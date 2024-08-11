@@ -12,12 +12,13 @@ const Driver = () => {
     const [items, setItems] = useState([] as any);
     const [editData, setEditData] = useState(null);
     const db = getFirestore();
+    const uid = sessionStorage.getItem('uid')
     const navigate = useNavigate();
     console.log("data", items);
 
     useEffect(() => {
         const fetchData = async () => {
-            const driverCollection = collection(db, 'driver');
+            const driverCollection = collection(db, `user/${uid}/driver`);
             const q = query(driverCollection, where('companyName', '==', 'RSA'));
             const querySnapshot = await getDocs(q);
 

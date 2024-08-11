@@ -42,7 +42,7 @@
         "dayjs": "^1.11.11",
         "dotenv": "^16.4.5",
         "easymde": "^2.18.0",
-        "firebase": "^10.8.0",
+        "firebase": "^10.12.5",
         "formik": "^2.2.9",
         "google-maps-react": "^2.0.6",
         "highlight.js": "^11.6.0",

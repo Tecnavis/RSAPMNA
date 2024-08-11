@@ -133,12 +133,13 @@ const StatusTable = () => {
     const [drivers, setDrivers] = useState({});
     const [searchQuery, setSearchQuery] = useState('');
     const db = getFirestore();
+    const uid = sessionStorage.getItem('uid')
 
     useEffect(() => {
         dispatch(setPageTitle('Status'));
 
         const fetchBookings = async () => {
-            const q = query(collection(db, 'bookings'), orderBy('createdAt', 'desc'));
+            const q = query(collection(db, `user/${uid}/bookings`), orderBy('createdAt', 'desc'));
             const querySnapshot = await getDocs(q);
             const updatedBookingsData = querySnapshot.docs.map((doc) => ({
                 id: doc.id,
@@ -151,7 +152,7 @@ const StatusTable = () => {
                 const driverId = record.selectedDriver;
 
                 if (driverId && !driverData[driverId]) {
-                    const driverDoc = await getDoc(doc(db, 'driver', driverId));
+                    const driverDoc = await getDoc(doc(db, `user/${uid}/driver`, driverId));
                     if (driverDoc.exists()) {
                         driverData[driverId] = driverDoc.data();
                     }
@@ -160,7 +161,7 @@ const StatusTable = () => {
             setDrivers(driverData);
         };
 
-        const unsubscribe = onSnapshot(collection(db, 'bookings'), () => {
+        const unsubscribe = onSnapshot(collection(db, `user/${uid}/bookings`), () => {
             fetchBookings();
         });
 

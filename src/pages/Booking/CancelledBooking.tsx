@@ -3,12 +3,12 @@ import { getFirestore, collection, getDocs, query, where } from 'firebase/firest
 
 const CancelledBooking = () => {
     const [completedBookings, setCompletedBookings] = useState([]);
-
+    const uid = sessionStorage.getItem('uid')
     useEffect(() => {
         const fetchCompletedBookings = async () => {
             try {
                 const db = getFirestore();
-                const q = query(collection(db, 'bookings'), where('status', '==', 'Rejected'));
+                const q = query(collection(db, `user/${uid}/bookings`), where('status', '==', 'Rejected'));
                 const querySnapshot = await getDocs(q);
                 const bookingsData = querySnapshot.docs.map((doc) => ({
                     id: doc.id,

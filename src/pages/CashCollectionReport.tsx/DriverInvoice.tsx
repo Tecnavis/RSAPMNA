@@ -13,6 +13,7 @@ import jsPDF from 'jspdf';
 
 const DriverInvoice = () => {
     const { id } = useParams();
+    const uid = sessionStorage.getItem('uid')
     const [booking, setBooking] = useState(null);
     const [loading, setLoading] = useState(false);
     const dispatch = useDispatch();
@@ -24,7 +25,7 @@ const DriverInvoice = () => {
         const fetchBooking = async () => {
             setLoading(true);
             try {
-                const bookingDocRef = doc(db, 'bookings', id);
+                const bookingDocRef = doc(db, `user/${uid}/bookings`, id);
                 const bookingSnapshot = await getDoc(bookingDocRef);
 
                 if (bookingSnapshot.exists()) {

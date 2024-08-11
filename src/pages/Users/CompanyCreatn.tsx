@@ -13,10 +13,11 @@ const CompanyCreatn = () => {
     const db = getFirestore();
     const navigate = useNavigate();
     console.log("data", items)
+    const uid = sessionStorage.getItem('uid')
 
     useEffect(() => {
         const fetchData = async () => {
-            const driverCollection = collection(db, 'driver');
+            const driverCollection = collection(db, `user/${uid}/driver`);
             const q = query(driverCollection, where('companyName', '==', 'Company'));
             const querySnapshot = await getDocs(q);
             const fetchedItems = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));

@@ -10,6 +10,7 @@ const Index = () => {
     const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
     const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass === 'rtl');
     const db = getFirestore();
+    const uid = sessionStorage.getItem('uid')
 
     const [loading, setLoading] = useState(true);
     const [salesByCategory, setSalesByCategory] = useState({
@@ -19,7 +20,7 @@ const Index = () => {
 
     useEffect(() => {
         const fetchBookings = () => {
-            const unsubscribe = onSnapshot(collection(db, 'bookings'), (querySnapshot) => {
+            const unsubscribe = onSnapshot(collection(db, `user/${uid}/bookings`), (querySnapshot) => {
                 const bookings = querySnapshot.docs.map(doc => doc.data());
 
                 const newBookingsShowRoom = bookings.filter(booking => booking.status === 'booking added' && booking.bookingStatus === 'ShowRoom Booking').length;

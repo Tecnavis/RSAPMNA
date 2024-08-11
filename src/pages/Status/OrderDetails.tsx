@@ -5,6 +5,7 @@ import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firest
 
 const OrderDetails = () => {
   const { id } = useParams();
+  const uid = sessionStorage.getItem('uid')
     const navigate = useNavigate();
     console.log('id', id);
     const [bookingDetails, setBookingDetails] = useState(null);
@@ -23,7 +24,7 @@ const OrderDetails = () => {
     useEffect(() => {
         const fetchBookingDetails = async () => {
             try {
-                const docRef = doc(db, 'bookings', id);
+                const docRef = doc(db, `user/${uid}/bookings`, id);
                 const docSnap = await getDoc(docRef);
                 console.log('Document data:', docSnap.data());
 
@@ -53,7 +54,7 @@ const OrderDetails = () => {
 
         const fetchStaffName = async (staffId) => {
             try {
-                const staffDocRef = doc(db, 'users', staffId);
+                const staffDocRef = doc(db, `user/${uid}/users`, staffId);
                 const staffDocSnap = await getDoc(staffDocRef);
 
                 if (staffDocSnap.exists()) {

@@ -7,6 +7,7 @@ import { parse, format } from 'date-fns';
 
 const CashCollectionReport = () => {
     const { id } = useParams();
+    const uid = sessionStorage.getItem('uid')
     const [bookings, setBookings] = useState([]);
     const [filteredBookings, setFilteredBookings] = useState([]);
     const [driver, setDriver] = useState(null);
@@ -28,7 +29,7 @@ const CashCollectionReport = () => {
     useEffect(() => {
         const fetchDriver = async () => {
             try {
-                const driverRef = doc(db, 'driver', id);
+                const driverRef = doc(db, `user/${uid}/driver`, id);
                 const driverSnap = await getDoc(driverRef);
                 if (driverSnap.exists()) {
                     setDriver(driverSnap.data());
@@ -46,7 +47,7 @@ const CashCollectionReport = () => {
     useEffect(() => {
         const fetchBookings = async () => {
             try {
-                const bookingsRef = collection(db, 'bookings');
+                const bookingsRef = collection(db, `user/${uid}/bookings`);
                 const q = query(bookingsRef, where('selectedDriver', '==', id));
                 const querySnapshot = await getDocs(q);
                 const fetchedBookings = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -75,7 +76,7 @@ const CashCollectionReport = () => {
 
     const updateBookingAmount = async (bookingId, newAmount) => {
         try {
-            const bookingRef = doc(db, 'bookings', bookingId);
+            const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
             await updateDoc(bookingRef, { amount: parseFloat(newAmount) });
             setBookings(prevBookings => prevBookings.map(booking => booking.id === bookingId ? { ...booking, amount: parseFloat(newAmount) } : booking));
             updateTotalBalance();
@@ -112,7 +113,7 @@ const CashCollectionReport = () => {
 
     const handleAmountReceivedChange = async (bookingId, receivedAmount) => {
         try {
-            const bookingRef = doc(db, 'bookings', bookingId);
+            const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
             await updateDoc(bookingRef, {
                 receivedAmount: parseFloat(receivedAmount),
                 balance: calculateBalance(bookings.find(booking => booking.id === bookingId).amount, receivedAmount)
@@ -149,7 +150,7 @@ const CashCollectionReport = () => {
             const totalBalance = bookings.reduce((acc, booking) => {
                 return acc + (parseFloat(booking.amount) - parseFloat(booking.receivedAmount || 0));
             }, 0);
-            const driverRef = doc(db, 'driver', id);
+            const driverRef = doc(db, `user/${uid}/driver`, id);
             await updateDoc(driverRef, { totalBalance: totalBalance });
         } catch (error) {
             console.error('Error updating total balance:', error);
@@ -165,7 +166,7 @@ const CashCollectionReport = () => {
         const correctPassword = 'Approve'; // Replace with your desired password
         if (password === correctPassword) {
             try {
-                const bookingRef = doc(db, 'bookings', bookingToApprove.id);
+                const bookingRef = doc(db, `user/${uid}/bookings`, bookingToApprove.id);
                 await updateDoc(bookingRef, { approved: true });
                 setBookings(prevBookings => prevBookings.map(booking => booking.id === bookingToApprove.id ? { ...booking, approved: true, disabled: true }  : booking));
                 setModalIsOpen(false);

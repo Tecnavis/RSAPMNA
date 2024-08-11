@@ -18,6 +18,7 @@ const [booking, setBooking] = useState(null);
     const [loading, setLoading] = useState(false);
     const dispatch = useDispatch();
     const db = getFirestore(); // Initialize Firestore
+    const uid = sessionStorage.getItem('uid')
     const location = useLocation(); // Use useLocation hook to access state
     const stateId = location.state?.id; // Access id from location state
     const invoiceRef = useRef();
@@ -25,7 +26,7 @@ const [booking, setBooking] = useState(null);
         const fetchBooking = async () => {
             setLoading(true);
             try {
-                const bookingDocRef = doc(db, 'bookings', id); // Reference to the specific booking document
+                const bookingDocRef = doc(db, `user/${uid}/bookings`, id); // Reference to the specific booking document
                 const bookingSnapshot = await getDoc(bookingDocRef); // Get the document snapshot
 
                 if (bookingSnapshot.exists()) {

@@ -12,11 +12,12 @@ const Company = () => {
     const [items, setItems] = useState([] as any);
     const db = getFirestore();
     const navigate = useNavigate();
+    const uid = sessionStorage.getItem('uid')
 
     // Fetch data from Firestore
     useEffect(() => {
         const fetchData = async () => {
-            const driverCollection = collection(db, 'driver');
+            const driverCollection = collection(db, `user/${uid}/driver`);
             const q = query(driverCollection, where('companyName', '!=', 'RSA'));
             const querySnapshot = await getDocs(q);
             const filteredDocs = querySnapshot.docs.filter(doc => doc.data().companyName !== 'Company');

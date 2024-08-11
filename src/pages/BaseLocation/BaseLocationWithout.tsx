@@ -7,6 +7,7 @@ const BaseLocationWithout = ({ onClose, setBaseLocation }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [items, setItems] = useState([]);
     const db = getFirestore();
+    const uid = sessionStorage.getItem('uid')
     const [distances, setDistances] = useState({});
 
     console.log('distances', distances);
@@ -14,7 +15,7 @@ const BaseLocationWithout = ({ onClose, setBaseLocation }) => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const querySnapshot = await getDocs(collection(db, 'baselocation'));
+                const querySnapshot = await getDocs(collection(db, `user/${uid}/baselocation`));
                 const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
                 setItems(data);
             } catch (error) {

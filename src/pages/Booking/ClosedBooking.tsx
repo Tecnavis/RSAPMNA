@@ -4,12 +4,12 @@ import { getFirestore, collection, getDocs, query, where, doc, setDoc, deleteDoc
 const ClosedBooking = () => {
     const [completedBookings, setCompletedBookings] = useState([]);
     const [searchQuery, setSearchQuery] = useState(''); // State for search query
-
+    const uid = sessionStorage.getItem('uid')
     useEffect(() => {
         const fetchCompletedBookings = async () => {
             try {
                 const db = getFirestore();
-                const q = query(collection(db, 'bookings'), where('status', '==', 'Order Completed'));
+                const q = query(collection(db, `user/${uid}/bookings`), where('status', '==', 'Order Completed'));
                 const querySnapshot = await getDocs(q);
                 const bookingsData = querySnapshot.docs.map((doc) => ({
                     id: doc.id,
@@ -27,9 +27,9 @@ const ClosedBooking = () => {
     const moveBookingToApproved = async (bookingId, bookingData) => {
         try {
             const db = getFirestore();
-            const approvedBookingRef = doc(db, 'approvedbookings', bookingId);
+            const approvedBookingRef = doc(db,`user/${uid}/approvedbookings`, bookingId);
             await setDoc(approvedBookingRef, bookingData);
-            const bookingRef = doc(db, 'bookings', bookingId);
+            const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
             await deleteDoc(bookingRef);
         } catch (error) {
             console.error('Error moving booking to approved:', error);

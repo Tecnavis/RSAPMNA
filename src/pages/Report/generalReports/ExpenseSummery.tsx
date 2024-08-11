@@ -36,12 +36,13 @@ const ExpenseSummery = () => {
     });
 
     const db = getFirestore();
+    const uid = sessionStorage.getItem('uid')
 
     useEffect(() => {
         const fetchExpensesAndDrivers = async () => {
             try {
-                const expensesQuery = query(collection(db, 'bookings'));
-                const driversQuery = query(collection(db, 'driver'));
+                const expensesQuery = query(collection(db, `user/${uid}/bookings`));
+                const driversQuery = query(collection(db, `user/${uid}/driver`));
 
                 const [expensesSnapshot, driversSnapshot] = await Promise.all([
                     getDocs(expensesQuery),
@@ -61,7 +62,7 @@ const ExpenseSummery = () => {
                         const expenseId = generateExpenseId();
                         expense.ExpenseId = expenseId;
                         // Update the Firestore document with the new ExpenseId
-                        await updateDoc(doc(db, 'bookings', docSnapshot.id), { ExpenseId: expenseId });
+                        await updateDoc(doc(db, `user/${uid}/bookings`, docSnapshot.id), { ExpenseId: expenseId });
                     }
 
                     // Add driver information
@@ -116,7 +117,7 @@ const ExpenseSummery = () => {
     const deleteRow = async (id) => {
         if (window.confirm('Are you sure want to delete selected row ?')) {
             try {
-                await deleteDoc(doc(db, 'expenses', id));
+                await deleteDoc(doc(db, `user/${uid}/expenses`, id));
                 const updatedRecords = items.filter((item) => item.id !== id);
                 setItems(updatedRecords);
                 setInitialRecords(updatedRecords);

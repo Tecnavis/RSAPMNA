@@ -27,11 +27,12 @@ const NewBooking = () => {
     const PAGE_SIZES = [10, 25, 'All'];
     const db = getFirestore();
     const navigate = useNavigate();
+    const uid = sessionStorage.getItem('uid')
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const q = query(collection(db, 'bookings'), orderBy('createdAt', 'desc'));
+                const q = query(collection(db, `user/${uid}/bookings`), orderBy('createdAt', 'desc'));
                 const querySnapshot = await getDocs(q);
                 let data: RecordData[] = querySnapshot.docs.map((doc) => ({
                     ...doc.data(),

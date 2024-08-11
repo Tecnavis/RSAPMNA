@@ -29,13 +29,14 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 const [advancePayment, setAdvancePayment] = useState('0');
 
     const storage = getStorage();
+    const uid = sessionStorage.getItem('uid')
     const [serviceOptions, setServiceOptions] = useState([]);
 
     useEffect(() => {
         const fetchServiceOptions = async () => {
             try {
                 const db = getFirestore();
-                const serviceCollection = collection(db, 'service');
+                const serviceCollection = collection(db,  `user/${uid}/service`);
                 const serviceSnapshot = await getDocs(serviceCollection);
                 const servicesList = serviceSnapshot.docs.map(doc => doc.data().name); // Adjust this based on your data structure
                 setServiceOptions(servicesList);
@@ -165,11 +166,11 @@ const [advancePayment, setAdvancePayment] = useState('0');
             };
 
             if (editData) {
-                const docRef = doc(db, 'driver', editData.id);
+                const docRef = doc(db,  `user/${uid}/driver`, editData.id);
                 await updateDoc(docRef, itemData);
                 console.log('Document updated');
             } else {
-                const docRef = await addDoc(collection(db, 'driver'), itemData);
+                const docRef = await addDoc(collection(db, `user/${uid}/driver`), itemData);
                 console.log('Document written with ID: ', docRef.id);
             }
 

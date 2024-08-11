@@ -39,6 +39,7 @@ const SalesSummary = () => {
     const [historyRange, setHistoryRange] = useState('10'); // State for history range filter
     const [totalAmount, setTotalAmount] = useState(0); // State for total amount
     const db = getFirestore();
+    const uid = sessionStorage.getItem('uid')
 
     useEffect(() => {
         const from = (page - 1) * pageSize;
@@ -49,8 +50,8 @@ const SalesSummary = () => {
     useEffect(() => {
         const fetchBookingsAndDrivers = async () => {
             try {
-                const bookingsQuery = query(collection(db, 'bookings'), orderBy('createdAt', 'desc'));
-                const driversQuery = query(collection(db, 'driver'));
+                const bookingsQuery = query(collection(db, `user/${uid}/bookings`), orderBy('createdAt', 'desc'));
+                const driversQuery = query(collection(db, `user/${uid}/driver`));
 
                 const [bookingsSnapshot, driversSnapshot] = await Promise.all([
                     getDocs(bookingsQuery),
@@ -70,7 +71,7 @@ const SalesSummary = () => {
                         const invoiceId = generateInvoiceId();
                         booking.invoice = invoiceId;
                         // Update the Firestore document with the new invoice ID
-                        await updateDoc(doc(db, 'bookings', docSnapshot.id), { invoice: invoiceId });
+                        await updateDoc(doc(db, `user/${uid}/bookings`, docSnapshot.id), { invoice: invoiceId });
                     }
                     // Add driver information
                     const driverId = booking.selectedDriver;

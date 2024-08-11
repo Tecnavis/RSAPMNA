@@ -14,7 +14,9 @@ const UserAdd = () => {
     const { state } = useLocation(); // Use the useLocation hook to access location state
 
     const db = getFirestore();
-
+    const uid =sessionStorage.getItem('uid')
+    
+    console.log(editData,'this is the ')
     useEffect(() => {
         if (state && state.editData) {
             setEditData(state.editData);
@@ -29,29 +31,33 @@ const UserAdd = () => {
           
 
     const addOrUpdateItem = async () => {
-        try {
-            const itemData = {
-                name,
-                email,
-                address,
-                phone_number,
-                userName,
-                password,
-            };
-
-            if (editData) {
-                const docRef = doc(db, 'users', editData.id);
-                await updateDoc(docRef, itemData);
-                console.log('Document updated');
-            } else {
-                const docRef = await addDoc(collection(db, 'users'), itemData);
-                console.log('Document written with ID: ', docRef.id);
+        if(uid){
+            try {
+                const itemData = {
+                    name,
+                    email,
+                    address,
+                    phone_number,
+                    userName,
+                    password,
+                };
+    
+                if (editData) {
+                    const docRef = doc(db, `user/${uid}/users`, editData.id);
+                    await updateDoc(docRef, itemData);
+                    console.log('Document updated');
+                } else {
+                    const docRef = await addDoc(collection(db, `user/${uid}/users`), itemData);
+                    console.log(docRef,'this is the doc ref')
+                    console.log('Document written with ID: ', docRef.id);
+                }
+    
+                navigate('/users/staff');
+            } catch (e) {
+                console.error('Error adding/updating document: ', e);
             }
-
-            navigate('/users/staff');
-        } catch (e) {
-            console.error('Error adding/updating document: ', e);
         }
+        
     };
     
     return (

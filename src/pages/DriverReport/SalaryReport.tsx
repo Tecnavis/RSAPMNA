@@ -6,6 +6,7 @@ import InvoiceModal from './InvoiceModal';
 import { parse, format } from 'date-fns';
 const SalaryReport = () => {
     const { id } = useParams();
+    const uid = sessionStorage.getItem('uid')
     const [bookings, setBookings] = useState([]);
     const [filteredBookings, setFilteredBookings] = useState([]);
     const [driver, setDriver] = useState(null);
@@ -31,7 +32,7 @@ const SalaryReport = () => {
     useEffect(() => {
         const fetchDriver = async () => {
             try {
-                const driverRef = doc(db, 'driver', id);
+                const driverRef = doc(db, `user/${uid}/driver`, id);
                 const driverSnap = await getDoc(driverRef);
                 if (driverSnap.exists()) {
                     setDriver(driverSnap.data());
@@ -49,7 +50,7 @@ const SalaryReport = () => {
     useEffect(() => {
         const fetchBookings = async () => {
             try {
-                const bookingsRef = collection(db, 'bookings');
+                const bookingsRef = collection(db, `user/${uid}/bookings`);
                 const q = query(bookingsRef, where('selectedDriver', '==', id));
                 const querySnapshot = await getDocs(q);
                 const fetchedBookings = querySnapshot.docs.map((doc) => {
@@ -143,7 +144,7 @@ const SalaryReport = () => {
         if (promptForTotalSalaryConfirmation()) {
             try {
                 const updatePromises = selectedBookings.map(async (bookingId) => {
-                    const bookingRef = doc(db, 'bookings', bookingId);
+                    const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
                     const bookingSnapshot = await getDoc(bookingRef);
                     
                     if (bookingSnapshot.exists()) {
@@ -215,7 +216,7 @@ const SalaryReport = () => {
     const handleSaveEdit = async () => {
         try {
             const { fileNumber, dateTime, serviceType, serviceVehicle, totalDriverSalary, transferedSalary } = editFormData;
-            const bookingRef = doc(db, 'bookings', editingBookingId);
+            const bookingRef = doc(db, `user/${uid}/bookings`, editingBookingId);
             await updateDoc(bookingRef, {
                 fileNumber,
                 dateTime,

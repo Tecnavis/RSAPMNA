@@ -21,6 +21,7 @@ const BaseLocation = () => {
     const [editing, setEditing] = useState(false);
     const [currentItemId, setCurrentItemId] = useState(null);
     const db = getFirestore();
+    const uid = sessionStorage.getItem('uid')
     const navigate = useNavigate();
 
     const handleMapClick = (location) => {
@@ -32,7 +33,7 @@ const BaseLocation = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const querySnapshot = await getDocs(collection(db, 'baselocation'));
+                const querySnapshot = await getDocs(collection(db, `user/${uid}/baselocation`));
                 const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
                 setItems(data);
             } catch (error) {
@@ -49,7 +50,7 @@ const BaseLocation = () => {
 
         if (editing) {
             try {
-                await updateDoc(doc(db, 'baselocation', currentItemId), baseLocationDetails);
+                await updateDoc(doc(db, `user/${uid}/baselocation`, currentItemId), baseLocationDetails);
                 setItems((prevItems) => prevItems.map((item) => (item.id === currentItemId ? { ...item, ...baseLocationDetails } : item)));
                 setEditing(false);
                 setCurrentItemId(null);
@@ -58,7 +59,7 @@ const BaseLocation = () => {
             }
         } else {
             try {
-                const docRef = await addDoc(collection(db, 'baselocation'), baseLocationDetails);
+                const docRef = await addDoc(collection(db, `user/${uid}/baselocation`), baseLocationDetails);
                 setItems([...items, { ...baseLocationDetails, id: docRef.id }]);
             } catch (error) {
                 console.error('Error adding base location: ', error);
@@ -79,7 +80,7 @@ const BaseLocation = () => {
             const password = window.prompt('Please enter the password to confirm deletion:');
             if (password === 'BASELOCATION') {
                 try {
-                    await deleteDoc(doc(db, 'baselocation', id));
+                    await deleteDoc(doc(db, `user/${uid}/baselocation`, id));
                     setItems((prevItems) => prevItems.filter((item) => item.id !== id));
                 } catch (error) {
                     console.error('Error deleting document:', error);

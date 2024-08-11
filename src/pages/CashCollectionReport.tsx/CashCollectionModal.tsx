@@ -3,14 +3,14 @@ import { updateDoc, addDoc, collection } from 'firebase/firestore';
 
 const CashCollectionModal = ({ netTotalAmountInHand, setNetTotalAmountInHand, driverId, driver, bookings, setBookings, db }) => {
     const [receivedAmount, setReceivedAmount] = useState('');
-
+    const uid = sessionStorage.getItem('uid')
     const handleSubmit = async () => {
         try {
             const received = parseFloat(receivedAmount);
             const updatedNetTotal = netTotalAmountInHand - received;
 
             // Update driver's netTotalAmountInHand
-            await updateDoc(doc(db, 'driver', driverId), { netTotalAmountInHand: updatedNetTotal });
+            await updateDoc(doc(db, `user/${uid}/driver`, driverId), { netTotalAmountInHand: updatedNetTotal });
 
             // Add new booking
             const newBooking = {
@@ -20,7 +20,7 @@ const CashCollectionModal = ({ netTotalAmountInHand, setNetTotalAmountInHand, dr
                 selectedDriver: driverId,
             };
 
-            const bookingsRef = collection(db, 'bookings');
+            const bookingsRef = collection(db, `user/${uid}/bookings`);
             await addDoc(bookingsRef, newBooking);
 
             // Update local state

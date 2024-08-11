@@ -19,11 +19,12 @@ const DriverReport = () => {
     const [searchQuery, setSearchQuery] = useState('');
 
     const db = getFirestore();
+    const uid = sessionStorage.getItem('uid')
 
     useEffect(() => {
         const fetchDrivers = async () => {
             try {
-                const querySnapshot = await getDocs(collection(db, 'driver'));
+                const querySnapshot = await getDocs(collection(db, `user/${uid}/driver`));
                 const driverList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setDrivers(driverList);
             } catch (error) {
@@ -50,7 +51,7 @@ const DriverReport = () => {
 
     const handleSaveDriverClick = async () => {
         try {
-            const driverDocRef = doc(db, 'driver', editDriverId);
+            const driverDocRef = doc(db, `user/${uid}/driver`, editDriverId);
             await updateDoc(driverDocRef, editDriverData);
             setDrivers((prevDrivers) =>
                 prevDrivers.map((driver) =>

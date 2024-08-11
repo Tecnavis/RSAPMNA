@@ -25,6 +25,7 @@ interface Showroom {
 
 const MapBooking = () => {
     const db = getFirestore();
+    const uid = sessionStorage.getItem('uid')
     const navigate = useNavigate();
     const [bookingId, setBookingId] = useState<string>('');
     useEffect(() => {
@@ -200,7 +201,7 @@ const [bodyShope, setBodyShope]= useState('');
         if (company === 'rsa') {
             const fetchCompanies = async () => {
                 try {
-                    const driverCollection = collection(db, 'driver');
+                    const driverCollection = collection(db, `user/${uid}/driver`);
                     const q = query(driverCollection, where('companyName', '==', 'Company'));
                     const querySnapshot = await getDocs(q);
                     const fetchedCompanies = querySnapshot.docs.map((doc) => ({
@@ -446,7 +447,7 @@ setBodyShope(insurance)
         const fetchShowroomOptions = async () => {
             try {
                 const db = getFirestore();
-                const serviceCollection = collection(db, 'showroom');
+                const serviceCollection = collection(db, `user/${uid}/showroom`);
                 const serviceSnapshot = await getDocs(serviceCollection);
                 const servicesList = serviceSnapshot.docs.map(doc => ({
                     value: doc.data().Location, // Assuming 'Location' is a unique identifier
@@ -465,7 +466,7 @@ setBodyShope(insurance)
     useEffect(() => {
         const fetchServiceTypes = async () => {
             try {
-                const serviceCollection = collection(db, 'service');
+                const serviceCollection = collection(db, `user/${uid}/service`);
                 const snapshot = await getDocs(serviceCollection);
                 const services = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
                 setServiceTypes(services);
@@ -479,7 +480,7 @@ setBodyShope(insurance)
 
     useEffect(() => {
         const db = getFirestore();
-        const unsubscribe = onSnapshot(collection(db, 'showroom'), (snapshot) => {
+        const unsubscribe = onSnapshot(collection(db,`user/${uid}/showroom`), (snapshot) => {
             const showrooms = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
             setShowRooms(showrooms);
         });
@@ -496,7 +497,7 @@ setBodyShope(insurance)
             }
     
             try {
-                const driversCollection = collection(db, 'driver');
+                const driversCollection = collection(db, `user/${uid}/driver`);
                 const snapshot = await getDocs(driversCollection);
     
                 // Fetch deleted driver IDs from localStorage using the correct key
@@ -542,7 +543,7 @@ setBodyShope(insurance)
             }
 
             try {
-                const serviceQuery = query(collection(db, 'service'), where('name', '==', serviceType));
+                const serviceQuery = query(collection(db, `user/${uid}/service`), where('name', '==', serviceType));
                 const snapshot = await getDocs(serviceQuery);
                 if (snapshot.empty) {
                     console.log('No matching service details found.');
@@ -655,7 +656,7 @@ setBodyShope(insurance)
         const fetchDrivers = async () => {
             console.log('Fetching drivers from Firestore');
             try {
-                const driversCollection = collection(db, 'driver');
+                const driversCollection = collection(db,`user/${uid}/driver`);
                 const snapshot = await getDocs(driversCollection);
                 console.log('Firestore snapshot:', snapshot);
 
@@ -890,11 +891,11 @@ setBodyShope(insurance)
                 console.log('Data to be added/updated:', bookingData); // Log the data before adding or updating
 
                 if (editData) {
-                    const docRef = doc(db, 'bookings', editData.id);
+                    const docRef = doc(db, `user/${uid}/bookings`, editData.id);
                     await updateDoc(docRef, bookingData);
                     console.log('Document updated');
                 } else {
-                    const docRef = await addDoc(collection(db, 'bookings'), bookingData);
+                    const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
                     console.log('Document written with ID: ', docRef.id);
                     console.log('Document added');
                 }

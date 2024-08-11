@@ -12,11 +12,11 @@ function ServiceType() {
   const [errors, setErrors] = useState({});
   const [formSubmitted, setFormSubmitted] = useState(false);
   const editRef = useRef(null);
-
+  const uid = sessionStorage.getItem('uid')
   useEffect(() => {
     const fetchServices = async () => {
       const db = getFirestore();
-      const serviceRef = collection(db, 'service');
+      const serviceRef = collection(db,`user/${uid}/service`);
       try {
         const snapshot = await getDocs(serviceRef);
         const services = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -71,7 +71,7 @@ function ServiceType() {
 
     try {
       const db = getFirestore();
-      const serviceRef = collection(db, 'service');
+      const serviceRef = collection(db, `user/${uid}/service`);
       const docRef = await addDoc(serviceRef, newService);
       setServiceTypes([...serviceTypes, { ...newService, id: docRef.id }]);
       setNewServiceType('');
@@ -93,7 +93,7 @@ function ServiceType() {
 
     try {
       const db = getFirestore();
-      const serviceRef = doc(db, 'service', id);
+      const serviceRef = doc(db, `user/${uid}/service`, id);
       await deleteDoc(serviceRef);
       setServiceTypes(serviceTypes.filter(service => service.id !== id));
     } catch (error) {
@@ -119,7 +119,7 @@ function ServiceType() {
     const { id, name, salary, basicSalaryKM, salaryPerKM } = currentService;
     try {
       const db = getFirestore();
-      const serviceRef = doc(db, 'service', id);
+      const serviceRef = doc(db, `user/${uid}/service`, id);
       await updateDoc(serviceRef, { name, salary, basicSalaryKM, salaryPerKM });
       setServiceTypes(serviceTypes.map(service => service.id === id ? { ...service, name, salary, basicSalaryKM, salaryPerKM } : service));
       setEditing(false);

@@ -7,6 +7,7 @@ const ViewMore = () => {
     const navigate = useNavigate();
     const [bookingDetails, setBookingDetails] = useState(null);
     const db = getFirestore();
+    const uid = sessionStorage.getItem('uid')
     const { search } = useLocation();
     const [showPickupDetails, setShowPickupDetails] = useState(false);
     const [showDropoffDetails, setShowDropoffDetails] = useState(false);
@@ -24,7 +25,7 @@ const ViewMore = () => {
     useEffect(() => {
         const fetchBookingDetails = async () => {
             try {
-                const docRef = doc(db, 'bookings', id);
+                const docRef = doc(db, `user/${uid}/bookings`, id);
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
@@ -53,7 +54,7 @@ const ViewMore = () => {
 
         const fetchStaffName = async (staffId) => {
             try {
-                const staffDocRef = doc(db, 'users', staffId);
+                const staffDocRef = doc(db, `user/${uid}/users`, staffId);
                 const staffDocSnap = await getDoc(staffDocRef);
 
                 if (staffDocSnap.exists()) {
@@ -83,7 +84,7 @@ const ViewMore = () => {
         const confirmDelete = window.confirm('Are you sure you want to delete this booking?');
         if (confirmDelete) {
             try {
-                await deleteDoc(doc(db, 'bookings', id));
+                await deleteDoc(doc(db, `user/${uid}/bookings`, id));
                 console.log('Document successfully deleted!');
                 navigate('/bookings/newbooking');
             } catch (error) {
@@ -102,7 +103,7 @@ const ViewMore = () => {
     const handleFormSubmit = async (e) => {
         e.preventDefault();
         try {
-            const docRef = doc(db, 'bookings', id);
+            const docRef = doc(db, `user/${uid}/bookings`, id);
             await updateDoc(docRef, {
                 ...formData,
                 status: 'Order Completed', // Update the status to completed

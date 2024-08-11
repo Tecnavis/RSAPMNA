@@ -26,12 +26,13 @@ const PendingBookings = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const PAGE_SIZES = [10, 25, 'All'];
     const db = getFirestore();
+    const uid = sessionStorage.getItem('uid')
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const statusConditions = ['booking added','Contacted Customer', 'Vehicle Picked', 'Vehicle Confirmed', 'To DropOff Location', 'Vehicle dropoff'];
-                const q = query(collection(db, 'bookings'), where('status', 'in', statusConditions));
+                const q = query(collection(db, `user/${uid}/bookings`), where('status', 'in', statusConditions));
                 const querySnapshot = await getDocs(q);
                 const dataWithIndex = querySnapshot.docs
                     .map((doc) => ({

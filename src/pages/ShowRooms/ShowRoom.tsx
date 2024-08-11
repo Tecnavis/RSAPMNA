@@ -43,6 +43,7 @@ const ShowRoom = () => {
     const formRef = useRef(null);
     const [baseOptions, setBaseOptions] = useState([]);
     const [baseLocation, setBaseLocation] = useState(null);
+    const uid = sessionStorage.getItem('uid')
     useEffect(() => {
         const term = searchTerm.toLowerCase();
         const filtered = existingShowRooms.filter(record =>
@@ -133,12 +134,12 @@ const ShowRoom = () => {
     
         try {
             if (editRoomId) {
-                const roomRef = doc(db, 'showroom', editRoomId);
+                const roomRef = doc(db, `user/${uid}/showroom`, editRoomId);
                 await updateDoc(roomRef, newShowRoom);
                 alert('Showroom updated successfully');
                 setEditRoomId(null);
             } else {
-                await addDoc(collection(db, 'showroom'), newShowRoom);
+                await addDoc(collection(db, `user/${uid}/showroom`), newShowRoom);
                 alert('Showroom added successfully');
             }
     
@@ -175,7 +176,7 @@ const ShowRoom = () => {
     const fetchShowRooms = async () => {
         const db = getFirestore();
         try {
-            const querySnapshot = await getDocs(query(collection(db, 'showroom'), orderBy('createdAt', 'desc')));
+            const querySnapshot = await getDocs(query(collection(db,`user/${uid}/showroom`), orderBy('createdAt', 'desc')));
             const rooms = [];
             querySnapshot.forEach((doc) => {
                 rooms.push({ id: doc.id, ...doc.data() });

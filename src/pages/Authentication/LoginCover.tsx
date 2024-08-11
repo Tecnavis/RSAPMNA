@@ -18,10 +18,13 @@ const LoginCover = () => {
     
     const signIn = () => {
         const auth = getAuth();
+
         signInWithEmailAndPassword(auth, email, password)
             .then((userCredential) => {
                 const user = userCredential.user;
-                console.log("User signed in:", user);
+                const uid = user.uid
+                sessionStorage.setItem('uid',uid)
+                console.log("User signed in:", uid);
                 navigate('/index'); // Redirect to home page or any other route
             })
             .catch((error) => {

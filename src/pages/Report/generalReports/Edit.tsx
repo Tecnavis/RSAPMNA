@@ -8,6 +8,7 @@ import IconSave from '../../../components/Icon/IconSave';
 
 const Edit = () => {
     const { id } = useParams();
+    const uid = sessionStorage.getItem('uid')
     const [booking, setBooking] = useState(null);
     const [loading, setLoading] = useState(false);
     const [formValues, setFormValues] = useState({});
@@ -19,7 +20,7 @@ const Edit = () => {
         const fetchBooking = async () => {
             setLoading(true);
             try {
-                const bookingDocRef = doc(db, 'bookings', id);
+                const bookingDocRef = doc(db, `user/${uid}/bookings`, id);
                 const bookingSnapshot = await getDoc(bookingDocRef);
 
                 if (bookingSnapshot.exists()) {
@@ -52,7 +53,7 @@ const Edit = () => {
     const handleSave = async () => {
         setLoading(true);
         try {
-            const bookingDocRef = doc(db, 'bookings', id);
+            const bookingDocRef = doc(db, `user/${uid}/bookings`, id);
             await updateDoc(bookingDocRef, formValues);
             setLoading(false);
             navigate(`/general/sales/preview/${id}`); // Redirect to preview page
