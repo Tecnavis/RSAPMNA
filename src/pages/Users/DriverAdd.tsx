@@ -131,8 +131,32 @@ const [advancePayment, setAdvancePayment] = useState('0');
 
         }
     }, [state]);
+    const checkPhoneUnique = async (phone) => {
+        const db = getFirestore();
+        const uid = sessionStorage.getItem('uid');
+        const driversRef = collection(db, `user/${uid}/driver`);
+        const querySnapshot = await getDocs(driversRef);
+        let isUnique = true;
+    
+        querySnapshot.forEach((doc) => {
+            if (doc.data().phone === phone) {
+                isUnique = false;
+            }
+        });
+    
+        return isUnique;
+    };
+    
     const addOrUpdateItem = async () => {
         try {
+            // Check if the phone number is unique
+            const isPhoneUnique = await checkPhoneUnique(phone);
+            if (!isPhoneUnique) {
+                console.error('Phone number already exists');
+                alert('Phone number already exists. Please enter a different phone number.');
+                return;
+            }
+    
             if (password !== confirmPassword) {
                 console.error('Password and confirm password do not match');
                 return;
@@ -219,14 +243,7 @@ const [advancePayment, setAdvancePayment] = useState('0');
                                     <label htmlFor="driverName">Driver Name</label>
                                     <input id="driverName" type="text" placeholder="Enter driver Name" className="form-input" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
                                 </div>
-                                {/* <div>
-                                    <label htmlFor="driverName">Driver Name</label>
-                                    <input id="driverName" type="text" placeholder="Enter driver Name" className="form-input" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
-                                </div> */}
-                                {/* <div>
-                                    <label htmlFor="companyName">Company Name</label>
-                                    <input id="companyName" type="text" placeholder="Enter Company Name" className="form-input" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
-                                </div> */}
+                               
                                 <div>
                                     <label htmlFor="idnumber">ID number</label>
                                     <input id="idnumber" type="idnumber"  className="form-input" value={idnumber} onChange={(e) => setIdnumber(e.target.value)} />

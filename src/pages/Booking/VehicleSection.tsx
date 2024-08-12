@@ -1,3 +1,4 @@
+import { collection, getDocs, getFirestore, query, where } from 'firebase/firestore';
 import React, { useState, useEffect, useRef } from 'react';
 
 const VehicleSection = ({
@@ -7,6 +8,7 @@ const VehicleSection = ({
     insuranceAmountBody,
     onInsuranceAmountBodyChange,
     serviceCategory,
+    updatedTotalSalary,
     onServiceCategoryChange,
     onAdjustValueChange,
     adjustValue,
@@ -20,93 +22,112 @@ const VehicleSection = ({
         insurance: bodyShope || '', // Initialize insurance with bodyShope
         insuranceAmountBody: insuranceAmountBody || 0,
     });
-    const [updatedTotalSalary, setUpdatedTotalSalary] = useState(totalSalary);
+    // const [updatedTotalSalary, setUpdatedTotalSalary] = useState('');
     const adjustmentApplied = useRef(false);
 console.log("insuranceAmountBodyvehicle",showroomLocation)
 //    ------------------------------------------------------------
 useEffect(() => {
-        let newTotalSalary = totalSalary;
+    const fetchInsuranceAmountBody = async () => {
+        const db = getFirestore();
+        const showroomRef = collection(db, 'showroom');
+        const q = query(showroomRef, where('Location', '==', showroomLocation));
+        const querySnapshot = await getDocs(q);
 
-        if (showRoom.availableServices === 'Body Shop' && showRoom.insurance === 'insurance') {
-            newTotalSalary -= parseFloat(insuranceAmountBody || 0);
-        }
+        if (!querySnapshot.empty) {
+            const showroomData = querySnapshot.docs[0].data(); // Get the first matching document
+            console.log('Fetched insuranceAmountBody:', showroomData); // Log the value
 
-        if (newTotalSalary !== updatedTotalSalary) {
-            setUpdatedTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
-            onUpdateTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
+            if (showroomData.insuranceAmountBody) {
+                console.log('Fetched insuranceAmountBody:', showroomData.insuranceAmountBody); // Log the value
+                
+                setShowRoom(prevShowRoom => ({
+                    ...prevShowRoom,
+                    insuranceAmountBody: showroomData.insuranceAmountBody,
+                }));
+                onInsuranceAmountBodyChange(showroomData.insuranceAmountBody);
+            } else {
+                console.log('No insuranceAmountBody found in the document');
+            }
+        } else {
+            console.log('No matching showroom found for the given location');
         }
-    }, [totalSalary, insuranceAmountBody, showRoom.availableServices, showRoom.insurance]);
-    useEffect(() => {
-        if (bodyShope !== showRoom.insurance) {
-            setShowRoom(prevShowRoom => ({
-                ...prevShowRoom,
-                insurance: bodyShope, // <-- Update insurance field with bodyShope
-            }));
-        }
-    }, [bodyShope]);
-    useEffect(() => {
-        if (serviceCategory !== showRoom.availableServices) {
-            setShowRoom(prevShowRoom => ({
-                ...prevShowRoom,
-                availableServices: serviceCategory,
-            }));
-        }
-    }, [serviceCategory]);
+    };
 
-    const handleServiceChange = (e) => {
-        const { value } = e.target;
+    if (showroomLocation) {
+        fetchInsuranceAmountBody();
+    }
+}, [showroomLocation, onInsuranceAmountBodyChange]);
+useEffect(() => {
+    if (bodyShope !== showRoom.insurance) {
         setShowRoom(prevShowRoom => ({
             ...prevShowRoom,
-            availableServices: value,
-            insurance: '',
+            insurance: bodyShope, // <-- Update insurance field with bodyShope
         }));
-
-        if (value === 'Body Shop') {
-            onServiceCategoryChange(value);
-        }
-    };
-
-    const handleBodyInsuranceChange = (e) => {
-        const { value } = e.target;
-        setShowRoom((prevShowRoom) => ({
-            ...prevShowRoom,
-            insurance: value,
-        }));
-        onInsuranceChange(value); 
-
-    };
-
-    const handleInsuranceAmountChange = (e) => {
-        const { value } = e.target;
+    }
+}, [bodyShope]);
+useEffect(() => {
+    if (serviceCategory !== showRoom.availableServices) {
         setShowRoom(prevShowRoom => ({
             ...prevShowRoom,
-            insuranceAmount: value,
+            availableServices: serviceCategory,
         }));
-        onInsuranceAmountBodyChange(value); 
-    };
+    }
+}, [serviceCategory]);
 
-    const handleAdjustValueChange = (e) => {
-        const { value } = e.target;
-        onAdjustValueChange(value); // Call the callback function passed from the parent
-    };
-    const applyAdjustment = () => {
-        const adjustedSalary = parseFloat(adjustValue);
+const handleServiceChange = (e) => {
+    const { value } = e.target;
+    setShowRoom(prevShowRoom => ({
+        ...prevShowRoom,
+        availableServices: value,
+        insurance: '',
+    }));
 
-        if (adjustedSalary > updatedTotalSalary) {
-            setUpdatedTotalSalary(adjustedSalary);
+    if (value === 'Body Shop') {
+        onServiceCategoryChange(value);
+    }
+};
+
+const handleBodyInsuranceChange = (e) => {
+    const { value } = e.target;
+    setShowRoom((prevShowRoom) => ({
+        ...prevShowRoom,
+        insurance: value,
+    }));
+    onInsuranceChange(value); 
+
+};
+
+const handleInsuranceAmountChange = (e) => {
+    const { value } = e.target;
+    setShowRoom(prevShowRoom => ({
+        ...prevShowRoom,
+        insuranceAmount: value,
+    }));
+    onInsuranceAmountBodyChange(value); 
+};
+
+const handleAdjustValueChange = (e) => {
+    const { value } = e.target;
+    onAdjustValueChange(value); 
+};
+const applyAdjustment = () => {
+    const adjustedSalary = parseFloat(adjustValue);
+
+    if (adjustedSalary > updatedTotalSalary) {
+        // setUpdatedTotalSalary(adjustedSalary);
+        onUpdateTotalSalary(adjustedSalary);
+        adjustmentApplied.current = true;
+    } else {
+        const password = prompt("Enter password to apply the adjustment: Password=Adjust");
+        if (password === "Adjust") {
+            // setUpdatedTotalSalary(adjustedSalary);
             onUpdateTotalSalary(adjustedSalary);
             adjustmentApplied.current = true;
         } else {
-            const password = prompt("Enter password to apply the adjustment: Password=Adjust");
-            if (password === "Adjust") {
-                setUpdatedTotalSalary(adjustedSalary);
-                onUpdateTotalSalary(adjustedSalary);
-                adjustmentApplied.current = true;
-            } else {
-                alert("Incorrect password. Adjustment not applied.");
-            }
+            alert("Incorrect password. Adjustment not applied.");
         }
-    };
+    }
+};
 
     return (
         <div className="mb-5">
