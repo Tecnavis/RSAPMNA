@@ -5,7 +5,7 @@ import IconPencil from '../../components/Icon/IconPencil';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import IconUserPlus from '../../components/Icon/IconUserPlus';
-import { getFirestore, collection, getDocs, where, query } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, where, query, doc, updateDoc } from 'firebase/firestore';
 import IconMenuScrumboard from '../../components/Icon/Menu/IconMenuScrumboard';
 
 const Company = () => {
@@ -14,39 +14,77 @@ const Company = () => {
     const navigate = useNavigate();
     const uid = sessionStorage.getItem('uid')
 
-    // Fetch data from Firestore
     useEffect(() => {
         const fetchData = async () => {
+            console.log('Fetching data from Firestore...');
+
             const driverCollection = collection(db, `user/${uid}/driver`);
+            console.log('Driver collection reference:', driverCollection);
+
+            // Create query to filter out items with companyName as 'RSA'
             const q = query(driverCollection, where('companyName', '!=', 'RSA'));
-            const querySnapshot = await getDocs(q);
-            const filteredDocs = querySnapshot.docs.filter(doc => doc.data().companyName !== 'Company');
-            const fetchedItems = filteredDocs.map((doc) => ({ id: doc.id, ...doc.data() }));
-            const deletedItemIds = JSON.parse(localStorage.getItem('deletedItems') || '[]');
-            const filteredItems = fetchedItems.filter(item => !deletedItemIds.includes(item.id));
-            setItems(filteredItems);
+            console.log('Query created with parameters:', q);
+
+            try {
+                console.log('Executing query...');
+                const querySnapshot = await getDocs(q);
+                console.log('Query executed. Snapshot:', querySnapshot);
+
+                // Further filter items client-side
+                const filteredItems = querySnapshot.docs
+                    .filter((doc) => {
+                        const data = doc.data();
+                        // Apply both filtering conditions
+                        return data.companyName !== 'Company' && 
+                               (!data.status || data.status === '');
+                    })
+                    .map((doc) => {
+                        console.log('Document data:', doc.data());
+                        return { id: doc.id, ...doc.data() };
+                    });
+
+                console.log('Filtered items:', filteredItems);
+                setItems(filteredItems);
+                console.log('State updated with fetched data.');
+            } catch (error) {
+                console.error('Error fetching data:', error); // Log errors if any
+            }
         };
-        fetchData().catch(console.error);
+
+        console.log('useEffect triggered to fetch data.');
+        fetchData().catch(console.error); // Correctly call fetchData inside useEffect
     }, []);
-
-    // Handle delete operation
+   
     const handleDelete = async (userId: string) => {
+        // Confirm deletion
         const confirmDelete = window.confirm('Are you sure you want to delete this user?');
+        
         if (confirmDelete) {
-            const enteredIdNumber = window.prompt('Please enter the ID number of the driver:');
-            const driver = items.find((item: any) => item.id === userId);
-
-            if (driver && enteredIdNumber === driver.idnumber) {
-                setItems((prevItems: any) => prevItems.filter((item: any) => item.id !== userId));
-                const deletedItemIds = JSON.parse(localStorage.getItem('deletedItems') || '[]');
-                localStorage.setItem('deletedItems', JSON.stringify([...deletedItemIds, userId]));
+            // Prompt for password
+            const enteredPassword = window.prompt('Please enter the password to confirm deletion:');
+            const requiredPassword = 'RSA@123';
+            
+            // Check if the entered password matches the required password
+            if (enteredPassword === requiredPassword) {
+                try {
+                    // Update Firestore document
+                    const userDoc = doc(db, `user/${uid}/driver`, userId);
+                    await updateDoc(userDoc, { status: 'deleted from UI' });
+                    
+                    // Update local state
+                    setItems((prevItems: any) => prevItems.filter((item: any) => item.id !== userId));
+                    
+                    alert('User deleted successfully.');
+                } catch (error) {
+                    console.error('Error deleting user:', error);
+                    alert('Failed to delete user.');
+                }
             } else {
-                window.alert('ID number is incorrect. Deletion aborted.');
+                window.alert('Incorrect password. Deletion aborted.');
             }
         }
     };
-
-    // Handle edit operation
+    
     const handleEdit = (item) => {
         navigate(`/users/company-add/${item.id}`, { state: { editData: item } });
     };

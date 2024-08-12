@@ -27,6 +27,7 @@ const [advancePayment, setAdvancePayment] = useState('');
 const [baseLocation, setBaseLocation] = useState('');
     const [baseLocations, setBaseLocations] = useState([]);
     const [serviceOptions, setServiceOptions] = useState([]);
+    const [serviceVehicle, setServiceVehicle] = useState({});
 
 
     const storage = getStorage();
@@ -85,7 +86,10 @@ const [baseLocation, setBaseLocation] = useState('');
         const updatedsalaryPerKm = { ...salaryPerKm, [service]: e.target.value };
         setSalaryPerKm(updatedsalaryPerKm);
     };
-   
+    const handleServiceVehicle = (service, e) => {
+        const updatedServiceVehicle= { ...serviceVehicle, [service]: e.target.value };
+        setServiceVehicle(updatedServiceVehicle);
+    };
     const handleProfileImageChange = (e) => {
         setProfileImage(e.target.files[0]); // Store the selected file
     };
@@ -130,7 +134,8 @@ const [baseLocation, setBaseLocation] = useState('');
             setConfirmPassword(state.editData.confirmPassword || '');
             setAdvancePayment(state.editData.advancePayment || '');
 
-            
+            setServiceVehicle(state.editData.serviceVehicle || '');
+
             setPersonalPhone(state.editData.personalphone || '');
             setSalaryPerKm(state.editData.salaryPerKm || '');
             setBasicSalaryKm(state.editData.basicSalaryKm || '');
@@ -144,13 +149,35 @@ const [baseLocation, setBaseLocation] = useState('');
 
         }
     }, [state]);
+    const checkPhoneUnique = async (phone) => {
+        const db = getFirestore();
+        const uid = sessionStorage.getItem('uid');
+        const driversRef = collection(db, `user/${uid}/driver`);
+        const querySnapshot = await getDocs(driversRef);
+        let isUnique = true;
+    
+        querySnapshot.forEach((doc) => {
+            if (doc.data().phone === phone) {
+                isUnique = false;
+            }
+        });
+    
+        return isUnique;
+    };
     const addOrUpdateItem = async () => {
         try {
+            // Check if the phone number is unique
+            const isPhoneUnique = await checkPhoneUnique(phone);
+            if (!isPhoneUnique) {
+                console.error('Phone number already exists');
+                alert('Phone number already exists. Please enter a different phone number.');
+                return;
+            }
+    
             if (password !== confirmPassword) {
                 console.error('Password and confirm password do not match');
                 return;
             }
-            
             let profileImageUrl: string = ''; 
 
             if (profileImage) {
@@ -168,6 +195,8 @@ const [baseLocation, setBaseLocation] = useState('');
                 advancePayment,
                 baseLocation,
                 phone,
+                serviceVehicle,
+
                 personalphone,
                 salaryPerKm,
                 basicSalaryKm,
@@ -364,6 +393,8 @@ const [baseLocation, setBaseLocation] = useState('');
                 <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Basic Amount</th>
                 <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>KM for Basic Salary</th>
                 <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>SalaryPerKm</th>
+                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Vehicle Number</th>
+
             </tr>
         </thead>
         <tbody>
@@ -396,6 +427,14 @@ const [baseLocation, setBaseLocation] = useState('');
                             onChange={(e) => handleSalaryPerKmChange(service, e)}
                         />
                         <span style={{ position: 'absolute', right: '45px', top: '50%', transform: 'translateY(-50%)', color: '#555'}}>/km</span>
+                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px', position: 'relative' }}>
+                        <input
+                            style={{ border: 'none', outline: 'none' }} // Set border and outline to none, adjust width to leave space for "KM"
+                            type="text"
+                            value={serviceVehicle[service] || ""}
+                            onChange={(e) => handleServiceVehicle(service, e)}
+                        />
                     </td>
                 </tr>
             ))}
