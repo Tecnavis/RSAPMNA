@@ -1,42 +1,52 @@
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import IconTrashLines from '../../components/Icon/IconTrashLines';
+import IconPencil from '../../components/Icon/IconPencil';
+import Tippy from '@tippyjs/react';
+import 'tippy.js/dist/tippy.css';
+import IconUserPlus from '../../components/Icon/IconUserPlus';
+import { getFirestore, collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import ConfirmationModal from './ConfirmationModal/ConfirmationModal'; // Import the modal component
+import defaultImage from '../../assets/css/images/user-front-side-with-white-background.jpg';
 
-    import React, { useEffect, useState } from 'react';
-    import { Link, useNavigate } from 'react-router-dom';
-    import IconTrashLines from '../../components/Icon/IconTrashLines';
-    import IconPencil from '../../components/Icon/IconPencil';
-    import Tippy from '@tippyjs/react';
-    import 'tippy.js/dist/tippy.css';
-    import IconUserPlus from '../../components/Icon/IconUserPlus';
-    import { getFirestore, collection, getDocs, doc, deleteDoc, updateDoc, addDoc } from 'firebase/firestore';
-    
-    const Staff = () => {
-        const [items, setItems] = useState([] as any);
-        const [editData, setEditData] = useState(null);
-        const db = getFirestore();
-        const navigate = useNavigate();
-        const uid = sessionStorage.getItem('uid')
-    
-        useEffect(() => {
-            const fetchData = async () => {
-                const querySnapshot = await getDocs(collection(db, `user/${uid}/users`));
-                setItems(querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-            };
-            fetchData().catch(console.error);
-        }, []);
-    
-        const handleDelete = async (userId: string) => {
-            try {
-                const userRef = doc(db, `user/${uid}/users`, userId);
-                await deleteDoc(userRef);
-                setItems((prevItems: any) => prevItems.filter((item: any) => item.id !== userId));
-            } catch (error) {
-                console.error('Error deleting document: ', error);
-            }
-        };
+const Staff = () => {
+    const [items, setItems] = useState([]);
+    const [editData, setEditData] = useState(null);
+    const [isModalVisible, setModalVisible] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
+    const db = getFirestore();
+    const navigate = useNavigate();
+    const uid = sessionStorage.getItem('uid');
 
-        const handleEdit = (item) => {
-            navigate(`/users/user-add/${item.id}`, { state: { editData: item } });
+    useEffect(() => {
+        const fetchData = async () => {
+            const querySnapshot = await getDocs(collection(db, `user/${uid}/users`));
+            setItems(querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
         };
-    
+        fetchData().catch(console.error);
+    }, []);
+
+    const handleDelete = async (userId) => {
+        try {
+            const userRef = doc(db, `user/${uid}/users`, userId);
+            await deleteDoc(userRef);
+            setItems((prevItems) => prevItems.filter((item) => item.id !== userId));
+        } catch (error) {
+            console.error('Error deleting document: ', error);
+        }
+        setModalVisible(false);
+    };
+
+    const openDeleteModal = (item) => {
+        setItemToDelete(item);
+        setModalVisible(true);
+    };
+
+    const closeModal = () => {
+        setModalVisible(false);
+        setItemToDelete(null);
+    };
+
     return (
         <div className="grid xl:grid-cols-1 gap-6 grid-cols-1">
             <div className="panel">
@@ -53,11 +63,10 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Id</th>
+                                <th>Photo</th>
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Address</th>
-
                                 <th>Phone Number</th>
                                 <th>User Name</th>
                                 <th>Password </th>
@@ -65,48 +74,47 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {items.map((item,index) => {
-                                return (
-                                    <tr key={item.id}>
-                                        <td>{index+1}</td>
-                                        <td>
-                                            <div className="whitespace-nowrap">{item.name}</div>
-                                        </td>
-                                        <td>{item.email}</td>
-                                        <td>{item.address}</td>
-
-                                        <td>{item.phone_number}</td>
-                                        <td>{item.userName}</td>
-
-                                        <td>{item.password}</td>
-
-                                        <td className="text-center">
-                                            <ul className="flex items-center justify-center gap-2">
-                                                <li>
+                            {items.map((item, index) => (
+                                <tr key={item.id}>
+                                   <td><img src={item.profileImage || defaultImage}  className="w-14 h-14 rounded-full overflow-hidden object-cover" alt="Profile" /></td>
+                                    <td><div className="whitespace-nowrap">{item.name}</div></td>
+                                    <td>{item.email}</td>
+                                    <td>{item.address}</td>
+                                    <td>{item.phone_number}</td>
+                                    <td>{item.userName}</td>
+                                    <td>{item.password}</td>
+                                    <td className="text-center">
+                                        <ul className="flex items-center justify-center gap-2">
+                                            <li>
                                                 <Tippy content="Edit">
-                        <button type="button" onClick={() => handleEdit(item)}>
-                            <IconPencil className="text-primary" />
-                        </button>
-                    </Tippy>
-                                                </li>
-                                                <li>
-                                                    <Tippy content="Delete">
-                                                        <button type="button" onClick={() => handleDelete(item.id)}>
-                                                            <IconTrashLines className="text-danger" />
-                                                        </button>
-                                                    </Tippy>
-                                                </li>
-                                            </ul>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                                                    <button type="button" onClick={() => navigate(`/users/user-add/${item.id}`, { state: { editData: item } })}>
+                                                        <IconPencil className="text-primary" />
+                                                    </button>
+                                                </Tippy>
+                                            </li>
+                                            <li>
+                                                <Tippy content="Delete">
+                                                    <button type="button" onClick={() => openDeleteModal(item)}>
+                                                        <IconTrashLines className="text-danger" />
+                                                    </button>
+                                                </Tippy>
+                                            </li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
-               
             </div>
+
+            <ConfirmationModal
+                isVisible={isModalVisible}
+                onConfirm={() => handleDelete(itemToDelete?.id)}
+                onCancel={closeModal}
+            />
         </div>
     );
 };
+
 export default Staff;
