@@ -72,7 +72,7 @@ const WithoutMapBooking = () => {
     const [selectedDriver, setSelectedDriver] = useState(null);
     const [serviceDetails, setServiceDetails] = useState('');
     const [serviceType, setServiceType] = useState('');
-    const [pickupLocation, setPickupLocation] = useState(null);
+    const [pickupLocation, setPickupLocation] = useState({ lat: '', lng: '', name: '' });
     const [availableServices, setAvailableServices] = useState('');
     const [dropoffLocation, setDropoffLocation] = useState(null);
     const [baseLocation, setBaseLocation] = useState(null);
@@ -90,7 +90,7 @@ const WithoutMapBooking = () => {
     const [showRooms, setShowRooms] = useState([]);
     const [selectedCompany, setSelectedCompany] = useState([]);
     const [currentDateTime, setCurrentDateTime] = useState('');
-    const [manualInput, setManualInput] = useState(pickupLocation ? pickupLocation.name : '');
+    const [manualInput, setManualInput] = useState('');
     const [manualInput1, setManualInput1] = useState(dropoffLocation ? dropoffLocation.name : '');
     const [disableFields, setDisableFields] = useState(false); // State to control field disabling
     const [totalDistance, setTotalDistance] = useState([]);
@@ -130,7 +130,7 @@ const WithoutMapBooking = () => {
             setSelectedDriver(editData.selectedDriver || '');
             setBaseLocation(editData.baseLocation || '');
             setPickupLocation(editData.pickupLocation || '');
-            setUpdatedTotalSalary(editData.updatedTotalSalary || '');
+            // setUpdatedTotalSalary(editData.updatedTotalSalary || '');
             console.log('updatedTotalSalaryyy', editData.updatedTotalSalary);
             setServiceType(editData.serviceType || '');
             setAdjustValue(editData.adjustValue || '');
@@ -148,10 +148,11 @@ const WithoutMapBooking = () => {
         const formattedDateTime = now.toLocaleString();
         setCurrentDateTime(formattedDateTime);
     }, []);
+  
     useEffect(() => {
         console.log('pickupLocationnnn', pickupLocation);
-
-        setManualInput(pickupLocation ? pickupLocation.name : '');
+        // Set the manual input field with the pickup location's name when the location changes
+        setManualInput(pickupLocation.name || '');
     }, [pickupLocation]);
     useEffect(() => {
         if (trappedLocation === 'outsideOfRoad') {
@@ -187,17 +188,24 @@ const WithoutMapBooking = () => {
             const fetchCompanies = async () => {
                 try {
                     const driverCollection = collection(db, `user/${uid}/driver`);
+                    
+                    // Query to fetch companies where companyName is 'Company'
                     const q = query(driverCollection, where('companyName', '==', 'Company'));
                     const querySnapshot = await getDocs(q);
+                    
                     const fetchedCompanies = querySnapshot.docs.map((doc) => ({
                         id: doc.id,
                         ...doc.data(),
                     })) as Company[];
 
-                    const deletedItemIds = JSON.parse(localStorage.getItem('deletedItems') || '[]');
-                    console.log('deletedItemIds', deletedItemIds);
-                    const filteredCompanies = fetchedCompanies.filter((company) => !deletedItemIds.includes(company.id));
-                    console.log('filteredCompanies', filteredCompanies);
+                    console.log("fetchedCompanies", fetchedCompanies);
+
+                    // Filter fetched companies based on status
+                    const filteredCompanies = fetchedCompanies.filter((company) => 
+                        company.status !== 'deleted from UI' && (company.status === '' || !company.status)
+                    );
+
+                    console.log("filteredCompanies", filteredCompanies);
                     setCompanies(filteredCompanies);
                 } catch (error) {
                     console.error('Error fetching companies:', error);
@@ -206,7 +214,7 @@ const WithoutMapBooking = () => {
 
             fetchCompanies();
         }
-    }, [company, db]);
+    }, [company, db, uid]);
     const handleUpdatedTotalSalary = (newTotalSalary) => {
         setUpdatedTotalSalary(newTotalSalary);
     };
@@ -247,7 +255,6 @@ const WithoutMapBooking = () => {
         }
     }, [selectedDriver, serviceType, drivers]);
 
-
     const handleInputChange = (field, value) => {
         switch (field) {
             case 'showroomLocation':
@@ -259,9 +266,9 @@ const WithoutMapBooking = () => {
                 console.log('Selected Showroom:', selectedShowroom);
 
                 if (selectedShowroom) {
-                    console.log('Found showroom:', selectedShowroom.value);
-                    console.log('Setting insuranceAmountBody to:', selectedShowroom.insuranceAmountBody);
-                    setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
+                    // console.log('Found showroom:', selectedShowroom.value);
+                    // console.log('Setting insuranceAmountBody to:', selectedShowroom.insuranceAmountBody);
+                    // setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
 
                     console.log('Setting dropoffLocation to:', {
                         name: selectedShowroom.value,
@@ -285,8 +292,8 @@ const WithoutMapBooking = () => {
                 break;
                 case 'totalSalary':
                     setTotalSalary(value || 0);
-                    const newCalculatedSalary = value - parseFloat(insuranceAmountBody);
-                    handleUpdatedTotalSalary(newCalculatedSalary);
+                    // const newCalculatedSalary = value - parseFloat(insuranceAmountBody);
+                    // handleUpdatedTotalSalary(newCalculatedSalary);
                     break;
             case 'serviceCategory':
                 setServiceCategory(value || 0);
@@ -301,8 +308,8 @@ const WithoutMapBooking = () => {
                     break;
                     case 'insuranceAmountBody':
                         setInsuranceAmountBody(value || 0);
-                        const recalculatedTotalSalary = totalSalary - parseFloat(value);
-                        handleUpdatedTotalSalary(recalculatedTotalSalary);
+                        // const recalculatedTotalSalary = totalSalary - parseFloat(value);
+                        // handleUpdatedTotalSalary(recalculatedTotalSalary);
                         break;
             case 'adjustValue':
                 setAdjustValue(value || 0);
@@ -431,7 +438,6 @@ const WithoutMapBooking = () => {
     const closeModal = () => {
         setIsModalOpen(false);
     };
-
     useEffect(() => {
         const fetchShowroomOptions = async () => {
             try {
@@ -478,14 +484,29 @@ const WithoutMapBooking = () => {
     };
     const handleLocationChange = (e) => {
         const value = e.target.value;
+        console.log('Input Value:', value);
+
         setManualInput(value);
-        handleInputChange('pickupLocation', value);
+
+        // Update pickupLocation with lat/lng values
+        const [lat, lng] = value.split(',').map(coord => coord.trim());
+        
+        setPickupLocation(prevState => ({
+            ...prevState,
+            lat: lat || prevState.lat,
+            lng: lng || prevState.lng,
+            name: value,
+        }));
     };
+
+   
 
     const updateShowroomLocation = (location) => {
         setShowroomLocation(location);
     };
-
+    const handleManualChange = (field, value) => {
+        setPickupLocation((prev) => ({ ...prev, [field]: value }));
+    };
     useEffect(() => {
         const fetchServiceTypes = async () => {
             try {
@@ -518,44 +539,42 @@ const WithoutMapBooking = () => {
                 setDrivers([]);
                 return;
             }
-    
+
             try {
                 const driversCollection = collection(db, `user/${uid}/driver`);
                 const snapshot = await getDocs(driversCollection);
-    
-                // Fetch deleted driver IDs from localStorage using the correct key
-                const deletedItemIds = JSON.parse(localStorage.getItem('deletedUserIds') || '[]');
-                console.log('Deleted Driver IDs:', deletedItemIds);
-    
+
                 const filteredDrivers = snapshot.docs
                     .map((doc) => {
                         const driverData = doc.data();
                         // Only include drivers who have the selected service type and are not deleted
-                        if (!driverData.selectedServices.includes(serviceType) || deletedItemIds.includes(doc.id)) {
+                        if (
+                            !driverData.selectedServices.includes(serviceType) ||
+                            driverData.status === 'deleted from UI'
+                        ) {
                             return null;
                         }
-    
+
                         return {
                             id: doc.id,
                             ...driverData,
                         };
                     })
                     .filter(Boolean); // Remove null entries
-    
+
                 setDrivers(filteredDrivers);
                 console.log('Filtered Drivers:', filteredDrivers);
             } catch (error) {
                 console.error('Error fetching drivers:', error);
             }
         };
-    
+
         if (serviceType && serviceDetails) {
             fetchDrivers().catch(console.error);
         } else {
             setDrivers([]);
         }
-    }, [db, serviceType, serviceDetails]);
-    
+    }, [db, uid, serviceType, serviceDetails]);
     useEffect(() => {
         const fetchServiceDetails = async () => {
             if (!serviceType) {
@@ -680,11 +699,23 @@ const WithoutMapBooking = () => {
             console.log('totalSalary', totalSalary);
 
             setTotalDistances(totalDistances); // Set totalDistances state
-            // setTotalSalary(totalSalary);
-            setUpdatedTotalSalary(totalSalary);
+            setTotalSalary(totalSalary);
+            // setUpdatedTotalSalary(totalSalary);
         }
     }, [drivers, serviceDetails, distance]);
+    useEffect(() => {
+        let newTotalSalary = totalSalary;
 
+        if (serviceCategory === 'Body Shop' && bodyShope === 'insurance') {
+            newTotalSalary -= parseFloat(insuranceAmountBody || 0);
+        }
+
+        if (newTotalSalary !== updatedTotalSalary) {
+            setUpdatedTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
+//             onUpdateTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
+        }
+    }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope,adjustValue]);
+    
     const renderServiceVehicle = (serviceVehicle, serviceType) => {
         if (serviceVehicle && serviceVehicle[serviceType]) {
             return serviceVehicle[serviceType];
@@ -720,26 +751,22 @@ const WithoutMapBooking = () => {
                 } else if (company === 'rsa') {
                     finalFileNumber = fileNumber;
                 }
-                console.log('Pickup Locationmmm:', pickupLocation);
-                let pickupLat = '';
-                let pickupLng = '';
-                if (pickupLocation && pickupLocation.name) {
-                    const parts = pickupLocation.name.split(',').map((part) => part.trim());
-                    if (parts.length >= 3) {
-                        // Adjusted to 3 to handle case with location, lat, lng
-                        pickupLat = parts[1];
-                        pickupLng = parts[2];
-                    }
-                }
+                // console.log('Pickup Locationmmm:', pickupLocation);
+                // let pickupLat = '';
+                // let pickupLng = '';
+                // if (pickupLocation && pickupLocation.name) {
+                //     const parts = pickupLocation.name.split(',').map((part) => part.trim());
+                //     if (parts.length >= 3) {
+                //         // Adjusted to 3 to handle case with location, lat, lng
+                //         pickupLat = parts[1];
+                //         pickupLng = parts[2];
+                //     }
+                // }
                 const bookingData = {
                     ...bookingDetails,
                     driver: driverName,
                     totalSalary: totalSalary,
-                    pickupLocation: {
-                        ...pickupLocation,
-                        lat: pickupLat,
-                        lng: pickupLng,
-                    },
+                    pickupLocation:pickupLocation,
                     dropoffLocation: dropoffLocation,
                     status: 'booking added',
                     dateTime: dateTime, // Use the formatted date
@@ -770,7 +797,7 @@ const WithoutMapBooking = () => {
                     selectedDriver: selectedDriver || '',
                     trappedLocation: trappedLocation || '',
                     updatedTotalSalary: updatedTotalSalary || '',
-                    insuranceAmount: insuranceAmountBody || '',
+                    insuranceAmountBody: insuranceAmountBody || '',
                     paymentStatus: 'Not Paid',
                 };
                 if (editData) {
@@ -796,7 +823,8 @@ const WithoutMapBooking = () => {
         }
     };
 
-    return (
+ 
+  return (
         <div className="p-1 flex-1 mt-4 mx-24 shadow-lg rounded-lg bg-lightblue-100" style={{ background: 'lightblue' }}>
             <div className="flex justify-end w-full mb-4">
                 <div
@@ -902,29 +930,57 @@ const WithoutMapBooking = () => {
 
                     <div style={{ width: '100%' }}>
                           
-                        <div>
-                            <div className="flex items-center mt-4">
-                                <label htmlFor="pickupLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    Pickup Location
-                                </label>
-                                <div className="search-box ltr:mr-2 rtl:ml-2  mb-0" style={{ width: '100%' }}>
-                                    <input
-                                        className="form-input flex-1"
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.5rem',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '5px',
-                                            fontSize: '1rem',
-                                            outline: 'none',
-                                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                        }}
-                                        type="text"
-                                        placeholder="Pickup Location"
-                                        onChange={handleLocationChange}
-                                        value={manualInput}
-                                    />
-                                </div>
+                    <div>
+                    <div className="flex items-center mt-4">
+            <label htmlFor="pickupLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
+                Pickup Location
+            </label>
+            <div className="search-box ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
+                <input
+                    id="pickupLocation"
+                    className="form-input flex-1"
+                    style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid #ccc',
+                        borderRadius: '5px',
+                        fontSize: '1rem',
+                        outline: 'none',
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                    }}
+                    type="text"
+                    placeholder="Pickup Location"
+                    onChange={handleLocationChange}
+                    value={manualInput} // Bind the input to manualInput state
+                />
+            </div>
+            <div className="search-box ltr:mr-2 rtl:ml-2 w-2/3 mb-0">
+                <input
+                    id="latLng"
+                    className="form-input flex-1"
+                    style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid #ccc',
+                        borderRadius: '5px',
+                        fontSize: '1rem',
+                        outline: 'none',
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                    }}
+                    type="text"
+                    placeholder="Latitude, Longitude"
+                    value={
+                        pickupLocation.lat && pickupLocation.lng
+                            ? `${pickupLocation.lat}, ${pickupLocation.lng}`
+                            : ''
+                    }
+                    onChange={(e) => {
+                        const [lat, lng] = e.target.value.split(',').map(coord => coord.trim());
+                        handleManualChange('lat', lat);
+                        handleManualChange('lng', lng);
+                    }}
+                />
+            </div>
 
                                 <a
                                     href={`https://www.google.co.in/maps/@${pickupLocation?.lat || '11.0527369'},${pickupLocation?.lng || '76.0747136'},15z?entry=ttu`}
@@ -950,6 +1006,7 @@ const WithoutMapBooking = () => {
                                     <IconMapPin />
                                 </a>
                             </div>
+
                             <div className="mt-4 flex items-center">
                                 <label htmlFor="baseLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
                                     Start Location
@@ -1380,6 +1437,7 @@ const WithoutMapBooking = () => {
                         <VehicleSection
                     showroomLocation={showroomLocation}
                                 totalSalary={totalSalary}
+                                updatedTotalSalary={updatedTotalSalary}
                                 onUpdateTotalSalary={handleUpdateTotalSalary}
                                 insuranceAmountBody={insuranceAmountBody}
                                 serviceCategory={serviceCategory}
@@ -1415,7 +1473,7 @@ const WithoutMapBooking = () => {
                                 </div>
                             </div>
                             <div className="mt-4 flex items-center">
-                                <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
+                                {/* <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
                                     Insurance Amount Body
                                 </label>
                                 <div className="form-input flex-1">
@@ -1427,7 +1485,8 @@ const WithoutMapBooking = () => {
                                         value={insuranceAmountBody}
                                         onChange={(e) => handleInputChange('insuranceAmountBody', e.target.value)}
                                     />
-                                </div>
+                                </div> */}
+                                {insuranceAmountBody}
                             </div>
                             <div className="mt-4 flex items-center">
                                 <label htmlFor="updatedTotalSalary" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
@@ -1646,10 +1705,14 @@ const WithoutMapBooking = () => {
                         <option value="2">2 Wheeler</option>
                         <option value="3">3 Wheeler</option>
                         <option value="4">4 Wheeler</option>
-                        <option value="5">5 Wheeler</option>
-                        <option value="6">6 Wheeler</option>
-                        <option value="7">7 Wheeler</option>
-                        <option value="8">8 Wheeler</option>
+                        <option value="6">8 Wheeler</option>
+                        <option value="8">12 Wheeler</option>
+                        <option value="8">14 Wheeler</option>
+
+                        <option value="8">16 Wheeler</option>
+                        <option value="8">20 Wheeler</option>
+
+
                     </select>
                 </div>
                 <div className="flex items-center mt-4" style={{ width: '100%' }}>

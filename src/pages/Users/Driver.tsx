@@ -5,7 +5,7 @@ import IconPencil from '../../components/Icon/IconPencil';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import IconUserPlus from '../../components/Icon/IconUserPlus';
-import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where, doc, updateDoc } from 'firebase/firestore';
 import IconMenuScrumboard from '../../components/Icon/Menu/IconMenuScrumboard';
 
 const Driver = () => {
@@ -16,43 +16,99 @@ const Driver = () => {
     const navigate = useNavigate();
     console.log("data", items);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            const driverCollection = collection(db, `user/${uid}/driver`);
-            const q = query(driverCollection, where('companyName', '==', 'RSA'));
+    const fetchData = async () => {
+        console.log('Fetching data from Firestore...');
+    
+        const driverCollection = collection(db, `user/${uid}/driver`);
+        console.log('Driver collection reference:', driverCollection);
+        
+        const q = query(
+            driverCollection,
+            where('companyName', '==', 'RSA')
+            // No condition for `status` here
+        );
+        console.log('Query created with parameters:', q);
+    
+        try {
+            console.log('Executing query...');
             const querySnapshot = await getDocs(q);
-
-            // Filter out deleted items
-            const deletedIds = JSON.parse(localStorage.getItem('deletedUserIds') || '[]');
-            const filteredItems = querySnapshot.docs
-                .map((doc) => ({ id: doc.id, ...doc.data() }))
-                .filter((item: any) => !deletedIds.includes(item.id));
-
+            console.log('Query executed. Snapshot:', querySnapshot);
+    
+            // Filter items client-side
+            const filteredItems = querySnapshot.docs.filter((doc) => {
+                const data = doc.data();
+                return !data.status || data.status === ''; // Check if `status` is missing or empty
+            }).map((doc) => {
+                console.log('Document data:', doc.data());
+                return { id: doc.id, ...doc.data() };
+            });
+            console.log('Filtered items:', filteredItems);
+    
             setItems(filteredItems);
-        };
-        fetchData().catch(console.error);
-    }, []);
-
-    const handleDelete = async (userId: string) => {
-        const confirmDelete = window.confirm('Are you sure you want to delete this user?');
-        if (confirmDelete) {
-            const enteredIdNumber = window.prompt('Please enter the ID number of the driver:');
-            const driver = items.find((item: any) => item.id === userId);
-
-            if (driver && enteredIdNumber === driver.idnumber) {
-                // Update the local state
-                setItems((prevItems: any) => prevItems.filter((item: any) => item.id !== userId));
-
-                // Store the deleted ID in localStorage
-                let deletedIds = JSON.parse(localStorage.getItem('deletedUserIds') || '[]');
-                deletedIds.push(userId);
-                localStorage.setItem('deletedUserIds', JSON.stringify(deletedIds));
-            } else {
-                window.alert('ID number is incorrect. Deletion aborted.');
-            }
+            console.log('State updated with fetched data.');
+        } catch (error) {
+            console.error('Error fetching data:', error); // Log errors if any
         }
     };
+    
 
+    useEffect(() => {
+        console.log('useEffect triggered to fetch data.');
+        fetchData().catch(console.error); // Correctly call fetchData inside useEffect
+    }, []);
+
+   
+    const handleDelete = async (userId: string) => {
+        console.log('handleDelete called with userId:', userId);
+    
+        // Prompt user to enter the password
+        const enteredPassword = prompt('Please enter the password to confirm deletion:');
+        console.log('User entered password:', enteredPassword);
+    
+        // Check if the entered password matches the required password
+        const requiredPassword = 'RSA@123';
+        if (enteredPassword === requiredPassword) {
+            console.log('Password is correct, proceeding with deletion.');
+    
+            // Confirm deletion
+            const confirmDelete = window.confirm('Are you sure you want to delete this user?');
+            console.log('User confirmed deletion:', confirmDelete);
+    
+            if (confirmDelete) {
+                try {
+                    console.log('Preparing to update document with userId:', userId);
+                    
+                    // Get document reference
+                    const userDoc = doc(db, `user/${uid}/driver`, userId);
+                    console.log('Document reference obtained:', userDoc);
+    
+                    // Update document status
+                    await updateDoc(userDoc, { status: 'deleted from UI' });
+                    console.log('Document updated successfully');
+    
+                    // Update local state
+                    setItems((prevItems) => {
+                        const updatedItems = prevItems.filter(item => item.id !== userId);
+                        console.log('Items state updated:', updatedItems);
+                        return updatedItems;
+                    });
+    
+                    alert('User deleted successfully.');
+                    console.log('User deletion confirmed by alert');
+                } catch (error) {
+                    console.error('Error deleting user:', error);
+                    alert('Failed to delete user.');
+                    console.error('Error details:', error);
+                }
+            } else {
+                console.log('User cancelled the deletion.');
+            }
+        } else {
+            console.log('Incorrect password, deletion canceled.');
+            alert('Incorrect password. Deletion canceled.');
+        }
+    };
+    
     const handleEdit = (item) => {
         navigate(`/users/driver-add/${item.id}`, { state: { editData: item } });
     };

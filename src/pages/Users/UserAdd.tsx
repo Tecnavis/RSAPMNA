@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { addDoc, collection, getFirestore, doc, updateDoc } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import styles from './useradd.module.css';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import defaultImage from '../../assets/css/images/user-front-side-with-white-background.jpg';
+import { addDoc, collection, getFirestore, doc, updateDoc, getDocs } from 'firebase/firestore';
 
 const UserAdd = () => {
     const [name, setName] = useState('');
@@ -37,6 +33,23 @@ const UserAdd = () => {
             setImagePreview(state.editData.profileImage || '');
         }
     }, [state]);
+          
+    const checkPhoneUnique = async (phone_number) => {
+        const db = getFirestore();
+        const uid = sessionStorage.getItem('uid');
+        const usersRef = collection(db, `user/${uid}/users`);
+        const querySnapshot = await getDocs(usersRef);
+        let isUnique = true;
+    
+        querySnapshot.forEach((doc) => {
+            if (doc.data().phone_number === phone_number) {
+                isUnique = false;
+            }
+        });
+    
+        return isUnique;
+    };
+    
 
     const validate = () => {
         let formErrors = {};
@@ -83,6 +96,13 @@ const UserAdd = () => {
 
         if (uid) {
             try {
+                  // Check if the phone number is unique
+            const isPhoneUnique = await checkPhoneUnique(phone_number);
+            if (!isPhoneUnique) {
+                console.error('Phone number already exists');
+                alert('Phone number already exists. Please enter a different phone number.');
+                return;
+            }
                 let profileImageUrl = '';
 
                 if (profileImage) {

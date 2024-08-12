@@ -9,11 +9,12 @@ const CompanyCreationDetails = () => {
     const { id } = useParams();
     const [driver, setDriver] = useState(null);
     const db = getFirestore();
-    
+    const uid = sessionStorage.getItem('uid')
+
     useEffect(() => {
         const fetchDriver = async () => {
             try {
-                const docRef = doc(db, 'driver', id); // Construct reference to the document with the provided ID
+                const docRef = doc(db,`user/${uid}/driver`, id); // Construct reference to the document with the provided ID
                 const docSnap = await getDoc(docRef); // Fetch the document snapshot
 
                 if (docSnap.exists()) {
