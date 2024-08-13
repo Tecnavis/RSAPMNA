@@ -23,7 +23,7 @@ interface Showroom {
     name: string;
 }
 
-const MapBooking = () => {
+const MapBooking =  ({ activeForm }) => {
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid')
     const navigate = useNavigate();
@@ -48,6 +48,7 @@ const MapBooking = () => {
         serviceType: '',
         serviceVehicle: '',
         vehicleType: '',
+        totalDriverDistance: '',
 
         driver: '',
         vehicleNumber: '',
@@ -107,7 +108,6 @@ const MapBooking = () => {
     console.log('totalSalary', totalSalary);
   const [errors, setErrors] = useState({});
     const [serviceCategory, setServiceCategory] = useState('');
-    const [legDistances, setLegDistances] = useState([]);
     const [availableServices, setAvailableServices] = useState('');
     const [adjustValue, setAdjustValue] = useState('');
 const [bodyShope, setBodyShope]= useState('');
@@ -202,17 +202,24 @@ const [bodyShope, setBodyShope]= useState('');
             const fetchCompanies = async () => {
                 try {
                     const driverCollection = collection(db, `user/${uid}/driver`);
+                    
+                    // Query to fetch companies where companyName is 'Company'
                     const q = query(driverCollection, where('companyName', '==', 'Company'));
                     const querySnapshot = await getDocs(q);
+                    
                     const fetchedCompanies = querySnapshot.docs.map((doc) => ({
                         id: doc.id,
                         ...doc.data(),
                     })) as Company[];
 
-                    const deletedItemIds = JSON.parse(localStorage.getItem('deletedItems') || '[]');
-                    console.log('deletedItemIds', deletedItemIds);
-                    const filteredCompanies = fetchedCompanies.filter((company) => !deletedItemIds.includes(company.id));
-                    console.log('filteredCompanies', filteredCompanies);
+                    console.log("fetchedCompanies", fetchedCompanies);
+
+                    // Filter fetched companies based on status
+                    const filteredCompanies = fetchedCompanies.filter((company) => 
+                        company.status !== 'deleted from UI' && (company.status === '' || !company.status)
+                    );
+
+                    console.log("filteredCompanies", filteredCompanies);
                     setCompanies(filteredCompanies);
                 } catch (error) {
                     console.error('Error fetching companies:', error);
@@ -221,14 +228,30 @@ const [bodyShope, setBodyShope]= useState('');
 
             fetchCompanies();
         }
-    }, [company, db]);
+    }, [company, db, uid]);
 
   
-    const handleUpdatedTotalSalary = (newTotalSalary) => {
-        setUpdatedTotalSalary(newTotalSalary);
+    const handleUpdateTotalSalary = (newTotaSalary) => {
+        console.log("newTotalSalary",newTotaSalary)
+        setUpdatedTotalSalary(newTotaSalary);
     };
+    const handleInsuranceAmountBodyChange = (amount) => {
+        console.log("firstamount",amount)
+        setInsuranceAmountBody(amount);
 
-   
+    };
+    const handleAdjustValueChange = (newAdjustValue) => {
+        console.log('Adjust Valuee:', newAdjustValue);
+        setAdjustValue(newAdjustValue);
+    };
+    const handleServiceCategoryChange = (service) => {
+        setServiceCategory(service);
+    };
+    const handleBodyInsuranceChange =(insurance) =>{
+        console.log("firstinsurance",insurance)
+    setBodyShope(insurance)
+    }
+ 
     useEffect(() => {
         if (selectedDriver) {
             const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
@@ -244,27 +267,7 @@ const [bodyShope, setBodyShope]= useState('');
         }
     }, [selectedDriver, serviceType, drivers]);
 
-    const handleUpdateTotalSalary = (newTotalSalary) => {
-        console.log("newTotalSalary",newTotalSalary)
-        setUpdatedTotalSalary(newTotalSalary);
-    };
-
-    const handleInsuranceAmountBodyChange = (amount) => {
-        console.log("firstamount",amount)
-        setInsuranceAmountBody(amount);
-
-    };
-    const handleAdjustValueChange = (newAdjustValue) => {
-        console.log('Adjust Valuee:', newAdjustValue);
-        setAdjustValue(newAdjustValue);
-    };
-    const handleServiceCategoryChange = (service) => {
-        setServiceCategory(service);
-    };
-const handleBodyInsuranceChange =(insurance) =>{
-    console.log("firstinsurance",insurance)
-setBodyShope(insurance)
-}
+    
     const handleInputChange = (field, value) => {
         switch (field) {
             case 'showroomLocation':
@@ -276,19 +279,16 @@ setBodyShope(insurance)
                 console.log('Selected Showroom:', selectedShowroom);
     
                 if (selectedShowroom) {
-                    console.log('Found showroom:', selectedShowroom.value);
-                    console.log('Setting insuranceAmountBody to:', selectedShowroom.insuranceAmountBody);
-                    setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
+                    const lat = selectedShowroom.locationLatLng.lat;
+                    const lng = selectedShowroom.locationLatLng.lng;
+                    const dropoffLocationString = `${lat},${lng}`;
     
-                    console.log('Setting dropoffLocation to:', {
-                        name: selectedShowroom.value,
-                        lat: selectedShowroom.locationLatLng.lat,
-                        lng: selectedShowroom.locationLatLng.lng,
-                    });
+                    console.log('Setting dropoffLocation to:', dropoffLocationString);
                     setDropoffLocation({
                         name: selectedShowroom.value,
-                        lat: selectedShowroom.locationLatLng.lat,
-                        lng: selectedShowroom.locationLatLng.lng,
+                        lat,
+                        lng,
+                        latLngString: dropoffLocationString, // Add the lat,lng string
                     });
                 } else {
                     console.log('No showroom found, resetting values');
@@ -297,18 +297,29 @@ setBodyShope(insurance)
                         name: '',
                         lat: null,
                         lng: null,
+                        latLngString: '', // Reset the lat,lng string
                     });
                 }
                 break;
             case 'totalSalary':
                 setTotalSalary(value || 0);
-                const newCalculatedSalary = value - parseFloat(insuranceAmountBody);
-                handleUpdatedTotalSalary(newCalculatedSalary);
+               
                 break;
+                case 'serviceCategory':
+                setServiceCategory(value || 0);
+
+                break;
+            case 'availableServices':
+                setAvailableServices(value || 0);
+
+                break;
+                case 'bodyShope':
+                    setBodyShope(value || '');
+                    break;
+                  
             case 'insuranceAmountBody':
                 setInsuranceAmountBody(value || 0);
-                const recalculatedTotalSalary = totalSalary - parseFloat(value);
-                handleUpdatedTotalSalary(recalculatedTotalSalary);
+               
                 break;
             case 'adjustValue':
                 setAdjustValue(value || '');
@@ -495,43 +506,42 @@ setBodyShope(insurance)
                 setDrivers([]);
                 return;
             }
-    
+
             try {
                 const driversCollection = collection(db, `user/${uid}/driver`);
                 const snapshot = await getDocs(driversCollection);
-    
-                // Fetch deleted driver IDs from localStorage using the correct key
-                const deletedItemIds = JSON.parse(localStorage.getItem('deletedUserIds') || '[]');
-                console.log('Deleted Driver IDs:', deletedItemIds);
-    
+
                 const filteredDrivers = snapshot.docs
                     .map((doc) => {
                         const driverData = doc.data();
                         // Only include drivers who have the selected service type and are not deleted
-                        if (!driverData.selectedServices.includes(serviceType) || deletedItemIds.includes(doc.id)) {
+                        if (
+                            !driverData.selectedServices.includes(serviceType) ||
+                            driverData.status === 'deleted from UI'
+                        ) {
                             return null;
                         }
-    
+
                         return {
                             id: doc.id,
                             ...driverData,
                         };
                     })
                     .filter(Boolean); // Remove null entries
-    
+
                 setDrivers(filteredDrivers);
                 console.log('Filtered Drivers:', filteredDrivers);
             } catch (error) {
                 console.error('Error fetching drivers:', error);
             }
         };
-    
+
         if (serviceType && serviceDetails) {
             fetchDrivers().catch(console.error);
         } else {
             setDrivers([]);
         }
-    }, [db, serviceType, serviceDetails]);
+    }, [db, uid, serviceType, serviceDetails]);
     
 
     useEffect(() => {
@@ -820,8 +830,8 @@ setBodyShope(insurance)
     const formatLocation = (location) => {
         const [name, lat, lng] = location.split(', ').map((item) => item.trim());
         return {
-            lat: parseFloat(lat),
-            lng: parseFloat(lng),
+            lat: lat, // Keep lat as a string
+            lng: lng, // Keep lng as a string
             name: `${name}, ${lat}, ${lng}`,
         };
     };
@@ -835,7 +845,6 @@ setBodyShope(insurance)
                 const currentDate = new Date();
                 const dateTime = formatDate(currentDate); // Use the formatted date
                 const formattedPickupLocation = formatLocation(pickupLocation);
-                // const formattedLegDistances = formatLegDistances(legDistances);
 
                 if (company === 'self') {
                     finalFileNumber = `PMNA${bookingId}`;
@@ -849,13 +858,14 @@ setBodyShope(insurance)
                     pickupLocation: formattedPickupLocation,
                     dropoffLocation: dropoffLocation,
                     status: 'booking added',
+                    statusEdit: activeForm === 'map' ? 'withoutmapbooking' : 'mapbooking',
                     dateTime: dateTime,
                     totalDriverSalary: totalDriverSalary,
                     totalDriverDistance: totalDriverDistance,
                     bookingId: `${bookingId}`,
                     createdAt: serverTimestamp(),
                     comments: comments || '',
-                    totalDistance: distance,
+                    // totalDistance: distance,
                     distance: distance,
                     showRooms: showroomLocation,
                     adjustValue:adjustValue || '',
@@ -878,7 +888,6 @@ setBodyShope(insurance)
                     fileNumber: finalFileNumber,
                     selectedDriver: selectedDriver || '',
                     trappedLocation: trappedLocation || '',
-                    legDistances: legDistances || '',
                     updatedTotalSalary: updatedTotalSalary || '',
                     insuranceAmount: insuranceAmountBody || '',
                     bodyShope: bodyShope || '',
@@ -1552,11 +1561,11 @@ setBodyShope(insurance)
                     
                           
 
-                    <div className="flex items-center mt-4">
-                                <label htmlFor="dropoffLocation" className="  mb-0">
+                    <div className="flex items-center mt-4 ">
+                                <label htmlFor="dropoffLocation" className="  w-1/3 mb-0">
                                     Drop off Location
                                 </label>
-                                <div className="search-box   mb-0" style={{width:"100%"}}>
+                                <div className="search-box " style={{width:"100%"}}>
                                     <input
                                         style={{
                                             width: '100%',
@@ -1822,6 +1831,7 @@ setBodyShope(insurance)
                     <VehicleSection
                     showroomLocation={showroomLocation}
                                 totalSalary={totalSalary}
+                                updatedTotalSalary={updatedTotalSalary}
                                 onUpdateTotalSalary={handleUpdateTotalSalary}
                                 insuranceAmountBody={insuranceAmountBody}
                                 serviceCategory={serviceCategory}

@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { addDoc, collection, getFirestore, doc, updateDoc, getDocs } from 'firebase/firestore';
+import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import defaultImage from '../../assets/css/images/user-front-side-with-white-background.jpg'
+import styles from './useradd.module.css'
 
 const UserAdd = () => {
     const [name, setName] = useState('');
