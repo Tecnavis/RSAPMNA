@@ -262,52 +262,42 @@ const [advancePayment, setAdvancePayment] = useState('0');
                                     <label htmlFor="advancePayment">Advance payment</label>
                                     <input id="advancePayment" type="advancePayment" className="form-input" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} />
                                 </div> */}
-                                <div>
+    <div>
     <label htmlFor="password">Password</label>
-    {editData ? (
-        <div>{password}</div>
-    ) : (
-        <input
-            id="password"
-            type={showPassword ? "text" : "password"}
-            placeholder="Enter password"
-            className="form-input"
-            value={password}
-            onChange={handlePasswordChange}
-        />
-    )}
-    {!editData && (
-        <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-        >
-            {showPassword ? "Hide" : "Show"} Password
-        </button>
-    )}
+    <input
+        id="password"
+        type={showPassword ? "text" : "password"}
+        placeholder="Enter password"
+        className="form-input"
+        value={password}
+        onChange={handlePasswordChange}
+    />
+    <button
+        type="button"
+        onClick={() => setShowPassword(!showPassword)}
+    >
+        {showPassword ? "Hide" : "Show"} Password
+    </button>
 </div>
 <div>
     <label htmlFor="confirmPassword">Confirm Password</label>
-    {editData ? (
-        <div>{confirmPassword}</div>
-    ) : (
-        <input
-            id="confirmPassword"
-            type={showConfirmPassword ? "text" : "password"}
-            placeholder="Confirm password"
-            className="form-input"
-            value={confirmPassword}
-            onChange={handleConfirmPasswordChange}
-        />
-    )}
-    {!editData && (
-        <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-        >
-            {showConfirmPassword ? "Hide" : "Show"} Confirm Password
-        </button>
-    )}
+    <input
+        id="confirmPassword"
+        type={showConfirmPassword ? "text" : "password"}
+        placeholder="Confirm password"
+        className="form-input"
+        value={confirmPassword}
+        onChange={handleConfirmPasswordChange}
+    />
+    <button
+        type="button"
+        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+    >
+        {showConfirmPassword ? "Hide" : "Show"} Confirm Password
+    </button>
 </div>
+
+
 
 
                                 <div>
