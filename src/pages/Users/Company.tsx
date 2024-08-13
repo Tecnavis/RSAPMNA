@@ -7,12 +7,15 @@ import 'tippy.js/dist/tippy.css';
 import IconUserPlus from '../../components/Icon/IconUserPlus';
 import { getFirestore, collection, getDocs, where, query, doc, updateDoc } from 'firebase/firestore';
 import IconMenuScrumboard from '../../components/Icon/Menu/IconMenuScrumboard';
-
+import defaultImage from '../../assets/css/images/user-front-side-with-white-background.jpg'
+import ConfirmationModal from './ConfirmationModal/ConfirmationModal'; // Import the modal component
 const Company = () => {
     const [items, setItems] = useState([] as any);
     const db = getFirestore();
     const navigate = useNavigate();
     const uid = sessionStorage.getItem('uid')
+    const [isModalVisible, setModalVisible] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -55,35 +58,27 @@ const Company = () => {
         fetchData().catch(console.error); // Correctly call fetchData inside useEffect
     }, []);
    
-    const handleDelete = async (userId: string) => {
-        // Confirm deletion
-        const confirmDelete = window.confirm('Are you sure you want to delete this user?');
-        
-        if (confirmDelete) {
-            // Prompt for password
-            const enteredPassword = window.prompt('Please enter the password to confirm deletion:');
-            const requiredPassword = 'RSA@123';
-            
-            // Check if the entered password matches the required password
-            if (enteredPassword === requiredPassword) {
-                try {
-                    // Update Firestore document
-                    const userDoc = doc(db, `user/${uid}/driver`, userId);
+    const handleDelete = async (userId) => {
+        try {
+            const userDoc = doc(db, `user/${uid}/driver`, userId);
                     await updateDoc(userDoc, { status: 'deleted from UI' });
                     
                     // Update local state
                     setItems((prevItems: any) => prevItems.filter((item: any) => item.id !== userId));
-                    
-                    alert('User deleted successfully.');
-                } catch (error) {
-                    console.error('Error deleting user:', error);
-                    alert('Failed to delete user.');
-                }
-            } else {
-                window.alert('Incorrect password. Deletion aborted.');
-            }
+        } catch (error) {
+            console.error('Error deleting document: ', error);
         }
+        setModalVisible(false);
     };
+    const openDeleteModal = (item) => {
+        setItemToDelete(item);
+        setModalVisible(true);
+    };
+    const closeModal = () => {
+        setModalVisible(false);
+        setItemToDelete(null);
+    };
+
     
     const handleEdit = (item) => {
         navigate(`/users/company-add/${item.id}`, { state: { editData: item } });
@@ -105,7 +100,7 @@ const Company = () => {
                     <table>
                         <thead>
                             <tr>
-                                <th>Id</th>
+                                <th>Photo</th>
                                 <th>Driver Name</th>
                                 <th>ID Number</th>
                                 <th>Phone Number</th>
@@ -118,7 +113,9 @@ const Company = () => {
                             {items.map((item, index) => {
                                 return (
                                     <tr key={item.id}>
-                                        <td>{index + 1}</td>
+                                        <td>  <div className="w-14 h-14 rounded-full overflow-hidden">
+                                            <img src={item.profileImageUrl || defaultImage} className="w-full h-full object-cover" alt="Profile" />
+                                        </div></td>
                                         <td>
                                             <div className="whitespace-nowrap">{item.driverName}</div>
                                         </td>
@@ -149,7 +146,7 @@ const Company = () => {
                                                 </li>
                                                 <li>
                                                     <Tippy content="Delete">
-                                                        <button type="button" onClick={() => handleDelete(item.id)}>
+                                                        <button type="button" onClick={() => openDeleteModal(item)}>
                                                             <IconTrashLines className="text-danger" />
                                                         </button>
                                                     </Tippy>
@@ -170,6 +167,7 @@ const Company = () => {
                     </table>
                 </div>
             </div>
+            <ConfirmationModal isVisible={isModalVisible} onConfirm={() => handleDelete(itemToDelete?.id)} onCancel={closeModal} />
         </div>
     );
 };
