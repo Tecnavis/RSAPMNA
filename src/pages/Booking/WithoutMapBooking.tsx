@@ -19,7 +19,7 @@ interface Showroom {
     name: string;
 }
 
-const WithoutMapBooking = () => {
+const WithoutMapBooking = ({ activeForm }) => {
     const db = getFirestore();
     const navigate = useNavigate();
     const [bookingId, setBookingId] = useState<string>('');
@@ -29,6 +29,8 @@ const WithoutMapBooking = () => {
     }, []);
     const [updatedTotalSalary, setUpdatedTotalSalary] = useState(0);
     const [companies, setCompanies] = useState([]);
+    const [totalDriverDistance, setTotalDriverDistance] = useState(0);
+
     const [bookingDetails, setBookingDetails] = useState({
         company: '',
         fileNumber: '',
@@ -58,7 +60,6 @@ const WithoutMapBooking = () => {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [vehicleType, setVehicleType] = useState('');
     const [totalDriverSalary, setTotalDriverSalary] = useState('');
-    const [totalDriverDistance, setTotalDriverDistance] = useState('');
     const [serviceCategory, setServiceCategory] = useState('');
     const [company, setCompany] = useState('');
     const [customerName, setCustomerName] = useState('');
@@ -215,9 +216,9 @@ const WithoutMapBooking = () => {
             fetchCompanies();
         }
     }, [company, db, uid]);
-    const handleUpdatedTotalSalary = (newTotalSalary) => {
-        setUpdatedTotalSalary(newTotalSalary);
-    };
+    // const handleUpdatedTotalSalary = (newTotalSalary) => {
+    //     setUpdatedTotalSalary(newTotalSalary);
+    // };
     const handleUpdateTotalSalary = (newTotaSalary) => {
         console.log("newTotalSalary",newTotaSalary)
         setUpdatedTotalSalary(newTotaSalary);
@@ -260,25 +261,22 @@ const WithoutMapBooking = () => {
             case 'showroomLocation':
                 console.log('Setting showroomLocation:', value);
                 setShowroomLocation(value);
-
+    
                 // Find the selected showroom based on the selected value
                 const selectedShowroom = showrooms.find((show) => show.value === value);
                 console.log('Selected Showroom:', selectedShowroom);
-
+    
                 if (selectedShowroom) {
-                    // console.log('Found showroom:', selectedShowroom.value);
-                    // console.log('Setting insuranceAmountBody to:', selectedShowroom.insuranceAmountBody);
-                    // setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
-
-                    console.log('Setting dropoffLocation to:', {
-                        name: selectedShowroom.value,
-                        lat: selectedShowroom.locationLatLng.lat,
-                        lng: selectedShowroom.locationLatLng.lng,
-                    });
+                    const lat = selectedShowroom.locationLatLng.lat;
+                    const lng = selectedShowroom.locationLatLng.lng;
+                    const dropoffLocationString = `${lat},${lng}`;
+    
+                    console.log('Setting dropoffLocation to:', dropoffLocationString);
                     setDropoffLocation({
                         name: selectedShowroom.value,
-                        lat: selectedShowroom.locationLatLng.lat,
-                        lng: selectedShowroom.locationLatLng.lng,
+                        lat,
+                        lng,
+                        latLngString: dropoffLocationString, // Add the lat,lng string
                     });
                 } else {
                     console.log('No showroom found, resetting values');
@@ -287,6 +285,7 @@ const WithoutMapBooking = () => {
                         name: '',
                         lat: null,
                         lng: null,
+                        latLngString: '', // Reset the lat,lng string
                     });
                 }
                 break;
@@ -751,17 +750,7 @@ const WithoutMapBooking = () => {
                 } else if (company === 'rsa') {
                     finalFileNumber = fileNumber;
                 }
-                // console.log('Pickup Locationmmm:', pickupLocation);
-                // let pickupLat = '';
-                // let pickupLng = '';
-                // if (pickupLocation && pickupLocation.name) {
-                //     const parts = pickupLocation.name.split(',').map((part) => part.trim());
-                //     if (parts.length >= 3) {
-                //         // Adjusted to 3 to handle case with location, lat, lng
-                //         pickupLat = parts[1];
-                //         pickupLng = parts[2];
-                //     }
-                // }
+        
                 const bookingData = {
                     ...bookingDetails,
                     driver: driverName,
@@ -773,19 +762,20 @@ const WithoutMapBooking = () => {
                     bookingId: `${bookingId}`,
                     createdAt: serverTimestamp(),
                     comments: comments || '',
-                    totalDistance: totalDistance,
+                    // totalDistance: totalDistance,
                     distance: distance,
                     baseLocation: baseLocation || '',
                     showroomLocation: showroomLocation,
                     company: company || '',
                     adjustValue:adjustValue || '',
                     customerName: customerName || '',
-                    totalDriverDistance: totalDriverDistance || '',
+                    totalDriverDistance: totalDriverDistance,
                     totalDriverSalary: totalDriverSalary || '',
                     mobileNumber: mobileNumber || '',
                     phoneNumber: phoneNumber || '',
                     vehicleType: vehicleType || '',
                     bodyShope: bodyShope || '',
+                    statusEdit: activeForm === 'withoutMap' ? 'mapbooking' : 'withoutmapbooking',
 
                     serviceType: serviceType || '',
                     serviceVehicle: serviceVehicle || '',
