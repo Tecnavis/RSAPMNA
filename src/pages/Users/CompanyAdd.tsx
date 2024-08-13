@@ -29,6 +29,13 @@ const [baseLocation, setBaseLocation] = useState('');
     const [serviceOptions, setServiceOptions] = useState([]);
     const [serviceVehicle, setServiceVehicle] = useState({});
 
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword);
+    };
+
+    const toggleConfirmPasswordVisibility = () => {
+        setShowConfirmPassword(!showConfirmPassword);
+    };
 
     const storage = getStorage();
     const db = getFirestore();
@@ -292,27 +299,27 @@ const [baseLocation, setBaseLocation] = useState('');
                                     <label htmlFor="personalphone">Personal PhoneNumber</label>
                                     <input id="personalphone" type="personalphone" className="form-input" value={personalphone} onChange={(e) => setPersonalPhone(e.target.value)} />
                                 </div>
-                                <div>
+                <div>
     <label htmlFor="password">Password</label>
     {editData ? (
         <div>{password}</div>
     ) : (
-        <input
-            id="password"
-            type={showPassword ? "text" : "password"}
-            placeholder="Enter password"
-            className="form-input"
-            value={password}
-            onChange={handlePasswordChange}
-        />
-    )}
-    {!editData && (
-        <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-        >
-            {showPassword ? "Hide" : "Show"} Password
-        </button>
+        <>
+            <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter password"
+                className="form-input"
+                value={password}
+                onChange={handlePasswordChange}
+            />
+            <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+            >
+                {showPassword ? "Hide" : "Show"} Password
+            </button>
+        </>
     )}
 </div>
 <div>
@@ -320,29 +327,25 @@ const [baseLocation, setBaseLocation] = useState('');
     {editData ? (
         <div>{confirmPassword}</div>
     ) : (
-        <input
-            id="confirmPassword"
-            type={showConfirmPassword ? "text" : "password"}
-            placeholder="Confirm password"
-            className="form-input"
-            value={confirmPassword}
-            onChange={handleConfirmPasswordChange}
-        />
+        <>
+            <input
+                id="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm password"
+                className="form-input"
+                value={confirmPassword}
+                onChange={handleConfirmPasswordChange}
+            />
+            <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+                {showConfirmPassword ? "Hide" : "Show"} Confirm Password
+            </button>
+        </>
     )}
-    <br />
-    {!editData && (
-        <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-        >
-            {showConfirmPassword ? "Hide" : "Show"} Confirm Password
-        </button>
-    )}
-                                   <div>
-  
+</div>
 
-</div>
-</div>
 
 <div>
         <label style={{ cursor: 'pointer'}} className="flex items-center" onClick={() => setShowTable(true)}>

@@ -107,13 +107,25 @@ const BaseLocation = () => {
 
 
     const getAutocompleteResults = async (inputText, setOptions) => {
+        const keralaCenterLat = 10.8505;
+        const keralaCenterLng = 76.2711;
+        const radius = 200000;
+
         try {
-            const response = await axios.get(`https://api.olamaps.io/places/v1/autocomplete?input=${inputText}&api_key=${import.meta.env.VITE_REACT_APP_API_KEY}`);
+            const response = await axios.get('https://api.olamaps.io/places/v1/autocomplete', {
+                params: {
+                    input: inputText,
+                    api_key: import.meta.env.VITE_REACT_APP_API_KEY,
+                    location: `${keralaCenterLat},${keralaCenterLng}`,
+                    radius,
+                },
+            });
+
             if (response.data && Array.isArray(response.data.predictions)) {
                 const predictionsWithCoords = await Promise.all(
                     response.data.predictions.map(async (prediction) => {
                         const placeDetails = await getPlaceDetails(prediction.place_id);
-                        const locationName = prediction.description.split(',')[0]; // Extract the location name
+                        const locationName = prediction.description.split(',')[0];
                         return {
                             label: locationName,
                             lat: placeDetails.geometry.location.lat,

@@ -163,15 +163,17 @@ const [serviceOptions, setServiceOptions] = useState([]);
                 console.error('Password and confirm password do not match');
                 return;
             }
+    
+            let profileImageUrl = ''; // Define the profileImageUrl variable here
             if (profileImage) {
                 const storageRef = ref(storage, 'profile_images/' + profileImage.name);
                 const uploadTask = uploadBytesResumable(storageRef, profileImage);
             
                 await uploadTask;
-                profileImageUrl = await getDownloadURL(storageRef);
+                profileImageUrl = await getDownloadURL(storageRef); // Correct the typo here
             }
             
-                        const itemData = {
+            const itemData = {
                 driverName,
                 idnumber,
                 companyName,
@@ -179,7 +181,6 @@ const [serviceOptions, setServiceOptions] = useState([]);
                 advancePayment,
                 phone,
                 serviceVehicle,
-
                 personalphone,
                 salaryPerKm,
                 basicSalaryKm,
@@ -187,9 +188,9 @@ const [serviceOptions, setServiceOptions] = useState([]);
                 basicSalaries,
                 password,
                 confirmPassword,
-                profileImageUrl
+                profileImageUrl // Use the corrected variable name
             };
-
+    
             if (editData) {
                 const docRef = doc(db, `user/${uid}/driver`, editData.id);
                 await updateDoc(docRef, itemData);
@@ -198,12 +199,13 @@ const [serviceOptions, setServiceOptions] = useState([]);
                 const docRef = await addDoc(collection(db, `user/${uid}/driver`), itemData);
                 console.log('Document written with ID: ', docRef.id);
             }
-
+    
             navigate('/users/companycreation');
         } catch (e) {
             console.error('Error adding/updating document: ', e);
         }
     };
+    
     
     return (
         <div>

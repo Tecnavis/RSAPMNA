@@ -26,6 +26,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
     const [locationCoords, setLocationCoords] = useState({ lat: '', lng: '' });
     const db = getFirestore();
     const inputRef = useRef(null);
+    const uid = sessionStorage.getItem('uid')
 
     const handleLocationChange = (e) => {
         const value = e.target.value;
@@ -44,7 +45,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await addDoc(collection(db, 'showroom'), {
+            await addDoc(collection(db, `user/${uid}/showroom`), {
                 Location: location,
                 ShowRoom: showRoom,
                 description,
@@ -95,7 +96,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
     };
 
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, 'showroom'), (snapshot) => {
+        const unsubscribe = onSnapshot(collection(db, `user/${uid}/showroom`), (snapshot) => {
             const showroomsList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
             setShowrooms(showroomsList);
         });
