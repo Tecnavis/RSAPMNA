@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { addDoc, collection, getFirestore, doc, updateDoc } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import styles from './useradd.module.css';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { addDoc, collection, getFirestore, doc, updateDoc, getDocs } from 'firebase/firestore';
+import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 import defaultImage from '../../assets/css/images/user-front-side-with-white-background.jpg';
+import styles from './useradd.module.css'
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const UserAdd = () => {
     const [name, setName] = useState('');
@@ -13,9 +13,11 @@ const UserAdd = () => {
     const [phone_number, setPhone] = useState('');
     const [userName, setUserName] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [errors, setErrors] = useState({});
     const [editData, setEditData] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [profileImage, setProfileImage] = useState(null);
     const [imagePreview, setImagePreview] = useState('');
     const navigate = useNavigate();
@@ -34,9 +36,30 @@ const UserAdd = () => {
             setPhone(state.editData.phone_number || '');
             setUserName(state.editData.userName || '');
             setPassword(state.editData.password || '');
+            setConfirmPassword(state.editData.confirmPassword || '');
             setImagePreview(state.editData.profileImage || '');
         }
     }, [state]);
+          
+    const checkPhoneUnique = async (phone_number) => {
+        const db = getFirestore();
+        const uid = sessionStorage.getItem('uid');
+        const usersRef = collection(db, `user/${uid}/users`);
+        const querySnapshot = await getDocs(usersRef);
+        let isUnique = true;
+    
+        querySnapshot.forEach((doc) => {
+            if (doc.data().phone_number === phone_number) {
+                isUnique = false;
+            }
+        });
+    
+        return isUnique;
+    };
+    
+    const handleConfirmPasswordChange = (e) => {
+        setConfirmPassword(e.target.value);
+    };
 
     const validate = () => {
         let formErrors = {};
@@ -66,6 +89,10 @@ const UserAdd = () => {
             formErrors.password = 'Password must be at least 4 characters';
         }
 
+        if (password !== confirmPassword) {
+            formErrors.confirmPassword = 'Password and confirm password do not match';
+        }
+
         setErrors(formErrors);
         return Object.keys(formErrors).length === 0;
     };
@@ -83,6 +110,19 @@ const UserAdd = () => {
 
         if (uid) {
             try {
+              // Assume you have an 'editData' object containing the original data, including the phone number
+if (!editData || editData.phone_number !== phone_number) {
+    // Check if the phone number is unique
+    const isPhoneUnique = await checkPhoneUnique(phone_number);
+    if (!isPhoneUnique) {
+        console.error('Phone number already exists');
+        alert('Phone number already exists. Please enter a different phone number.');
+        return;
+    }
+}
+
+// Continue with the rest of the code (e.g., saving the data)
+
                 let profileImageUrl = '';
 
                 if (profileImage) {
@@ -94,12 +134,13 @@ const UserAdd = () => {
                 }
 
                 const itemData = {
-                    name,
+                    name: name.toUpperCase(),
                     email,
                     address,
                     phone_number,
                     userName,
                     password,
+                    confirmPassword,
                     profileImage: profileImageUrl,
                 };
 
@@ -176,8 +217,25 @@ const UserAdd = () => {
                                 <span className="absolute end-3 top-1/2 -translate-y-1/2 cursor-pointer" onClick={() => setShowPassword(!showPassword)}>
                                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                                 </span>
-                                {errors.password && <p className="text-red-500">{errors.password}</p>}
                             </div>
+                            {errors.password && <p className="text-red-500">{errors.password}</p>}
+                        </div>
+                        <div>
+                            <label htmlFor="confirmPassword">Confirm password </label>
+                            <div className="relative">
+                                <input
+                                    id="confirmPassword"
+                                    type={showConfirmPassword ? 'text' : 'password'}
+                                    placeholder="Confirm Password"
+                                    className="form-input pr-10"
+                                    value={confirmPassword}
+                                    onChange={handleConfirmPasswordChange}
+                                />
+                                <span className="absolute end-3 top-1/2 -translate-y-1/2 cursor-pointer" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                    {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                                </span>
+                            </div>
+                            {errors.confirmPassword && <p className="text-red-500">{errors.confirmPassword}</p>}
                         </div>
 
                         <div>

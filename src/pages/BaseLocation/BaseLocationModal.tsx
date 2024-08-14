@@ -52,63 +52,67 @@ const BaseLocationModal = ({ onClose, setBaseLocation, pickupLocation }) => {
     }, [db, pickupLocation]);
 
     const getDistanceAndDuration = async (origin, destination, id) => {
-        if (!origin || !destination) return { id, distance: null, duration: null };
-      
-        try {
-          console.log(`Fetching distance between ${JSON.stringify(origin)} and ${JSON.stringify(destination)}...`);
-          const response = await axios.post(
-            `https://api.olamaps.io/routing/v1/directions`,
-            null,
-            {
-              params: {
-                origin: `${origin.lat},${origin.lng}`,
-                destination: `${destination.lat},${destination.lng}`,
-                api_key: import.meta.env.VITE_REACT_APP_API_KEY
-              },
-              headers: {
-                'X-Request-Id': 'YOUR_REQUEST_ID', // Replace with your actual request ID
-              }
+      if (!origin || !destination) return { id, distance: null, duration: null };
+    
+      try {
+        console.log(`Fetching distance between ${JSON.stringify(origin)} and ${JSON.stringify(destination)}...`);
+        const response = await axios.post(
+          `https://api.olamaps.io/routing/v1/directions`,
+          null,
+          {
+            params: {
+              origin: `${origin.lat},${origin.lng}`,
+              destination: `${destination.lat},${destination.lng}`,
+              api_key: import.meta.env.VITE_REACT_APP_API_KEY
+            },
+            headers: {
+              'X-Request-Id': 'YOUR_REQUEST_ID', // Replace with your actual request ID
             }
-          );
-      
-          if (response.status === 200) {
-            const data = response.data;
-            console.log('Distance response:', data);
-      
-            if (data.routes && data.routes.length > 0) {
-              const route = data.routes[0];
-              console.log('Route:', route);
-      
-              if (route.legs && route.legs.length > 0) {
-                const leg = route.legs[0];
-                console.log('Leg:', leg);
-      
-                const distanceInfo = {
-                  id,
-                  distance: leg.distance !== undefined ? (leg.distance / 1000).toFixed(2) : null, // Convert to km and format
-                  duration: formatDuration(leg.duration !== undefined ? leg.duration : null) // Convert to readable format
-                };
-      
-                console.log('Distance info:', distanceInfo);
-                return distanceInfo;
-              } else {
-                console.error('No legs found in the route:', route);
-                return { id, distance: null, duration: null };
-              }
+          }
+        );
+    
+        if (response.status === 200) {
+          const data = response.data;
+          console.log('Distance response:', data);
+    
+          if (data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+            console.log('Route:', route);
+    
+            if (route.legs && route.legs.length > 0) {
+              const leg = route.legs[0];
+              console.log('Leg:', leg);
+    
+              const distance = leg.distance !== undefined ? (leg.distance / 1000).toFixed(2) : null; // Convert to km and format
+              const durationInSeconds = leg.duration !== undefined ? leg.duration : null; // Duration in seconds
+              const doubledDuration = durationInSeconds !== null ? durationInSeconds * 2 : null; // Double the duration
+    
+              const distanceInfo = {
+                id,
+                distance,
+                duration: formatDuration(doubledDuration) // Convert doubled duration to readable format
+              };
+    
+              console.log('Distance info:', distanceInfo);
+              return distanceInfo;
             } else {
-              console.error('No routes found in the response:', data);
+              console.error('No legs found in the route:', route);
               return { id, distance: null, duration: null };
             }
           } else {
-            console.error('Error fetching directions:', response.statusText);
+            console.error('No routes found in the response:', data);
             return { id, distance: null, duration: null };
           }
-        } catch (error) {
-          console.error('Error fetching distance data:', error);
+        } else {
+          console.error('Error fetching directions:', response.statusText);
           return { id, distance: null, duration: null };
         }
+      } catch (error) {
+        console.error('Error fetching distance data:', error);
+        return { id, distance: null, duration: null };
+      }
     };
-
+    
     const formatDuration = (seconds) => {
       if (seconds === null) return 'Calculating...';
       
@@ -122,6 +126,7 @@ const BaseLocationModal = ({ onClose, setBaseLocation, pickupLocation }) => {
         return `${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}`;
       }
     };
+    
 
     const filteredItems = items
     .filter((item) => item.name.toLowerCase().includes(searchTerm.toLowerCase()))

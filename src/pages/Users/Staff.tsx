@@ -76,8 +76,15 @@ const Staff = () => {
                         <tbody>
                             {items.map((item, index) => (
                                 <tr key={item.id}>
-                                   <td><img src={item.profileImage || defaultImage}  className="w-14 h-14 rounded-full overflow-hidden object-cover" alt="Profile" /></td>
-                                    <td><div className="whitespace-nowrap">{item.name}</div></td>
+                                    <td>
+                                        <div className="w-14 h-14 rounded-full overflow-hidden">
+                                            <img src={item.profileImage || defaultImage} className="w-full h-full object-cover" alt="Profile" />
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div className="whitespace-nowrap">{item.name}</div>
+                                    </td>
                                     <td>{item.email}</td>
                                     <td>{item.address}</td>
                                     <td>{item.phone_number}</td>
@@ -108,11 +115,7 @@ const Staff = () => {
                 </div>
             </div>
 
-            <ConfirmationModal
-                isVisible={isModalVisible}
-                onConfirm={() => handleDelete(itemToDelete?.id)}
-                onCancel={closeModal}
-            />
+            <ConfirmationModal isVisible={isModalVisible} onConfirm={() => handleDelete(itemToDelete?.id)} onCancel={closeModal} />
         </div>
     );
 };

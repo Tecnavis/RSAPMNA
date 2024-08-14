@@ -131,8 +131,32 @@ const [advancePayment, setAdvancePayment] = useState('0');
 
         }
     }, [state]);
+    const checkPhoneUnique = async (phone) => {
+        const db = getFirestore();
+        const uid = sessionStorage.getItem('uid');
+        const driversRef = collection(db, `user/${uid}/driver`);
+        const querySnapshot = await getDocs(driversRef);
+        let isUnique = true;
+    
+        querySnapshot.forEach((doc) => {
+            if (doc.data().phone === phone) {
+                isUnique = false;
+            }
+        });
+    
+        return isUnique;
+    };
+    
     const addOrUpdateItem = async () => {
         try {
+            // Check if the phone number is unique
+            const isPhoneUnique = await checkPhoneUnique(phone);
+            if (!isPhoneUnique) {
+                console.error('Phone number already exists');
+                alert('Phone number already exists. Please enter a different phone number.');
+                return;
+            }
+    
             if (password !== confirmPassword) {
                 console.error('Password and confirm password do not match');
                 return;
@@ -219,14 +243,7 @@ const [advancePayment, setAdvancePayment] = useState('0');
                                     <label htmlFor="driverName">Driver Name</label>
                                     <input id="driverName" type="text" placeholder="Enter driver Name" className="form-input" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
                                 </div>
-                                {/* <div>
-                                    <label htmlFor="driverName">Driver Name</label>
-                                    <input id="driverName" type="text" placeholder="Enter driver Name" className="form-input" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
-                                </div> */}
-                                {/* <div>
-                                    <label htmlFor="companyName">Company Name</label>
-                                    <input id="companyName" type="text" placeholder="Enter Company Name" className="form-input" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
-                                </div> */}
+                               
                                 <div>
                                     <label htmlFor="idnumber">ID number</label>
                                     <input id="idnumber" type="idnumber"  className="form-input" value={idnumber} onChange={(e) => setIdnumber(e.target.value)} />
@@ -245,52 +262,42 @@ const [advancePayment, setAdvancePayment] = useState('0');
                                     <label htmlFor="advancePayment">Advance payment</label>
                                     <input id="advancePayment" type="advancePayment" className="form-input" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} />
                                 </div> */}
-                                <div>
+    <div>
     <label htmlFor="password">Password</label>
-    {editData ? (
-        <div>{password}</div>
-    ) : (
-        <input
-            id="password"
-            type={showPassword ? "text" : "password"}
-            placeholder="Enter password"
-            className="form-input"
-            value={password}
-            onChange={handlePasswordChange}
-        />
-    )}
-    {!editData && (
-        <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-        >
-            {showPassword ? "Hide" : "Show"} Password
-        </button>
-    )}
+    <input
+        id="password"
+        type={showPassword ? "text" : "password"}
+        placeholder="Enter password"
+        className="form-input"
+        value={password}
+        onChange={handlePasswordChange}
+    />
+    <button
+        type="button"
+        onClick={() => setShowPassword(!showPassword)}
+    >
+        {showPassword ? "Hide" : "Show"} Password
+    </button>
 </div>
 <div>
     <label htmlFor="confirmPassword">Confirm Password</label>
-    {editData ? (
-        <div>{confirmPassword}</div>
-    ) : (
-        <input
-            id="confirmPassword"
-            type={showConfirmPassword ? "text" : "password"}
-            placeholder="Confirm password"
-            className="form-input"
-            value={confirmPassword}
-            onChange={handleConfirmPasswordChange}
-        />
-    )}
-    {!editData && (
-        <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-        >
-            {showConfirmPassword ? "Hide" : "Show"} Confirm Password
-        </button>
-    )}
+    <input
+        id="confirmPassword"
+        type={showConfirmPassword ? "text" : "password"}
+        placeholder="Confirm password"
+        className="form-input"
+        value={confirmPassword}
+        onChange={handleConfirmPasswordChange}
+    />
+    <button
+        type="button"
+        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+    >
+        {showConfirmPassword ? "Hide" : "Show"} Confirm Password
+    </button>
 </div>
+
+
 
 
                                 <div>

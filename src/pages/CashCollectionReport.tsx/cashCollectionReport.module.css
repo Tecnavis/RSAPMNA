@@ -1,0 +1,76 @@
+.tableContainer {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* For smooth scrolling on iOS */
+}
+
+.table {
+    min-width: 100%;
+    background-color: white;
+    border: 1px solid #d1d5db; /* border-gray-300 */
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.tableHead {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.tableBody {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.tableRow {
+    display: table;
+    width: 100%;
+}
+
+.tableCell {
+    display: table-cell;
+    padding: 0.5rem 1rem; /* py-2 px-4 */
+    border-bottom: 1px solid #d1d5db; /* border-gray-300 */
+}
+
+.responsiveTable {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+}
+
+.responsiveCell {
+    display: block;
+    text-align: right;
+    padding: 0.5rem 1rem; /* py-2 px-4 */
+    border-bottom: 1px solid #d1d5db; /* border-gray-300 */
+    position: relative;
+    width: 100%;
+}
+
+.responsiveCell::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    width: 50%;
+    padding-left: 10px;
+    font-weight: bold;
+    text-align: left;
+}
+
+@media (max-width: 768px) {
+    .tableHead {
+        display: none;
+    }
+
+    .tableBody {
+        display: block;
+        width: 100%;
+    }
+
+    .tableRow {
+        display: block;
+        width: 100%;
+    }
+}
