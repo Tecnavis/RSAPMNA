@@ -1,0 +1,16 @@
+.error {
+    color: red;
+    font-size: 12px; /* Adjust the size if necessary */
+    margin-top: 5px; /* Add some space above the error message */
+}
+/* For Chrome, Safari, Edge, Opera */
+.formInput[type="number"]::-webkit-outer-spin-button,
+.formInput[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* For Firefox */
+.formInput[type="number"] {
+  -moz-appearance: textfield;
+}

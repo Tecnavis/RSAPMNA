@@ -7,9 +7,20 @@ import IconPrinter from '../../components/Icon/IconPrinter';
 import { Autocomplete, TextField, Box, Typography } from '@mui/material';
 import axios from 'axios';
 const keralaDistricts = [
-    'Alappuzha', 'Ernakulam', 'Idukki', 'Kannur', 'Kasaragod',
-    'Kollam', 'Kottayam', 'Kozhikode', 'Malappuram', 'Palakkad',
-    'Pathanamthitta', 'Thiruvananthapuram', 'Thrissur', 'Wayanad'
+    'Alappuzha',
+    'Ernakulam',
+    'Idukki',
+    'Kannur',
+    'Kasaragod',
+    'Kollam',
+    'Kottayam',
+    'Kozhikode',
+    'Malappuram',
+    'Palakkad',
+    'Pathanamthitta',
+    'Thiruvananthapuram',
+    'Thrissur',
+    'Wayanad',
 ];
 
 const ShowRoom = () => {
@@ -43,26 +54,27 @@ const ShowRoom = () => {
     const formRef = useRef(null);
     const [baseOptions, setBaseOptions] = useState([]);
     const [baseLocation, setBaseLocation] = useState(null);
-    const uid = sessionStorage.getItem('uid')
+    const uid = sessionStorage.getItem('uid');
     useEffect(() => {
         const term = searchTerm.toLowerCase();
-        const filtered = existingShowRooms.filter(record =>
-            (record.availableServices?.join(', ').toLowerCase().includes(term) ?? false) ||
-            (record.hasInsurance?.toLowerCase().includes(term) ?? false) ||
-            (record.insuranceAmount?.toLowerCase().includes(term) ?? false) ||
-            (record.hasInsuranceBody?.toLowerCase().includes(term) ?? false) ||
-            (record.insuranceAmountBody?.toLowerCase().includes(term) ?? false) ||
-            (record.ShowRoom?.toLowerCase().includes(term) ?? false) ||
-            (record.showroomId?.toLowerCase().includes(term) ?? false) ||
-            (record.description?.toLowerCase().includes(term) ?? false) ||
-            (record.Location?.toLowerCase().includes(term) ?? false) ||
-            (record.userName?.toLowerCase().includes(term) ?? false) ||
-            (record.password?.toLowerCase().includes(term) ?? false) ||
-            (record.tollfree?.toLowerCase().includes(term) ?? false) ||
-            (record.phoneNumber?.toLowerCase().includes(term) ?? false) ||
-            (record.mobileNumber?.toLowerCase().includes(term) ?? false) ||
-            (record.state?.toLowerCase().includes(term) ?? false) ||
-            (record.district?.toLowerCase().includes(term) ?? false)
+        const filtered = existingShowRooms.filter(
+            (record) =>
+                (record.availableServices?.join(', ').toLowerCase().includes(term) ?? false) ||
+                (record.hasInsurance?.toLowerCase().includes(term) ?? false) ||
+                (record.insuranceAmount?.toLowerCase().includes(term) ?? false) ||
+                (record.hasInsuranceBody?.toLowerCase().includes(term) ?? false) ||
+                (record.insuranceAmountBody?.toLowerCase().includes(term) ?? false) ||
+                (record.ShowRoom?.toLowerCase().includes(term) ?? false) ||
+                (record.showroomId?.toLowerCase().includes(term) ?? false) ||
+                (record.description?.toLowerCase().includes(term) ?? false) ||
+                (record.Location?.toLowerCase().includes(term) ?? false) ||
+                (record.userName?.toLowerCase().includes(term) ?? false) ||
+                (record.password?.toLowerCase().includes(term) ?? false) ||
+                (record.tollfree?.toLowerCase().includes(term) ?? false) ||
+                (record.phoneNumber?.toLowerCase().includes(term) ?? false) ||
+                (record.mobileNumber?.toLowerCase().includes(term) ?? false) ||
+                (record.state?.toLowerCase().includes(term) ?? false) ||
+                (record.district?.toLowerCase().includes(term) ?? false)
         );
         setFilteredRecords(filtered);
     }, [searchTerm, existingShowRooms]);
@@ -122,16 +134,16 @@ const ShowRoom = () => {
         e.preventDefault();
         const db = getFirestore();
         const timestamp = serverTimestamp();
-    
+
         // Construct the newShowRoom object with Location including lat and lng
         const newShowRoom = {
             ...showRoom,
             createdAt: timestamp,
             status: 'admin added showroom',
             // Assuming Location field should contain the string along with lat and lng
-            Location: `${showRoom.Location}, ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`
+            Location: `${showRoom.Location}, ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`,
         };
-    
+
         try {
             if (editRoomId) {
                 const roomRef = doc(db, `user/${uid}/showroom`, editRoomId);
@@ -142,7 +154,7 @@ const ShowRoom = () => {
                 await addDoc(collection(db, `user/${uid}/showroom`), newShowRoom);
                 alert('Showroom added successfully');
             }
-    
+
             // Clear the form fields
             setShowRoom({
                 img: '',
@@ -164,19 +176,18 @@ const ShowRoom = () => {
                 hasInsuranceBody: '',
                 insuranceAmountBody: '',
             });
-    
+
             fetchShowRooms();
             window.location.reload();
-    
         } catch (error) {
             console.error('Error adding/updating showroom:', error);
         }
     };
-    
+
     const fetchShowRooms = async () => {
         const db = getFirestore();
         try {
-            const querySnapshot = await getDocs(query(collection(db,`user/${uid}/showroom`), orderBy('createdAt', 'desc')));
+            const querySnapshot = await getDocs(query(collection(db, `user/${uid}/showroom`), orderBy('createdAt', 'desc')));
             const rooms = [];
             querySnapshot.forEach((doc) => {
                 rooms.push({ id: doc.id, ...doc.data() });
@@ -230,7 +241,7 @@ const ShowRoom = () => {
         const keralaCenterLat = 10.8505;
         const keralaCenterLng = 76.2711;
         const radius = 200000;
-    
+
         try {
             const response = await axios.get('https://api.olamaps.io/places/v1/autocomplete', {
                 params: {
@@ -238,9 +249,9 @@ const ShowRoom = () => {
                     api_key: import.meta.env.VITE_REACT_APP_API_KEY,
                     location: `${keralaCenterLat},${keralaCenterLng}`,
                     radius,
-                }
+                },
             });
-    
+
             if (response.data && Array.isArray(response.data.predictions)) {
                 const predictionsWithCoords = await Promise.all(
                     response.data.predictions.map(async (prediction) => {
@@ -263,7 +274,7 @@ const ShowRoom = () => {
             setOptions([]);
         }
     };
-    
+
     const getPlaceDetails = async (placeId) => {
         try {
             const response = await axios.get(`https://api.olamaps.io/places/v1/details?place_id=${placeId}&api_key=${import.meta.env.VITE_REACT_APP_API_KEY}`);
@@ -281,13 +292,13 @@ const ShowRoom = () => {
             setShowRoom((prevShowRoom) => ({
                 ...prevShowRoom,
                 locationLatLng: { lat: newValue.lat, lng: newValue.lng },
-                Location: newValue.label
+                Location: newValue.label,
             }));
         } else {
             setShowRoom((prevShowRoom) => ({
                 ...prevShowRoom,
                 locationLatLng: { lat: '', lng: '' },
-                Location: ''
+                Location: '',
             }));
         }
         setBaseOptions([]);
@@ -489,9 +500,7 @@ const ShowRoom = () => {
                             isOptionEqualToValue={(option, value) => option.label === value.label}
                             renderInput={(params) => <TextField {...params} label="Location" variant="outlined" />}
                         />
-                        {showRoom.locationLatLng.lat && showRoom.locationLatLng.lng && (
-                            <Typography>{`Location Lat/Lng: ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`}</Typography>
-                        )}
+                        {showRoom.locationLatLng.lat && showRoom.locationLatLng.lng && <Typography>{`Location Lat/Lng: ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`}</Typography>}
                     </Box>
                 </div>
 
@@ -595,7 +604,7 @@ const ShowRoom = () => {
                         className="form-select w-full"
                         required
                         style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
-                    >
+                     >
                         <option value="">Select District</option>
                         {keralaDistricts.map((district) => (
                             <option key={district} value={district}>
@@ -639,7 +648,7 @@ const ShowRoom = () => {
                     </button>
                 </div>
             </form>
-            <br/>
+            <br />
             <div className="search-bar-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '20px' }}>
                 <input
                     type="text"
@@ -672,172 +681,118 @@ const ShowRoom = () => {
                 ShowRooms List
             </h3>
             <div className="tooltip">
-      <button
-        onClick={handlePrint}
-        style={{
-          backgroundColor: 'gray',
-          color: '#fff',
-          border: 'none',
-          padding: '10px 20px',
-          borderRadius: '5px',
-          cursor: 'pointer',
-          marginBottom: '16px',
-        }}
-      >
-        <IconPrinter />
-      </button>
-      <span className="tooltip-text">Print here</span>
-    </div>
+                <button
+                    onClick={handlePrint}
+                    style={{
+                        backgroundColor: 'gray',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '10px 20px',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        marginBottom: '16px',
+                    }}
+                >
+                    <IconPrinter />
+                </button>
+                <span className="tooltip-text">Print here</span>
+            </div>
 
-            <div className="overflow-x-auto" style={{ overflowX: 'auto' }} ref={listRef}>
-                <table className="w-full whitespace-nowrap text-black dark:text-white" style={{ width: '100%', whiteSpace: 'nowrap', color: '#000', backgroundColor: '#fff' }}>
-                <thead style={{ background: '#f8f9fa' }}>
-    <tr>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            Image
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            ShowRoom Name
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            ShowRoom Id
-        </th>
-        {/* <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            Status
-        </th> */}
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            Location
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            User Name
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            Password
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            Help Line Number
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            Phone Number
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            Mobile Number
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            State
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            District
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            Available Services
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            Has Insurance<br/>(Service Center)
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            Insurance Amount Service Center{' '}
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            Has Insurance<br/>(Body Shop)
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            Insurance Amount Body Shop{' '}
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            Description
-        </th>
-        <th className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-            Actions
-        </th>
-    </tr>
-</thead>
-
+            <div className="tableContainer overflow-x-auto" style={{ overflowX: 'auto' }} ref={listRef}>
+                <table className="tableContainer">
+                    <thead className="tableHeader">
+                        <tr>
+                            <th className="tableCell">Image</th>
+                            <th className="tableCell">ShowRoom Name</th>
+                            <th className="tableCell">ShowRoom Id</th>
+                            <th className="tableCell">Location</th>
+                            <th className="tableCell">User Name</th>
+                            <th className="tableCell">Password</th>
+                            <th className="tableCell">Help Line Number</th>
+                            <th className="tableCell">Phone Number</th>
+                            <th className="tableCell">Mobile Number</th>
+                            <th className="tableCell">State</th>
+                            <th className="tableCell">District</th>
+                            <th className="tableCell">Available Services</th>
+                            <th className="tableCell">
+                                Has Insurance
+                                <br />
+                                (Service Center)
+                            </th>
+                            <th className="tableCell">Insurance Amount Service Center</th>
+                            <th className="tableCell">
+                                Has Insurance
+                                <br />
+                                (Body Shop)
+                            </th>
+                            <th className="tableCell">Insurance Amount Body Shop</th>
+                            <th className="tableCell">Description</th>
+                            <th className="tableCell">Actions</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         {filteredRecords.map((room) => (
-        <tr key={room.id} style={{ backgroundColor: room.status === 'admin added showroom' ? '#e6f7ff' : room.status === 'new showroom' ? '#f2f9ff' : 'transparent' }}>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                            <tr
+                                key={room.id}
+                                className="tableRow"
+                                style={{ backgroundColor: room.status === 'admin added showroom' ? '#e6f7ff' : room.status === 'new showroom' ? '#f2f9ff' : 'transparent' }}
+                            >
+                                <td className="tableCell" data-label="Image">
                                     <img src={room.img} alt="ShowRoom" className="w-16 h-16 object-cover" style={{ width: '64px', height: '64px', objectFit: 'cover' }} />
                                 </td>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="ShowRoom Name">
                                     {room.ShowRoom}
                                 </td>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="ShowRoom Id">
                                     {room.ShowRoomId}
                                 </td>
-                                {/* <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
-                                    {room.status}
-                                </td> */}
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="Location">
                                     {room.Location}
                                 </td>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="User Name">
                                     {room.userName}
                                 </td>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="Password">
                                     {room.password}
                                 </td>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="Help Line Number">
                                     {room.tollfree}
                                 </td>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="Phone Number">
                                     {room.phoneNumber}
                                 </td>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="Mobile Number">
                                     {room.mobileNumber}
                                 </td>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="State">
                                     {room.state}
                                 </td>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="District">
                                     {room.district}
                                 </td>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="Available Services">
                                     {room.availableServices}
                                 </td>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="Has Insurance(Service Center)">
                                     {room.hasInsurance}
                                 </td>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="Insurance Amount Service Center">
                                     {room.insuranceAmount}
                                 </td>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="Has Insurance(Body Shop)">
                                     {room.hasInsuranceBody}
                                 </td>
-                                
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="Insurance Amount Body Shop">
                                     {room.insuranceAmountBody}
                                 </td>
-
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                <td className="tableCell" data-label="Description">
                                     {room.description}
                                 </td>
-                                <td className="border border-gray-300 p-2" style={{ border: '1px solid #ccc', padding: '8px',alignItems: 'center' }}>
-                                    <button
-                                        onClick={() => handleEdit(room.id)}
-                                        style={{
-                                            backgroundColor: '#6c757d',
-                                            color: '#fff',
-                                            border: 'none',
-                                            padding: '5px 10px',
-                                            borderRadius: '5px',
-                                            cursor: 'pointer',
-                                            marginRight: '5px',
-                                        }}
-                                    >
+                                <td className="tableCell tableActions">
+                                    <button onClick={() => handleEdit(room.id)} className="editButton">
                                         Edit
                                     </button>
-                                    <button
-                                        onClick={() => handleDelete(room.id)}
-                                        style={{
-                                            backgroundColor: '#dc3545',
-                                            color: '#fff',
-                                            border: 'none',
-                                            padding: '5px 10px',
-                                            borderRadius: '5px',
-                                            cursor: 'pointer',
-                                        }}
-                                    >
+                                    <button onClick={() => handleDelete(room.id)} className="deleteButton">
                                         Delete
                                     </button>
                                 </td>
