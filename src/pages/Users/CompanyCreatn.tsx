@@ -5,48 +5,58 @@ import IconPencil from '../../components/Icon/IconPencil';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import IconUserPlus from '../../components/Icon/IconUserPlus';
-import { getFirestore, collection, getDocs, where, query } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, where, query, doc, updateDoc } from 'firebase/firestore';
 import IconMenuScrumboard from '../../components/Icon/Menu/IconMenuScrumboard';
 
 const CompanyCreatn = () => {
     const [items, setItems] = useState([] as any);
     const db = getFirestore();
     const navigate = useNavigate();
-    console.log("data", items)
     const uid = sessionStorage.getItem('uid')
 
     useEffect(() => {
         const fetchData = async () => {
-            const driverCollection = collection(db, `user/${uid}/driver`);
-            const q = query(driverCollection, where('companyName', '==', 'Company'));
-            const querySnapshot = await getDocs(q);
-            const fetchedItems = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-            
-            // Filter out deleted items
-            const deletedIds = JSON.parse(localStorage.getItem('deletedUserIds') || '[]');
-            const filteredItems = fetchedItems.filter(item => !deletedIds.includes(item.id));
-            
-            setItems(filteredItems);
-        };
-        fetchData().catch(console.error);
-    }, []);
+            try {
+                const driverCollection = collection(db, `user/${uid}/driver`);
+                const q = query(driverCollection, where('companyName', '==', 'Company')); 
+                const querySnapshot = await getDocs(q);
+                
+                // Filter the fetched data based on status
+                const filteredItems = querySnapshot.docs
+                    .filter((doc) => {
+                        const data = doc.data();
+                        return !data.status || data.status === 'Active'; // Adjust status as needed
+                    })
+                    .map((doc) => ({ id: doc.id, ...doc.data() }));
 
-    const handleDelete = (userId: string) => {
+                setItems(filteredItems);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        };
+
+        fetchData();
+    }, [uid, db]);
+
+    const handleDelete = async (userId: string) => {
         const confirmDelete = window.confirm('Are you sure you want to delete this user?');
         if (confirmDelete) {
-            const enteredIdNumber = window.prompt('Please enter the ID number of the driver:');
-            const driver = items.find((item: any) => item.id === userId);
+            const enteredPassword = window.prompt('Please enter the password to confirm deletion:');
+            const requiredPassword = 'RSA@123';
 
-            if (driver && enteredIdNumber === driver.idnumber) {
-                // Update the local state
-                setItems((prevItems: any) => prevItems.filter((item: any) => item.id !== userId));
-                
-                // Store the deleted ID in localStorage
-                let deletedIds = JSON.parse(localStorage.getItem('deletedUserIds') || '[]');
-                deletedIds.push(userId);
-                localStorage.setItem('deletedUserIds', JSON.stringify(deletedIds));
+            if (enteredPassword === requiredPassword) {
+                try {
+                    const userDoc = doc(db, `user/${uid}/driver`, userId);
+                    await updateDoc(userDoc, { status: 'deleted from UI' });
+                    
+                    setItems((prevItems: any) => prevItems.filter((item: any) => item.id !== userId));
+                    alert('User deleted successfully.');
+                } catch (error) {
+                    console.error('Error deleting user:', error);
+                    alert('Failed to delete user.');
+                }
             } else {
-                window.alert('ID number is incorrect. Deletion aborted.');
+                window.alert('Incorrect password. Deletion aborted.');
             }
         }
     };
@@ -85,7 +95,7 @@ const CompanyCreatn = () => {
                             {items.map((item, index) => (
                                 <tr key={item.id}>
                                     <td>{index + 1}</td>
-                                    <td>{item.company}</td>
+                                    <td>{item.companyName}</td>
                                     <td>
                                         <div className="whitespace-nowrap">{item.driverName}</div>
                                     </td>

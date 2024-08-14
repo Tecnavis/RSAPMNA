@@ -133,24 +133,47 @@ const [serviceOptions, setServiceOptions] = useState([]);
 
         }
     }, [state]);
+    const checkPhoneUnique = async (phone) => {
+        const db = getFirestore();
+        const uid = sessionStorage.getItem('uid');
+        const driversRef = collection(db, `user/${uid}/driver`);
+        const querySnapshot = await getDocs(driversRef);
+        let isUnique = true;
+    
+        querySnapshot.forEach((doc) => {
+            if (doc.data().phone === phone) {
+                isUnique = false;
+            }
+        });
+    
+        return isUnique;
+    };
+    
     const addOrUpdateItem = async () => {
         try {
-            if (password !== confirmPassword) {
-                setErrorMessage('Password and confirm password do not match');
+            // Check if the phone number is unique
+            const isPhoneUnique = await checkPhoneUnique(phone);
+            if (!isPhoneUnique) {
+                console.error('Phone number already exists');
+                alert('Phone number already exists. Please enter a different phone number.');
                 return;
             }
-            setErrorMessage('');
-            let profileImageUrl: string = ''; 
-
+    
+            if (password !== confirmPassword) {
+                console.error('Password and confirm password do not match');
+                return;
+            }
+    
+            let profileImageUrl = ''; // Define the profileImageUrl variable here
             if (profileImage) {
                 const storageRef = ref(storage, 'profile_images/' + profileImage.name);
                 const uploadTask = uploadBytesResumable(storageRef, profileImage);
             
                 await uploadTask;
-                profileImageUrl = await getDownloadURL(storageRef);
+                profileImageUrl = await getDownloadURL(storageRef); // Correct the typo here
             }
             
-                        const itemData = {
+            const itemData = {
                 driverName,
                 idnumber,
                 companyName,
@@ -158,7 +181,6 @@ const [serviceOptions, setServiceOptions] = useState([]);
                 advancePayment,
                 phone,
                 serviceVehicle,
-
                 personalphone,
                 salaryPerKm,
                 basicSalaryKm,
@@ -166,9 +188,9 @@ const [serviceOptions, setServiceOptions] = useState([]);
                 basicSalaries,
                 password,
                 confirmPassword,
-                profileImageUrl
+                profileImageUrl // Use the corrected variable name
             };
-
+    
             if (editData) {
                 const docRef = doc(db, `user/${uid}/driver`, editData.id);
                 await updateDoc(docRef, itemData);
@@ -177,12 +199,13 @@ const [serviceOptions, setServiceOptions] = useState([]);
                 const docRef = await addDoc(collection(db, `user/${uid}/driver`), itemData);
                 console.log('Document written with ID: ', docRef.id);
             }
-
+    
             navigate('/users/companycreation');
         } catch (e) {
             console.error('Error adding/updating document: ', e);
         }
     };
+    
     
     return (
         <div>

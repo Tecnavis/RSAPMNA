@@ -5,48 +5,81 @@ import IconPencil from '../../components/Icon/IconPencil';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import IconUserPlus from '../../components/Icon/IconUserPlus';
-import { getFirestore, collection, getDocs, where, query } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, where, query, doc, updateDoc } from 'firebase/firestore';
 import IconMenuScrumboard from '../../components/Icon/Menu/IconMenuScrumboard';
-
+import defaultImage from '../../assets/css/images/user-front-side-with-white-background.jpg'
+import ConfirmationModal from './ConfirmationModal/ConfirmationModal'; // Import the modal component
 const Company = () => {
     const [items, setItems] = useState([] as any);
     const db = getFirestore();
     const navigate = useNavigate();
     const uid = sessionStorage.getItem('uid')
+    const [isModalVisible, setModalVisible] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
 
-    // Fetch data from Firestore
     useEffect(() => {
         const fetchData = async () => {
+            console.log('Fetching data from Firestore...');
+
             const driverCollection = collection(db, `user/${uid}/driver`);
+            console.log('Driver collection reference:', driverCollection);
+
+            // Create query to filter out items with companyName as 'RSA'
             const q = query(driverCollection, where('companyName', '!=', 'RSA'));
-            const querySnapshot = await getDocs(q);
-            const filteredDocs = querySnapshot.docs.filter(doc => doc.data().companyName !== 'Company');
-            const fetchedItems = filteredDocs.map((doc) => ({ id: doc.id, ...doc.data() }));
-            const deletedItemIds = JSON.parse(localStorage.getItem('deletedItems') || '[]');
-            const filteredItems = fetchedItems.filter(item => !deletedItemIds.includes(item.id));
-            setItems(filteredItems);
-        };
-        fetchData().catch(console.error);
-    }, []);
+            console.log('Query created with parameters:', q);
 
-    // Handle delete operation
-    const handleDelete = async (userId: string) => {
-        const confirmDelete = window.confirm('Are you sure you want to delete this user?');
-        if (confirmDelete) {
-            const enteredIdNumber = window.prompt('Please enter the ID number of the driver:');
-            const driver = items.find((item: any) => item.id === userId);
+            try {
+                console.log('Executing query...');
+                const querySnapshot = await getDocs(q);
+                console.log('Query executed. Snapshot:', querySnapshot);
 
-            if (driver && enteredIdNumber === driver.idnumber) {
-                setItems((prevItems: any) => prevItems.filter((item: any) => item.id !== userId));
-                const deletedItemIds = JSON.parse(localStorage.getItem('deletedItems') || '[]');
-                localStorage.setItem('deletedItems', JSON.stringify([...deletedItemIds, userId]));
-            } else {
-                window.alert('ID number is incorrect. Deletion aborted.');
+                // Further filter items client-side
+                const filteredItems = querySnapshot.docs
+                    .filter((doc) => {
+                        const data = doc.data();
+                        // Apply both filtering conditions
+                        return data.companyName !== 'Company' && 
+                               (!data.status || data.status === '');
+                    })
+                    .map((doc) => {
+                        console.log('Document data:', doc.data());
+                        return { id: doc.id, ...doc.data() };
+                    });
+
+                console.log('Filtered items:', filteredItems);
+                setItems(filteredItems);
+                console.log('State updated with fetched data.');
+            } catch (error) {
+                console.error('Error fetching data:', error); // Log errors if any
             }
+        };
+
+        console.log('useEffect triggered to fetch data.');
+        fetchData().catch(console.error); // Correctly call fetchData inside useEffect
+    }, []);
+   
+    const handleDelete = async (userId) => {
+        try {
+            const userDoc = doc(db, `user/${uid}/driver`, userId);
+                    await updateDoc(userDoc, { status: 'deleted from UI' });
+                    
+                    // Update local state
+                    setItems((prevItems: any) => prevItems.filter((item: any) => item.id !== userId));
+        } catch (error) {
+            console.error('Error deleting document: ', error);
         }
+        setModalVisible(false);
+    };
+    const openDeleteModal = (item) => {
+        setItemToDelete(item);
+        setModalVisible(true);
+    };
+    const closeModal = () => {
+        setModalVisible(false);
+        setItemToDelete(null);
     };
 
-    // Handle edit operation
+    
     const handleEdit = (item) => {
         navigate(`/users/company-add/${item.id}`, { state: { editData: item } });
     };
@@ -67,7 +100,7 @@ const Company = () => {
                     <table>
                         <thead>
                             <tr>
-                                <th>Id</th>
+                                <th>Photo</th>
                                 <th>Driver Name</th>
                                 <th>ID Number</th>
                                 <th>Phone Number</th>
@@ -80,7 +113,9 @@ const Company = () => {
                             {items.map((item, index) => {
                                 return (
                                     <tr key={item.id}>
-                                        <td>{index + 1}</td>
+                                        <td>  <div className="w-14 h-14 rounded-full overflow-hidden">
+                                            <img src={item.profileImageUrl || defaultImage} className="w-full h-full object-cover" alt="Profile" />
+                                        </div></td>
                                         <td>
                                             <div className="whitespace-nowrap">{item.driverName}</div>
                                         </td>
@@ -111,7 +146,7 @@ const Company = () => {
                                                 </li>
                                                 <li>
                                                     <Tippy content="Delete">
-                                                        <button type="button" onClick={() => handleDelete(item.id)}>
+                                                        <button type="button" onClick={() => openDeleteModal(item)}>
                                                             <IconTrashLines className="text-danger" />
                                                         </button>
                                                     </Tippy>
@@ -132,6 +167,7 @@ const Company = () => {
                     </table>
                 </div>
             </div>
+            <ConfirmationModal isVisible={isModalVisible} onConfirm={() => handleDelete(itemToDelete?.id)} onCancel={closeModal} />
         </div>
     );
 };
