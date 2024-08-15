@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { addDoc, collection, getFirestore, doc, updateDoc } from 'firebase/firestore';
-
+import { addDoc, collection, getFirestore, doc, updateDoc, getDocs } from 'firebase/firestore';
+import styles from './customer.module.css'
 const CustomerAdd = () => {
     const [customerName, setCustomerName] = useState('');
+    const [customerNameError, setCustomerNameError] = useState('')
     const [location, setLocation] = useState('');
 
     const [email, setEmail] = useState('');
     const [address, setAddress] = useState('');
     const [phone_number, setPhone] = useState('');
+    const [phoneNumberError, setPhoneNumberError]= useState('')
     const [editData, setEditData] = useState(null);
     const navigate = useNavigate();
     const db = getFirestore();
+    const uid = sessionStorage.getItem('uid')
     const { state } = useLocation(); // Use the useLocation hook to access location state
 
     useEffect(() => {
@@ -24,10 +27,53 @@ const CustomerAdd = () => {
             setPhone(state.editData.phone_number || '');
         }
     }, [state]);
+
+    const checkPhoneUnique = async (phone_number) => {
+        const db = getFirestore();
+        const driversRef = collection(db, `user/${uid}/customer`);
+        const querySnapshot = await getDocs(driversRef);
+        let isUnique = true;
+
+        querySnapshot.forEach((doc) => {
+            if (doc.data().phone_number === phone_number) {
+                isUnique = false;
+            }
+        });
+
+        return isUnique;
+    };
     const addOrUpdateItem = async () => {
+        let isValid = true;
+
+        // Validation checks
+        if (!customerName) {
+            setCustomerNameError('Driver name is required');
+            isValid = false;
+        } else {
+            setCustomerNameError('');
+        }
+   
+        let isPhoneUnique = true;
+        if (!editData || editData.phone_number !== phone_number) {
+            isPhoneUnique = await checkPhoneUnique(phone_number);
+        }
+
+        if (!phone_number) {
+            setPhoneNumberError('Phone number is required');
+            isValid = false;
+        } else if (!/^[6-9]\d{9}$/.test(phone_number)) {
+            setPhoneNumberError('Enter a valid phone number');
+            isValid = false;
+        } else if (!isPhoneUnique) {
+            setPhoneNumberError('Phone number already used');
+            isValid = false;
+        } else {
+            setPhoneNumberError('');
+        }
+        if (!isValid) return;
         try {
             const itemData = {
-                customerName,
+                customerName:customerName.toUpperCase(),
                 location,
                 email,
                 address,
@@ -36,11 +82,11 @@ const CustomerAdd = () => {
             };
 
             if (editData) {
-                const docRef = doc(db, 'customer', editData.id);
+                const docRef = doc(db,  `user/${uid}/customer`, editData.id);
                 await updateDoc(docRef, itemData);
                 console.log('Document updated');
             } else {
-                const docRef = await addDoc(collection(db, 'customer'), itemData);
+                const docRef = await addDoc(collection(db, `user/${uid}/customer`), itemData);
                 console.log('Document written with ID: ', docRef.id);
             }
 
@@ -79,6 +125,7 @@ const CustomerAdd = () => {
                                 <div>
                                     <label htmlFor="customerName">Customer Name</label>
                                     <input id="customerName" type="text" placeholder="Enter Customer Name" className="form-input" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+                                    {customerNameError && <span className={`${styles.error}`}>{customerNameError}</span>}
                                 </div>
                                 <div>
                                     <label htmlFor="location">Location</label>
@@ -95,7 +142,8 @@ const CustomerAdd = () => {
 
                                 <div>
                                     <label htmlFor="phone_number">Phone</label>
-                                    <input id="phone_number" type="phone_number" placeholder="phone number" className="form-input" value={phone_number} onChange={(e) => setPhone(e.target.value)} />
+                                    <input id="phone_number" type="number" placeholder="phone number" className={`${styles.formInput} form-input`} value={phone_number} onChange={(e) => setPhone(e.target.value)} />
+                                    {phoneNumberError && <span className={`${styles.error}`}>{phoneNumberError}</span>}
                                 </div>
                                
         

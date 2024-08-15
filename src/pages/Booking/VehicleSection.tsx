@@ -20,114 +20,113 @@ const VehicleSection = ({
         hasInsurance: '',
         insuranceAmount: '',
         insurance: bodyShope || '', // Initialize insurance with bodyShope
-        insuranceAmountBody: insuranceAmountBody || 0,
+        insuranceAmountBody: insuranceAmountBody || '', // Allow insurance amount to be an empty string for manual entry
     });
     // const [updatedTotalSalary, setUpdatedTotalSalary] = useState('');
     const adjustmentApplied = useRef(false);
-console.log("insuranceAmountBodyvehicle",showroomLocation)
-//    ------------------------------------------------------------
-useEffect(() => {
-    const fetchInsuranceAmountBody = async () => {
-        const db = getFirestore();
-        const showroomRef = collection(db, 'showroom');
-        const q = query(showroomRef, where('Location', '==', showroomLocation));
-        const querySnapshot = await getDocs(q);
+    const uid = sessionStorage.getItem('uid');
+    //    ------------------------------------------------------------
+    useEffect(() => {
+        const fetchInsuranceAmountBody = async () => {
+            const db = getFirestore();
+            const showroomRef = collection(db, `user/${uid}/showroom`);
+            const q = query(showroomRef, where('Location', '==', showroomLocation));
+            const querySnapshot = await getDocs(q);
 
-        if (!querySnapshot.empty) {
-            const showroomData = querySnapshot.docs[0].data(); // Get the first matching document
-            console.log('Fetched insuranceAmountBody:', showroomData); // Log the value
+            if (!querySnapshot.empty) {
+                const showroomData = querySnapshot.docs[0].data(); // Get the first matching document
+                console.log('Fetched insuranceAmountBody:', showroomData); // Log the value
 
-            if (showroomData.insuranceAmountBody) {
-                console.log('Fetched insuranceAmountBody:', showroomData.insuranceAmountBody); // Log the value
-                
-                setShowRoom(prevShowRoom => ({
-                    ...prevShowRoom,
-                    insuranceAmountBody: showroomData.insuranceAmountBody,
-                }));
-                onInsuranceAmountBodyChange(showroomData.insuranceAmountBody);
+                if (showroomData.insuranceAmountBody) {
+                    console.log('Fetched insuranceAmountBody:', showroomData.insuranceAmountBody); // Log the value
+
+                    setShowRoom((prevShowRoom) => ({
+                        ...prevShowRoom,
+                        insuranceAmountBody: showroomData.insuranceAmountBody,
+                    }));
+                    onInsuranceAmountBodyChange(showroomData.insuranceAmountBody);
+                } else {
+                    console.log('No insuranceAmountBody found in the document');
+                }
             } else {
-                console.log('No insuranceAmountBody found in the document');
+                console.log('No matching showroom found for the given location');
             }
-        } else {
-            console.log('No matching showroom found for the given location');
+        };
+
+        if (showroomLocation) {
+            fetchInsuranceAmountBody();
+        }
+    }, [showroomLocation, onInsuranceAmountBodyChange]);
+    useEffect(() => {
+        if (bodyShope !== showRoom.insurance) {
+            setShowRoom((prevShowRoom) => ({
+                ...prevShowRoom,
+                insurance: bodyShope, // <-- Update insurance field with bodyShope
+            }));
+        }
+    }, [bodyShope]);
+    useEffect(() => {
+        if (serviceCategory !== showRoom.availableServices) {
+            setShowRoom((prevShowRoom) => ({
+                ...prevShowRoom,
+                availableServices: serviceCategory,
+            }));
+        }
+    }, [serviceCategory]);
+
+    const handleServiceChange = (e) => {
+        const { value } = e.target;
+        setShowRoom((prevShowRoom) => ({
+            ...prevShowRoom,
+            availableServices: value,
+            insurance: '',
+        }));
+
+        if (value === 'Body Shop') {
+            onServiceCategoryChange(value);
         }
     };
 
-    if (showroomLocation) {
-        fetchInsuranceAmountBody();
-    }
-}, [showroomLocation, onInsuranceAmountBodyChange]);
-useEffect(() => {
-    if (bodyShope !== showRoom.insurance) {
-        setShowRoom(prevShowRoom => ({
+    const handleBodyInsuranceChange = (e) => {
+        const { value } = e.target;
+        setShowRoom((prevShowRoom) => ({
             ...prevShowRoom,
-            insurance: bodyShope, // <-- Update insurance field with bodyShope
+            insurance: value,
         }));
-    }
-}, [bodyShope]);
-useEffect(() => {
-    if (serviceCategory !== showRoom.availableServices) {
-        setShowRoom(prevShowRoom => ({
+        onInsuranceChange(value);
+    };
+
+    const handleInsuranceAmountChange = (e) => {
+        const { value } = e.target;
+        setShowRoom((prevShowRoom) => ({
             ...prevShowRoom,
-            availableServices: serviceCategory,
+            insuranceAmountBody: value, // Update the local state
         }));
-    }
-}, [serviceCategory]);
+        onInsuranceAmountBodyChange(value);
+    };
 
-const handleServiceChange = (e) => {
-    const { value } = e.target;
-    setShowRoom(prevShowRoom => ({
-        ...prevShowRoom,
-        availableServices: value,
-        insurance: '',
-    }));
+    const handleAdjustValueChange = (e) => {
+        const { value } = e.target;
+        onAdjustValueChange(value);
+    };
+    const applyAdjustment = () => {
+        const adjustedSalary = parseFloat(adjustValue);
 
-    if (value === 'Body Shop') {
-        onServiceCategoryChange(value);
-    }
-};
-
-const handleBodyInsuranceChange = (e) => {
-    const { value } = e.target;
-    setShowRoom((prevShowRoom) => ({
-        ...prevShowRoom,
-        insurance: value,
-    }));
-    onInsuranceChange(value); 
-
-};
-
-const handleInsuranceAmountChange = (e) => {
-    const { value } = e.target;
-    setShowRoom(prevShowRoom => ({
-        ...prevShowRoom,
-        insuranceAmount: value,
-    }));
-    onInsuranceAmountBodyChange(value); 
-};
-
-const handleAdjustValueChange = (e) => {
-    const { value } = e.target;
-    onAdjustValueChange(value); 
-};
-const applyAdjustment = () => {
-    const adjustedSalary = parseFloat(adjustValue);
-
-    if (adjustedSalary > updatedTotalSalary) {
-        // setUpdatedTotalSalary(adjustedSalary);
-        onUpdateTotalSalary(adjustedSalary);
-        adjustmentApplied.current = true;
-    } else {
-        const password = prompt("Enter password to apply the adjustment: Password=Adjust");
-        if (password === "Adjust") {
+        if (adjustedSalary > updatedTotalSalary) {
             // setUpdatedTotalSalary(adjustedSalary);
             onUpdateTotalSalary(adjustedSalary);
             adjustmentApplied.current = true;
         } else {
-            alert("Incorrect password. Adjustment not applied.");
+            const password = prompt('Enter password to apply the adjustment: Password=Adjust');
+            if (password === 'Adjust') {
+                // setUpdatedTotalSalary(adjustedSalary);
+                onUpdateTotalSalary(adjustedSalary);
+                adjustmentApplied.current = true;
+            } else {
+                alert('Incorrect password. Adjustment not applied.');
+            }
         }
-    }
-};
+    };
 
     return (
         <div className="mb-5">
@@ -198,12 +197,12 @@ const applyAdjustment = () => {
                         </label>
                         {showRoom.insurance === 'insurance' && (
                             <div className="mt-2" style={{ marginTop: '10px', fontSize: '0.9em' }}>
-                                <label style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>Insurance Amount (for newly added showrooms (Optional)):</label>
+                                <label style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>Insurance Amount:</label>
                                 <input
                                     type="number"
                                     name="insuranceAmount"
-                                    value={showRoom.insuranceAmount}
-                                    onChange={handleInsuranceAmountChange}
+                                    value={showRoom.insuranceAmountBody} // Bind state to input
+                                    onChange={handleInsuranceAmountChange} // Update state and parent component
                                     style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }}
                                 />
                             </div>
@@ -227,12 +226,7 @@ const applyAdjustment = () => {
             <div>
                 <div>
                     <label style={{ fontSize: '1em', color: '#333' }}>Adjustment Value:</label>
-                    <input
-                        type="number"
-                        value={adjustValue}
-                        onChange={handleAdjustValueChange}
-                        style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }}
-                    />
+                    <input type="number" value={adjustValue} onChange={handleAdjustValueChange} style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }} />
                     <button
                         onClick={applyAdjustment}
                         style={{
