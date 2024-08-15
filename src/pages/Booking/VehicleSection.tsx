@@ -20,16 +20,16 @@ const VehicleSection = ({
         hasInsurance: '',
         insuranceAmount: '',
         insurance: bodyShope || '', // Initialize insurance with bodyShope
-        insuranceAmountBody: insuranceAmountBody || 0,
+        insuranceAmountBody: insuranceAmountBody || '', // Allow insurance amount to be an empty string for manual entry
     });
     // const [updatedTotalSalary, setUpdatedTotalSalary] = useState('');
     const adjustmentApplied = useRef(false);
-console.log("insuranceAmountBodyvehicle",showroomLocation)
+    const uid = sessionStorage.getItem('uid')
 //    ------------------------------------------------------------
 useEffect(() => {
     const fetchInsuranceAmountBody = async () => {
         const db = getFirestore();
-        const showroomRef = collection(db, 'showroom');
+        const showroomRef = collection(db, `user/${uid}/showroom`);
         const q = query(showroomRef, where('Location', '==', showroomLocation));
         const querySnapshot = await getDocs(q);
 
@@ -101,7 +101,7 @@ const handleInsuranceAmountChange = (e) => {
     const { value } = e.target;
     setShowRoom(prevShowRoom => ({
         ...prevShowRoom,
-        insuranceAmount: value,
+        insuranceAmountBody: value, // Update the local state
     }));
     onInsuranceAmountBodyChange(value); 
 };
@@ -198,16 +198,17 @@ const applyAdjustment = () => {
                         </label>
                         {showRoom.insurance === 'insurance' && (
                             <div className="mt-2" style={{ marginTop: '10px', fontSize: '0.9em' }}>
-                                <label style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>Insurance Amount (for newly added showrooms (Optional)):</label>
+                                <label style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>Insurance Amount:</label>
                                 <input
                                     type="number"
                                     name="insuranceAmount"
-                                    value={showRoom.insuranceAmount}
-                                    onChange={handleInsuranceAmountChange}
+                                    value={showRoom.insuranceAmountBody} // Bind state to input
+                                    onChange={handleInsuranceAmountChange} // Update state and parent component
                                     style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }}
                                 />
                             </div>
                         )}
+
                     </div>
                 )}
                 <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
