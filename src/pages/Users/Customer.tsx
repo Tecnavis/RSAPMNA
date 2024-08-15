@@ -12,11 +12,12 @@ const Customer = () => {
     const [items, setItems] = useState([] as any);
     const [editData, setEditData] = useState(null);
     const db = getFirestore();
+    const uid = sessionStorage.getItem('uid');
     const navigate = useNavigate();
 
     useEffect(() => {
         const fetchData = async () => {
-            const querySnapshot = await getDocs(collection(db, 'customer'));
+            const querySnapshot = await getDocs(collection(db, `user/${uid}/customer`));
             setItems(querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
         };
         fetchData().catch(console.error);
@@ -24,7 +25,7 @@ const Customer = () => {
 
     const handleDelete = async (userId: string) => {
         try {
-            const userRef = doc(db, 'customer', userId);
+            const userRef = doc(db, `user/${uid}/customer`, userId);
             await deleteDoc(userRef);
             setItems((prevItems: any) => prevItems.filter((item: any) => item.id !== userId));
         } catch (error) {

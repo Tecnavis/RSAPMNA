@@ -438,25 +438,25 @@ const WithoutMapBooking = ({ activeForm }) => {
         setIsModalOpen(false);
     };
     useEffect(() => {
-        const fetchShowroomOptions = async () => {
-            try {
-                const db = getFirestore();
-                const serviceCollection = collection(db,`user/${uid}/showroom`);
-                const serviceSnapshot = await getDocs(serviceCollection);
-                const servicesList = serviceSnapshot.docs.map((doc) => ({
-                    value: doc.data().Location, // Assuming 'Location' is a unique identifier
-                    label: doc.data().Location,
-                    insuranceAmountBody: doc.data().insuranceAmountBody, // Make sure to include this
-                    locationLatLng: doc.data().locationLatLng, // Make sure to include this
-                }));
-                setShowrooms(servicesList);
-            } catch (error) {
-                console.error('Error fetching services:', error);
-            }
-        };
+        const db = getFirestore();
+        const serviceCollection = collection(db, `user/${uid}/showroom`);
 
-        fetchShowroomOptions();
-    }, []);
+        // Set up the real-time listener
+        const unsubscribe = onSnapshot(serviceCollection, (snapshot) => {
+            const servicesList = snapshot.docs.map(doc => ({
+                value: doc.data().Location, // Assuming 'Location' is a unique identifier
+                label: doc.data().Location,
+                insuranceAmountBody: doc.data().insuranceAmountBody, // Include this field if needed
+                locationLatLng: doc.data().locationLatLng // Include this field if needed
+            }));
+            setShowrooms(servicesList);
+        }, (error) => {
+            console.error('Error fetching services:', error);
+        });
+
+        // Clean up the listener on component unmount
+        return () => unsubscribe();
+    }, [uid]); 
 
     // -------------------------------------------------------------------------------------
     // useEffect(() => {
@@ -704,15 +704,18 @@ const WithoutMapBooking = ({ activeForm }) => {
     }, [drivers, serviceDetails, distance]);
     useEffect(() => {
         let newTotalSalary = totalSalary;
-
+console.log("editData.updatedTotalSalary",updatedTotalSalary)
         if (serviceCategory === 'Body Shop' && bodyShope === 'insurance') {
             newTotalSalary -= parseFloat(insuranceAmountBody || 0);
         }
-
-        if (newTotalSalary !== updatedTotalSalary) {
-            setUpdatedTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
-//             onUpdateTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
-        }
+console.log("newTotalSalary",newTotalSalary)
+if (editData?.adjustValue) {
+    // If editData has adjustValue, prioritize it
+    setUpdatedTotalSalary(parseFloat(editData.adjustValue) || 0);
+} else if (newTotalSalary !== updatedTotalSalary) {
+    // Otherwise, use the calculated newTotalSalary
+    setUpdatedTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
+}
     }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope,adjustValue]);
     
     const renderServiceVehicle = (serviceVehicle, serviceType) => {
@@ -1463,20 +1466,14 @@ const WithoutMapBooking = ({ activeForm }) => {
                                 </div>
                             </div>
                             <div className="mt-4 flex items-center">
-                                {/* <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
+                                <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
                                     Insurance Amount Body
                                 </label>
                                 <div className="form-input flex-1">
-                                    <input
-                                        id="insuranceAmountBody"
-                                        type="text"
-                                        name="insuranceAmountBody"
-                                        className="w-full"
-                                        value={insuranceAmountBody}
-                                        onChange={(e) => handleInputChange('insuranceAmountBody', e.target.value)}
-                                    />
-                                </div> */}
+
                                 {insuranceAmountBody}
+                                </div>
+
                             </div>
                             <div className="mt-4 flex items-center">
                                 <label htmlFor="updatedTotalSalary" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
