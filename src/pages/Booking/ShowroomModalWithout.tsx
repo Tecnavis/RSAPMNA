@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './ShowroomModal.css';
 import { collection, addDoc, getFirestore, onSnapshot } from 'firebase/firestore';
 import { TextField, Typography, IconButton } from '@mui/material';
@@ -22,20 +22,18 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
     const [hasInsuranceBody, setHasInsuranceBody] = useState('');
     const [insuranceAmountBody, setInsuranceAmountBody] = useState('');
     const [img, setImg] = useState('');
-    const [location, setLocation] = useState('');
-    const [locationCoords, setLocationCoords] = useState({ lat: '', lng: '' });
+    const [locationName, setLocationName] = useState('');
+    const [locationCoords, setLocationCoords] = useState('');
     const db = getFirestore();
-    const inputRef = useRef(null);
-    const uid = sessionStorage.getItem('uid')
+    const uid = sessionStorage.getItem('uid');
 
-    const handleLocationChange = (e) => {
+    const handleLocationCoordsChange = (e) => {
         const value = e.target.value;
-        setLocation(value);
+        setLocationCoords(value);
 
         const parts = value.split(',').map(part => part.trim());
-        if (parts.length >= 3) {
-            const lat = parts[parts.length - 2];
-            const lng = parts[parts.length - 1];
+        if (parts.length === 2) {
+            const [lat, lng] = parts;
             setLocationCoords({ lat, lng });
         } else {
             setLocationCoords({ lat: '', lng: '' });
@@ -46,7 +44,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
         e.preventDefault();
         try {
             await addDoc(collection(db, `user/${uid}/showroom`), {
-                Location: location,
+                Location: locationName,
                 ShowRoom: showRoom,
                 description,
                 userName,
@@ -68,11 +66,11 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
                 createdAt: new Date(),
             });
             console.log('Showroom added successfully');
-            console.log('Updating showroom location to:', location);
-            updateShowroomLocation(location);
+            console.log('Updating showroom location to:', locationName);
+            updateShowroomLocation(locationName);
 
             // Reset form fields
-            setLocation('');
+            setLocationName('');
             setShowRoom('');
             setDescription('');
             setUserName('');
@@ -82,7 +80,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
             setPhoneNumber('');
             setAvailableServices([]);
             setMobileNumber('');
-            setLocationCoords({ lat: '', lng: '' });
+            setLocationCoords('');
             setState('');
             setDistrict('');
             setHasInsurance('');
@@ -105,7 +103,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
     }, [db]);
 
     const openGoogleMaps = () => {
-        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(showRoom)}`;
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName)}`;
         window.open(googleMapsUrl, '_blank');
     };
 
@@ -123,22 +121,29 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
                     />
                 </div>
                 <div className="form-group">
-                    <label htmlFor="location">Location:</label>
+                    <label htmlFor="locationName">Location Name:</label>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                         <TextField
-                            value={location}
-                            onChange={handleLocationChange}
+                            value={locationName}
+                            onChange={(e) => setLocationName(e.target.value)}
                             variant="outlined"
-                            label="Location (format: location, lat, lng)"
+                            label="Location Name"
                             fullWidth
                         />
                         <IconButton onClick={openGoogleMaps} className="icon-button">
-                            <IconMapPin/>
+                            <IconMapPin />
                         </IconButton>
                     </div>
-                    {locationCoords.lat && locationCoords.lng && (
-                        <Typography>{`Location Lat/Lng: ${locationCoords.lat}, ${locationCoords.lng}`}</Typography>
-                    )}
+                </div>
+                <div className="form-group">
+                    <label htmlFor="locationCoords">Latitude, Longitude:</label>
+                    <TextField
+                        value={locationCoords.lat && locationCoords.lng ? `${locationCoords.lat}, ${locationCoords.lng}` : ''}
+                        onChange={handleLocationCoordsChange}
+                        variant="outlined"
+                        label="Latitude, Longitude (format: lat, lng)"
+                        fullWidth
+                    />
                 </div>
                 <div className="form-group">
                     <label htmlFor="description">Description:</label>
