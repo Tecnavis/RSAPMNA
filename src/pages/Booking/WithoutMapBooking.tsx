@@ -261,31 +261,37 @@ const WithoutMapBooking = ({ activeForm }) => {
             case 'showroomLocation':
                 console.log('Setting showroomLocation:', value);
                 setShowroomLocation(value);
-    
+            
                 // Find the selected showroom based on the selected value
                 const selectedShowroom = showrooms.find((show) => show.value === value);
                 console.log('Selected Showroom:', selectedShowroom);
-    
+            
                 if (selectedShowroom) {
-                    const lat = selectedShowroom.locationLatLng.lat;
-                    const lng = selectedShowroom.locationLatLng.lng;
-                    const dropoffLocationString = `${lat},${lng}`;
-    
-                    console.log('Setting dropoffLocation to:', dropoffLocationString);
+                    console.log('Found showroom:', selectedShowroom.value);
+                    console.log('Setting insuranceAmountBody to:', selectedShowroom.insuranceAmountBody);
+                    setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
+            
+                    // Ensure lat and lng are stored as strings
+                    const latString = selectedShowroom.locationLatLng.lat.toString();
+                    const lngString = selectedShowroom.locationLatLng.lng.toString();
+            
+                    console.log('Setting dropoffLocation to:', {
+                        name: selectedShowroom.value,
+                        lat: latString,
+                        lng: lngString,
+                    });
                     setDropoffLocation({
                         name: selectedShowroom.value,
-                        lat,
-                        lng,
-                        latLngString: dropoffLocationString, // Add the lat,lng string
+                        lat: latString,
+                        lng: lngString,
                     });
                 } else {
                     console.log('No showroom found, resetting values');
                     setInsuranceAmountBody('');
                     setDropoffLocation({
                         name: '',
-                        lat: null,
-                        lng: null,
-                        latLngString: '', // Reset the lat,lng string
+                        lat: '',
+                        lng: '',
                     });
                 }
                 break;
@@ -759,7 +765,7 @@ if (editData?.adjustValue) {
                     driver: driverName,
                     totalSalary: totalSalary,
                     pickupLocation:pickupLocation,
-                    dropoffLocation: dropoffLocation,
+                    dropoffLocation: dropoffLocation || '',
                     status: 'booking added',
                     dateTime: dateTime, // Use the formatted date
                     bookingId: `${bookingId}`,

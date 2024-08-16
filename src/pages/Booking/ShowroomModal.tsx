@@ -84,11 +84,19 @@ const ShowroomModal = ({ updateShowroomLocation }) => {
         setLocationOptions([]);
     };
 
+    const handleLatChange = (e) => {
+        setLocationCoords({ ...locationCoords, lat: e.target.value });
+    };
+
+    const handleLngChange = (e) => {
+        setLocationCoords({ ...locationCoords, lng: e.target.value });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             await addDoc(collection(db, `user/${uid}/showroom`), {
-                Location: `${location.label}, ${locationCoords.lat}, ${locationCoords.lng}`,
+                Location: `${location ? location.label : ''}, ${locationCoords.lat}, ${locationCoords.lng}`,
                 ShowRoom: showRoom,
                 description,
                 userName,
@@ -110,8 +118,8 @@ const ShowroomModal = ({ updateShowroomLocation }) => {
                 createdAt: new Date(),
             });
             console.log('Showroom added successfully');
-            console.log('Updating showroom location to:', location.label);
-            updateShowroomLocation(location.label);
+            console.log('Updating showroom location to:', location ? location.label : '');
+            updateShowroomLocation(location ? location.label : '');
 
             // Reset form fields
             setLocation(null);
@@ -161,9 +169,30 @@ const ShowroomModal = ({ updateShowroomLocation }) => {
                         isOptionEqualToValue={(option, value) => option.label === value.label}
                         renderInput={(params) => <TextField {...params} label="Location" variant="outlined" />}
                     />
-                    {locationCoords.lat && locationCoords.lng && (
-                        <Typography>{`Location Lat/Lng: ${locationCoords.lat}, ${locationCoords.lng}`}</Typography>
-                    )}
+                </div>
+                <div className="form-group">
+                    <label htmlFor="lat">Latitude:</label>
+                    <TextField
+                        id="lat"
+                        value={locationCoords.lat}
+                        onChange={handleLatChange}
+                        required
+                        className="form-control"
+                        placeholder="Enter latitude"
+                        variant="outlined"
+                    />
+                </div>
+                <div className="form-group">
+                    <label htmlFor="lng">Longitude:</label>
+                    <TextField
+                        id="lng"
+                        value={locationCoords.lng}
+                        onChange={handleLngChange}
+                        required
+                        className="form-control"
+                        placeholder="Enter longitude"
+                        variant="outlined"
+                    />
                 </div>
                 <div className="form-group">
                     <label htmlFor="description">Description:</label>
