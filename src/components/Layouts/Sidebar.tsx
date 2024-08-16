@@ -64,7 +64,7 @@ const Sidebar = () => {
             >
                 <div className="bg-white dark:bg-black h-full">
                     <div className="flex justify-between items-center px-4">
-                        <NavLink to="/" className="main-logo flex items-center shrink-0">
+                        <NavLink to="/index" className="main-logo flex items-center shrink-0">
                             <img className="w-48 mx-auto p-3" src="/assets/images/auth/rsa-png.png" alt="logo" />
                         </NavLink>
                         <button
