@@ -16,10 +16,7 @@ import IconServer from '../Icon/IconServer';
 import IconTxtFile from '../Icon/IconTxtFile';
 import IconBook from '../Icon/IconBook';
 import IconBarChart from '../Icon/IconBarChart';
-import IconArchive from '../Icon/IconArchive';
-import IconMapPin from '../Icon/IconMapPin';
-import IconRouter from '../Icon/IconRouter';
-import IconFolder from '../Icon/IconFolder';
+
 
 const Sidebar = () => {
     const [currentMenu, setCurrentMenu] = useState<string>('');
@@ -28,6 +25,8 @@ const Sidebar = () => {
     const location = useLocation();
     const dispatch = useDispatch();
     const { t } = useTranslation();
+    const role =sessionStorage.getItem('role');
+console.log("role",role)
     const toggleMenu = (value: string) => {
         setCurrentMenu((oldValue) => {
             return oldValue === value ? '' : value;
@@ -107,24 +106,25 @@ const Sidebar = () => {
                                 </button>
 
                                 <AnimateHeight duration={300} height={currentMenu === 'users' ? 'auto' : 0}>
-                                    <ul className="sub-menu text-gray-500">
-                                        <li>
-                                            <NavLink to="/users/staff">Staff Creation</NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/users/company">Provider Creation</NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/users/customer">Customer Creation</NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/users/driver">Driver Creation </NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/users/companycreation">Company Creation </NavLink>
-                                        </li>
-                                        
-                                    </ul>
+                                <ul className="sub-menu text-gray-500">
+                    {role !== 'staff' && (
+                        <li>
+                            <NavLink to="/users/staff">Staff Creation</NavLink>
+                        </li>
+                    )}
+                    <li>
+                        <NavLink to="/users/company">Provider Creation</NavLink>
+                    </li>
+                    <li>
+                        <NavLink to="/users/customer">Customer Creation</NavLink>
+                    </li>
+                    <li>
+                        <NavLink to="/users/driver">Driver Creation</NavLink>
+                    </li>
+                    <li>
+                        <NavLink to="/users/companycreation">Company Creation</NavLink>
+                    </li>
+                </ul>
                                 </AnimateHeight>
                             </li>
 

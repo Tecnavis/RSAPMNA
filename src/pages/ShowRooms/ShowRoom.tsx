@@ -3,11 +3,13 @@ import { addDoc, collection, getFirestore, getDocs, doc, updateDoc, serverTimest
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import './ShowRoom.css';
 import IconPrinter from '../../components/Icon/IconPrinter';
-
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from 'react-toastify';
 import { Autocomplete, TextField, Box, Typography, Modal, Button } from '@mui/material';
 import axios from 'axios';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
+import ConfirmationModal from '../../pages/Users/ConfirmationModal/ConfirmationModal';
 const style = {
     position: 'absolute' as 'absolute',
     top: '50%',
@@ -15,7 +17,7 @@ const style = {
     transform: 'translate(-50%, -50%)',
     width: 400,
     maxHeight: '80vh', // Set a max height to make the modal scrollable
-    overflowY: 'auto',  // Enable vertical scrolling
+    overflowY: 'auto', // Enable vertical scrolling
     bgcolor: 'background.paper',
     boxShadow: 24,
 };
@@ -69,6 +71,9 @@ const ShowRoom = () => {
     const formRef = useRef(null);
     const [baseOptions, setBaseOptions] = useState([]);
     const [baseLocation, setBaseLocation] = useState(null);
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [currentRoomId, setCurrentRoomId] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
     const uid = sessionStorage.getItem('uid');
     useEffect(() => {
         const term = searchTerm.toLowerCase();
@@ -163,12 +168,12 @@ const ShowRoom = () => {
             if (editRoomId) {
                 const roomRef = doc(db, `user/${uid}/showroom`, editRoomId);
                 await updateDoc(roomRef, newShowRoom);
-                setOpen(false)
-                alert('Showroom updated successfully');
+                setOpen(false);
+                toast.success('Showroom updated successfully', { autoClose: 3000 });
                 setEditRoomId(null);
             } else {
                 await addDoc(collection(db, `user/${uid}/showroom`), newShowRoom);
-                alert('Showroom added successfully');
+                toast.success('Showroom added successfully', { autoClose: 3000 });
             }
 
             // Clear the form fields
@@ -215,34 +220,37 @@ const ShowRoom = () => {
     };
 
     const handleEdit = (roomId) => {
-        const roomToEdit = existingShowRooms.find((room) => room.id === roomId);
-        const userPassword = prompt('Please enter the password for edit:');
+        setCurrentRoomId(roomId);
+        setIsEditing(true);
+        setIsModalVisible(true); // Show the confirmation modal
+    };
 
-        if (userPassword === 'SHOWROOM') {
-            setOpen(true)
+    const handleDelete = (roomId) => {
+        setCurrentRoomId(roomId);
+        setIsEditing(false);
+        setIsModalVisible(true); // Show the confirmation modal
+    };
+
+    const onConfirmAction = () => {
+        if (isEditing) {
+            const roomToEdit = existingShowRooms.find((room) => room.id === currentRoomId);
+            setOpen(true);
             setShowRoom(roomToEdit);
-            setEditRoomId(roomId);
+            setEditRoomId(currentRoomId);
             formRef.current.scrollIntoView({ behavior: 'smooth' });
-            
         } else {
-            alert('Incorrect password. Edit operation aborted.');
+            setExistingShowRooms((prevShowRooms) =>
+                prevShowRooms.filter((room) => room.id !== currentRoomId)
+            );
+            toast.success('Showroom removed successfully!', { autoClose: 3000 });
         }
+        setIsModalVisible(false);
     };
 
-    const handleDelete = async (roomId) => {
-        const roomToDelete = existingShowRooms.find((room) => room.id === roomId);
-        const shouldDelete = window.confirm('Are you sure you want to delete this showroom?');
-        if (!shouldDelete) return;
-
-        const userPassword = prompt('Please enter your password:');
-        if (userPassword !== roomToDelete.password) {
-            alert('Incorrect password. Deletion aborted.');
-            return;
-        }
-
-        setExistingShowRooms((prevShowRooms) => prevShowRooms.filter((room) => room.id !== roomId));
-        alert('Showroom removed from UI.');
+    const onCancelAction = () => {
+        setIsModalVisible(false);
     };
+
 
     useEffect(() => {
         fetchShowRooms();
@@ -321,13 +329,12 @@ const ShowRoom = () => {
         }
         setBaseOptions([]);
     };
-    const handleOpen = ()=> setOpen(true);
+    const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
     return (
         <div className="mb-5">
             <h5 className="font-semibold text-lg dark:text-white-light mb-5">Showroom Details</h5>
 
-           
             <br />
             <div className="search-bar-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '20px' }}>
                 <input
@@ -357,27 +364,27 @@ const ShowRoom = () => {
                     Search
                 </button>
             </div>
-            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', paddingLeft:'40px', paddingRight:'40px'}}>
-            <div className="tooltip">
-                <button
-                
-                    onClick={handlePrint}
-                    style={{
-                        backgroundColor: 'gray',
-                        color: '#fff',
-                        border: 'none',
-                        padding: '10px 20px',
-                        borderRadius: '5px',
-                        cursor: 'pointer',
-                    }}
-                >
-                    <IconPrinter />
-                </button>
-                <span className="tooltip-text">Print here</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '40px', paddingRight: '40px', marginBottom: '16px' }}>
+                <div className="tooltip">
+                    <button
+                        onClick={handlePrint}
+                        style={{
+                            backgroundColor: 'gray',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '10px 20px',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        <IconPrinter />
+                    </button>
+                    <span className="tooltip-text">Print here</span>
+                </div>
+                <Button variant="contained" color="success" onClick={handleOpen}>
+                    Create showroom
+                </Button>
             </div>
-                <Button variant='contained' color='success' onClick={handleOpen}>Create showroom</Button>
-            </div>
-           
 
             <div className="tableContainer overflow-x-auto" style={{ overflowX: 'auto' }} ref={listRef}>
                 <table className="tableContainer">
@@ -422,7 +429,7 @@ const ShowRoom = () => {
                                     <img src={room.img} alt="ShowRoom" className="w-16 h-16 object-cover" style={{ width: '64px', height: '64px', objectFit: 'cover' }} />
                                 </td>
                                 <td className="tableCell" data-label="Showroom Name">
-                                    {room.ShowRoom}
+                                    {room.ShowRoom.toUpperCase()}
                                 </td>
                                 <td className="tableCell" data-label="Showroom Id">
                                     {room.ShowRoomId}
@@ -469,369 +476,377 @@ const ShowRoom = () => {
                                 <td className="tableCell" data-label="Description">
                                     {room.description}
                                 </td>
-                                <td >
-                                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-around', width:'100%'}}>
-                                    <button onClick={() => handleEdit(room.id)} >
-                                      <IconPencil className="text-primary"/>
-                                    </button>
-                                    <button onClick={() => handleDelete(room.id)} >
-                                        <IconTrashLines className="text-danger"/>
-                                    </button>
+                                <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', width: '100%' }}>
+                                        <button onClick={() => handleEdit(room.id)}>
+                                            <IconPencil className="text-primary" />
+                                        </button>
+                                        <button onClick={() => handleDelete(room.id)}>
+                                            <IconTrashLines className="text-danger" />
+                                        </button>
                                     </div>
-                                   
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
-     
-            <Modal open={open} onClose={handleClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
+
+            <Modal open={open} onClose={handleClose}  aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
                 <Box sx={style}>
-                <form onSubmit={handleSubmit} ref={formRef} style={{ maxWidth: '400px', margin: '0 auto', padding: '20px', borderRadius: '5px' }}>
-                <div className="mb-2" style={{ alignItems: 'center', border: '1px solid #ccc', padding: '10px', borderRadius: '5px', backgroundColor: '#f9f9f9' }}>
-                    <h1 style={{ marginRight: '10px', fontSize: '1.2em', color: '#333' }}>Service type</h1>
-                    <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
-                        <input
-                            type="checkbox"
-                            name="availableServices"
-                            value="Service Center"
-                            checked={showRoom.availableServices.includes('Service Center')}
-                            onChange={handleServiceChange}
-                            className="mr-1"
-                            style={{ marginRight: '5px' }}
-                        />
-                        Service Center
-                    </label>
-                    {showRoom.availableServices.includes('Service Center') && (
-                        <div className="mb-2" style={{ marginLeft: '10px', backgroundColor: '#ffeeba', padding: '10px', borderRadius: '5px', fontSize: '0.9em' }}>
-                            <p style={{ marginBottom: '5px', fontWeight: 'bold' }}>Do you have insurance?</p>
-                            <label className="mr-2" style={{ marginRight: '10px', fontSize: '1em' }}>
+                    <form onSubmit={handleSubmit} ref={formRef} style={{ maxWidth: '400px', margin: '0 auto', padding: '20px', borderRadius: '5px' }}>
+                        <div className="mb-2" style={{ alignItems: 'center', border: '1px solid #ccc', padding: '10px', borderRadius: '5px', backgroundColor: '#f9f9f9' }}>
+                            <h1 style={{ marginRight: '10px', fontSize: '1.2em', color: '#333' }}>Service type</h1>
+                            <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
                                 <input
                                     type="checkbox"
-                                    name="hasInsurance"
-                                    value="Yes"
-                                    checked={showRoom.hasInsurance === 'Yes'}
-                                    onChange={handleInsuranceChange}
+                                    name="availableServices"
+                                    value="Service Center"
+                                    checked={showRoom.availableServices.includes('Service Center')}
+                                    onChange={handleServiceChange}
                                     className="mr-1"
                                     style={{ marginRight: '5px' }}
                                 />
-                                Yes
+                                Service Center
                             </label>
-                            <label className="mr-2" style={{ marginRight: '10px', fontSize: '1em' }}>
-                                <input
-                                    type="checkbox"
-                                    name="hasInsurance"
-                                    value="No"
-                                    checked={showRoom.hasInsurance === 'No'}
-                                    onChange={handleInsuranceChange}
-                                    className="mr-1"
-                                    style={{ marginRight: '5px' }}
-                                />
-                                No
-                            </label>
-                            {showRoom.hasInsurance === 'Yes' && (
-                                <div className="mt-2" style={{ marginTop: '10px' }}>
-                                    <label style={{ fontSize: '1em', color: '#333' }}>
-                                        Insurance Amount:
+                            {showRoom.availableServices.includes('Service Center') && (
+                                <div className="mb-2" style={{ marginLeft: '10px', backgroundColor: '#ffeeba', padding: '10px', borderRadius: '5px', fontSize: '0.9em' }}>
+                                    <p style={{ marginBottom: '5px', fontWeight: 'bold' }}>Do you have insurance?</p>
+                                    <label className="mr-2" style={{ marginRight: '10px', fontSize: '1em' }}>
                                         <input
-                                            type="text"
-                                            name="insuranceAmount"
-                                            value={showRoom.insuranceAmount}
-                                            onChange={handleChange}
-                                            className="form-input w-full mb-2"
-                                            required
-                                            style={{ width: '100%', padding: '5px', marginTop: '5px', borderRadius: '5px', border: '1px solid #ccc' }}
+                                            type="checkbox"
+                                            name="hasInsurance"
+                                            value="Yes"
+                                            checked={showRoom.hasInsurance === 'Yes'}
+                                            onChange={handleInsuranceChange}
+                                            className="mr-1"
+                                            style={{ marginRight: '5px' }}
                                         />
+                                        Yes
                                     </label>
+                                    <label className="mr-2" style={{ marginRight: '10px', fontSize: '1em' }}>
+                                        <input
+                                            type="checkbox"
+                                            name="hasInsurance"
+                                            value="No"
+                                            checked={showRoom.hasInsurance === 'No'}
+                                            onChange={handleInsuranceChange}
+                                            className="mr-1"
+                                            style={{ marginRight: '5px' }}
+                                        />
+                                        No
+                                    </label>
+                                    {showRoom.hasInsurance === 'Yes' && (
+                                        <div className="mt-2" style={{ marginTop: '10px' }}>
+                                            <label style={{ fontSize: '1em', color: '#333' }}>
+                                                Insurance Amount:
+                                                <input
+                                                    type="text"
+                                                    name="insuranceAmount"
+                                                    value={showRoom.insuranceAmount}
+                                                    onChange={handleChange}
+                                                    className="form-input w-full mb-2"
+                                                    required
+                                                    style={{ width: '100%', padding: '5px', marginTop: '5px', borderRadius: '5px', border: '1px solid #ccc' }}
+                                                />
+                                            </label>
+                                        </div>
+                                    )}
                                 </div>
                             )}
-                        </div>
-                    )}
-                    <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
-                        <input
-                            type="checkbox"
-                            name="availableServices"
-                            value="Body Shop"
-                            checked={showRoom.availableServices.includes('Body Shop')}
-                            onChange={handleServiceChange}
-                            className="mr-1"
-                            style={{ marginRight: '5px' }}
-                        />
-                        Body Shop
-                    </label>
-                    {showRoom.availableServices.includes('Body Shop') && (
-                        <div className="mb-2" style={{ marginLeft: '10px', backgroundColor: '#ffeeba', padding: '10px', borderRadius: '5px', fontSize: '0.9em' }}>
-                            <p style={{ marginBottom: '5px', fontWeight: 'bold' }}>Do you have insurance?</p>
-                            <label className="mr-2" style={{ marginRight: '10px', fontSize: '1em' }}>
+                            <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
                                 <input
                                     type="checkbox"
-                                    name="hasInsuranceBody"
-                                    value="Yes"
-                                    checked={showRoom.hasInsuranceBody === 'Yes'}
-                                    onChange={handleBodyInsuranceChange}
+                                    name="availableServices"
+                                    value="Body Shop"
+                                    checked={showRoom.availableServices.includes('Body Shop')}
+                                    onChange={handleServiceChange}
                                     className="mr-1"
                                     style={{ marginRight: '5px' }}
                                 />
-                                Yes
+                                Body Shop
                             </label>
-                            <label className="mr-2" style={{ marginRight: '10px', fontSize: '1em' }}>
-                                <input
-                                    type="checkbox"
-                                    name="hasInsuranceBody"
-                                    value="No"
-                                    checked={showRoom.hasInsuranceBody === 'No'}
-                                    onChange={handleBodyInsuranceChange}
-                                    className="mr-1"
-                                    style={{ marginRight: '5px' }}
-                                />
-                                No
-                            </label>
-                            {showRoom.hasInsuranceBody === 'Yes' && (
-                                <div className="mt-2" style={{ marginTop: '10px' }}>
-                                    <label style={{ fontSize: '1em', color: '#333' }}>
-                                        Insurance Amount:
+                            {showRoom.availableServices.includes('Body Shop') && (
+                                <div className="mb-2" style={{ marginLeft: '10px', backgroundColor: '#ffeeba', padding: '10px', borderRadius: '5px', fontSize: '0.9em' }}>
+                                    <p style={{ marginBottom: '5px', fontWeight: 'bold' }}>Do you have insurance?</p>
+                                    <label className="mr-2" style={{ marginRight: '10px', fontSize: '1em' }}>
                                         <input
-                                            type="text"
-                                            name="insuranceAmountBody"
-                                            value={showRoom.insuranceAmountBody}
-                                            onChange={handleBodyChange}
-                                            className="form-input w-full mb-2"
-                                            required
-                                            style={{ width: '100%', padding: '5px', marginTop: '5px', borderRadius: '5px', border: '1px solid #ccc' }}
+                                            type="checkbox"
+                                            name="hasInsuranceBody"
+                                            value="Yes"
+                                            checked={showRoom.hasInsuranceBody === 'Yes'}
+                                            onChange={handleBodyInsuranceChange}
+                                            className="mr-1"
+                                            style={{ marginRight: '5px' }}
                                         />
+                                        Yes
                                     </label>
+                                    <label className="mr-2" style={{ marginRight: '10px', fontSize: '1em' }}>
+                                        <input
+                                            type="checkbox"
+                                            name="hasInsuranceBody"
+                                            value="No"
+                                            checked={showRoom.hasInsuranceBody === 'No'}
+                                            onChange={handleBodyInsuranceChange}
+                                            className="mr-1"
+                                            style={{ marginRight: '5px' }}
+                                        />
+                                        No
+                                    </label>
+                                    {showRoom.hasInsuranceBody === 'Yes' && (
+                                        <div className="mt-2" style={{ marginTop: '10px' }}>
+                                            <label style={{ fontSize: '1em', color: '#333' }}>
+                                                Insurance Amount:
+                                                <input
+                                                    type="text"
+                                                    name="insuranceAmountBody"
+                                                    value={showRoom.insuranceAmountBody}
+                                                    onChange={handleBodyChange}
+                                                    className="form-input w-full mb-2"
+                                                    required
+                                                    style={{ width: '100%', padding: '5px', marginTop: '5px', borderRadius: '5px', border: '1px solid #ccc' }}
+                                                />
+                                            </label>
+                                        </div>
+                                    )}
                                 </div>
                             )}
+                            <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
+                                <input
+                                    type="checkbox"
+                                    name="availableServices"
+                                    value="Showroom"
+                                    checked={showRoom.availableServices.includes('Showroom')}
+                                    onChange={handleServiceChange}
+                                    className="mr-1"
+                                    style={{ marginRight: '5px' }}
+                                />
+                                Showroom
+                            </label>
                         </div>
-                    )}
-                    <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
-                        <input
-                            type="checkbox"
-                            name="availableServices"
-                            value="Showroom"
-                            checked={showRoom.availableServices.includes('Showroom')}
-                            onChange={handleServiceChange}
-                            className="mr-1"
-                            style={{ marginRight: '5px' }}
-                        />
-                        Showroom
-                    </label>
-                </div>
 
-                <div className="mb-4" style={{ marginBottom: '16px' }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                        Showroom Name
-                    </label>
-                    <input
-                        type="text"
-                        name="ShowRoom"
-                        value={showRoom.ShowRoom}
-                        onChange={handleChange}
-                        className="form-input w-full"
-                        required
-                        style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
-                    />
-                </div>
-                <div className="mb-4" style={{ marginBottom: '16px' }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                        ShowroomId
-                    </label>
-                    <input
-                        type="text"
-                        name="ShowRoomId"
-                        value={showRoom.ShowRoomId}
-                        onChange={handleChange}
-                        className="form-input w-full"
-                        required
-                        style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
-                    />
-                </div>
-                <div className="mb-4" style={{ marginBottom: '16px' }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                        Description
-                    </label>
-                    <textarea
-                        name="description"
-                        value={showRoom.description}
-                        onChange={handleChange}
-                        className="form-textarea w-full"
-                        required
-                        style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em', minHeight: '100px' }}
-                    />
-                </div>
-                <div className="mb-4" style={{ marginBottom: '16px' }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                        Location
-                    </label>
-                    <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" width="100%" sx={{ gap: 2 }}>
-                        <Autocomplete
-                        style={{width:'100%',backgroundColor:'white'}}
-                            value={baseLocation}
-                            onInputChange={(event, newInputValue) => {
-                                if (newInputValue) {
-                                    getAutocompleteResults(newInputValue, setBaseOptions);
-                                } else {
-                                    setBaseOptions([]);
-                                }
-                            }}
-                            onChange={handleLocationChange}
-                            sx={{ width: 300 }}
-                            options={baseOptions}
-                            getOptionLabel={(option) => option.label}
-                            isOptionEqualToValue={(option, value) => option.label === value.label}
-                            renderInput={(params) => <TextField {...params} label="Location" variant="outlined" />}
-                        />
-                        {showRoom.locationLatLng.lat && showRoom.locationLatLng.lng && <Typography>{`Location Lat/Lng: ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`}</Typography>}
-                    </Box>
-                </div>
+                        <div className="mb-4" style={{ marginBottom: '16px' }}>
+                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+                                Showroom Name
+                            </label>
+                            <input
+                                type="text"
+                                name="ShowRoom"
+                                value={showRoom.ShowRoom}
+                                onChange={handleChange}
+                                className="form-input w-full"
+                                required
+                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
+                            />
+                        </div>
+                        <div className="mb-4" style={{ marginBottom: '16px' }}>
+                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+                                ShowroomId
+                            </label>
+                            <input
+                                type="text"
+                                name="ShowRoomId"
+                                value={showRoom.ShowRoomId}
+                                onChange={handleChange}
+                                className="form-input w-full"
+                                required
+                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
+                            />
+                        </div>
+                        <div className="mb-4" style={{ marginBottom: '16px' }}>
+                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+                                Description
+                            </label>
+                            <textarea
+                                name="description"
+                                value={showRoom.description}
+                                onChange={handleChange}
+                                className="form-textarea w-full"
+                                required
+                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em', minHeight: '100px' }}
+                            />
+                        </div>
+                        <div className="mb-4" style={{ marginBottom: '16px' }}>
+                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+                                Location
+                            </label>
+                            <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" width="100%" sx={{ gap: 2 }}>
+                                <Autocomplete
+                                    style={{ width: '100%', backgroundColor: 'white' }}
+                                    value={baseLocation}
+                                    onInputChange={(event, newInputValue) => {
+                                        if (newInputValue) {
+                                            getAutocompleteResults(newInputValue, setBaseOptions);
+                                        } else {
+                                            setBaseOptions([]);
+                                        }
+                                    }}
+                                    onChange={handleLocationChange}
+                                    sx={{ width: 300 }}
+                                    options={baseOptions}
+                                    getOptionLabel={(option) => option.label}
+                                    isOptionEqualToValue={(option, value) => option.label === value.label}
+                                    renderInput={(params) => <TextField {...params} label="Location" variant="outlined" />}
+                                />
+                                {showRoom.locationLatLng.lat && showRoom.locationLatLng.lng && (
+                                    <Typography>{`Location Lat/Lng: ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`}</Typography>
+                                )}
+                            </Box>
+                        </div>
 
-                <div className="mb-4" style={{ marginBottom: '16px' }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                        User Name
-                    </label>
-                    <input
-                        type="text"
-                        name="userName"
-                        value={showRoom.userName}
-                        onChange={handleChange}
-                        className="form-input w-full"
-                        required
-                        style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
-                    />
-                </div>
+                        <div className="mb-4" style={{ marginBottom: '16px' }}>
+                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+                                User Name
+                            </label>
+                            <input
+                                type="text"
+                                name="userName"
+                                value={showRoom.userName}
+                                onChange={handleChange}
+                                className="form-input w-full"
+                                required
+                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
+                            />
+                        </div>
 
-                <div className="mb-4" style={{ marginBottom: '16px' }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                        Password
-                    </label>
-                    <input
-                        type="password"
-                        name="password"
-                        value={showRoom.password}
-                        onChange={handleChange}
-                        className="form-input w-full"
-                        required
-                        style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
-                    />
-                </div>
-                <div className="mb-4" style={{ marginBottom: '16px' }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                        Help Line Number
-                    </label>
-                    <input
-                        type="text"
-                        name="tollfree"
-                        value={showRoom.tollfree}
-                        onChange={handleChange}
-                        className="form-input w-full"
-                        required
-                        style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
-                    />
-                </div>
+                        <div className="mb-4" style={{ marginBottom: '16px' }}>
+                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+                                Password
+                            </label>
+                            <input
+                                type="password"
+                                name="password"
+                                value={showRoom.password}
+                                onChange={handleChange}
+                                className="form-input w-full"
+                                required
+                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
+                            />
+                        </div>
+                        <div className="mb-4" style={{ marginBottom: '16px' }}>
+                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+                                Help Line Number
+                            </label>
+                            <input
+                                type="text"
+                                name="tollfree"
+                                value={showRoom.tollfree}
+                                onChange={handleChange}
+                                className="form-input w-full"
+                                required
+                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
+                            />
+                        </div>
 
-                <div className="mb-4" style={{ marginBottom: '16px' }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                        Phone Number
-                    </label>
-                    <input
-                        type="text"
-                        name="phoneNumber"
-                        value={showRoom.phoneNumber}
-                        onChange={handleChange}
-                        className="form-input w-full"
-                        required
-                        style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
-                    />
-                </div>
+                        <div className="mb-4" style={{ marginBottom: '16px' }}>
+                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+                                Phone Number
+                            </label>
+                            <input
+                                type="text"
+                                name="phoneNumber"
+                                value={showRoom.phoneNumber}
+                                onChange={handleChange}
+                                className="form-input w-full"
+                                required
+                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
+                            />
+                        </div>
 
-                <div className="mb-4" style={{ marginBottom: '16px' }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                        Mobile Number
-                    </label>
-                    <input
-                        type="text"
-                        name="mobileNumber"
-                        value={showRoom.mobileNumber}
-                        onChange={handleChange}
-                        className="form-input w-full"
-                        required
-                        style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
-                    />
-                </div>
+                        <div className="mb-4" style={{ marginBottom: '16px' }}>
+                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+                                Mobile Number
+                            </label>
+                            <input
+                                type="text"
+                                name="mobileNumber"
+                                value={showRoom.mobileNumber}
+                                onChange={handleChange}
+                                className="form-input w-full"
+                                required
+                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
+                            />
+                        </div>
 
-                <div className="mb-4" style={{ marginBottom: '16px' }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                        State
-                    </label>
-                    <input
-                        type="text"
-                        name="state"
-                        value={showRoom.state}
-                        onChange={handleChange}
-                        className="form-input w-full"
-                        required
-                        style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
-                    />
-                </div>
+                        <div className="mb-4" style={{ marginBottom: '16px' }}>
+                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+                                State
+                            </label>
+                            <input
+                                type="text"
+                                name="state"
+                                value={showRoom.state}
+                                onChange={handleChange}
+                                className="form-input w-full"
+                                required
+                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
+                            />
+                        </div>
 
-                <div className="mb-4" style={{ marginBottom: '16px' }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                        District
-                    </label>
-                    <select
-                        name="district"
-                        value={showRoom.district}
-                        onChange={handleChange}
-                        className="form-select w-full"
-                        required
-                        style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
-                     >
-                        <option value="">Select District</option>
-                        {keralaDistricts.map((district) => (
-                            <option key={district} value={district}>
-                                {district}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                        <div className="mb-4" style={{ marginBottom: '16px' }}>
+                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+                                District
+                            </label>
+                            <select
+                                name="district"
+                                value={showRoom.district}
+                                onChange={handleChange}
+                                className="form-select w-full"
+                                required
+                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
+                            >
+                                <option value="">Select District</option>
+                                {keralaDistricts.map((district) => (
+                                    <option key={district} value={district}>
+                                        {district}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-                <div className="mb-4" style={{ marginBottom: '16px' }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                        Upload Image
-                    </label>
-                    <input
-                        type="file"
-                        onChange={handleImageUpload}
-                        className="form-input w-full"
-                        required
-                        style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
-                    />
-                </div>
+                        <div className="mb-4" style={{ marginBottom: '16px' }}>
+                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+                                Upload Image
+                            </label>
+                            <input
+                                type="file"
+                                onChange={handleImageUpload}
+                                className="form-input w-full"
+                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
+                            />
+                        </div>
 
-                <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
-                    <button
-                        type="submit"
-                        className="btn btn-primary w-full"
-                        style={{
-                            width: '100%',
-                            padding: '12px',
-                            backgroundColor: '#007bff',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '1em',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            textTransform: 'uppercase',
-                        }}
-                    >
-                        {editRoomId ? 'Update Showroom' : 'Add Showroom'}
-                    </button>
-                </div>
-            </form>
+                        <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
+                            <button
+                                type="submit"
+                                className="btn btn-primary w-full"
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    backgroundColor: '#007bff',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    fontSize: '1em',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    textTransform: 'uppercase',
+                                }}
+                            >
+                                {editRoomId ? 'Update Showroom' : 'Add Showroom'}
+                            </button>
+                        </div>
+                    </form>
                 </Box>
             </Modal>
+            {isModalVisible && (
+                <ConfirmationModal
+                    isVisible={isModalVisible}
+                    onConfirm={onConfirmAction}
+                    onCancel={onCancelAction}
+                />
+            )}
+             <ToastContainer />
         </div>
     );
 };
