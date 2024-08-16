@@ -5,6 +5,7 @@ const ConfirmationModal = ({ isVisible, onConfirm, onCancel }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const role =sessionStorage.getItem('role');
 
     const handleTogglePassword = () => {
         setShowPassword(!showPassword);
@@ -25,7 +26,9 @@ const ConfirmationModal = ({ isVisible, onConfirm, onCancel }) => {
     return (
         <div className="fixed inset-0 flex items-start justify-center bg-black bg-opacity-50">
             <div className="bg-white p-6 rounded shadow-lg mt-10">
-                <h3 className="text-lg font-semibold">Enter Password {`RSA@123`} to Confirm Deletion</h3>
+                <h3 className="text-lg font-semibold">
+                Enter Password {role !== 'staff' && 'RSA@123'} to Confirm Deletion
+                </h3>
                 <div className="relative">
                     <input
                         type={showPassword ? 'text' : 'password'}
