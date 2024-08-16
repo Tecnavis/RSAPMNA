@@ -15,6 +15,7 @@ const Driver = () => {
     const uid = sessionStorage.getItem('uid')
     const navigate = useNavigate();
     console.log("data", items);
+    const role =sessionStorage.getItem('role');
 
     const fetchData = async () => {
         console.log('Fetching data from Firestore...');
