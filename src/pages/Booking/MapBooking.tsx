@@ -861,6 +861,10 @@ if (editData?.adjustValue) {
             try {
                 const selectedDriverObject = drivers.find((driver) => driver.id === selectedDriver);
                 const driverName = selectedDriverObject ? selectedDriverObject.driverName : '';
+                const selectedDriverDistanceData = pickupDistances.find((dist) => dist.id === selectedDriver);
+                const pickupDistance = selectedDriverDistanceData ? selectedDriverDistanceData.distance : 0;
+    
+              
                 let finalFileNumber = '';
                 const currentDate = new Date();
                 const dateTime = formatDate(currentDate); // Use the formatted date
@@ -899,6 +903,7 @@ if (editData?.adjustValue) {
                     mobileNumber: mobileNumber || '',
                     phoneNumber: phoneNumber || '',
                     vehicleType: vehicleType || '',
+                    pickupDistance: pickupDistance || '',
 
                     serviceType: serviceType || '',
                     serviceVehicle: serviceVehicle || '',
@@ -1580,7 +1585,7 @@ if (editData?.adjustValue) {
                             <IconPlus />
                         </button>
                     </div>
-                    <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#333', marginTop: '10px', background: 'white', padding: '19px', borderRadius: '4px',marginLeft:"24%" }}> {showroomLocation}</div>
+                    {/* <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#333', marginTop: '10px', background: 'white', padding: '19px', borderRadius: '4px',marginLeft:"24%" }}> {showroomLocation}</div> */}
                     {showShowroomModal && <ShowroomModal onClose={() => setShowShowroomModal(false)} updateShowroomLocation={updateShowroomLocation} />}
                     
                           
