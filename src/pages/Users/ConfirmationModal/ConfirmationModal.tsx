@@ -6,7 +6,8 @@ const ConfirmationModal = ({ isVisible, onConfirm, onCancel }) => {
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const role =sessionStorage.getItem('role');
-
+    const confirmPassword = import.meta.env.VITE_REACT_APP_CONFIRM_PASSWORD;
+    
     const handleTogglePassword = () => {
         setShowPassword(!showPassword);
     };
@@ -27,7 +28,7 @@ const ConfirmationModal = ({ isVisible, onConfirm, onCancel }) => {
         <div className="fixed inset-0 flex items-start justify-center bg-black bg-opacity-50">
             <div className="bg-white p-6 rounded shadow-lg mt-10">
                 <h3 className="text-lg font-semibold">
-                Enter Password {role !== 'staff' && 'RSA@123'} to Confirm 
+                Enter Password {role !== 'staff' && confirmPassword} to Confirm 
                 </h3>
                 <div className="relative">
                     <input
