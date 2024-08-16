@@ -74,6 +74,7 @@
         "react-simplemde-editor": "^5.2.0",
         "react-sortablejs": "^6.1.4",
         "react-text-mask": "^5.5.0",
+        "react-toastify": "^10.0.5",
         "sortablejs": "^1.15.0",
         "styled-components": "^6.1.11",
         "sweetalert2": "^11.6.8",
