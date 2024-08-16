@@ -17,6 +17,7 @@ const LoginCover = () => {
     const signIn = () => {
         // Store role in local storage
         localStorage.setItem('role', role);
+
         const db = getFirestore();
 
         const auth = getAuth();
@@ -29,6 +30,8 @@ const LoginCover = () => {
                     const user = userCredential.user;
                     const uid = user.uid;
                     sessionStorage.setItem('uid', uid);
+                    sessionStorage.setItem('role', role);
+
                     console.log("User signed in:", uid);
                     navigate('/index'); // Redirect to home page or any other route
                 })
@@ -47,7 +50,7 @@ const LoginCover = () => {
     
         try {
             console.log("Attempting to fetch staff credentials...");
-            console.log(`Username: ${username}, Password: ${password}, Role: staff`);
+            console.log(`Username: ${username}, Password: ${password}, Role:${role} `);
     
             const q = query(
                 collection(db, `user/V9e4v0UtSzUrPVgxtJzOTkq71do2/users`),
@@ -69,8 +72,10 @@ const LoginCover = () => {
                     console.log("Document found:", doc.id, doc.data());
                     userId = doc.id;
                 });
-    
-                sessionStorage.setItem('role', userId);
+
+                sessionStorage.setItem('role', role);
+                sessionStorage.setItem('username', username); // Store username
+
                 console.log("Staff user signed in successfully with UID:", userId);
                 navigate('/index');
             } else {

@@ -140,6 +140,8 @@ if (!editData || editData.phone_number !== phone_number) {
                     phone_number,
                     userName,
                     password,
+                    role: "staff" ,
+
                     confirmPassword,
                     profileImage: profileImageUrl,
                 };
