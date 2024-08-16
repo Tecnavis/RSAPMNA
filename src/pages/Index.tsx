@@ -11,7 +11,10 @@ const Index = () => {
     const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass === 'rtl');
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid')
+const role =sessionStorage.getItem('role');
+const userName =sessionStorage.getItem('username');
 
+console.log("role",userName)
     const [loading, setLoading] = useState(true);
     const [salesByCategory, setSalesByCategory] = useState({
         series: [0, 0, 0, 0],

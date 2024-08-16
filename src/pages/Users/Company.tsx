@@ -16,6 +16,7 @@ const Company = () => {
     const uid = sessionStorage.getItem('uid')
     const [isModalVisible, setModalVisible] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
+    const role =sessionStorage.getItem('role');
 
     useEffect(() => {
         const fetchData = async () => {
