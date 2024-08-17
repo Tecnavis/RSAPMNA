@@ -333,65 +333,66 @@ const CashCollectionReport = () => {
                         </div>
                     </div>
                     <div className={styles.tableContainer}>
-            <table className={styles.table}>
-                <thead className={styles.tableHead}>
-                    <tr>
-                        <th className={styles.tableCell}>Select</th>
-                        <th className={styles.tableCell}>Date</th>
-                        <th className={styles.tableCell}>Amount</th>
-                        <th className={styles.tableCell}>Received Amount</th>
-                        <th className={styles.tableCell}>Balance</th>
-                        <th className={styles.tableCell}>Actions</th>
-                    </tr>
-                </thead>
-                <tbody className={styles.tableBody}>
-                    {filteredBookings.map((booking) => (
-                        <tr key={booking.id} className={`${styles.tableRow} ${booking.approved ? 'bg-gray-200 text-gray-500' : 'bg-white'}`}>
-                            <td className={`${styles.tableCell} text-center`}>
-                                <input type="checkbox" checked={selectedBookings.includes(booking.id)} onChange={() => handleCheckboxChange(booking.id)} disabled={booking.approved} />
-                            </td>
-                            <td className={styles.responsiveCell}>
-                                {format(parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date()), 'dd/MM/yyyy, h:mm:ss a')}
-                            </td>
-                            <td className={styles.responsiveCell}>{booking.amount}</td>
-                            <td className={styles.responsiveCell}>
-                                <input
-                                    type="number"
-                                    value={booking.receivedAmount || ''}
-                                    onChange={(e) => handleAmountReceivedChange(booking.id, e.target.value)}
-                                    style={{ border: '1px solid #d1d5db', borderRadius: '0.25rem', padding: '0.25rem 0.5rem' }}
-                                    disabled={booking.approved}
-                                />
-                            </td>
-                            <td className={styles.responsiveCell}>{calculateBalance(booking.amount, booking.receivedAmount || 0)}</td>
-                            <td className={styles.responsiveCell}>
-                                <button
-                                    onClick={() => handleEditClick(booking)}
-                                    className={`text-blue-500 hover:text-blue-700 ${booking.approved ? 'cursor-not-allowed opacity-50' : ''}`}
-                                    disabled={booking.approved}
-                                >
-                                    Edit
-                                </button>
-                                <button
-                                    onClick={() => handleInvoiceClick(booking)}
-                                    className={`text-green-500 hover:text-green-700 ${booking.approved ? 'cursor-not-allowed opacity-50' : ''}`}
-                                    disabled={booking.approved}
-                                >
-                                    Invoice
-                                </button>
-                                <button
-                                    onClick={() => handleApproveClick(booking)}
-                                    className={`text-${booking.approved ? 'green-500' : 'red-500'} hover:text-${booking.approved ? 'green-700' : 'red-700'} ${booking.approved ? 'cursor-not-allowed' : ''}`}
-                                    disabled={booking.approved}
-                                >
-                                    {booking.approved ? 'Approved' : 'Approve'}
-                                </button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+    <table className={styles.table}>
+        <thead className={styles.tableHead}>
+            <tr>
+                <th className={styles.tableCell}>Select</th>
+                <th className={styles.tableCell}>Date</th>
+                <th className={styles.tableCell}>Amount</th>
+                <th className={styles.tableCell}>Received Amount</th>
+                <th className={styles.tableCell}>Balance</th>
+                <th className={styles.tableCell}>Actions</th>
+            </tr>
+        </thead>
+        <tbody className={styles.tableBody}>
+            {filteredBookings.map((booking) => (
+                <tr key={booking.id} className={`${styles.tableRow} ${booking.approved ? 'bg-gray-200 text-gray-500' : 'bg-white'}`}>
+                    <td className={`${styles.tableCell} text-center`}>
+                        <input type="checkbox" checked={selectedBookings.includes(booking.id)} onChange={() => handleCheckboxChange(booking.id)} disabled={booking.approved} />
+                    </td>
+                    <td className={styles.responsiveCell}>
+                        {format(parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date()), 'dd/MM/yyyy, h:mm:ss a')}
+                    </td>
+                    <td className={styles.responsiveCell}>{booking.amount}</td>
+                    <td className={styles.responsiveCell}>
+                        <input
+                            type="number"
+                            value={booking.receivedAmount || ''}
+                            onChange={(e) => handleAmountReceivedChange(booking.id, e.target.value)}
+                            style={{ border: '1px solid #d1d5db', borderRadius: '0.25rem', padding: '0.25rem 0.5rem' }}
+                            disabled={booking.approved}
+                        />
+                    </td>
+                    <td className={styles.responsiveCell}>{calculateBalance(booking.amount, booking.receivedAmount || 0)}</td>
+                    <td className={styles.responsiveCell}>
+                        <button
+                            onClick={() => handleEditClick(booking)}
+                            className={`text-blue-500 hover:text-blue-700 ${booking.approved ? 'cursor-not-allowed opacity-50' : ''}`}
+                            disabled={booking.approved}
+                        >
+                            Edit
+                        </button>
+                        <button
+                            onClick={() => handleInvoiceClick(booking)}
+                            className={`text-green-500 hover:text-green-700 ${booking.approved ? 'cursor-not-allowed opacity-50' : ''}`}
+                            disabled={booking.approved}
+                        >
+                            Invoice
+                        </button>
+                        <button
+                            onClick={() => handleApproveClick(booking)}
+                            className={`text-${booking.approved ? 'green-500' : 'red-500'} hover:text-${booking.approved ? 'green-700' : 'red-700'} ${booking.approved ? 'cursor-not-allowed' : ''}`}
+                            disabled={booking.approved}
+                        >
+                            {booking.approved ? 'Approved' : 'Approve'}
+                        </button>
+                    </td>
+                </tr>
+            ))}
+        </tbody>
+    </table>
+</div>
+
 
                     {editingBooking && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto outline-none focus:outline-none">

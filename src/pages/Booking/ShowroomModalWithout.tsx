@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './ShowroomModal.css';
 import { collection, addDoc, getFirestore, onSnapshot } from 'firebase/firestore';
-import { TextField, Typography, IconButton } from '@mui/material';
+import { TextField, Typography, IconButton, Button } from '@mui/material';
 import IconMapPin from '../../components/Icon/IconMapPin';
 
-const ShowroomModalWithout = ({ updateShowroomLocation }) => {
+const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
     const [showRoom, setShowRoom] = useState('');
     const [showrooms, setShowrooms] = useState([]);
     const [description, setDescription] = useState('');
@@ -23,28 +23,16 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
     const [insuranceAmountBody, setInsuranceAmountBody] = useState('');
     const [img, setImg] = useState('');
     const [locationName, setLocationName] = useState('');
-    const [locationCoords, setLocationCoords] = useState('');
+    const [locationCoords, setLocationCoords] = useState({ lat: '', lng: '' });
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
 
-    const handleLocationCoordsChange = (e) => {
-        const value = e.target.value;
-        setLocationCoords(value);
-
-        const parts = value.split(',').map(part => part.trim());
-        if (parts.length === 2) {
-            const [lat, lng] = parts;
-            setLocationCoords({ lat, lng });
-        } else {
-            setLocationCoords({ lat: '', lng: '' });
-        }
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const location = `${locationName}, ${locationCoords.lat}, ${locationCoords.lng}`;
         try {
             await addDoc(collection(db, `user/${uid}/showroom`), {
-                Location: locationName,
+                Location: location,
                 ShowRoom: showRoom,
                 description,
                 userName,
@@ -66,8 +54,8 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
                 createdAt: new Date(),
             });
             console.log('Showroom added successfully');
-            console.log('Updating showroom location to:', locationName);
-            updateShowroomLocation(locationName);
+            console.log('Updating showroom location to:', location);
+            updateShowroomLocation(location);
 
             // Reset form fields
             setLocationName('');
@@ -80,7 +68,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
             setPhoneNumber('');
             setAvailableServices([]);
             setMobileNumber('');
-            setLocationCoords('');
+            setLocationCoords({ lat: '', lng: '' });
             setState('');
             setDistrict('');
             setHasInsurance('');
@@ -88,6 +76,9 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
             setHasInsuranceBody('');
             setInsuranceAmountBody('');
             setImg('');
+
+            // Close the modal
+            onClose();
         } catch (error) {
             console.error('Error adding document:', error);
         }
@@ -136,12 +127,22 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
                     </div>
                 </div>
                 <div className="form-group">
-                    <label htmlFor="locationCoords">Latitude, Longitude:</label>
+                    <label htmlFor="lat">Latitude:</label>
                     <TextField
-                        value={locationCoords.lat && locationCoords.lng ? `${locationCoords.lat}, ${locationCoords.lng}` : ''}
-                        onChange={handleLocationCoordsChange}
+                        value={locationCoords.lat}
+                        onChange={(e) => setLocationCoords({ ...locationCoords, lat: e.target.value })}
                         variant="outlined"
-                        label="Latitude, Longitude (format: lat, lng)"
+                        label="Latitude"
+                        fullWidth
+                    />
+                </div>
+                <div className="form-group">
+                    <label htmlFor="lng">Longitude:</label>
+                    <TextField
+                        value={locationCoords.lng}
+                        onChange={(e) => setLocationCoords({ ...locationCoords, lng: e.target.value })}
+                        variant="outlined"
+                        label="Longitude"
                         fullWidth
                     />
                 </div>
@@ -157,7 +158,10 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
                     ></textarea>
                 </div>
                 {/* Add other form fields here */}
-                <button type="submit" className="btn btn-primary">Save Showroom</button>
+                <div className="modal-actions">
+                    <Button type="submit" variant="contained" color="primary">Save Showroom</Button>
+                    <Button onClick={onClose} variant="outlined" color="secondary">Close</Button>
+                </div>
             </form>
         </div>
     );

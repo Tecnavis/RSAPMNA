@@ -731,6 +731,18 @@ if (editData?.adjustValue) {
             return 'Unknown Vehicle';
         }
     };
+    // ---------------------------------------------------------------------
+    const getMapUrl = (start, end) => {
+        if (start && end) {
+          return `https://www.google.com/maps/dir/?api=1&origin=${start.lat},${start.lng}&destination=${end.lat},${end.lng}`;
+        }
+        return '#';
+      };
+    
+      const baseToPickupUrl = getMapUrl(baseLocation, pickupLocation);
+      const pickupToDropoffUrl = getMapUrl(pickupLocation, dropoffLocation);
+      const dropoffToBaseUrl = getMapUrl(dropoffLocation, baseLocation);
+    // -----------------------------------------------------------------------------
     const formatDate = (date) => {
         const day = date.getDate().toString().padStart(2, '0');
         const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are zero-based
@@ -821,7 +833,37 @@ if (editData?.adjustValue) {
             }
         }
     };
-
+    const buttonStyle = {
+        display: 'inline-block',
+        padding: '10px 20px',
+        margin: '5px',
+        borderRadius: '25px',
+        background: 'linear-gradient(135deg, #4CAF50, #2E8B57)',
+        color: 'white',
+        textAlign: 'center',
+        textDecoration: 'none',
+        fontSize: '16px',
+        fontWeight: 'bold',
+        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+        transition: 'background 0.3s ease, transform 0.2s ease',
+        cursor: 'pointer',
+        border: 'none',
+      };
+      
+      const buttonHoverStyle = {
+        ...buttonStyle,
+        background: 'linear-gradient(135deg, #2E8B57, #4CAF50)',
+        transform: 'scale(1.05)',
+      };
+      const containerStyle = {
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+      };
+      // To use the hover style, you might need to add hover effects using CSS classes instead of inline styles.
+      
  
   return (
         <div className="p-1 flex-1 mt-4 mx-24 shadow-lg rounded-lg bg-lightblue-100" style={{ background: 'lightblue' }}>
@@ -1125,12 +1167,13 @@ if (editData?.adjustValue) {
                                     <IconPlus />
                                 </button>
                             </div>
-                            <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#333', marginTop: '10px', background: 'white', padding: '19px', borderRadius: '4px', marginLeft: '24%' }}>
+                            {/* <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#333', marginTop: '10px', background: 'white', padding: '19px', borderRadius: '4px', marginLeft: '24%' }}>
                                 {' '}
                                 {showroomLocation}
-                            </div>
+                            </div> */}
                             {showShowroomModal && <ShowroomModalWithout onClose={() => setShowShowroomModal(false)} updateShowroomLocation={updateShowroomLocation} />}
-
+                        
+           
                             <div className="flex items-center mt-4">
                                 <label htmlFor="dropoffLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
                                     Dropoff Location
@@ -1153,6 +1196,7 @@ if (editData?.adjustValue) {
                                         value={manualInput1}
                                     />
                                 </div>
+                               
                                 <div className="search-box ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
                                     <input
                                         className="form-input flex-1"
@@ -1215,6 +1259,38 @@ if (editData?.adjustValue) {
                             </div>
                         </div>
                     </div>
+                   {/* Navigation Buttons */}
+                   <div className="mt-4 "  style={containerStyle}>
+  <a
+    href={baseToPickupUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    style={buttonStyle}
+  >
+    Route: Base to Pickup
+  </a>
+  <a
+    href={pickupToDropoffUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    style={buttonStyle}
+  >
+    Route: Pickup to Dropoff
+  </a>
+  <a
+    href={dropoffToBaseUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    style={buttonStyle}
+  >
+    Route: Dropoff to Base
+  </a>
+</div>
+
+ 
+
+
+
                     <div className="mt-4 flex items-center">
                         <label htmlFor="distance" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
                             Distance (KM)
