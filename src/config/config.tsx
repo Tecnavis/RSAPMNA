@@ -21,6 +21,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const storage = getStorage(app);
 const messaging = getMessaging(app);
+getToken(messaging, {vapidKey:"BKPoKIWRkx6sdBatbMyNn_rw0aT7kw52-FNKZIlfYV6QD2knwxCSEUBU_CDMJSjJnYflUix08tmsJ2-ddbnrzoQ"})
 
 export { auth, storage, messaging, getToken, onMessage };
 export default app;

@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import ShowroomModalWithout from './ShowroomModalWithout';
 import { title } from 'process';
 import axios from 'axios';
+import firebase from '../..';
 
 interface Showroom {
     id: string;
@@ -861,21 +862,21 @@ const distance=parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3);
                     const docRef = doc(db, `user/${uid}/bookings`, editData.id);
                     await updateDoc(docRef, bookingData);
                     console.log('Document updated');
-                    try {
-                        const response = await axios.post('https://fcm.googleapis.com/fcm/send', {
-                          notification: {
-                            title: 'title',
-                            body: 'body',
-                          },
-                          to: 'fcmToken'
-                        }, {
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `key=YOUR_SERVER_KEY`
-                          }
-                        });
-                    
-                        console.log('Notification sent successfully:', response.data);
+                    const notificationPayload = {
+                        notification: {
+                          title: 'New Booking!',
+                          body: `Booking ID: ${bookingData.bookingId} has been ${editData ? 'updated' : 'added'}.`
+                        },
+                        data: {
+                          bookingId: 'the booking id',
+                          driverName: 'the driver nam',
+                          // Other relevant booking details
+                        }
+                      };
+                  
+                      try {
+                        const response = await firebase.messaging().send(notificationPayload);
+                        console.log('Notification sent successfully:', response);
                       } catch (error) {
                         console.error('Error sending notification:', error);
                       }
