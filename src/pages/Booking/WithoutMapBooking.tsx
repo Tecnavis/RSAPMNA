@@ -100,7 +100,34 @@ const WithoutMapBooking = ({ activeForm }) => {
     const [adjustValue, setAdjustValue] = useState('');
     const [bodyShope, setBodyShope]= useState('');
     const uid = sessionStorage.getItem('uid')
-
+    const [dis1, setDis1] = useState('');
+    const [dis2, setDis2] = useState('');
+    const [dis3, setDis3] = useState('');
+    const inputStyle = {
+        width: '100%',
+        padding: '0.5rem',
+        border: '1px solid #ccc',
+        borderRadius: '5px',
+        fontSize: '1rem',
+        outline: 'none',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    };
+    
+    const linkStyle = {
+        borderRadius: '40px',
+        background: 'transparent',
+        color: 'blue',
+        marginLeft: '10px',
+        padding: '10px',
+        border: 'none',
+        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
+        cursor: 'pointer',
+        transition: 'background 0.3s ease',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+    };
+    
     useEffect(() => {
         if (state && state.editData) {
             console.log('first');
@@ -122,6 +149,12 @@ const WithoutMapBooking = ({ activeForm }) => {
             setServiceCategory(editData.serviceCategory || '');
             setAvailableServices(editData.availableServices || '');
             setMobileNumber(editData.mobileNumber || '');
+            setDis1(editData.dis1 || '');
+            setDis2(editData.dis2 || '');
+
+            setDis3(editData.dis3 || '');
+
+
             setVehicleNumber(editData.vehicleNumber || '');
             setServiceVehicle(editData.serviceVehicle || '');
             setVehicleModel(editData.vehicleModel || '');
@@ -358,28 +391,38 @@ const WithoutMapBooking = ({ activeForm }) => {
             case 'updatedTotalSalary':
                 setUpdatedTotalSalary(value || '');
                 break;
-
-            case 'distance':
-                setDistance(value || '');
-                break;
+                case 'dis1':
+                    setDis1(value || '');
+                    break;
+                case 'dis2':
+                    setDis2(value || '');
+                    break;
+                case 'dis3':
+                    setDis3(value || '');
+                    break;
+                case 'distance':
+                    // Ensure that totalDistance is recalculated
+                    const totalDistance = parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3);
+                    console.log('Setting distance to:', totalDistance);
+                    setDistance(totalDistance || 0); // Default to 0 if totalDistance is NaN
+                    break;
             case 'serviceVehicle':
                 setServiceVehicle(value);
                 break;
-            case 'selectedDriver':
-                setSelectedDriver(value || '');
-                console.log('Selected Driver ID:', value);
-
-                const selectedDriverData = drivers.find((driver) => driver.id === value);
-                console.log('Selected Driver Dataaa:', selectedDriverData);
-                if (selectedDriverData) {
-                    const calculatedSalary = calculateTotalSalary(serviceDetails.salary, distance, serviceDetails.basicSalaryKM, serviceDetails.salaryPerKM);
-                    console.log('Calculated Salary:', calculatedSalary);
-
-                    setTotalSalary(calculatedSalary);
-                }
-
-                break;
-
+                case 'selectedDriver':
+                    setSelectedDriver(value || '');
+                    console.log('Selected Driver ID:', value);
+                
+                    const selectedDriverData = drivers.find((driver) => driver.id === value);
+                    console.log('Selected Driver Data:', selectedDriverData);
+                    if (selectedDriverData) {
+                        const calculatedSalary = calculateTotalSalary(serviceDetails.salary, distance, serviceDetails.basicSalaryKM, serviceDetails.salaryPerKM);
+                        console.log('Calculated Salary:', calculatedSalary);
+                
+                        setTotalSalary(calculatedSalary);
+                    }
+                    break;
+                
             case 'dropoffLocation':
                 if (typeof value === 'string') {
                     setDropoffLocation({ ...dropoffLocation, name: value });
@@ -732,16 +775,8 @@ if (editData?.adjustValue) {
         }
     };
     // ---------------------------------------------------------------------
-    const getMapUrl = (start, end) => {
-        if (start && end) {
-          return `https://www.google.com/maps/dir/?api=1&origin=${start.lat},${start.lng}&destination=${end.lat},${end.lng}`;
-        }
-        return '#';
-      };
+
     
-      const baseToPickupUrl = getMapUrl(baseLocation, pickupLocation);
-      const pickupToDropoffUrl = getMapUrl(pickupLocation, dropoffLocation);
-      const dropoffToBaseUrl = getMapUrl(dropoffLocation, baseLocation);
     // -----------------------------------------------------------------------------
     const formatDate = (date) => {
         const day = date.getDate().toString().padStart(2, '0');
@@ -759,11 +794,11 @@ if (editData?.adjustValue) {
     const addOrUpdateItem = async () => {
         if (validateForm()) {
             try {
-                const selectedDriverObject = drivers.find((driver) => driver.id === selectedDriver);
-                const driverName = selectedDriverObject ? selectedDriverObject.driverName : '';
+                const selectedDriverObject = drivers.find((driver) => driver.id === selectedDriver) || { driverName: 'Dummy Driver' };
+                const driverName = selectedDriverObject.driverName || 'Dummy Driver'; // Ensure Dummy Driver is handled
                 const currentDate = new Date();
                 const dateTime = formatDate(currentDate); // Use the formatted date
-
+const distance=parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3);
                 let finalFileNumber = '';
 
                 if (company === 'self') {
@@ -793,6 +828,9 @@ if (editData?.adjustValue) {
                     totalDriverDistance: totalDriverDistance,
                     totalDriverSalary: totalDriverSalary || '',
                     mobileNumber: mobileNumber || '',
+                    dis1: dis1 || '',
+                    dis2: dis2 || '',
+                    dis3: dis3 || '',
                     phoneNumber: phoneNumber || '',
                     vehicleType: vehicleType || '',
                     bodyShope: bodyShope || '',
@@ -833,37 +871,7 @@ if (editData?.adjustValue) {
             }
         }
     };
-    const buttonStyle = {
-        display: 'inline-block',
-        padding: '10px 20px',
-        margin: '5px',
-        borderRadius: '25px',
-        background: 'linear-gradient(135deg, #4CAF50, #2E8B57)',
-        color: 'white',
-        textAlign: 'center',
-        textDecoration: 'none',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-        transition: 'background 0.3s ease, transform 0.2s ease',
-        cursor: 'pointer',
-        border: 'none',
-      };
-      
-      const buttonHoverStyle = {
-        ...buttonStyle,
-        background: 'linear-gradient(135deg, #2E8B57, #4CAF50)',
-        transform: 'scale(1.05)',
-      };
-      const containerStyle = {
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-      };
-      // To use the hover style, you might need to add hover effects using CSS classes instead of inline styles.
-      
+
  
   return (
         <div className="p-1 flex-1 mt-4 mx-24 shadow-lg rounded-lg bg-lightblue-100" style={{ background: 'lightblue' }}>
@@ -1172,8 +1180,7 @@ if (editData?.adjustValue) {
                                 {showroomLocation}
                             </div> */}
                             {showShowroomModal && <ShowroomModalWithout onClose={() => setShowShowroomModal(false)} updateShowroomLocation={updateShowroomLocation} />}
-                        
-           
+
                             <div className="flex items-center mt-4">
                                 <label htmlFor="dropoffLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
                                     Dropoff Location
@@ -1196,7 +1203,6 @@ if (editData?.adjustValue) {
                                         value={manualInput1}
                                     />
                                 </div>
-                               
                                 <div className="search-box ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
                                     <input
                                         className="form-input flex-1"
@@ -1259,39 +1265,70 @@ if (editData?.adjustValue) {
                             </div>
                         </div>
                     </div>
-                   {/* Navigation Buttons */}
-                   <div className="mt-4 "  style={containerStyle}>
-  <a
-    href={baseToPickupUrl}
-    target="_blank"
-    rel="noopener noreferrer"
-    style={buttonStyle}
-  >
-    Route: Base to Pickup
-  </a>
-  <a
-    href={pickupToDropoffUrl}
-    target="_blank"
-    rel="noopener noreferrer"
-    style={buttonStyle}
-  >
-    Route: Pickup to Dropoff
-  </a>
-  <a
-    href={dropoffToBaseUrl}
-    target="_blank"
-    rel="noopener noreferrer"
-    style={buttonStyle}
-  >
-    Route: Dropoff to Base
-  </a>
+                    
+                    <div className="flex items-center mt-4">
+    <label htmlFor="dis1" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">Distance 1 (Base to Pickup)</label>
+    <input
+        id="dis1"
+        type="text"
+        className="form-input flex-1"
+        placeholder="Enter Distance 1"
+        value={dis1}
+        onChange={(e) => setDis1(e.target.value)}
+        style={inputStyle}
+    />
+    <a
+        href={`https://www.google.com/maps/dir/?api=1&origin=${baseLocation?.lat},${baseLocation?.lng}&destination=${pickupLocation?.lat},${pickupLocation?.lng}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={linkStyle}
+    >
+        <IconMapPin />
+    </a>
 </div>
 
- 
+<div className="flex items-center mt-4">
+    <label htmlFor="dis2" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">Distance 2 (Pickup to Dropoff)</label>
+    <input
+        id="dis2"
+        type="text"
+        className="form-input flex-1"
+        placeholder="Enter Distance 2"
+        value={dis2}
+        onChange={(e) => setDis2(e.target.value)}
+        style={inputStyle}
+    />
+    <a
+        href={`https://www.google.com/maps/dir/?api=1&origin=${pickupLocation?.lat},${pickupLocation?.lng}&destination=${dropoffLocation?.lat},${dropoffLocation?.lng}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={linkStyle}
+    >
+        <IconMapPin />
+    </a>
+</div>
 
-
-
-                    <div className="mt-4 flex items-center">
+<div className="flex items-center mt-4">
+    <label htmlFor="dis3" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">Distance 3 (Dropoff to Base)</label>
+    <input
+        id="dis3"
+        type="text"
+        className="form-input flex-1"
+        placeholder="Enter Distance 3"
+        value={dis3}
+        onChange={(e) => setDis3(e.target.value)}
+        style={inputStyle}
+    />
+    <a
+        href={`https://www.google.com/maps/dir/?api=1&origin=${dropoffLocation?.lat},${dropoffLocation?.lng}&destination=${baseLocation?.lat},${baseLocation?.lng}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={linkStyle}
+    >
+        <IconMapPin />
+    </a>
+</div>
+  <div className="mt-4 flex items-center">
                         <label htmlFor="distance" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
                             Distance (KM)
                         </label>
@@ -1309,9 +1346,10 @@ if (editData?.adjustValue) {
                                 outline: 'none',
                                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                             }}
+                            
                             onChange={(e) => handleInputChange('distance', e.target.value)}
-                            value={distance}
-                        />
+                            value={parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3)}
+                            />
                     </div>
                     <div className="flex items-center mt-4">
                         <label htmlFor="trappedLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
@@ -1423,8 +1461,9 @@ if (editData?.adjustValue) {
                                         outline: 'none',
                                         boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                                     }}
-                                    value={selectedDriver && drivers.find((driver) => driver.id === selectedDriver)?.driverName}
+                                    value={selectedDriver ? selectedDriverData?.driverName || 'Dummy Driver' : ''}
                                     onClick={() => openModal(distance)}
+                                    readOnly
                                 />
                             </div>
                             <ReactModal
@@ -1461,48 +1500,51 @@ if (editData?.adjustValue) {
                                 </div>
 
                                 <div style={{ marginTop: '10px' }}>
-                                    <div className="grid grid-cols-1 gap-4">
-                                        {drivers
-                                            .sort((a, b) => {
-                                                if (a.companyName === 'RSA' && b.companyName !== 'RSA') {
-                                                    return -1;
-                                                }
-                                                if (a.companyName !== 'RSA' && b.companyName === 'RSA') {
-                                                    return 1;
-                                                }
-                                                return 0;
-                                            })
-                                            .map((driver) => (
-                                                <div key={driver.id} className="flex items-center border border-gray-200 p-2 rounded-lg">
-                                                    <table className="panel p-4 w-full">
-                                                        <thead>
-                                                            <tr>
-                                                                <th>Driver Name</th>
-                                                                <th>Company Name</th>
-                                                                <th>Select</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            <tr>
-                                                                <td style={{ fontSize: '18px', fontWeight: 'bold', color: 'green' }}>{driver.driverName || 'Unknown Driver'}</td>
-                                                                <td>{driver.companyName || 'Unknown Company'}</td>
-                                                                <td>
-                                                                    <input
-                                                                        type="radio"
-                                                                        name="selectedDriver"
-                                                                        value={driver.id}
-                                                                        checked={selectedDriver === driver.id}
-                                                                        onChange={() => handleInputChange('selectedDriver', driver.id)}
-                                                                    />
-                                                                </td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            ))}
-                                    </div>
-                                </div>
-                            </ReactModal>
+                <div className="grid grid-cols-1 gap-4">
+                    {[
+                        { id: 'dummy', driverName: 'Dummy Driver', companyName: 'Dummy Company' },
+                        ...drivers.sort((a, b) => {
+                            if (a.companyName === 'RSA' && b.companyName !== 'RSA') {
+                                return -1;
+                            }
+                            if (a.companyName !== 'RSA' && b.companyName === 'RSA') {
+                                return 1;
+                            }
+                            return 0;
+                        }),
+                    ].map((driver) => (
+                        <div key={driver.id} className="flex items-center border border-gray-200 p-2 rounded-lg">
+                            <table className="panel p-4 w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Driver Name</th>
+                                        <th>Company Name</th>
+                                        <th>Select</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style={{ fontSize: '18px', fontWeight: 'bold', color: 'green' }}>
+                                            {driver.driverName || 'Unknown Driver'}
+                                        </td>
+                                        <td>{driver.companyName || 'Unknown Company'}</td>
+                                        <td>
+                                            <input
+                                                type="radio"
+                                                name="selectedDriver"
+                                                value={driver.id}
+                                                checked={selectedDriver === driver.id}
+                                                onChange={() => handleInputChange('selectedDriver', driver.id)}
+                                            />
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </ReactModal>
                         </div>
                     )}
                 </div>
