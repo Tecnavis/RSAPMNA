@@ -74,7 +74,8 @@ const LoginCover = () => {
                 });
 
                 sessionStorage.setItem('role', role);
-                sessionStorage.setItem('username', username); // Store username
+                sessionStorage.setItem('username', username);// Store username
+                sessionStorage.setItem('uid','V9e4v0UtSzUrPVgxtJzOTkq71do2') ;
 
                 console.log("Staff user signed in successfully with UID:", userId);
                 navigate('/index');
