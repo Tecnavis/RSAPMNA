@@ -16,17 +16,19 @@ import BaseLocationModal from '../BaseLocation/BaseLocationModal';
 import IconMapPin from '../../components/Icon/IconMapPin';
 import Select from 'react-select';
 import useGoogleMaps from './GoogleMaps';
+import styles from './mapbooking.module.css';
 import MapView from './Map';
 import { backgroundClip } from 'html2canvas/dist/types/css/property-descriptors/background-clip';
 import Placeholder from 'react-select/dist/declarations/src/components/Placeholder';
+import { Col, Container, Row } from 'react-bootstrap';
 interface Showroom {
     id: string;
     name: string;
 }
 
-const MapBooking =  ({ activeForm }) => {
+const MapBooking = ({ activeForm }) => {
     const db = getFirestore();
-    const uid = sessionStorage.getItem('uid')
+    const uid = sessionStorage.getItem('uid');
     const navigate = useNavigate();
     const [bookingId, setBookingId] = useState<string>('');
     useEffect(() => {
@@ -107,11 +109,11 @@ const MapBooking =  ({ activeForm }) => {
     const [disableFields, setDisableFields] = useState(false); // State to control field disabling
     const [pickupDistances, setPickupDistances] = useState([]);
     console.log('totalSalary', totalSalary);
-  const [errors, setErrors] = useState({});
+    const [errors, setErrors] = useState({});
     const [serviceCategory, setServiceCategory] = useState('');
     const [availableServices, setAvailableServices] = useState('');
     const [adjustValue, setAdjustValue] = useState('');
-const [bodyShope, setBodyShope]= useState('');
+    const [bodyShope, setBodyShope] = useState('');
     useEffect(() => {
         if (state && state.editData) {
             const editData = state.editData;
@@ -130,7 +132,7 @@ const [bodyShope, setBodyShope]= useState('');
             setServiceVehicle(editData.serviceVehicle || '');
             setVehicleType(editData.vehicleType || '');
             setAdjustValue(editData.adjustValue || '');
-            console.log("editData.adjustValue", editData.adjustValue);
+            console.log('editData.adjustValue', editData.adjustValue);
 
             setServiceCategory(editData.serviceCategory || '');
             setAvailableServices(editData.availableServices || '');
@@ -138,9 +140,9 @@ const [bodyShope, setBodyShope]= useState('');
             setVehicleSection(editData.vehicleSection || '');
             setShowroomLocation(editData.showroomLocation || '');
             setDistance(editData.distance || '');
-            console.log("editData.distance", editData.distance);
+            console.log('editData.distance', editData.distance);
             setBodyShope(editData.bodyShope || '');
-            console.log("editData.bodyShope",editData.bodyShope)
+            console.log('editData.bodyShope', editData.bodyShope);
             setSelectedDriver(editData.selectedDriver || '');
             setBaseLocation(editData.baseLocation || '');
             setShowrooms(editData.showrooms || []);
@@ -150,12 +152,12 @@ const [bodyShope, setBodyShope]= useState('');
                 setPickupCoords({ lat, lng });
             } else {
                 setPickupLocation(editData.pickupLocation || '');
-            }            
+            }
             setTotalDriverDistance(editData.totalDriverDistance || '');
             setAvailableServices(editData.availableServices || '');
             setShowRooms(editData.showRooms || '');
             setUpdatedTotalSalary(editData.updatedTotalSalary || '');
-            console.log("editData.updatedTotalSalary",editData.updatedTotalSalary)
+            console.log('editData.updatedTotalSalary', editData.updatedTotalSalary);
 
             setDistance(editData.distance || '');
             setServiceType(editData.serviceType || '');
@@ -164,12 +166,19 @@ const [bodyShope, setBodyShope]= useState('');
             setSelectedCompany(editData.selectedCompany || '');
         }
     }, [state]);
-    
+
     useEffect(() => {
         const now = new Date();
-        const formattedDateTime = now.toLocaleString();
+        const formattedDateTime = now.toLocaleString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        });
         setCurrentDateTime(formattedDateTime);
     }, []);
+
     useEffect(() => {
         setManualInput(pickupLocation ? pickupLocation.name : '');
     }, [pickupLocation]);
@@ -207,24 +216,22 @@ const [bodyShope, setBodyShope]= useState('');
             const fetchCompanies = async () => {
                 try {
                     const driverCollection = collection(db, `user/${uid}/driver`);
-                    
+
                     // Query to fetch companies where companyName is 'Company'
                     const q = query(driverCollection, where('companyName', '==', 'Company'));
                     const querySnapshot = await getDocs(q);
-                    
+
                     const fetchedCompanies = querySnapshot.docs.map((doc) => ({
                         id: doc.id,
                         ...doc.data(),
                     })) as Company[];
 
-                    console.log("fetchedCompanies", fetchedCompanies);
+                    console.log('fetchedCompanies', fetchedCompanies);
 
                     // Filter fetched companies based on status
-                    const filteredCompanies = fetchedCompanies.filter((company) => 
-                        company.status !== 'deleted from UI' && (company.status === '' || !company.status)
-                    );
+                    const filteredCompanies = fetchedCompanies.filter((company) => company.status !== 'deleted from UI' && (company.status === '' || !company.status));
 
-                    console.log("filteredCompanies", filteredCompanies);
+                    console.log('filteredCompanies', filteredCompanies);
                     setCompanies(filteredCompanies);
                 } catch (error) {
                     console.error('Error fetching companies:', error);
@@ -235,15 +242,13 @@ const [bodyShope, setBodyShope]= useState('');
         }
     }, [company, db, uid]);
 
-  
     const handleUpdateTotalSalary = (newTotaSalary) => {
-        console.log("newTotalSalary",newTotaSalary)
+        console.log('newTotalSalary', newTotaSalary);
         setUpdatedTotalSalary(newTotaSalary);
     };
     const handleInsuranceAmountBodyChange = (amount) => {
-        console.log("firstamount",amount)
+        console.log('firstamount', amount);
         setInsuranceAmountBody(amount);
-
     };
     const handleAdjustValueChange = (newAdjustValue) => {
         console.log('Adjust Valuee:', newAdjustValue);
@@ -252,11 +257,11 @@ const [bodyShope, setBodyShope]= useState('');
     const handleServiceCategoryChange = (service) => {
         setServiceCategory(service);
     };
-    const handleBodyInsuranceChange =(insurance) =>{
-        console.log("firstinsurance",insurance)
-    setBodyShope(insurance)
-    }
- 
+    const handleBodyInsuranceChange = (insurance) => {
+        console.log('firstinsurance', insurance);
+        setBodyShope(insurance);
+    };
+
     useEffect(() => {
         if (selectedDriver) {
             const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
@@ -272,26 +277,25 @@ const [bodyShope, setBodyShope]= useState('');
         }
     }, [selectedDriver, serviceType, drivers]);
 
-    
     const handleInputChange = (field, value) => {
         switch (field) {
             case 'showroomLocation':
                 console.log('Setting showroomLocation:', value);
                 setShowroomLocation(value);
-            
+
                 // Find the selected showroom based on the selected value
                 const selectedShowroom = showrooms.find((show) => show.value === value);
                 console.log('Selected Showroom:', selectedShowroom);
-            
+
                 if (selectedShowroom) {
                     console.log('Found showroom:', selectedShowroom.value);
                     console.log('Setting insuranceAmountBody to:', selectedShowroom.insuranceAmountBody);
                     setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
-            
+
                     // Ensure lat and lng are stored as strings
                     const latString = selectedShowroom.locationLatLng.lat.toString();
                     const lngString = selectedShowroom.locationLatLng.lng.toString();
-            
+
                     console.log('Setting dropoffLocation to:', {
                         name: selectedShowroom.value,
                         lat: latString,
@@ -314,9 +318,9 @@ const [bodyShope, setBodyShope]= useState('');
                 break;
             case 'totalSalary':
                 setTotalSalary(value || 0);
-               
+
                 break;
-                case 'serviceCategory':
+            case 'serviceCategory':
                 setServiceCategory(value || 0);
 
                 break;
@@ -324,13 +328,13 @@ const [bodyShope, setBodyShope]= useState('');
                 setAvailableServices(value || 0);
 
                 break;
-                case 'bodyShope':
-                    setBodyShope(value || '');
-                    break;
-                  
+            case 'bodyShope':
+                setBodyShope(value || '');
+                break;
+
             case 'insuranceAmountBody':
                 setInsuranceAmountBody(value || 0);
-               
+
                 break;
             case 'adjustValue':
                 setAdjustValue(value || '');
@@ -339,10 +343,10 @@ const [bodyShope, setBodyShope]= useState('');
             case 'customerName':
                 setCustomerName(value || '');
                 break;
-                case 'showRooms':
-                    setShowRooms(value || '');
-                    break;
-                
+            case 'showRooms':
+                setShowRooms(value || '');
+                break;
+
             case 'company':
                 setCompany(value);
                 setFileNumber(value === 'self' ? bookingId : '');
@@ -386,9 +390,9 @@ const [bodyShope, setBodyShope]= useState('');
                 console.log('updatedTotalSalary', updatedTotalSalary);
                 setUpdatedTotalSalary(value || '');
                 break;
-                case 'totalDriverDistance':
-                    setTotalDriverDistance(value || 0);
-                    break;
+            case 'totalDriverDistance':
+                setTotalDriverDistance(value || 0);
+                break;
             case 'distance':
                 console.log('eeee', distance);
 
@@ -425,19 +429,19 @@ const [bodyShope, setBodyShope]= useState('');
             case 'baseLocation':
                 setBaseLocation(value || '');
                 break;
-                case 'bodyShope':
-                    setBodyShope(value || '');
-                    break;
+            case 'bodyShope':
+                setBodyShope(value || '');
+                break;
             case 'trappedLocation':
                 setDisableFields(value === 'outsideOfRoad'); // Disable fields if trappedLocation is 'outsideOfRoad'
 
                 setTrappedLocation(value || '');
                 break;
-                case 'availableServices':
-                    setAvailableServices(value || 0);
-     
-                    break;
-                
+            case 'availableServices':
+                setAvailableServices(value || 0);
+
+                break;
+
             case 'showrooms':
                 setShowrooms(value || '');
                 break;
@@ -461,7 +465,7 @@ const [bodyShope, setBodyShope]= useState('');
     const closeModal = () => {
         setIsModalOpen(false);
     };
-   
+
     const updateShowroomLocation = (location) => {
         setShowroomLocation(location);
     };
@@ -470,21 +474,25 @@ const [bodyShope, setBodyShope]= useState('');
         const serviceCollection = collection(db, `user/${uid}/showroom`);
 
         // Set up the real-time listener
-        const unsubscribe = onSnapshot(serviceCollection, (snapshot) => {
-            const servicesList = snapshot.docs.map(doc => ({
-                value: doc.data().Location, // Assuming 'Location' is a unique identifier
-                label: doc.data().Location,
-                insuranceAmountBody: doc.data().insuranceAmountBody, // Include this field if needed
-                locationLatLng: doc.data().locationLatLng // Include this field if needed
-            }));
-            setShowrooms(servicesList);
-        }, (error) => {
-            console.error('Error fetching services:', error);
-        });
+        const unsubscribe = onSnapshot(
+            serviceCollection,
+            (snapshot) => {
+                const servicesList = snapshot.docs.map((doc) => ({
+                    value: doc.data().Location, // Assuming 'Location' is a unique identifier
+                    label: doc.data().Location,
+                    insuranceAmountBody: doc.data().insuranceAmountBody, // Include this field if needed
+                    locationLatLng: doc.data().locationLatLng, // Include this field if needed
+                }));
+                setShowrooms(servicesList);
+            },
+            (error) => {
+                console.error('Error fetching services:', error);
+            }
+        );
 
         // Clean up the listener on component unmount
         return () => unsubscribe();
-    }, [uid]); 
+    }, [uid]);
     useEffect(() => {
         const fetchServiceTypes = async () => {
             try {
@@ -502,7 +510,7 @@ const [bodyShope, setBodyShope]= useState('');
 
     useEffect(() => {
         const db = getFirestore();
-        const unsubscribe = onSnapshot(collection(db,`user/${uid}/showroom`), (snapshot) => {
+        const unsubscribe = onSnapshot(collection(db, `user/${uid}/showroom`), (snapshot) => {
             const showrooms = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
             setShowRooms(showrooms);
         });
@@ -526,10 +534,7 @@ const [bodyShope, setBodyShope]= useState('');
                     .map((doc) => {
                         const driverData = doc.data();
                         // Only include drivers who have the selected service type and are not deleted
-                        if (
-                            !driverData.selectedServices.includes(serviceType) ||
-                            driverData.status === 'deleted from UI'
-                        ) {
+                        if (!driverData.selectedServices.includes(serviceType) || driverData.status === 'deleted from UI') {
                             return null;
                         }
 
@@ -553,7 +558,6 @@ const [bodyShope, setBodyShope]= useState('');
             setDrivers([]);
         }
     }, [db, uid, serviceType, serviceDetails]);
-    
 
     useEffect(() => {
         const fetchServiceDetails = async () => {
@@ -673,11 +677,10 @@ const [bodyShope, setBodyShope]= useState('');
     };
 
     useEffect(() => {
-        
         const fetchDrivers = async () => {
             console.log('Fetching drivers from Firestore');
             try {
-                const driversCollection = collection(db,`user/${uid}/driver`);
+                const driversCollection = collection(db, `user/${uid}/driver`);
                 const snapshot = await getDocs(driversCollection);
                 console.log('Firestore snapshot:', snapshot);
 
@@ -757,20 +760,20 @@ const [bodyShope, setBodyShope]= useState('');
     console.log('Effect dependencies:', { serviceType, serviceDetails, pickupLocation });
     useEffect(() => {
         let newTotalSalary = totalSalary;
-console.log("editData.updatedTotalSalary",updatedTotalSalary)
+        console.log('editData.updatedTotalSalary', updatedTotalSalary);
         if (serviceCategory === 'Body Shop' && bodyShope === 'insurance') {
             newTotalSalary -= parseFloat(insuranceAmountBody || 0);
         }
-console.log("newTotalSalary",newTotalSalary)
-if (editData?.adjustValue) {
-    // If editData has adjustValue, prioritize it
-    setUpdatedTotalSalary(parseFloat(editData.adjustValue) || 0);
-} else if (newTotalSalary !== updatedTotalSalary) {
-    // Otherwise, use the calculated newTotalSalary
-    setUpdatedTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
-}
-    }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope,adjustValue]);
-    
+        console.log('newTotalSalary', newTotalSalary);
+        if (editData?.adjustValue) {
+            // If editData has adjustValue, prioritize it
+            setUpdatedTotalSalary(parseFloat(editData.adjustValue) || 0);
+        } else if (newTotalSalary !== updatedTotalSalary) {
+            // Otherwise, use the calculated newTotalSalary
+            setUpdatedTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
+        }
+    }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope, adjustValue]);
+
     const renderServiceVehicle = (serviceVehicle, serviceType) => {
         if (serviceVehicle && serviceVehicle[serviceType]) {
             return serviceVehicle[serviceType];
@@ -839,7 +842,6 @@ if (editData?.adjustValue) {
         }
     }, [selectedDriver, totalDriverDistance, drivers]);
 
-   
     // -------------------------------------------------------------------------------------
     const formatDate = (date) => {
         const day = date.getDate().toString().padStart(2, '0');
@@ -869,8 +871,7 @@ if (editData?.adjustValue) {
                 const driverName = selectedDriverObject ? selectedDriverObject.driverName : '';
                 const selectedDriverDistanceData = pickupDistances.find((dist) => dist.id === selectedDriver);
                 const pickupDistance = selectedDriverDistanceData ? selectedDriverDistanceData.distance : 0;
-    
-              
+
                 let finalFileNumber = '';
                 const currentDate = new Date();
                 const dateTime = formatDate(currentDate); // Use the formatted date
@@ -898,7 +899,7 @@ if (editData?.adjustValue) {
                     // totalDistance: distance,
                     distance: distance,
                     showRooms: showroomLocation,
-                    adjustValue:adjustValue || '',
+                    adjustValue: adjustValue || '',
                     serviceCategory: serviceCategory || '',
 
                     baseLocation: baseLocation || '',
@@ -953,7 +954,7 @@ if (editData?.adjustValue) {
         const keralaCenterLat = 10.8505;
         const keralaCenterLng = 76.2711;
         const radius = 200000;
-    
+
         try {
             console.log(`Fetching autocomplete results for input: ${inputText}`);
             const response = await axios.get(`https://api.olamaps.io/places/v1/autocomplete`, {
@@ -965,15 +966,15 @@ if (editData?.adjustValue) {
                 },
             });
             console.log('Autocomplete response:', response.data);
-    
+
             if (response.data && Array.isArray(response.data.predictions)) {
                 const predictionsWithCoords = await Promise.all(
                     response.data.predictions.map(async (prediction, index) => {
                         const placeDetails = await getPlaceDetails(prediction.place_id);
-                        console.log("locationName", placeDetails);
-    
+                        console.log('locationName', placeDetails);
+
                         const locationName = prediction.description.split(',')[0];
-    
+
                         return {
                             key: `${prediction.place_id}-${index}`,
                             label: locationName,
@@ -993,7 +994,7 @@ if (editData?.adjustValue) {
             setOptions([]);
         }
     };
-    
+
     const getPlaceDetails = async (placeId) => {
         try {
             console.log(`Fetching place details for placeId: ${placeId}`);
@@ -1025,30 +1026,30 @@ if (editData?.adjustValue) {
     const handlePickupChange = (newValue) => {
         console.log('Checking newValue:', newValue);
         console.log('Selected pickup location:', newValue);
-    
+
         const hasLabel = newValue && newValue.label;
         const hasLat = newValue && newValue.lat;
         const hasLng = newValue && newValue.lng;
-    
+
         console.log('newValue exists:', newValue !== undefined && newValue !== null);
         console.log('newValue.label exists:', hasLabel);
         console.log('newValue.lat exists:', hasLat);
         console.log('newValue.lng exists:', hasLng);
-    
+
         if (hasLabel && hasLat && hasLng) {
             const formattedLocation = `${newValue.label}, ${newValue.lat}, ${newValue.lng}`;
             console.log('Setting pickup location formatted...');
             setPickupLocationFormatted(newValue.label);
             console.log('Pickup location formatted:', newValue.label);
-    
+
             console.log('Setting pickup coordinates...');
             setPickupCoords({ lat: newValue.lat, lng: newValue.lng });
             console.log('Pickup coordinates:', { lat: newValue.lat, lng: newValue.lng });
-    
+
             console.log('Setting pickup location...');
             setPickupLocation(formattedLocation);
             console.log('Pickup location:', formattedLocation);
-    
+
             console.log('Base location before check:', baseLocation);
             if (baseLocation) {
                 console.log('Base location is set in pick:', baseLocation);
@@ -1056,7 +1057,7 @@ if (editData?.adjustValue) {
                     console.log('Dropoff location is set:', dropoffLocation);
                     console.log('Calculating total distance...');
                     console.log('Before calculating distance, baseLocation:', baseLocation);
-    
+
                     calculateTotalDistance(baseLocation, { lat: newValue.lat, lng: newValue.lng }, dropoffLocation);
                 } else {
                     console.log('Dropoff location is not set');
@@ -1069,11 +1070,11 @@ if (editData?.adjustValue) {
             setPickupCoords({ lat: undefined, lng: undefined });
             setPickupLocationFormatted('');
         }
-    
+
         console.log('Clearing pickup options...');
         setPickupOptions([]);
     };
-    
+
     const calculateTotalDistance = async (base, pickup, dropoff) => {
         try {
             console.log('Calculating total distance...');
@@ -1091,13 +1092,12 @@ if (editData?.adjustValue) {
 
             const totalDistance = distances.reduce((acc, cur) => acc + (cur.distance ? parseFloat(cur.distance) : 0), 0);
             console.log('Total distance calculated:', totalDistance);
-    
+
             const newTotalDistance = totalDistance.toFixed(2);
             console.log('Total distance set:', newTotalDistance);
-            console.log("pickupLocationdistance",distance);
+            console.log('pickupLocationdistance', distance);
 
             setDistance(newTotalDistance);
-    
         } catch (error) {
             console.error('Error calculating total distance:', error);
         }
@@ -1293,13 +1293,12 @@ if (editData?.adjustValue) {
 
         const driverLocation = selectedDriverData.currentLocation;
         console.log('Driver Location from Selected Driver Data:', driverLocation);
- const totalDriverDistance = await calculateTotalDriverDistance(driverLocation, pickupLocation, dropoffLocation);
-    console.log('Total Driver Distance (before rounding):', totalDriverDistance);
+        const totalDriverDistance = await calculateTotalDriverDistance(driverLocation, pickupLocation, dropoffLocation);
+        console.log('Total Driver Distance (before rounding):', totalDriverDistance);
 
-    // Round and fix the totalDriverDistance to 2 decimal places
-    const roundedTotalDriverDistance = parseFloat(totalDriverDistance.toFixed(2));
-    console.log('Total Driver Distance (rounded):', roundedTotalDriverDistance);
-
+        // Round and fix the totalDriverDistance to 2 decimal places
+        const roundedTotalDriverDistance = parseFloat(totalDriverDistance.toFixed(2));
+        console.log('Total Driver Distance (rounded):', roundedTotalDriverDistance);
     };
 
     useEffect(() => {
@@ -1308,29 +1307,17 @@ if (editData?.adjustValue) {
     //------------------------------------------------------
     return (
         <div className="p-1 flex-1 mt-4 mx-24 shadow-lg rounded-lg bg-lightblue-100" style={{ background: 'lightblue' }}>
-            <div className="flex justify-end w-full mb-4 ">
-                <div
-                    style={{
-                        margin: '5px 0',
-                        color: '#7f8c8d',
-                        fontFamily: 'Georgia, serif',
-                        fontSize: '16px',
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        backgroundColor: '#ecf0f1',
-                        border: '1px solid #bdc3c7',
-                        minWidth: 'fit-content',
-                    }}
-                >
-                    <h5 className="font-semibold text-lg dark:text-white-light">{currentDateTime}</h5>
+            <div className={styles.dateContainer}>
+                <div className={styles.dateBox}>
+                    <h5 className={styles.dateText}>{currentDateTime}</h5>
                 </div>
             </div>
 
             <div className="flex flex-wrap p-4">
                 <h5 className="font-semibold text-lg dark:text-white-light mb-5">Book Now</h5>
                 <div className="w-full">
-                    <div className="flex items-center mt-4">
-                        <label htmlFor="company" className="mr-2 ml-2 w-1/3 mb-0 text-gray-800 font-semibold">
+                    <div className="flex flex-col md:flex-row items-start mt-4">
+                        <label htmlFor="company" className="w-full md:w-1/3 mb-2 md:mb-0 text-gray-800 font-semibold">
                             Company
                         </label>
                         <select
@@ -1345,6 +1332,7 @@ if (editData?.adjustValue) {
                             <option value="self">Payment Work</option>
                         </select>
                     </div>
+
                     {company === 'rsa' && (
                         <div style={{ display: 'flex', alignItems: 'center', marginTop: '1rem' }}>
                             <label htmlFor="selectedCompany" style={{ marginRight: '0.5rem', marginLeft: '0.5rem', marginBottom: '0', color: '#333' }}>
@@ -1379,16 +1367,16 @@ if (editData?.adjustValue) {
                             <label htmlFor="fileNumber" className="mr-2 ml-2 w-1/3 mb-0 text-gray-800 font-semibold">
                                 File Number
                             </label>
-                            <div className='search-box ltr:mr-2 rtl:ml-2  mb-0"' style={{width:"100%"}}>
-                            <input
-                                id="fileNumber"
-                                type="text"
-                                name="fileNumber"
-                                placeholder="Enter File Number"
-                                className="form-input lg:w-[250px] w-2/3 p-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 focus:outline-none"
-                                value={`PMNA${bookingId}`}
-                                readOnly
-                            />
+                            <div className='search-box ltr:mr-2 rtl:ml-2  mb-0"' style={{ width: '100%' }}>
+                                <input
+                                    id="fileNumber"
+                                    type="text"
+                                    name="fileNumber"
+                                    placeholder="Enter File Number"
+                                    className="form-input lg:w-[250px] w-2/3 p-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 focus:outline-none"
+                                    value={`PMNA${bookingId}`}
+                                    readOnly
+                                />
                             </div>
                         </div>
                     ) : (
@@ -1396,21 +1384,20 @@ if (editData?.adjustValue) {
                             <label htmlFor="fileNumber" className="mr-2 ml-2 w-1/3 mb-0 text-gray-800 font-semibold">
                                 File Number
                             </label>
-                            <div className='search-box ltr:mr-2 rtl:ml-2  mb-0"' style={{width:"100%"}}>
-                            <input
-                                id="fileNumber"
-                                type="text"
-                                name="fileNumber"
-                                className="form-input lg:w-[250px] w-2/3 p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                                placeholder="Enter File Number"
-                                value={fileNumber}
-                                onChange={(e) => handleInputChange('fileNumber', e.target.value)}
-                            />
+                            <div className='search-box ltr:mr-2 rtl:ml-2  mb-0"' style={{ width: '100%' }}>
+                                <input
+                                    id="fileNumber"
+                                    type="text"
+                                    name="fileNumber"
+                                    className="form-input lg:w-[250px] w-2/3 p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                                    placeholder="Enter File Number"
+                                    value={fileNumber}
+                                    onChange={(e) => handleInputChange('fileNumber', e.target.value)}
+                                />
                             </div>
                         </div>
-                        
                     )}
-                   <div style={{ width: '100%' }}>
+                    <div style={{ width: '100%' }}>
                           
                         <div>
                             <div className="flex items-center mt-4">
@@ -1428,46 +1415,40 @@ if (editData?.adjustValue) {
                                         boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                                     }}
                                 >
-                               <Autocomplete
-    value={{ label: pickupLocation }}
-    onInputChange={(event, newInputValue) => {
-        console.log('Input change event:', event);
-        console.log('New input value:', newInputValue);
+                                    <Autocomplete
+                                        value={{ label: pickupLocation }}
+                                        onInputChange={(event, newInputValue) => {
+                                            console.log('Input change event:', event);
+                                            console.log('New input value:', newInputValue);
 
-        setPickupLocation(newInputValue);
-        if (newInputValue) {
-            console.log('Fetching autocomplete results for:', newInputValue);
-            getAutocompleteResults(newInputValue, setPickupOptions);
-        } else {
-            console.log('Clearing pickup options');
-            setPickupOptions([]);
-        }
-    }}
-    onChange={(event, newValue) => {
-        console.log('Autocomplete onChange event:', event);
-        console.log('Autocomplete onChange newValue:', newValue);
-        handlePickupChange(newValue);
-    }}
-    sx={{ background: "white", width: '100%', border: '20px' }}
-    options={pickupOptions}
-    getOptionLabel={(option) => {
-        console.log('Get option label:', option);
-        return option.label;
-    }}
-    isOptionEqualToValue={(option, value) => {
-        console.log('Checking if option is equal to value:', option, value);
-        return option.label === value.label;
-    }}
-    renderInput={(params) => (
-        <TextField
-            {...params}
-            label="Pickup Location"
-            variant="outlined"
-            placeholder="manual pickupLocation entering format: place, lat, lng"
-        />
-    )}
-/>
-
+                                            setPickupLocation(newInputValue);
+                                            if (newInputValue) {
+                                                console.log('Fetching autocomplete results for:', newInputValue);
+                                                getAutocompleteResults(newInputValue, setPickupOptions);
+                                            } else {
+                                                console.log('Clearing pickup options');
+                                                setPickupOptions([]);
+                                            }
+                                        }}
+                                        onChange={(event, newValue) => {
+                                            console.log('Autocomplete onChange event:', event);
+                                            console.log('Autocomplete onChange newValue:', newValue);
+                                            handlePickupChange(newValue);
+                                        }}
+                                        sx={{ background: 'white', width: '100%', border: '20px' }}
+                                        options={pickupOptions}
+                                        getOptionLabel={(option) => {
+                                            console.log('Get option label:', option);
+                                            return option.label;
+                                        }}
+                                        isOptionEqualToValue={(option, value) => {
+                                            console.log('Checking if option is equal to value:', option, value);
+                                            return option.label === value.label;
+                                        }}
+                                        renderInput={(params) => (
+                                            <TextField {...params} label="Pickup Location" variant="outlined" placeholder="manual pickupLocation entering format: place, lat, lng" />
+                                        )}
+                                    />
 
                                     {pickupCoords.lat !== undefined && pickupCoords.lng !== undefined && <Typography>{`Pickup Location Lat/Lng: ${pickupCoords.lat}, ${pickupCoords.lng}`}</Typography>}
                                 </Box>
@@ -1533,74 +1514,70 @@ if (editData?.adjustValue) {
                                         backgroundColor: 'rgb(0,0,0)',
                                     }}
                                 >
-                                  
-                                        <div className="modal-body">
-                                            <BaseLocationModal onClose={closeModal1} setBaseLocation={setBaseLocation} pickupLocation={pickupLocation} />
-                                        </div>
-                                       
+                                    <div className="modal-body">
+                                        <BaseLocationModal onClose={closeModal1} setBaseLocation={setBaseLocation} pickupLocation={pickupLocation} />
+                                    </div>
                                 </div>
                             )}
-    <div className="flex items-center mt-4">
-                            <label htmlFor="showrooms" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                Service Center
-            </label>
-            {showrooms.length > 0 && (
-                <Select
-                    className="w-full"
-                    id="showrooms"
-                    name="showrooms"
-                    value={showrooms.find(option => option.value === showroomLocation) || null}
-                    options={showrooms}
-                    onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
-                    isSearchable={true}
-                    placeholder="Select showroom"
-                    styles={{
-                        control: (provided) => ({
-                            ...provided,
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }),
-                        placeholder: (provided) => ({
-                            ...provided,
-                            fontSize: '1rem',
-                        }),
-                    }}
-                />
-            )}
-                        <button
-                            onClick={() => setShowShowroomModal(true)}
-                            style={{
-                                borderRadius: '40px',
-                                background: 'linear-gradient(135deg, #32CD32, #228B22)',
-                                color: 'white',
-                                margin: '10px',
-                                padding: '10px 10px',
-                                border: 'none',
-                                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-                                cursor: 'pointer',
-                                transition: 'background 0.3s ease',
-                            }}
-                            onMouseOver={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg, #228B22, #006400)')}
-                            onMouseOut={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg, #32CD32, #228B22)')}
-                        >
-                            <IconPlus />
-                        </button>
-                    </div>
-                    {/* <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#333', marginTop: '10px', background: 'white', padding: '19px', borderRadius: '4px',marginLeft:"24%" }}> {showroomLocation}</div> */}
-                    {showShowroomModal && <ShowroomModal onClose={() => setShowShowroomModal(false)} updateShowroomLocation={updateShowroomLocation} />}
-                    
-                          
+                            <div className="flex items-center mt-4">
+                                <label htmlFor="showrooms" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
+                                    Service Center
+                                </label>
+                                {showrooms.length > 0 && (
+                                    <Select
+                                        className="w-full"
+                                        id="showrooms"
+                                        name="showrooms"
+                                        value={showrooms.find((option) => option.value === showroomLocation) || null}
+                                        options={showrooms}
+                                        onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
+                                        isSearchable={true}
+                                        placeholder="Select showroom"
+                                        styles={{
+                                            control: (provided) => ({
+                                                ...provided,
+                                                width: '100%',
+                                                padding: '0.5rem',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '5px',
+                                                fontSize: '1rem',
+                                                outline: 'none',
+                                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                                            }),
+                                            placeholder: (provided) => ({
+                                                ...provided,
+                                                fontSize: '1rem',
+                                            }),
+                                        }}
+                                    />
+                                )}
+                                <button
+                                    onClick={() => setShowShowroomModal(true)}
+                                    style={{
+                                        borderRadius: '40px',
+                                        background: 'linear-gradient(135deg, #32CD32, #228B22)',
+                                        color: 'white',
+                                        margin: '10px',
+                                        padding: '10px 10px',
+                                        border: 'none',
+                                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                                        cursor: 'pointer',
+                                        transition: 'background 0.3s ease',
+                                    }}
+                                    onMouseOver={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg, #228B22, #006400)')}
+                                    onMouseOut={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg, #32CD32, #228B22)')}
+                                >
+                                    <IconPlus />
+                                </button>
+                            </div>
+                            {/* <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#333', marginTop: '10px', background: 'white', padding: '19px', borderRadius: '4px',marginLeft:"24%" }}> {showroomLocation}</div> */}
+                            {showShowroomModal && <ShowroomModal onClose={() => setShowShowroomModal(false)} updateShowroomLocation={updateShowroomLocation} />}
 
-                    <div className="flex items-center mt-4 ">
+                            <div className="flex items-center mt-4 ">
                                 <label htmlFor="dropoffLocation" className="  w-1/3 mb-0">
                                     Drop off Location
                                 </label>
-                                <div className="search-box " style={{width:"100%"}}>
+                                <div className="search-box " style={{ width: '100%' }}>
                                     <input
                                         style={{
                                             width: '100%',
@@ -1615,10 +1592,9 @@ if (editData?.adjustValue) {
                                     />
                                 </div>
                             </div>
-<div className='mt-4'>
-<MapView />
-
-</div>
+                            <div className="mt-4">
+                                <MapView />
+                            </div>
                         </div>
                         {/* )} */}
                     </div>
@@ -1863,20 +1839,20 @@ if (editData?.adjustValue) {
                 </div>
                 <React.Fragment>
                     <div>
-                    <VehicleSection
-                    showroomLocation={showroomLocation}
-                                totalSalary={totalSalary}
-                                updatedTotalSalary={updatedTotalSalary}
-                                onUpdateTotalSalary={handleUpdateTotalSalary}
-                                insuranceAmountBody={insuranceAmountBody}
-                                serviceCategory={serviceCategory}
-                                onInsuranceAmountBodyChange={handleInsuranceAmountBodyChange}
-                                onServiceCategoryChange={handleServiceCategoryChange}
-                                onAdjustValueChange={handleAdjustValueChange}
-                                adjustValue={adjustValue}
-                                bodyShope={bodyShope}
-                                onInsuranceChange={handleBodyInsuranceChange}
-                            />
+                        <VehicleSection
+                            showroomLocation={showroomLocation}
+                            totalSalary={totalSalary}
+                            updatedTotalSalary={updatedTotalSalary}
+                            onUpdateTotalSalary={handleUpdateTotalSalary}
+                            insuranceAmountBody={insuranceAmountBody}
+                            serviceCategory={serviceCategory}
+                            onInsuranceAmountBodyChange={handleInsuranceAmountBodyChange}
+                            onServiceCategoryChange={handleServiceCategoryChange}
+                            onAdjustValueChange={handleAdjustValueChange}
+                            adjustValue={adjustValue}
+                            bodyShope={bodyShope}
+                            onInsuranceChange={handleBodyInsuranceChange}
+                        />
 
                         <div className="mt-4 flex items-center">
                             <label htmlFor="totalSalary" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
@@ -1902,15 +1878,11 @@ if (editData?.adjustValue) {
                             </div>
                         </div>
                         <div className="mt-4 flex items-center">
-                                <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    Insurance Amount Body
-                                </label>
-                                <div className="form-input flex-1">
-
-                                {insuranceAmountBody}
-                                </div>
-
-                            </div>
+                            <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
+                                Insurance Amount Body
+                            </label>
+                            <div className="form-input flex-1">{insuranceAmountBody}</div>
+                        </div>
                         <div className="mt-4 flex items-center">
                             <label htmlFor="updatedTotalSalary" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
                                 Payable Amount (with insurance)
@@ -1937,50 +1909,49 @@ if (editData?.adjustValue) {
                     </div>
                 </React.Fragment>
                 {selectedDriver && (
-    <div>
-        <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column' }}>
-            <label htmlFor="totalDriverSalary" style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                Total Driver Salary
-            </label>
-            <input
-                id="totalDriverSalary"
-                type="text"
-                value={totalDriverSalary}
-                readOnly
-                style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid #ccc',
-                    borderRadius: '5px',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                }}
-            />
-        </div>
-        <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column' }}>
-            <label htmlFor="totalDriverDistance" style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                Total Driver Distance
-            </label>
-            <input
-                id="totalDriverDistance"
-                type="text"
-                value={totalDriverDistance}
-                readOnly
-                style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid #ccc',
-                    borderRadius: '5px',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                }}
-            />
-        </div>
-    </div>
-)}
-
+                    <div>
+                        <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column' }}>
+                            <label htmlFor="totalDriverSalary" style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                                Total Driver Salary
+                            </label>
+                            <input
+                                id="totalDriverSalary"
+                                type="text"
+                                value={totalDriverSalary}
+                                readOnly
+                                style={{
+                                    width: '100%',
+                                    padding: '0.5rem',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '5px',
+                                    fontSize: '1rem',
+                                    outline: 'none',
+                                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                                }}
+                            />
+                        </div>
+                        <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column' }}>
+                            <label htmlFor="totalDriverDistance" style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                                Total Driver Distance
+                            </label>
+                            <input
+                                id="totalDriverDistance"
+                                type="text"
+                                value={totalDriverDistance}
+                                readOnly
+                                style={{
+                                    width: '100%',
+                                    padding: '0.5rem',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '5px',
+                                    fontSize: '1rem',
+                                    outline: 'none',
+                                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                                }}
+                            />
+                        </div>
+                    </div>
+                )}
                 <div className="flex items-center mt-4" style={{ width: '100%' }}>
                     <label htmlFor="serviceVehicle" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
                         Service Vehicle Number

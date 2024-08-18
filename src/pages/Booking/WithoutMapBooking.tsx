@@ -13,6 +13,8 @@ import Select from 'react-select';
 import BaseLocationWithout from '../BaseLocation/BaseLocationWithout';
 import { format } from 'date-fns';
 import ShowroomModalWithout from './ShowroomModalWithout';
+import { title } from 'process';
+import axios from 'axios';
 
 interface Showroom {
     id: string;
@@ -859,6 +861,24 @@ const distance=parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3);
                     const docRef = doc(db, `user/${uid}/bookings`, editData.id);
                     await updateDoc(docRef, bookingData);
                     console.log('Document updated');
+                    try {
+                        const response = await axios.post('https://fcm.googleapis.com/fcm/send', {
+                          notification: {
+                            title: 'title',
+                            body: 'body',
+                          },
+                          to: 'fcmToken'
+                        }, {
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `key=YOUR_SERVER_KEY`
+                          }
+                        });
+                    
+                        console.log('Notification sent successfully:', response.data);
+                      } catch (error) {
+                        console.error('Error sending notification:', error);
+                      }
                 } else {
                     const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
                     console.log('Document written with ID: ', docRef.id);
