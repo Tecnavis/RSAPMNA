@@ -8,11 +8,13 @@ const ViewMore = () => {
     const [bookingDetails, setBookingDetails] = useState(null);
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid')
+    const role =sessionStorage.getItem('role');
+
     const { search } = useLocation();
     const [showPickupDetails, setShowPickupDetails] = useState(false);
     const [showDropoffDetails, setShowDropoffDetails] = useState(false);
     const queryParams = new URLSearchParams(search);
-    const [staffName, setStaffName] = useState('Admin');
+    const userName =sessionStorage.getItem('username');
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({
         dropoffTime: '',
@@ -27,12 +29,15 @@ const ViewMore = () => {
             try {
                 const docRef = doc(db, `user/${uid}/bookings`, id);
                 const docSnap = await getDoc(docRef);
-
+    
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     setBookingDetails({
                         ...data,
-                        kilometer: data.kilometer || 'No data',
+                        kilometerPick: data.kilometerPick?.km || 'No data',
+                        kilometerPickImage: data.kilometerPick?.kmImage || '',
+                        kilometerDrop: data.kilometerDrop?.km || 'No data',
+                        kilometerDropImage: data.kilometerDrop?.kmImage || '',
                         kilometerdrop: data.kilometerdrop || 'No data',
                         photo: data.photo,
                         photodrop: data.photodrop,
@@ -41,9 +46,7 @@ const ViewMore = () => {
                         vehicleImgURLs: data.vehicleImgURLs || [],
                         fuelBillImageURLs: data.fuelBillImageURLs || [],
                     });
-                    if (data.staffId) {
-                        fetchStaffName(data.staffId);
-                    }
+                   
                 } else {
                     console.log(`Document with ID ${id} does not exist!`);
                 }
@@ -51,24 +54,10 @@ const ViewMore = () => {
                 console.error('Error fetching data:', error);
             }
         };
-
-        const fetchStaffName = async (staffId) => {
-            try {
-                const staffDocRef = doc(db, `user/${uid}/users`, staffId);
-                const staffDocSnap = await getDoc(staffDocRef);
-
-                if (staffDocSnap.exists()) {
-                    setStaffName(staffDocSnap.data().name);
-                } else {
-                    console.log(`Staff with ID ${staffId} does not exist!`);
-                }
-            } catch (error) {
-                console.error('Error fetching staff data:', error);
-            }
-        };
-
+    
         fetchBookingDetails();
     }, [db, id]);
+    
 
     const togglePickupDetails = () => {
         setShowPickupDetails(!showPickupDetails);
@@ -132,18 +121,18 @@ const ViewMore = () => {
             </div>
 
             {showPickupDetails && (
-                <div>
-                    {bookingDetails.kilometer && (
-                        <div className="my-4">
-                            <strong>Pickup Kilometer:</strong> {bookingDetails.kilometer}
-                        </div>
-                    )}
-                    {bookingDetails.photo && (
-                        <div className="my-4 flex">
-                            <strong>Pickup Km Photo:</strong>
-                            <img src={bookingDetails.photo} alt="Pickup Km Photo" className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5" />
-                        </div>
-                    )}
+                 <div>
+                 {bookingDetails.kilometerPick && (
+                     <div className="my-4">
+                         <strong>Pickup Kilometer:</strong> {bookingDetails.kilometerPick}
+                     </div>
+                 )}
+                 {bookingDetails.kilometerPickImage && (
+                     <div className="my-4 flex">
+                         <strong>Pickup Km Photo:</strong>
+                         <img src={bookingDetails.kilometerPickImage} alt="Pickup Km Photo" className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5" />
+                     </div>
+                 )}
 
                     <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -175,17 +164,17 @@ const ViewMore = () => {
 
             {showDropoffDetails && (
                 <div>
-                    {bookingDetails.kilometerdrop && (
-                        <div className="my-4">
-                            <strong>Dropoff Kilometer:</strong> {bookingDetails.kilometerdrop}
-                        </div>
-                    )}
-                    {bookingDetails.photodrop && (
-                        <div className="my-4 flex">
-                            <strong>Dropoff Km Photo:</strong>
-                            <img src={bookingDetails.photodrop} alt="Dropoff Km Photo" className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5" />
-                        </div>
-                    )}
+                {bookingDetails.kilometerDrop && (
+                    <div className="my-4">
+                        <strong>Dropoff Kilometer:</strong> {bookingDetails.kilometerDrop}
+                    </div>
+                )}
+                {bookingDetails.kilometerDropImage && (
+                    <div className="my-4 flex">
+                        <strong>Dropoff Km Photo:</strong>
+                        <img src={bookingDetails.kilometerDropImage} alt="Dropoff Km Photo" className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5" />
+                    </div>
+                )}
                     <h3 className="text-xl font-bold mt-5">Fuel Bill Images</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {bookingDetails.fuelBillImageURLs.length > 0 ? (
@@ -224,10 +213,13 @@ const ViewMore = () => {
                         <td className="bg-gray-100 p-2 font-semibold">Booking ID :</td>
                         <td className="p-2">{bookingDetails.bookingId}</td>
                     </tr>
-                    <tr>
-                        <td className="bg-gray-100 p-2 font-semibold">Staff Name :</td>
-                        <td className="p-2">{staffName}</td>
-                    </tr>
+                    {role === 'staff' && (
+    <tr>
+        <td className="bg-gray-100 p-2 font-semibold">Staff Name :</td>
+        <td className="p-2">{userName}</td>
+    </tr>
+)}
+
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Edited person :</td>
                         <td className="p-2">{bookingDetails.newStatus}, {bookingDetails.editedTime}</td>

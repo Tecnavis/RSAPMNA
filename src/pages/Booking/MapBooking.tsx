@@ -113,7 +113,9 @@ const MapBooking = ({ activeForm }) => {
     const [serviceCategory, setServiceCategory] = useState('');
     const [availableServices, setAvailableServices] = useState('');
     const [adjustValue, setAdjustValue] = useState('');
-    const [bodyShope, setBodyShope] = useState('');
+const [bodyShope, setBodyShope]= useState('');
+const userName =sessionStorage.getItem('username');
+const role =sessionStorage.getItem('role');
     useEffect(() => {
         if (state && state.editData) {
             const editData = state.editData;
@@ -868,7 +870,9 @@ const MapBooking = ({ activeForm }) => {
         if (validateForm()) {
             try {
                 const selectedDriverObject = drivers.find((driver) => driver.id === selectedDriver);
-                const driverName = selectedDriverObject ? selectedDriverObject.driverName : '';
+                // const driverName = selectedDriverObject ? selectedDriverObject.driverName : ''  || 'Dummy Driver';
+                const driverName = selectedDriverObject?.driverName || 'Dummy Driver';
+
                 const selectedDriverDistanceData = pickupDistances.find((dist) => dist.id === selectedDriver);
                 const pickupDistance = selectedDriverDistanceData ? selectedDriverDistanceData.distance : 0;
 
@@ -926,8 +930,11 @@ const MapBooking = ({ activeForm }) => {
                     paymentStatus: 'Not Paid',
                 };
                 if (editData) {
-                    bookingData.newStatus = 'Edited by Admin';
-                    bookingData.editedTime = currentDate.toLocaleString();
+                    if (role === 'admin') {
+                        bookingData.newStatus = `Edited by ${role}`;
+                    } else if (role === 'staff') {
+                        bookingData.newStatus = `Edited by ${role} ${userName}`;
+                    }                    bookingData.editedTime = currentDate.toLocaleString();
                 }
                 console.log('Data to be added/updated:', bookingData); // Log the data before adding or updating
 
@@ -1712,130 +1719,136 @@ const MapBooking = ({ activeForm }) => {
                             </select>
                         </div>
                     )}
-                    {!disableFields && (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="driver" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                Driver
-                            </label>
-                            <div className="form-input flex-1" style={{ position: 'relative', width: '100%' }}>
-                                <input
-                                    id="driver"
-                                    type="text"
-                                    name="driver"
-                                    className="w-full"
-                                    placeholder="Select your driver"
-                                    style={{
-                                        padding: '0.5rem',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '5px',
-                                        fontSize: '1rem',
-                                        outline: 'none',
-                                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                    }}
-                                    value={selectedDriver && drivers.find((driver) => driver.id === selectedDriver)?.driverName}
-                                    onClick={() => openModal(distance)}
-                                />
-                            </div>
-                            <ReactModal
-                                isOpen={isModalOpen}
-                                onRequestClose={closeModal}
-                                style={{
-                                    overlay: {
-                                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                                    },
-                                    content: {
-                                        top: '50%',
-                                        left: '50%',
-                                        right: 'auto',
-                                        bottom: 'auto',
-                                        transform: 'translate(-50%, -50%)',
-                                        borderRadius: '10px',
-                                        maxWidth: '90vw',
-                                        maxHeight: '80vh',
-                                        boxShadow: '0 0 20px rgba(0, 0, 0, 0.7)',
-                                        padding: '20px',
-                                        overflow: 'auto',
-                                    },
-                                }}
-                            >
-                                <div style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 999 }}>
-                                    <h2 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>Available Drivers for {serviceType}</h2>
-                                    <button
-                                        onClick={closeModal}
-                                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-1"
-                                        style={{ marginLeft: 'auto', marginRight: '20px' }}
-                                    >
-                                        OK
-                                    </button>
+                 {!disableFields && (
+    <div className="flex items-center mt-4">
+        <label htmlFor="driver" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
+            Driver
+        </label>
+        <div className="form-input flex-1" style={{ position: 'relative', width: '100%' }}>
+            <input
+                id="driver"
+                type="text"
+                name="driver"
+                className="w-full"
+                placeholder="Select your driver"
+                style={{
+                    padding: '0.5rem',
+                    border: '1px solid #ccc',
+                    borderRadius: '5px',
+                    fontSize: '1rem',
+                    outline: 'none',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                }}
+                value={
+                    selectedDriver
+                        ? drivers.find((driver) => driver.id === selectedDriver)?.driverName || 'Dummy Driver'
+                        : 'Dummy Driver'
+                }
+                onClick={() => openModal(distance)}
+                readOnly
+            />
+        </div>
+        <ReactModal
+            isOpen={isModalOpen}
+            onRequestClose={closeModal}
+            style={{
+                overlay: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                },
+                content: {
+                    top: '50%',
+                    left: '50%',
+                    right: 'auto',
+                    bottom: 'auto',
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: '10px',
+                    maxWidth: '90vw',
+                    maxHeight: '80vh',
+                    boxShadow: '0 0 20px rgba(0, 0, 0, 0.7)',
+                    padding: '20px',
+                    overflow: 'auto',
+                },
+            }}
+        >
+            <div style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 999 }}>
+                <h2 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>Available Drivers for {serviceType}</h2>
+                <button
+                    onClick={closeModal}
+                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-1"
+                    style={{ marginLeft: 'auto', marginRight: '20px' }}
+                >
+                    OK
+                </button>
+            </div>
+
+            <div style={{ marginTop: '10px' }}>
+                <div className="grid grid-cols-1 gap-4">
+                    {/* Add "Dummy Driver" to the top of the list */}
+                    {[{ driver: { id: 'dummy', driverName: 'Dummy Driver', companyName: '' }, pickupDistanceData: { distance: 0, duration: 0 } }]
+                        .concat(
+                            drivers
+                                .map((driver, index) => ({
+                                    driver,
+                                    pickupDistanceData: pickupDistances[index] || { distance: 0, duration: 0 },
+                                }))
+                                .sort((a, b) => {
+                                    if (a.driver.id === 'dummy') return -1; // Ensure Dummy Driver is always first
+                                    if (b.driver.id === 'dummy') return 1;  // Ensure Dummy Driver is always first
+                                    
+                                    if (a.driver.companyName === 'RSA' && b.driver.companyName !== 'RSA') {
+                                        return -1;
+                                    }
+                                    if (a.driver.companyName !== 'RSA' && b.driver.companyName === 'RSA') {
+                                        return 1;
+                                    }
+                                    return a.pickupDistanceData.distance - b.pickupDistanceData.distance;
+                                })
+                        )
+                        .map(({ driver, pickupDistanceData }, index) => {
+                            const totalDistance = pickupDistances.find((dist) => dist.id === driver.id)?.distance || 0;
+                            const driverTotalSalary = calculateTotalSalary(serviceDetails.salary, distance, serviceDetails.basicSalaryKM, serviceDetails.salaryPerKM);
+
+                            return (
+                                <div key={driver.id} className="flex items-center border border-gray-200 p-2 rounded-lg">
+                                    <table className="panel p-4 w-full">
+                                        <thead>
+                                            <tr className="text-left">
+                                                <th className="border-b-2 p-2">Driver Name</th>
+                                                <th className="border-b-2 p-2">Company Name</th>
+                                                <th className="border-b-2 p-2">Pickup Distance (KM)</th>
+                                                <th className="border-b-2 p-2">Pickup Duration</th>
+                                                <th className="border-b-2 p-2">Salary</th>
+                                                <th className="border-b-2 p-2">Select Driver</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr className="text-left">
+                                                <td className="border-b-2 p-2">{driver.driverName}</td>
+                                                <td className="border-b-2 p-2">{driver.companyName}</td>
+                                                <td className="border-b-2 p-2">{pickupDistanceData.distance}</td>
+                                                <td className="border-b-2 p-2">{pickupDistanceData.duration}</td>
+                                                <td className="border-b-2 p-2">{driverTotalSalary}</td>
+                                                <td>
+                                                    <input
+                                                        type="radio"
+                                                        name="selectedDriver"
+                                                        value={driver.id}
+                                                        checked={selectedDriver === driver.id}
+                                                        onChange={() => handleInputChange('selectedDriver', driver.id)}
+                                                    />
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
+                            );
+                        })}
+                </div>
+            </div>
+        </ReactModal>
+    </div>
+)}
 
-                                <div style={{ marginTop: '10px' }}>
-                                    <div className="grid grid-cols-1 gap-4">
-                                        {drivers
-                                            .map((driver, index) => ({
-                                                driver,
-                                                pickupDistanceData: pickupDistances[index] || { distance: 0, duration: 0 },
-                                            }))
-                                            .sort((a, b) => {
-                                                if (a.driver.companyName === 'RSA' && b.driver.companyName !== 'RSA') {
-                                                    return -1;
-                                                }
-                                                if (a.driver.companyName !== 'RSA' && b.driver.companyName === 'RSA') {
-                                                    return 1;
-                                                }
-                                                return a.pickupDistanceData.distance - b.pickupDistanceData.distance;
-                                            })
-                                            .map(({ driver, pickupDistanceData }, index) => {
-                                                const totalDistance = pickupDistances.find((dist) => dist.id === driver.id)?.distance || 0;
-                                                const driverTotalSalary = calculateTotalSalary(serviceDetails.salary, distance, serviceDetails.basicSalaryKM, serviceDetails.salaryPerKM);
-
-                                                console.log('Driver Total Salary Calculation:');
-                                                console.log('Service Details Salary:', serviceDetails.salary);
-                                                console.log('Total Distance:', totalDistance);
-                                                console.log('Basic Salary per KM:', serviceDetails.basicSalaryKM);
-                                                console.log('Salary per KM:', serviceDetails.salaryPerKM);
-                                                console.log('Calculated Total Salary:', driverTotalSalary);
-
-                                                return (
-                                                    <div key={driver.id} className="flex items-center border border-gray-200 p-2 rounded-lg">
-                                                        <table className="panel p-4 w-full">
-                                                            <thead>
-                                                                <tr className="text-left">
-                                                                    <th className="border-b-2 p-2">Driver Name</th>
-                                                                    <th className="border-b-2 p-2">Company Name</th>
-                                                                    <th className="border-b-2 p-2">Pickup Distance (KM)</th>
-                                                                    <th className="border-b-2 p-2">Pickup Duration</th>
-                                                                    <th className="border-b-2 p-2">Salary</th>
-                                                                    <th className="border-b-2 p-2">Select Driver</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                <tr className="text-left">
-                                                                    <td className="border-b-2 p-2">{driver.driverName}</td>
-                                                                    <td className="border-b-2 p-2">{driver.companyName}</td>
-                                                                    <td className="border-b-2 p-2">{pickupDistanceData.distance}</td>
-                                                                    <td className="border-b-2 p-2">{pickupDistanceData.duration}</td>
-                                                                    <td className="border-b-2 p-2">{driverTotalSalary}</td>
-                                                                    <td>
-                                                                        <input
-                                                                            type="radio"
-                                                                            name="selectedDriver"
-                                                                            value={driver.id}
-                                                                            checked={selectedDriver === driver.id}
-                                                                            onChange={() => handleInputChange('selectedDriver', driver.id)}
-                                                                        />
-                                                                    </td>
-                                                                </tr>
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                );
-                                            })}
-                                    </div>
-                                </div>
-                            </ReactModal>
-                        </div>
-                    )}
                 </div>
                 <React.Fragment>
                     <div>

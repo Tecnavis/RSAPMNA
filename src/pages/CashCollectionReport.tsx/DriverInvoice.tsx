@@ -91,10 +91,10 @@ const DriverInvoice = () => {
     return (
         <div>
             <div className="flex items-center lg:justify-end justify-center flex-wrap gap-4 mb-6">
-                <button type="button" className="btn btn-info gap-2">
+                {/* <button type="button" className="btn btn-info gap-2">
                     <IconSend />
                     Send Invoice
-                </button>
+                </button> */}
 
                 <button type="button" className="btn btn-primary gap-2" onClick={handlePrint}>
                     <IconPrinter />
@@ -106,10 +106,10 @@ const DriverInvoice = () => {
                     Download
                 </button>
 
-                <Link to="/apps/invoice/add" className="btn btn-secondary gap-2">
+                {/* <Link to="/apps/invoice/add" className="btn btn-secondary gap-2">
                     <IconPlus />
                     Create
-                </Link>
+                </Link> */}
 
                 <Link to={`/general/sales/preview/edit/${id}`} className="btn btn-warning gap-2">
                     <IconEdit />
