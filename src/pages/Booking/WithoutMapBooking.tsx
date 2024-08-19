@@ -85,8 +85,7 @@ const WithoutMapBooking = ({ activeForm }) => {
     const [insuranceAmountBody, setInsuranceAmountBody] = useState(0);
     const [showrooms, setShowrooms] = useState<Showroom[]>([]);
     console.log(showrooms);
-    const [distance, setDistance] = useState('');
-    console.log('distance', distance);
+const [distance, setDistance] = useState(0);
     const [drivers, setDrivers] = useState([]);
     const [editData, setEditData] = useState(null);
     const [serviceTypes, setServiceTypes] = useState([]);
@@ -102,6 +101,9 @@ const WithoutMapBooking = ({ activeForm }) => {
     const [adjustValue, setAdjustValue] = useState('');
     const [bodyShope, setBodyShope]= useState('');
     const uid = sessionStorage.getItem('uid')
+    const userName =sessionStorage.getItem('username');
+    const role =sessionStorage.getItem('role');
+console.log("role",role)
     const [dis1, setDis1] = useState('');
     const [dis2, setDis2] = useState('');
     const [dis3, setDis3] = useState('');
@@ -394,18 +396,20 @@ const WithoutMapBooking = ({ activeForm }) => {
                 setUpdatedTotalSalary(value || '');
                 break;
                 case 'dis1':
-                    setDis1(value || '');
+                    setDis1(value || 0);
                     break;
                 case 'dis2':
-                    setDis2(value || '');
+                    setDis2(value || 0);
                     break;
                 case 'dis3':
-                    setDis3(value || '');
+                    setDis3(value || 0);
                     break;
                 case 'distance':
-                    // Ensure that totalDistance is recalculated
+                    console.log('Distance type before savingdis1:', typeof distance);
                     const totalDistance = parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3);
                     console.log('Setting distance to:', totalDistance);
+                    console.log('Distance type before saving:', typeof distance);
+
                     setDistance(totalDistance || 0); // Default to 0 if totalDistance is NaN
                     break;
             case 'serviceVehicle':
@@ -800,7 +804,7 @@ if (editData?.adjustValue) {
                 const driverName = selectedDriverObject.driverName || 'Dummy Driver'; // Ensure Dummy Driver is handled
                 const currentDate = new Date();
                 const dateTime = formatDate(currentDate); // Use the formatted date
-const distance=parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3);
+                const distance = (parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3)).toString();
                 let finalFileNumber = '';
 
                 if (company === 'self') {
@@ -808,31 +812,32 @@ const distance=parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3);
                 } else if (company === 'rsa') {
                     finalFileNumber = fileNumber;
                 }
-        
+                console.log('Distance type before saving:', typeof distance);
+
                 const bookingData = {
                     ...bookingDetails,
                     driver: driverName,
                     totalSalary: totalSalary,
                     pickupLocation:pickupLocation,
-                    dropoffLocation: dropoffLocation || '',
-                    status: 'booking added',
+                    dropoffLocation: dropoffLocation || {},
+                                        status: 'booking added',
                     dateTime: dateTime, // Use the formatted date
                     bookingId: `${bookingId}`,
                     createdAt: serverTimestamp(),
                     comments: comments || '',
                     // totalDistance: totalDistance,
-                    distance: distance,
+                    distance: distance || 0, 
                     baseLocation: baseLocation || '',
                     showroomLocation: showroomLocation,
                     company: company || '',
                     adjustValue:adjustValue || '',
                     customerName: customerName || '',
-                    totalDriverDistance: totalDriverDistance,
-                    totalDriverSalary: totalDriverSalary || '',
+                    totalDriverDistance: totalDriverDistance|| 0,
+                    totalDriverSalary: totalDriverSalary || 0,
                     mobileNumber: mobileNumber || '',
-                    dis1: dis1 || '',
-                    dis2: dis2 || '',
-                    dis3: dis3 || '',
+                    dis1: dis1 || 0,
+                    dis2: dis2 || 0,
+                    dis3: dis3 || 0,
                     phoneNumber: phoneNumber || '',
                     vehicleType: vehicleType || '',
                     bodyShope: bodyShope || '',
@@ -852,8 +857,11 @@ const distance=parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3);
                     paymentStatus: 'Not Paid',
                 };
                 if (editData) {
-                    bookingData.newStatus = 'Edited by Admin';
-                    bookingData.editedTime = formatDate(new Date());
+                    if (role === 'admin') {
+                        bookingData.newStatus = `Edited by ${role}`;
+                    } else if (role === 'staff') {
+                        bookingData.newStatus = `Edited by ${role} ${userName}`;
+                    }                    bookingData.editedTime = formatDate(new Date());
                 }
                 console.log('Data to be added/updated:', bookingData); // Log the data before adding or updating
 
@@ -1342,29 +1350,29 @@ const distance=parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3);
         <IconMapPin />
     </a>
 </div>
-  <div className="mt-4 flex items-center">
-                        <label htmlFor="distance" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                            Distance (KM)
-                        </label>
-                        <input
-                            id="distance"
-                            type="text"
-                            name="distance"
-                            className="form-input flex-1"
-                            style={{
-                                width: '100%',
-                                padding: '0.5rem',
-                                border: '1px solid #ccc',
-                                borderRadius: '5px',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                            }}
-                            
-                            onChange={(e) => handleInputChange('distance', e.target.value)}
-                            value={parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3)}
-                            />
-                    </div>
+<div className="mt-4 flex items-center">
+    <label htmlFor="distance" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
+        Distance (KM)
+    </label>
+    <input
+        id="distance"
+        type="number" // Use type="number" to ensure numeric input
+        name="distance"
+        className="form-input flex-1"
+        style={{
+            width: '100%',
+            padding: '0.5rem',
+            border: '1px solid #ccc',
+            borderRadius: '5px',
+            fontSize: '1rem',
+            outline: 'none',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        }}
+        onChange={(e) => handleInputChange('distance', e.target.value)}
+        value={parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3)} // Ensure the value is numeric
+    />
+</div>
+
                     <div className="flex items-center mt-4">
                         <label htmlFor="trappedLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
                             Trapped Location

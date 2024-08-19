@@ -21,7 +21,7 @@ const DriverSalaryInvoice = () => {
     const location = useLocation();
     const invoiceRef = useRef();
 
-    // Extract selectedBookings from the state
+    const uid = sessionStorage.getItem('uid');
     const { state } = location;
     const { selectedBookings } = state || { selectedBookings: [] };
 
@@ -30,7 +30,7 @@ const DriverSalaryInvoice = () => {
             setLoading(true);
             try {
                 const bookingPromises = selectedBookings.map(async (bookingId) => {
-                    const bookingDocRef = doc(db, 'bookings', bookingId);
+                    const bookingDocRef = doc(db, `user/${uid}bookings`, bookingId);
                     const bookingSnapshot = await getDoc(bookingDocRef);
                     if (bookingSnapshot.exists()) {
                         return { id: bookingSnapshot.id, ...bookingSnapshot.data() };
