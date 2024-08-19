@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { addDoc, collection, getFirestore, doc, updateDoc, getDocs } from 'firebase/firestore';
@@ -22,32 +21,32 @@ const DriverAdd = () => {
     const [basicSalaries, setBasicSalaries] = useState({}); // Ensure basicSalaries is defined here
     const [profileImage, setProfileImage] = useState(null); // State to store profile image file
     const [showPassword, setShowPassword] = useState(false);
-    
+
     const [serviceVehicle, setServiceVehicle] = useState({});
 
-const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-const [advancePayment, setAdvancePayment] = useState('0');
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [advancePayment, setAdvancePayment] = useState('0');
 
     const storage = getStorage();
-    const uid = sessionStorage.getItem('uid')
+    const uid = sessionStorage.getItem('uid');
     const [serviceOptions, setServiceOptions] = useState([]);
 
     useEffect(() => {
         const fetchServiceOptions = async () => {
             try {
                 const db = getFirestore();
-                const serviceCollection = collection(db,  `user/${uid}/service`);
+                const serviceCollection = collection(db, `user/${uid}/service`);
                 const serviceSnapshot = await getDocs(serviceCollection);
-                const servicesList = serviceSnapshot.docs.map(doc => doc.data().name); // Adjust this based on your data structure
+                const servicesList = serviceSnapshot.docs.map((doc) => doc.data().name); // Adjust this based on your data structure
                 setServiceOptions(servicesList);
             } catch (error) {
                 console.error('Error fetching services:', error);
             }
         };
-    
+
         fetchServiceOptions();
     }, []);
-    
+
     const handlePasswordChange = (e) => {
         setPassword(e.target.value);
     };
@@ -68,20 +67,32 @@ const [advancePayment, setAdvancePayment] = useState('0');
         const updatedsalaryPerKm = { ...salaryPerKm, [service]: e.target.value };
         setSalaryPerKm(updatedsalaryPerKm);
     };
-   
+
     const handleServiceVehicle = (service, e) => {
-        const updatedServiceVehicle= { ...serviceVehicle, [service]: e.target.value };
+        const updatedServiceVehicle = { ...serviceVehicle, [service]: e.target.value };
         setServiceVehicle(updatedServiceVehicle);
     };
     const handleProfileImageChange = (e) => {
-        setProfileImage(e.target.files[0]); 
+        setProfileImage(e.target.files[0]);
     };
 
     const renderServiceOptions = () => {
         return (
             <div style={{ columnCount: 3, columnGap: '1rem', fontFamily: 'Arial, sans-serif', fontSize: '16px' }}>
                 {serviceOptions.map((option, index) => (
-                    <label key={index} style={{ display: 'inline-flex', alignItems: 'center', marginBottom: '0.5rem', padding: '0.5rem', borderRadius: '8px', backgroundColor: '#f4f4f4', boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)', transition: 'all 0.3s ease' }}>
+                    <label
+                        key={index}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            marginBottom: '0.5rem',
+                            padding: '0.5rem',
+                            borderRadius: '8px',
+                            backgroundColor: '#f4f4f4',
+                            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+                            transition: 'all 0.3s ease',
+                        }}
+                    >
                         <input
                             type="checkbox"
                             value={option}
@@ -95,16 +106,15 @@ const [advancePayment, setAdvancePayment] = useState('0');
             </div>
         );
     };
-    
 
     const handleCheckboxChange = (value, isChecked) => {
         if (isChecked) {
             setSelectedServices([...selectedServices, value]);
         } else {
-            setSelectedServices(selectedServices.filter(service => service !== value));
+            setSelectedServices(selectedServices.filter((service) => service !== value));
         }
     };
-   
+
     const navigate = useNavigate();
     const db = getFirestore();
     const { state } = useLocation(); // Use the useLocation hook to access location state
@@ -127,8 +137,7 @@ const [advancePayment, setAdvancePayment] = useState('0');
 
             setBasicSalaries(state.editData.basicSalaries || '');
             setProfileImage(state.editData.profileImage || '');
-            // setAdvancePayment(state.editData.advancePayment || ''); 
-
+            // setAdvancePayment(state.editData.advancePayment || '');
         }
     }, [state]);
     const checkPhoneUnique = async (phone) => {
@@ -137,16 +146,16 @@ const [advancePayment, setAdvancePayment] = useState('0');
         const driversRef = collection(db, `user/${uid}/driver`);
         const querySnapshot = await getDocs(driversRef);
         let isUnique = true;
-    
+
         querySnapshot.forEach((doc) => {
             if (doc.data().phone === phone) {
                 isUnique = false;
             }
         });
-    
+
         return isUnique;
     };
-    
+
     const addOrUpdateItem = async () => {
         try {
             // Check if the phone number is unique
@@ -156,23 +165,23 @@ const [advancePayment, setAdvancePayment] = useState('0');
                 alert('Phone number already exists. Please enter a different phone number.');
                 return;
             }
-    
+
             if (password !== confirmPassword) {
                 console.error('Password and confirm password do not match');
                 return;
             }
-            
-            let profileImageUrl: string = ''; 
+
+            let profileImageUrl: string = '';
 
             if (profileImage) {
                 const storageRef = ref(storage, 'profile_images/' + profileImage.name);
                 const uploadTask = uploadBytesResumable(storageRef, profileImage);
-            
+
                 await uploadTask;
                 profileImageUrl = await getDownloadURL(storageRef);
             }
-            
-                        const itemData = {
+
+            const itemData = {
                 driverName,
                 idnumber,
                 phone,
@@ -186,11 +195,11 @@ const [advancePayment, setAdvancePayment] = useState('0');
                 password,
                 confirmPassword,
                 profileImageUrl,
-                advancePayment 
+                advancePayment,
             };
 
             if (editData) {
-                const docRef = doc(db,  `user/${uid}/driver`, editData.id);
+                const docRef = doc(db, `user/${uid}/driver`, editData.id);
                 await updateDoc(docRef, itemData);
                 console.log('Document updated');
             } else {
@@ -203,7 +212,7 @@ const [advancePayment, setAdvancePayment] = useState('0');
             console.error('Error adding/updating document: ', e);
         }
     };
-    
+
     return (
         <div>
             <ul className="flex space-x-2 rtl:space-x-reverse">
@@ -226,7 +235,7 @@ const [advancePayment, setAdvancePayment] = useState('0');
                     <form className="border border-[#ebedf2] dark:border-[#191e3a] rounded-md p-4 mb-5 bg-white dark:bg-black">
                         <h6 className="text-lg font-bold mb-5">General Information</h6>
                         <div className="flex flex-col sm:flex-row">
-                        <div className="ltr:sm:mr-4 rtl:sm:ml-4 w-full sm:w-2/12 mb-5">
+                            <div className="ltr:sm:mr-4 rtl:sm:ml-4 w-full sm:w-2/12 mb-5">
                                 {profileImage ? (
                                     <img src={URL.createObjectURL(profileImage)} alt="Profile" className="w-20 h-20 md:w-32 md:h-32 rounded-full object-cover mx-auto" />
                                 ) : (
@@ -243,16 +252,15 @@ const [advancePayment, setAdvancePayment] = useState('0');
                                     <label htmlFor="driverName">Driver Name</label>
                                     <input id="driverName" type="text" placeholder="Enter driver Name" className="form-input" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
                                 </div>
-                               
+
                                 <div>
                                     <label htmlFor="idnumber">ID number</label>
-                                    <input id="idnumber" type="idnumber"  className="form-input" value={idnumber} onChange={(e) => setIdnumber(e.target.value)} />
+                                    <input id="idnumber" type="idnumber" className="form-input" value={idnumber} onChange={(e) => setIdnumber(e.target.value)} />
                                 </div>
                                 <div>
                                     <label htmlFor="phone">Phone</label>
                                     <input id="phone" type="phone" placeholder="" className="form-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
                                 </div>
-                                
 
                                 <div>
                                     <label htmlFor="personalphone">Personal PhoneNumber</label>
@@ -262,137 +270,124 @@ const [advancePayment, setAdvancePayment] = useState('0');
                                     <label htmlFor="advancePayment">Advance payment</label>
                                     <input id="advancePayment" type="advancePayment" className="form-input" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} />
                                 </div> */}
-    <div>
-    <label htmlFor="password">Password</label>
-    <input
-        id="password"
-        type={showPassword ? "text" : "password"}
-        placeholder="Enter password"
-        className="form-input"
-        value={password}
-        onChange={handlePasswordChange}
-    />
-    <button
-        type="button"
-        onClick={() => setShowPassword(!showPassword)}
-    >
-        {showPassword ? "Hide" : "Show"} Password
-    </button>
-</div>
-<div>
-    <label htmlFor="confirmPassword">Confirm Password</label>
-    <input
-        id="confirmPassword"
-        type={showConfirmPassword ? "text" : "password"}
-        placeholder="Confirm password"
-        className="form-input"
-        value={confirmPassword}
-        onChange={handleConfirmPasswordChange}
-    />
-    <button
-        type="button"
-        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-    >
-        {showConfirmPassword ? "Hide" : "Show"} Confirm Password
-    </button>
-</div>
-
-
-
+                                <div>
+                                    <label htmlFor="password">Password</label>
+                                    <input
+                                        id="password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        placeholder="Enter password"
+                                        className="form-input"
+                                        value={password}
+                                        onChange={handlePasswordChange}
+                                    />
+                                    <button type="button" onClick={() => setShowPassword(!showPassword)}>
+                                        {showPassword ? 'Hide' : 'Show'} Password
+                                    </button>
+                                </div>
+                                <div>
+                                    <label htmlFor="confirmPassword">Confirm Password</label>
+                                    <input
+                                        id="confirmPassword"
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        placeholder="Confirm password"
+                                        className="form-input"
+                                        value={confirmPassword}
+                                        onChange={handleConfirmPasswordChange}
+                                    />
+                                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                        {showConfirmPassword ? 'Hide' : 'Show'} Confirm Password
+                                    </button>
+                                </div>
 
                                 <div>
-    <div>
-        <label style={{ cursor: 'pointer'}} className="flex items-center" onClick={() => setShowTable(true)}>
-            <IconPlusCircle className="me-2"/>
-            Add Service Type
-        </label>
-        {showTable && (
-  <div>
-    {renderServiceOptions()}
-    <button 
-        style={{ 
-            marginTop: '10px', 
-            padding: '8px 16px', // Increase padding for button
-            backgroundColor: '#007bff', 
-            color: '#fff', 
-            border: 'none', 
-            borderRadius: '5px', // Increase border radius for button
-            cursor: 'pointer', 
-            display: 'block', // Ensure button takes full width
-            margin: 'auto' // Center the button horizontally
-        }} 
-        onClick={() => setShowTable(false)}
-    >
-        Done
-    </button>
-</div>
-
-)}
-{selectedServices.length > 0 && (
-    <table style={{ marginTop: '20px', borderCollapse: 'collapse', width: '100%' }}>
-        <thead>
-            <tr>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Service Name</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Basic Salary</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>KM for Basic Salary</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>SalaryPerKm</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Vehicle Number</th>
-
-            </tr>
-        </thead>
-        <tbody>
-            {selectedServices.map((service, index) => (
-                <tr key={index}>
-                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>{service}</td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                        <input 
-                            style={{ border: 'none', outline: 'none' }} // Set border and outline to none
-                            type="text"
-                            value={basicSalaries[service] || ""}
-                            placeholder='Enter Basic Salary'
-                            onChange={(e) => handleBasicSalaryChange(service, e)}
-                        />
-                    </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', position: 'relative' }}>
-                        <input
-                            style={{ border: 'none', outline: 'none', width: 'calc(100% - 20px)' }} // Set border and outline to none, adjust width to leave space for "KM"
-                            type="text"
-                            value={basicSalaryKm[service] || ""}
-                            onChange={(e) => handleBasicSalaryKmChange(service, e)}
-                        />
-                        <span style={{ position: 'absolute', right: '5px', top: '50%', transform: 'translateY(-50%)', color: '#555'}}>KM</span>
-                    </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', position: 'relative' }}>
-                        <input
-                            style={{ border: 'none', outline: 'none', width: 'calc(100% - 20px)' }} // Set border and outline to none, adjust width to leave space for "KM"
-                            type="text"
-                            value={salaryPerKm[service] || ""}
-                            onChange={(e) => handleSalaryPerKmChange(service, e)}
-                        />
-                        <span style={{ position: 'absolute', right: '45px', top: '50%', transform: 'translateY(-50%)', color: '#555'}}>/km</span>
-                    </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', position: 'relative' }}>
-                        <input
-                            style={{ border: 'none', outline: 'none' }} // Set border and outline to none, adjust width to leave space for "KM"
-                            type="text"
-                            value={serviceVehicle[service] || ""}
-                            onChange={(e) => handleServiceVehicle(service, e)}
-                        />
-                    </td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
-)}
-
-
-</div>
-</div>
+                                    <div>
+                                        <label style={{ cursor: 'pointer' }} className="flex items-center" onClick={() => setShowTable(true)}>
+                                            <IconPlusCircle className="me-2" />
+                                            Add Service Type
+                                        </label>
+                                        {showTable && (
+                                            <div>
+                                                {renderServiceOptions()}
+                                                <button
+                                                    style={{
+                                                        marginTop: '10px',
+                                                        padding: '8px 16px', // Increase padding for button
+                                                        backgroundColor: '#007bff',
+                                                        color: '#fff',
+                                                        border: 'none',
+                                                        borderRadius: '5px', // Increase border radius for button
+                                                        cursor: 'pointer',
+                                                        display: 'block', // Ensure button takes full width
+                                                        margin: 'auto', // Center the button horizontally
+                                                    }}
+                                                    onClick={() => setShowTable(false)}
+                                                >
+                                                    Done
+                                                </button>
+                                            </div>
+                                        )}
+                                        {selectedServices.length > 0 && (
+                                            <table style={{ marginTop: '20px', borderCollapse: 'collapse', width: '100%' }}>
+                                                <thead>
+                                                    <tr>
+                                                        <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Service Name</th>
+                                                        <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Basic Salary</th>
+                                                        <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>KM for Basic Salary</th>
+                                                        <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>SalaryPerKm</th>
+                                                        <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Vehicle Number</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {selectedServices.map((service, index) => (
+                                                        <tr key={index}>
+                                                            <td style={{ border: '1px solid #ddd', padding: '8px' }}>{service}</td>
+                                                            <td style={{ border: '1px solid #ddd', padding: '8px' }}>
+                                                                <input
+                                                                    style={{ border: 'none', outline: 'none' }} // Set border and outline to none
+                                                                    type="text"
+                                                                    value={basicSalaries[service] || ''}
+                                                                    placeholder="Enter Basic Salary"
+                                                                    onChange={(e) => handleBasicSalaryChange(service, e)}
+                                                                />
+                                                            </td>
+                                                            <td style={{ border: '1px solid #ddd', padding: '8px', position: 'relative' }}>
+                                                                <input
+                                                                    style={{ border: 'none', outline: 'none', width: 'calc(100% - 20px)' }} // Set border and outline to none, adjust width to leave space for "KM"
+                                                                    type="text"
+                                                                    value={basicSalaryKm[service] || ''}
+                                                                    onChange={(e) => handleBasicSalaryKmChange(service, e)}
+                                                                />
+                                                                <span style={{ position: 'absolute', right: '5px', top: '50%', transform: 'translateY(-50%)', color: '#555' }}>KM</span>
+                                                            </td>
+                                                            <td style={{ border: '1px solid #ddd', padding: '8px', position: 'relative' }}>
+                                                                <input
+                                                                    style={{ border: 'none', outline: 'none', width: 'calc(100% - 20px)' }} // Set border and outline to none, adjust width to leave space for "KM"
+                                                                    type="text"
+                                                                    value={salaryPerKm[service] || ''}
+                                                                    onChange={(e) => handleSalaryPerKmChange(service, e)}
+                                                                />
+                                                                <span style={{ position: 'absolute', right: '45px', top: '50%', transform: 'translateY(-50%)', color: '#555' }}>/km</span>
+                                                            </td>
+                                                            <td style={{ border: '1px solid #ddd', padding: '8px', position: 'relative' }}>
+                                                                <input
+                                                                    style={{ border: 'none', outline: 'none' }} // Set border and outline to none, adjust width to leave space for "KM"
+                                                                    type="text"
+                                                                    value={serviceVehicle[service] || ''}
+                                                                    onChange={(e) => handleServiceVehicle(service, e)}
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        )}
+                                    </div>
+                                </div>
                                 <div className="sm:col-span-2 mt-3">
-            <button type="button" className="btn btn-primary" onClick={addOrUpdateItem}>
-                {editData ? 'Update' : 'Save'}
-            </button>
-        </div>
+                                    <button type="button" className="btn btn-primary" onClick={addOrUpdateItem}>
+                                        {editData ? 'Update' : 'Save'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </form>
