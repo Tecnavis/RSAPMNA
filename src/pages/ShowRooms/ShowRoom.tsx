@@ -74,6 +74,10 @@ const ShowRoom = () => {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [currentRoomId, setCurrentRoomId] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
+    const [manualLocationName, setManualLocationName] = useState('');
+    const [manualLat, setManualLat] = useState('');
+    const [manualLng, setManualLng] = useState('');
+    
     const uid = sessionStorage.getItem('uid');
     useEffect(() => {
         const term = searchTerm.toLowerCase();
@@ -328,6 +332,29 @@ const ShowRoom = () => {
             }));
         }
         setBaseOptions([]);
+    };
+     // Handle Manual Input
+     const handleManualInputChange = (event) => {
+        const { name, value } = event.target;
+        if (name === 'manualLocationName') {
+            setManualLocationName(value);
+            setShowRoom((prevShowRoom) => ({
+                ...prevShowRoom,
+                Location: value,
+            }));
+        } else if (name === 'manualLat') {
+            setManualLat(value);
+            setShowRoom((prevShowRoom) => ({
+                ...prevShowRoom,
+                locationLatLng: { ...prevShowRoom.locationLatLng, lat: value },
+            }));
+        } else if (name === 'manualLng') {
+            setManualLng(value);
+            setShowRoom((prevShowRoom) => ({
+                ...prevShowRoom,
+                locationLatLng: { ...prevShowRoom.locationLatLng, lng: value },
+            }));
+        }
     };
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
@@ -667,32 +694,56 @@ const ShowRoom = () => {
                             />
                         </div>
                         <div className="mb-4" style={{ marginBottom: '16px' }}>
-                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                                Location
-                            </label>
-                            <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" width="100%" sx={{ gap: 2 }}>
-                                <Autocomplete
-                                    style={{ width: '100%', backgroundColor: 'white' }}
-                                    value={baseLocation}
-                                    onInputChange={(event, newInputValue) => {
-                                        if (newInputValue) {
-                                            getAutocompleteResults(newInputValue, setBaseOptions);
-                                        } else {
-                                            setBaseOptions([]);
-                                        }
-                                    }}
-                                    onChange={handleLocationChange}
-                                    sx={{ width: 300 }}
-                                    options={baseOptions}
-                                    getOptionLabel={(option) => option.label}
-                                    isOptionEqualToValue={(option, value) => option.label === value.label}
-                                    renderInput={(params) => <TextField {...params} label="Location" variant="outlined" />}
-                                />
-                                {showRoom.locationLatLng.lat && showRoom.locationLatLng.lng && (
-                                    <Typography>{`Location Lat/Lng: ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`}</Typography>
-                                )}
-                            </Box>
-                        </div>
+            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+                Location
+            </label>
+            <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" width="100%" sx={{ gap: 2 }}>
+                <Autocomplete
+                    style={{ width: '100%', backgroundColor: 'white' }}
+                    value={baseLocation}
+                    onInputChange={(event, newInputValue) => {
+                        if (newInputValue) {
+                            getAutocompleteResults(newInputValue, setBaseOptions);
+                        } else {
+                            setBaseOptions([]);
+                        }
+                    }}
+                    onChange={handleLocationChange}
+                    sx={{ width: 300 }}
+                    options={baseOptions}
+                    getOptionLabel={(option) => option.label}
+                    isOptionEqualToValue={(option, value) => option.label === value.label}
+                    renderInput={(params) => <TextField {...params} label="Location" variant="outlined" />}
+                />
+                <TextField
+                    label="Manual Location Name"
+                    name="manualLocationName"
+                    value={manualLocationName}
+                    onChange={handleManualInputChange}
+                    fullWidth
+                    variant="outlined"
+                />
+                <TextField
+                    label="Latitude"
+                    name="manualLat"
+                    value={manualLat}
+                    onChange={handleManualInputChange}
+                    fullWidth
+                    variant="outlined"
+                />
+                <TextField
+                    label="Longitude"
+                    name="manualLng"
+                    value={manualLng}
+                    onChange={handleManualInputChange}
+                    fullWidth
+                    variant="outlined"
+                />
+                {showRoom.locationLatLng.lat && showRoom.locationLatLng.lng && (
+                    <Typography>{`Location Lat/Lng: ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`}</Typography>
+                )}
+            </Box>
+        </div>
 
                         <div className="mb-4" style={{ marginBottom: '16px' }}>
                             <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
