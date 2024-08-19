@@ -7,6 +7,7 @@ import Box from '@mui/material/Box';
 import Modal from '@mui/material/Modal';
 import { Button } from '@mui/material';
 import ConfirmationModal from '../Users/ConfirmationModal/ConfirmationModal'; // Import the modal component
+import { useNavigate } from 'react-router-dom';
 
 const style = {
     position: 'absolute' as 'absolute',
@@ -33,6 +34,7 @@ function ServiceType() {
     const [isModalVisible, setModalVisible] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
     const uid = sessionStorage.getItem('uid');
+    const navigate = useNavigate(); // Initialize useNavigate
 
     useEffect(() => {
         const fetchServices = async () => {
@@ -119,6 +121,8 @@ function ServiceType() {
             const docRef = await addDoc(serviceRef, newService);
             setServiceTypes([...serviceTypes, { ...newService, id: docRef.id }]);
             handleClose();
+            // navigate('/users/dummy-add'); // Navigate to the dummy driver page
+
         } catch (error) {
             console.error('Error adding service type:', error);
         }
@@ -146,6 +150,7 @@ function ServiceType() {
             await updateDoc(serviceRef, updatedService);
             setServiceTypes(serviceTypes.map((service) => (service.id === id ? { ...service, ...updatedService } : service)));
             handleClose();
+            // navigate('/users/dummy-add'); 
         } catch (error) {
             console.error('Error updating service type:', error);
         }
