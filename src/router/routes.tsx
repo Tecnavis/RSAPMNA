@@ -44,6 +44,7 @@ import SalaryReport from '../pages/DriverReport/SalaryReport';
 import DriverSalaryInvoice from '../pages/DriverReport/DriverSalaryInvoice';
 import EditSalary from '../pages/DriverReport/EditSalary';
 import CompanyCreationDetails from '../pages/Users/CompanyCreationDetails';
+import DummyAdd from '../pages/Users/DummyAdd';
 
 
 
@@ -494,6 +495,10 @@ const routes = [
     {
         path: '/users/company-add',
         element: <CompanyAdd />,
+    },
+    {
+        path: '/users/dummy-add',
+        element: <DummyAdd />,
     },
     {
         path: '/users/company-add/:id',

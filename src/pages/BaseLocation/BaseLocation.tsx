@@ -11,8 +11,6 @@ import { useNavigate } from 'react-router-dom';
 const BaseLocation = () => {
     const [baseLocation, setBaseLocation] = useState(null);
     const [baseOptions, setBaseOptions] = useState([]);
-    const [baseCoords, setBaseCoords] = useState({ lat: undefined, lng: undefined });
-
     const [lat, setLat] = useState('');
     const [lng, setLng] = useState('');
     const [baseLocationName, setBaseLocationName] = useState('');
@@ -27,7 +25,6 @@ const BaseLocation = () => {
     const handleMapClick = (location) => {
         setLat(location.lat);
         setLng(location.lng);
-        setBaseCoords(location);
     };
 
     useEffect(() => {
@@ -70,8 +67,6 @@ const BaseLocation = () => {
         setBaseLocationName('');
         setLat('');
         setLng('');
-        window.location.reload();
-
     };
 
     const handleDelete = async (id) => {
@@ -99,12 +94,10 @@ const BaseLocation = () => {
             setBaseLocationName(item.name);
             setLat(item.lat);
             setLng(item.lng);
-            setBaseCoords({ lat: item.lat, lng: item.lng });
         } else {
             alert('Incorrect password. Edit cancelled.');
         }
     };
-
 
     const getAutocompleteResults = async (inputText, setOptions) => {
         const keralaCenterLat = 10.8505;
@@ -157,11 +150,11 @@ const BaseLocation = () => {
     const handleBaseChange = (event, newValue) => {
         if (newValue) {
             setBaseLocation(newValue);
+            setBaseLocationName(newValue.label);
             setLat(newValue.lat);
             setLng(newValue.lng);
-            setBaseCoords({ lat: newValue.lat, lng: newValue.lng });
         } else {
-            setBaseCoords({ lat: undefined, lng: undefined });
+            setBaseLocation(null);
         }
         setBaseOptions([]);
     };
@@ -171,34 +164,63 @@ const BaseLocation = () => {
             <form onSubmit={handleFormSubmit} className="base-location-form">
                 <div className="form-group">
                     <label htmlFor="baseLocationName">Base Location Name:</label>
-                    <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" sx={{ gap: 2 }}>
-                        <Autocomplete
-                            value={baseLocation}
-                            onInputChange={(event, newInputValue) => {
-                                setBaseLocationName(newInputValue);
-                                if (newInputValue) {
-                                    getAutocompleteResults(newInputValue, setBaseOptions);
-                                } else {
-                                    setBaseOptions([]);
-                                }
-                            }}
-                            onChange={handleBaseChange}
-                            sx={{ width: 300 }}
-                            options={baseOptions}
-                            getOptionLabel={(option) => option.label}
-                            isOptionEqualToValue={(option, value) => option.label === value.label}
-                            renderInput={(params) => <TextField {...params} label="Base Location" variant="outlined" />}
-                        />
-                        {baseCoords.lat && baseCoords.lng && <Typography>{`Base Location Lat/Lng: ${baseCoords.lat}, ${baseCoords.lng}`}</Typography>}
-                    </Box>
+                    <Autocomplete
+                        value={baseLocation}
+                        onInputChange={(event, newInputValue) => {
+                            setBaseLocationName(newInputValue);
+                            if (newInputValue) {
+                                getAutocompleteResults(newInputValue, setBaseOptions);
+                            } else {
+                                setBaseOptions([]);
+                            }
+                        }}
+                        onChange={handleBaseChange}
+                        sx={{ width: 300 }}
+                        options={baseOptions}
+                        getOptionLabel={(option) => option.label}
+                        isOptionEqualToValue={(option, value) => option.label === value.label}
+                        renderInput={(params) => <TextField {...params} label="Search Base Location" variant="outlined" />}
+                    />
                 </div>
+
+                <div className="form-group">
+                    <label htmlFor="manualLocationName">Manual Base Location Name:</label>
+                    <TextField
+                        id="manualLocationName"
+                        variant="outlined"
+                        fullWidth
+                        value={baseLocationName}
+                        onChange={(e) => setBaseLocationName(e.target.value)}
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="lat">Latitude:</label>
+                    <TextField
+                        id="lat"
+                        variant="outlined"
+                        fullWidth
+                        value={lat}
+                        onChange={(e) => setLat(e.target.value)}
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="lng">Longitude:</label>
+                    <TextField
+                        id="lng"
+                        variant="outlined"
+                        fullWidth
+                        value={lng}
+                        onChange={(e) => setLng(e.target.value)}
+                    />
+                </div>
+
                 <button type="submit" className="btn btn-primary">
                     {editing ? 'Update Base Location' : 'Save Base Location'}
                 </button>
             </form>
-            {/* <div className="map-container">
-                <MyMapComponent baseLocation={baseCoords} onMapClick={handleMapClick} />
-            </div> */}
+
             {savedBaseLocation && (
                 <div className="base-location-details">
                     <h3>Base Location Details</h3>
@@ -210,6 +232,7 @@ const BaseLocation = () => {
                     </p>
                 </div>
             )}
+
             <div className="table-responsive mb-5">
                 <table>
                     <thead>
@@ -234,21 +257,15 @@ const BaseLocation = () => {
                                 <td>
                                     <div className="whitespace-nowrap">{item.lng}</div>
                                 </td>
-                                <td className="!text-center">
-                                    <div className="flex items-center justify-center gap-x-2">
-                                        <Tippy content="Edit">
-                                            <button
-                                                className="btn btn-secondary"
-                                                onClick={() => handleEdit(item)}
-                                            >
+                                <td>
+                                    <div className="whitespace-nowrap flex justify-center items-center gap-2">
+                                        <Tippy content="Edit" animation="fade">
+                                            <button className="btn btn-info btn-icon" onClick={() => handleEdit(item)}>
                                                 <IconPencil />
                                             </button>
                                         </Tippy>
-                                        <Tippy content="Delete">
-                                            <button
-                                                className="btn btn-danger"
-                                                onClick={() => handleDelete(item.id)}
-                                            >
+                                        <Tippy content="Delete" animation="fade">
+                                            <button className="btn btn-danger btn-icon" onClick={() => handleDelete(item.id)}>
                                                 <IconTrashLines />
                                             </button>
                                         </Tippy>
