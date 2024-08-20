@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import MapBooking from './MapBooking';
 import WithoutMapBooking from './WithoutMapBooking';
 import { useLocation } from 'react-router-dom';
+import { FaMapMarkedAlt, FaMapPin } from 'react-icons/fa';
+import styles from './booking.module.css'
 
 const Booking = () => {
     const [activeForm, setActiveForm] = useState('map');
@@ -31,21 +33,28 @@ const Booking = () => {
     };
 
     return (
-        <div style={{ backgroundColor: '#e6f7ff', padding: '2rem', borderRadius: '10px', boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ backgroundColor: '#e6f7ff', borderRadius: '10px', boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{ marginBottom: '1rem' }}>
-                <button 
-                    onClick={handleWithMapClick} 
-                    style={{ marginRight: '1rem',background:"" }} 
-                    disabled={isEditing && activeForm !== 'map'} // Disable if editing and not the active form
-                >
-                    Map Booking
-                </button>
-                <button 
-                    onClick={handleWithoutMapClick} 
-                    disabled={isEditing && activeForm !== 'withoutMap'} // Disable if editing and not the active form
-                >
-                    Without Map Booking
-                </button>
+            <div  className={styles.buttonContainer}>
+            <button 
+                onClick={handleWithMapClick} 
+                className={styles.button}
+                style={{ backgroundColor: '#4CAF50' }} 
+                disabled={isEditing && activeForm !== 'map'}
+            >
+                <FaMapMarkedAlt className={styles.icon} />
+                <span>Map Booking</span>
+            </button>
+            <button 
+                onClick={handleWithoutMapClick} 
+                className={styles.button}
+                style={{ backgroundColor: '#f44336' }} 
+                disabled={isEditing && activeForm !== 'withoutMap'}
+            >
+                <FaMapPin className={styles.icon} />
+                <span>Without Map Booking</span>
+            </button>
+        </div>
             </div>
             {activeForm === 'map' && <MapBooking />}
             {activeForm === 'withoutMap' && <WithoutMapBooking />}
