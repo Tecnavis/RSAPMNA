@@ -7,11 +7,15 @@ import 'tippy.js/dist/tippy.css';
 import IconUserPlus from '../../components/Icon/IconUserPlus';
 import { getFirestore, collection, getDocs, query, where, doc, updateDoc } from 'firebase/firestore';
 import IconMenuScrumboard from '../../components/Icon/Menu/IconMenuScrumboard';
+import ConfirmationModal from './ConfirmationModal/ConfirmationModal'; // Import the modal component
+import defaultImage from '../../assets/css/images/user-front-side-with-white-background.jpg'
 
 const Driver = () => {
     const [items, setItems] = useState([] as any);
     const [editData, setEditData] = useState(null);
     const db = getFirestore();
+    const [isModalVisible, setModalVisible] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
     const uid = sessionStorage.getItem('uid')
     const navigate = useNavigate();
     console.log("data", items);
@@ -59,55 +63,25 @@ const Driver = () => {
     }, []);
 
    
-    const handleDelete = async (userId: string) => {
-        console.log('handleDelete called with userId:', userId);
-    
-        // Prompt user to enter the password
-        const enteredPassword = prompt('Please enter the password to confirm deletion:');
-        console.log('User entered password:', enteredPassword);
-    
-        // Check if the entered password matches the required password
-        const requiredPassword = 'RSA@123';
-        if (enteredPassword === requiredPassword) {
-            console.log('Password is correct, proceeding with deletion.');
-    
-            // Confirm deletion
-            const confirmDelete = window.confirm('Are you sure you want to delete this user?');
-            console.log('User confirmed deletion:', confirmDelete);
-    
-            if (confirmDelete) {
-                try {
-                    console.log('Preparing to update document with userId:', userId);
-                    
-                    // Get document reference
-                    const userDoc = doc(db, `user/${uid}/driver`, userId);
-                    console.log('Document reference obtained:', userDoc);
-    
-                    // Update document status
+    const handleDelete = async (userId) => {
+        try {
+            const userDoc = doc(db, `user/${uid}/driver`, userId);
                     await updateDoc(userDoc, { status: 'deleted from UI' });
-                    console.log('Document updated successfully');
-    
+                    
                     // Update local state
-                    setItems((prevItems) => {
-                        const updatedItems = prevItems.filter(item => item.id !== userId);
-                        console.log('Items state updated:', updatedItems);
-                        return updatedItems;
-                    });
-    
-                    alert('User deleted successfully.');
-                    console.log('User deletion confirmed by alert');
-                } catch (error) {
-                    console.error('Error deleting user:', error);
-                    alert('Failed to delete user.');
-                    console.error('Error details:', error);
-                }
-            } else {
-                console.log('User cancelled the deletion.');
-            }
-        } else {
-            console.log('Incorrect password, deletion canceled.');
-            alert('Incorrect password. Deletion canceled.');
+                    setItems((prevItems: any) => prevItems.filter((item: any) => item.id !== userId));
+        } catch (error) {
+            console.error('Error deleting document: ', error);
         }
+        setModalVisible(false);
+    };
+    const openDeleteModal = (item) => {
+        setItemToDelete(item);
+        setModalVisible(true);
+    };
+    const closeModal = () => {
+        setModalVisible(false);
+        setItemToDelete(null);
     };
     
     const handleEdit = (item) => {
@@ -172,11 +146,11 @@ const Driver = () => {
                                                 </Tippy>
                                             </li>
                                             <li>
-                                                <Tippy content="Delete">
-                                                    <button type="button" onClick={() => handleDelete(item.id)}>
-                                                        <IconTrashLines className="text-danger" />
-                                                    </button>
-                                                </Tippy>
+                                            <Tippy content="Delete">
+                                                        <button type="button" onClick={() => openDeleteModal(item)}>
+                                                            <IconTrashLines className="text-danger" />
+                                                        </button>
+                                                    </Tippy>
                                             </li>
                                             <li>
                                                 <Tippy content="More">
@@ -193,6 +167,8 @@ const Driver = () => {
                     </table>
                 </div>
             </div>
+            <ConfirmationModal isVisible={isModalVisible} onConfirm={() => handleDelete(itemToDelete?.id)} onCancel={closeModal} />
+
         </div>
     );
 };
