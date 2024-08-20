@@ -15,12 +15,24 @@ import { format } from 'date-fns';
 import ShowroomModalWithout from './ShowroomModalWithout';
 import { title } from 'process';
 import axios from 'axios';
+import styles from './withoutMap.module.css';
+import ReactSelect from 'react-select';
 
 interface Showroom {
     id: string;
     name: string;
 }
 
+const options = [
+    { value: '2', label: '2 Wheeler' },
+    { value: '3', label: '3 Wheeler' },
+    { value: '4', label: '4 Wheeler' },
+    { value: '6', label: '8 Wheeler' },
+    { value: '8', label: '12 Wheeler' },
+    { value: '10', label: '14 Wheeler' },
+    { value: '12', label: '16 Wheeler' },
+    { value: '20', label: '20 Wheeler' },
+];
 const WithoutMapBooking = ({ activeForm }) => {
     const db = getFirestore();
     const navigate = useNavigate();
@@ -85,7 +97,7 @@ const WithoutMapBooking = ({ activeForm }) => {
     const [insuranceAmountBody, setInsuranceAmountBody] = useState(0);
     const [showrooms, setShowrooms] = useState<Showroom[]>([]);
     console.log(showrooms);
-const [distance, setDistance] = useState(0);
+    const [distance, setDistance] = useState(0);
     const [drivers, setDrivers] = useState([]);
     const [editData, setEditData] = useState(null);
     const [serviceTypes, setServiceTypes] = useState([]);
@@ -99,11 +111,11 @@ const [distance, setDistance] = useState(0);
     const [totalDistances, setTotalDistances] = useState([]);
     const [errors, setErrors] = useState({});
     const [adjustValue, setAdjustValue] = useState('');
-    const [bodyShope, setBodyShope]= useState('');
-    const uid = sessionStorage.getItem('uid')
-    const userName =sessionStorage.getItem('username');
-    const role =sessionStorage.getItem('role');
-console.log("role",role)
+    const [bodyShope, setBodyShope] = useState('');
+    const uid = sessionStorage.getItem('uid');
+    const userName = sessionStorage.getItem('username');
+    const role = sessionStorage.getItem('role');
+    console.log('role', role);
     const [dis1, setDis1] = useState('');
     const [dis2, setDis2] = useState('');
     const [dis3, setDis3] = useState('');
@@ -116,7 +128,7 @@ console.log("role",role)
         outline: 'none',
         boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
     };
-    
+
     const linkStyle = {
         borderRadius: '40px',
         background: 'transparent',
@@ -131,7 +143,7 @@ console.log("role",role)
         alignItems: 'center',
         justifyContent: 'center',
     };
-    
+
     useEffect(() => {
         if (state && state.editData) {
             console.log('first');
@@ -158,7 +170,6 @@ console.log("role",role)
 
             setDis3(editData.dis3 || '');
 
-
             setVehicleNumber(editData.vehicleNumber || '');
             setServiceVehicle(editData.serviceVehicle || '');
             setVehicleModel(editData.vehicleModel || '');
@@ -172,12 +183,12 @@ console.log("role",role)
             console.log('updatedTotalSalaryyy', editData.updatedTotalSalary);
             setServiceType(editData.serviceType || '');
             setAdjustValue(editData.adjustValue || '');
-            console.log("editData.adjustValue",editData.adjustValue)
+            console.log('editData.adjustValue', editData.adjustValue);
 
-                        setTotalSalary(editData.totalSalary || 0);
+            setTotalSalary(editData.totalSalary || 0);
             setDropoffLocation(editData.dropoffLocation || '');
             setSelectedCompany(editData.selectedCompany || '');
-       
+
             setDisableFields(false);
         }
     }, [state]);
@@ -186,7 +197,7 @@ console.log("role",role)
         const formattedDateTime = now.toLocaleString();
         setCurrentDateTime(formattedDateTime);
     }, []);
-  
+
     useEffect(() => {
         console.log('pickupLocationnnn', pickupLocation);
         // Set the manual input field with the pickup location's name when the location changes
@@ -226,24 +237,22 @@ console.log("role",role)
             const fetchCompanies = async () => {
                 try {
                     const driverCollection = collection(db, `user/${uid}/driver`);
-                    
+
                     // Query to fetch companies where companyName is 'Company'
                     const q = query(driverCollection, where('companyName', '==', 'Company'));
                     const querySnapshot = await getDocs(q);
-                    
+
                     const fetchedCompanies = querySnapshot.docs.map((doc) => ({
                         id: doc.id,
                         ...doc.data(),
                     })) as Company[];
 
-                    console.log("fetchedCompanies", fetchedCompanies);
+                    console.log('fetchedCompanies', fetchedCompanies);
 
                     // Filter fetched companies based on status
-                    const filteredCompanies = fetchedCompanies.filter((company) => 
-                        company.status !== 'deleted from UI' && (company.status === '' || !company.status)
-                    );
+                    const filteredCompanies = fetchedCompanies.filter((company) => company.status !== 'deleted from UI' && (company.status === '' || !company.status));
 
-                    console.log("filteredCompanies", filteredCompanies);
+                    console.log('filteredCompanies', filteredCompanies);
                     setCompanies(filteredCompanies);
                 } catch (error) {
                     console.error('Error fetching companies:', error);
@@ -257,14 +266,13 @@ console.log("role",role)
     //     setUpdatedTotalSalary(newTotalSalary);
     // };
     const handleUpdateTotalSalary = (newTotaSalary) => {
-        console.log("newTotalSalary",newTotaSalary)
+        console.log('newTotalSalary', newTotaSalary);
         setUpdatedTotalSalary(newTotaSalary);
     };
 
     const handleInsuranceAmountBodyChange = (amount) => {
-        console.log("firstamount",amount)
+        console.log('firstamount', amount);
         setInsuranceAmountBody(amount);
-
     };
     const handleAdjustValueChange = (newAdjustValue) => {
         console.log('Adjust Valuee:', newAdjustValue);
@@ -273,11 +281,11 @@ console.log("role",role)
     const handleServiceCategoryChange = (service) => {
         setServiceCategory(service);
     };
-    const handleBodyInsuranceChange =(insurance) =>{
-        console.log("firstinsurance",insurance)
-    setBodyShope(insurance)
-    }
- 
+    const handleBodyInsuranceChange = (insurance) => {
+        console.log('firstinsurance', insurance);
+        setBodyShope(insurance);
+    };
+
     useEffect(() => {
         if (selectedDriver) {
             const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
@@ -298,20 +306,20 @@ console.log("role",role)
             case 'showroomLocation':
                 console.log('Setting showroomLocation:', value);
                 setShowroomLocation(value);
-            
+
                 // Find the selected showroom based on the selected value
                 const selectedShowroom = showrooms.find((show) => show.value === value);
                 console.log('Selected Showroom:', selectedShowroom);
-            
+
                 if (selectedShowroom) {
                     console.log('Found showroom:', selectedShowroom.value);
                     console.log('Setting insuranceAmountBody to:', selectedShowroom.insuranceAmountBody);
                     setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
-            
+
                     // Ensure lat and lng are stored as strings
                     const latString = selectedShowroom.locationLatLng.lat.toString();
                     const lngString = selectedShowroom.locationLatLng.lng.toString();
-            
+
                     console.log('Setting dropoffLocation to:', {
                         name: selectedShowroom.value,
                         lat: latString,
@@ -332,11 +340,11 @@ console.log("role",role)
                     });
                 }
                 break;
-                case 'totalSalary':
-                    setTotalSalary(value || 0);
-                    // const newCalculatedSalary = value - parseFloat(insuranceAmountBody);
-                    // handleUpdatedTotalSalary(newCalculatedSalary);
-                    break;
+            case 'totalSalary':
+                setTotalSalary(value || 0);
+                // const newCalculatedSalary = value - parseFloat(insuranceAmountBody);
+                // handleUpdatedTotalSalary(newCalculatedSalary);
+                break;
             case 'serviceCategory':
                 setServiceCategory(value || 0);
 
@@ -345,14 +353,14 @@ console.log("role",role)
                 setAvailableServices(value || 0);
 
                 break;
-                case 'bodyShope':
-                    setBodyShope(value || '');
-                    break;
-                    case 'insuranceAmountBody':
-                        setInsuranceAmountBody(value || 0);
-                        // const recalculatedTotalSalary = totalSalary - parseFloat(value);
-                        // handleUpdatedTotalSalary(recalculatedTotalSalary);
-                        break;
+            case 'bodyShope':
+                setBodyShope(value || '');
+                break;
+            case 'insuranceAmountBody':
+                setInsuranceAmountBody(value || 0);
+                // const recalculatedTotalSalary = totalSalary - parseFloat(value);
+                // handleUpdatedTotalSalary(recalculatedTotalSalary);
+                break;
             case 'adjustValue':
                 setAdjustValue(value || 0);
 
@@ -395,40 +403,40 @@ console.log("role",role)
             case 'updatedTotalSalary':
                 setUpdatedTotalSalary(value || '');
                 break;
-                case 'dis1':
-                    setDis1(value || 0);
-                    break;
-                case 'dis2':
-                    setDis2(value || 0);
-                    break;
-                case 'dis3':
-                    setDis3(value || 0);
-                    break;
-                case 'distance':
-                    console.log('Distance type before savingdis1:', typeof distance);
-                    const totalDistance = parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3);
-                    console.log('Setting distance to:', totalDistance);
-                    console.log('Distance type before saving:', typeof distance);
+            case 'dis1':
+                setDis1(value || 0);
+                break;
+            case 'dis2':
+                setDis2(value || 0);
+                break;
+            case 'dis3':
+                setDis3(value || 0);
+                break;
+            case 'distance':
+                console.log('Distance type before savingdis1:', typeof distance);
+                const totalDistance = parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3);
+                console.log('Setting distance to:', totalDistance);
+                console.log('Distance type before saving:', typeof distance);
 
-                    setDistance(totalDistance || 0); // Default to 0 if totalDistance is NaN
-                    break;
+                setDistance(totalDistance || 0); // Default to 0 if totalDistance is NaN
+                break;
             case 'serviceVehicle':
                 setServiceVehicle(value);
                 break;
-                case 'selectedDriver':
-                    setSelectedDriver(value || '');
-                    console.log('Selected Driver ID:', value);
-                
-                    const selectedDriverData = drivers.find((driver) => driver.id === value);
-                    console.log('Selected Driver Data:', selectedDriverData);
-                    if (selectedDriverData) {
-                        const calculatedSalary = calculateTotalSalary(serviceDetails.salary, distance, serviceDetails.basicSalaryKM, serviceDetails.salaryPerKM);
-                        console.log('Calculated Salary:', calculatedSalary);
-                
-                        setTotalSalary(calculatedSalary);
-                    }
-                    break;
-                
+            case 'selectedDriver':
+                setSelectedDriver(value || '');
+                console.log('Selected Driver ID:', value);
+
+                const selectedDriverData = drivers.find((driver) => driver.id === value);
+                console.log('Selected Driver Data:', selectedDriverData);
+                if (selectedDriverData) {
+                    const calculatedSalary = calculateTotalSalary(serviceDetails.salary, distance, serviceDetails.basicSalaryKM, serviceDetails.salaryPerKM);
+                    console.log('Calculated Salary:', calculatedSalary);
+
+                    setTotalSalary(calculatedSalary);
+                }
+                break;
+
             case 'dropoffLocation':
                 if (typeof value === 'string') {
                     setDropoffLocation({ ...dropoffLocation, name: value });
@@ -497,21 +505,25 @@ console.log("role",role)
         const serviceCollection = collection(db, `user/${uid}/showroom`);
 
         // Set up the real-time listener
-        const unsubscribe = onSnapshot(serviceCollection, (snapshot) => {
-            const servicesList = snapshot.docs.map(doc => ({
-                value: doc.data().Location, // Assuming 'Location' is a unique identifier
-                label: doc.data().Location,
-                insuranceAmountBody: doc.data().insuranceAmountBody, // Include this field if needed
-                locationLatLng: doc.data().locationLatLng // Include this field if needed
-            }));
-            setShowrooms(servicesList);
-        }, (error) => {
-            console.error('Error fetching services:', error);
-        });
+        const unsubscribe = onSnapshot(
+            serviceCollection,
+            (snapshot) => {
+                const servicesList = snapshot.docs.map((doc) => ({
+                    value: doc.data().Location, // Assuming 'Location' is a unique identifier
+                    label: doc.data().Location,
+                    insuranceAmountBody: doc.data().insuranceAmountBody, // Include this field if needed
+                    locationLatLng: doc.data().locationLatLng, // Include this field if needed
+                }));
+                setShowrooms(servicesList);
+            },
+            (error) => {
+                console.error('Error fetching services:', error);
+            }
+        );
 
         // Clean up the listener on component unmount
         return () => unsubscribe();
-    }, [uid]); 
+    }, [uid]);
 
     // -------------------------------------------------------------------------------------
     // useEffect(() => {
@@ -543,17 +555,15 @@ console.log("role",role)
         setManualInput(value);
 
         // Update pickupLocation with lat/lng values
-        const [lat, lng] = value.split(',').map(coord => coord.trim());
-        
-        setPickupLocation(prevState => ({
+        const [lat, lng] = value.split(',').map((coord) => coord.trim());
+
+        setPickupLocation((prevState) => ({
             ...prevState,
             lat: lat || prevState.lat,
             lng: lng || prevState.lng,
             name: value,
         }));
     };
-
-   
 
     const updateShowroomLocation = (location) => {
         setShowroomLocation(location);
@@ -602,10 +612,7 @@ console.log("role",role)
                     .map((doc) => {
                         const driverData = doc.data();
                         // Only include drivers who have the selected service type and are not deleted
-                        if (
-                            !driverData.selectedServices.includes(serviceType) ||
-                            driverData.status === 'deleted from UI'
-                        ) {
+                        if (!driverData.selectedServices.includes(serviceType) || driverData.status === 'deleted from UI') {
                             return null;
                         }
 
@@ -759,20 +766,20 @@ console.log("role",role)
     }, [drivers, serviceDetails, distance]);
     useEffect(() => {
         let newTotalSalary = totalSalary;
-console.log("editData.updatedTotalSalary",updatedTotalSalary)
+        console.log('editData.updatedTotalSalary', updatedTotalSalary);
         if (serviceCategory === 'Body Shop' && bodyShope === 'insurance') {
             newTotalSalary -= parseFloat(insuranceAmountBody || 0);
         }
-console.log("newTotalSalary",newTotalSalary)
-if (editData?.adjustValue) {
-    // If editData has adjustValue, prioritize it
-    setUpdatedTotalSalary(parseFloat(editData.adjustValue) || 0);
-} else if (newTotalSalary !== updatedTotalSalary) {
-    // Otherwise, use the calculated newTotalSalary
-    setUpdatedTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
-}
-    }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope,adjustValue]);
-    
+        console.log('newTotalSalary', newTotalSalary);
+        if (editData?.adjustValue) {
+            // If editData has adjustValue, prioritize it
+            setUpdatedTotalSalary(parseFloat(editData.adjustValue) || 0);
+        } else if (newTotalSalary !== updatedTotalSalary) {
+            // Otherwise, use the calculated newTotalSalary
+            setUpdatedTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
+        }
+    }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope, adjustValue]);
+
     const renderServiceVehicle = (serviceVehicle, serviceType) => {
         if (serviceVehicle && serviceVehicle[serviceType]) {
             return serviceVehicle[serviceType];
@@ -782,7 +789,6 @@ if (editData?.adjustValue) {
     };
     // ---------------------------------------------------------------------
 
-    
     // -----------------------------------------------------------------------------
     const formatDate = (date) => {
         const day = date.getDate().toString().padStart(2, '0');
@@ -818,21 +824,21 @@ if (editData?.adjustValue) {
                     ...bookingDetails,
                     driver: driverName,
                     totalSalary: totalSalary,
-                    pickupLocation:pickupLocation,
+                    pickupLocation: pickupLocation,
                     dropoffLocation: dropoffLocation || {},
-                                        status: 'booking added',
+                    status: 'booking added',
                     dateTime: dateTime, // Use the formatted date
                     bookingId: `${bookingId}`,
                     createdAt: serverTimestamp(),
                     comments: comments || '',
                     // totalDistance: totalDistance,
-                    distance: distance || 0, 
+                    distance: distance || 0,
                     baseLocation: baseLocation || '',
                     showroomLocation: showroomLocation,
                     company: company || '',
-                    adjustValue:adjustValue || '',
+                    adjustValue: adjustValue || '',
                     customerName: customerName || '',
-                    totalDriverDistance: totalDriverDistance|| 0,
+                    totalDriverDistance: totalDriverDistance || 0,
                     totalDriverSalary: totalDriverSalary || 0,
                     mobileNumber: mobileNumber || '',
                     dis1: dis1 || 0,
@@ -861,26 +867,27 @@ if (editData?.adjustValue) {
                         bookingData.newStatus = `Edited by ${role}`;
                     } else if (role === 'staff') {
                         bookingData.newStatus = `Edited by ${role} ${userName}`;
-                    }                    bookingData.editedTime = formatDate(new Date());
+                    }
+                    bookingData.editedTime = formatDate(new Date());
                 }
                 console.log('Data to be added/updated:', bookingData); // Log the data before adding or updating
 
                 if (editData) {
                     const docRef = doc(db, `user/${uid}/bookings`, editData.id);
+                    console.log(docRef, 'this is the doc ref', bookingData);
                     await updateDoc(docRef, bookingData);
                     console.log('Document updated');
                     const notificationPayload = {
                         notification: {
-                          title: 'New Booking!',
-                          body: `Booking ID: ${bookingData.bookingId} has been ${editData ? 'updated' : 'added'}.`
+                            title: 'New Booking!',
+                            body: `Booking ID: ${bookingData.bookingId} has been ${editData ? 'updated' : 'added'}.`,
                         },
                         data: {
-                          bookingId: 'the booking id',
-                          driverName: 'the driver nam',
-                          // Other relevant booking details
-                        }
-                      };
-                
+                            bookingId: 'the booking id',
+                            driverName: 'the driver nam',
+                            // Other relevant booking details
+                        },
+                    };
                 } else {
                     const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
                     console.log('Document written with ID: ', docRef.id);
@@ -894,490 +901,255 @@ if (editData?.adjustValue) {
         }
     };
 
- 
-  return (
-        <div className="p-1 flex-1 mt-4 mx-24 shadow-lg rounded-lg bg-lightblue-100" style={{ background: 'lightblue' }}>
-            <div className="flex justify-end w-full mb-4">
-                <div
-                    style={{
-                        margin: '5px 0',
-                        color: '#7f8c8d',
-                        fontFamily: 'Georgia, serif',
-                        fontSize: '16px',
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        backgroundColor: '#ecf0f1',
-                        border: '1px solid #bdc3c7',
-                        minWidth: 'fit-content',
-                    }}
-                >
-                    <h5 className="font-semibold text-lg dark:text-white-light">{currentDateTime}</h5>
+    const handleButtonClick = (event) => {
+        event.preventDefault();
+        setShowShowroomModal(true);
+    };
+    return (
+        <div className={styles.bookingFormContainer}>
+            <div className={styles.dateTime}>{currentDateTime}</div>
+            <h2 className={styles.formHeading}>BOOK WITHOUT MAP</h2>
+            <form className={styles.bookingForm}>
+                <div className={styles.formGroup}>
+                    <label htmlFor="company" className={styles.label}>
+                        Company
+                    </label>
+                    <select id="company" name="company" value={company} className={styles.formControl} onChange={(e) => handleInputChange('company', e.target.value)}>
+                        <option value="">Select company</option>
+                        <option value="rsa">RSA Work</option>
+                        <option value="self">Payment Work</option>
+                    </select>
                 </div>
-            </div>
 
-            <div className="flex flex-wrap p-4">
-                <h5 className="font-semibold text-lg dark:text-white-light mb-5">Book Now</h5>
-                <div className="w-full">
-                    <div className="flex items-center mt-4">
-                        <label htmlFor="company" className="mr-2 ml-2 w-1/3 mb-0 text-gray-800 font-semibold">
-                            Company
+                {company === 'rsa' && (
+                    <div className={styles.flexRow}>
+                        <label htmlFor="selectedCompany" className={`${styles.label}`}>
+                            Select Company
                         </label>
-                        <select
-                            id="company"
-                            name="company"
-                            value={company}
-                            className="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                            onChange={(e) => handleInputChange('company', e.target.value)}
-                        >
+                        <select id="selectedCompany" name="selectedCompany" className={styles.formControl} onChange={(e) => handleInputChange('selectedCompany', e.target.value)}>
                             <option value="">Select Company</option>
-                            <option value="rsa">RSA Work</option>
-                            <option value="self">Payment Work</option>
+                            {companies.map((comp) => (
+                                <option key={comp.id} value={comp.id}>
+                                    {comp.company}
+                                </option>
+                            ))}
                         </select>
+                        {companies.length === 0 && <p className={styles.errorMessage}>No companies available</p>}
                     </div>
-                    {company === 'rsa' && (
-                        <div style={{ display: 'flex', alignItems: 'center', marginTop: '1rem' }}>
-                            <label htmlFor="selectedCompany" style={{ marginRight: '0.5rem', marginLeft: '0.5rem', marginBottom: '0', color: '#333' }}>
-                                Select Company
-                            </label>
-                            <select
-                                id="selectedCompany"
-                                name="selectedCompany"
-                                style={{
-                                    width: '100%',
-                                    padding: '0.5rem',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '5px',
-                                    fontSize: '1rem',
-                                    outline: 'none',
-                                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                }}
-                                onChange={(e) => handleInputChange('selectedCompany', e.target.value)}
-                            >
-                                <option value="">Select Company</option>
-                                {companies.map((comp) => (
-                                    <option key={comp.id} value={comp.id}>
-                                        {comp.company}
-                                    </option>
-                                ))}
-                            </select>
-                            {companies.length === 0 && <p>No companies available</p>}
-                        </div>
-                    )}
-                    {company === 'self' ? (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="fileNumber" className="mr-2 ml-2 w-1/3 mb-0 text-gray-800 font-semibold">
-                                File Number
-                            </label>
-                            <div className='search-box ltr:mr-2 rtl:ml-2  mb-0"' style={{ width: '100%' }}>
-                                <input
-                                    id="fileNumber"
-                                    type="text"
-                                    name="fileNumber"
-                                    placeholder="Enter File Number"
-                                    className="form-input lg:w-[250px] w-2/3 p-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 focus:outline-none"
-                                    value={`PMNA${bookingId}`}
-                                    readOnly
-                                />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="fileNumber" className="mr-2 ml-2 w-1/3 mb-0 text-gray-800 font-semibold">
-                                File Number
-                            </label>
-                            <div className='search-box ltr:mr-2 rtl:ml-2  mb-0"' style={{ width: '100%' }}>
-                                <input
-                                    id="fileNumber"
-                                    type="text"
-                                    name="fileNumber"
-                                    className="form-input lg:w-[250px] w-2/3 p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                                    placeholder="Enter File Number"
-                                    value={fileNumber}
-                                    onChange={(e) => handleInputChange('fileNumber', e.target.value)}
-                                />
-                            </div>
-                        </div>
-                    )}
+                )}
 
-                    <div style={{ width: '100%' }}>
-                          
-                    <div>
-                    <div className="flex items-center mt-4">
-            <label htmlFor="pickupLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                Pickup Location
-            </label>
-            <div className="search-box ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                <input
-                    id="pickupLocation"
-                    className="form-input flex-1"
-                    style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        border: '1px solid #ccc',
-                        borderRadius: '5px',
-                        fontSize: '1rem',
-                        outline: 'none',
-                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    }}
-                    type="text"
-                    placeholder="Pickup Location"
-                    onChange={handleLocationChange}
-                    value={manualInput} // Bind the input to manualInput state
-                />
-            </div>
-            <div className="search-box ltr:mr-2 rtl:ml-2 w-2/3 mb-0">
-                <input
-                    id="latLng"
-                    className="form-input flex-1"
-                    style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        border: '1px solid #ccc',
-                        borderRadius: '5px',
-                        fontSize: '1rem',
-                        outline: 'none',
-                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    }}
-                    type="text"
-                    placeholder="Latitude, Longitude"
-                    value={
-                        pickupLocation.lat && pickupLocation.lng
-                            ? `${pickupLocation.lat}, ${pickupLocation.lng}`
-                            : ''
-                    }
-                    onChange={(e) => {
-                        const [lat, lng] = e.target.value.split(',').map(coord => coord.trim());
-                        handleManualChange('lat', lat);
-                        handleManualChange('lng', lng);
-                    }}
-                />
-            </div>
-
-                                <a
-                                    href={`https://www.google.co.in/maps/@${pickupLocation?.lat || '11.0527369'},${pickupLocation?.lng || '76.0747136'},15z?entry=ttu`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{
-                                        borderRadius: '40px',
-                                        background: 'transparent',
-                                        color: 'blue',
-                                        marginLeft: '10px',
-                                        padding: '10px',
-                                        border: 'none',
-                                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
-                                        cursor: 'pointer',
-                                        transition: 'background 0.3s ease',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}
-                                    onMouseOver={(e) => (e.currentTarget.style.background = 'lightblue')}
-                                    onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
-                                >
-                                    <IconMapPin />
-                                </a>
-                            </div>
-
-                            <div className="mt-4 flex items-center">
-                                <label htmlFor="baseLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    Start Location
-                                </label>
-                                <div className='search-box ltr:mr-2 rtl:ml-2  mb-0"' style={{ width: '100%' }}>
-                                    <input
-                                        id="baseLocation"
-                                        type="text"
-                                        name="baseLocation"
-                                        className="form-input flex-1"
-                                        placeholder="select start location"
-                                        value={baseLocation ? `${baseLocation.name} , ${baseLocation.lat} , ${baseLocation.lng}` : ''}
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.5rem',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '5px',
-                                            fontSize: '1rem',
-                                            outline: 'none',
-                                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                        }}
-                                        readOnly
-                                        onClick={openModal1}
-                                    />
-                                </div>
-                                <button
-                                    onClick={openModal1}
-                                    style={{
-                                        borderRadius: '40px',
-                                        background: 'transparent',
-                                        color: 'blue',
-                                        marginLeft: '10px',
-                                        padding: '10px',
-                                        border: 'none',
-                                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
-                                        cursor: 'pointer',
-                                        transition: 'background 0.3s ease',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}
-                                    onMouseOver={(e) => (e.currentTarget.style.background = 'lightblue')}
-                                    onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
-                                >
-                                    <IconMapPin style={{ color: '#FF6347', fontSize: '1.5rem' }} />
-                                </button>
-                            </div>
-
-                            {isModalOpen1 && (
-                                <div
-                                    className="modal"
-                                    style={{
-                                        position: 'fixed',
-                                        zIndex: 1,
-                                        left: 0,
-                                        top: 0,
-                                        width: '100%',
-                                        height: '100%',
-                                        overflow: 'auto',
-                                        // backgroundColor: 'rgb(0,0,0)',
-                                        backgroundColor: 'rgba(0,0,0,0.4)',
-                                    }}
-                                >
-                                    <div className="modal-body">
-                                        <BaseLocationWithout onClose={closeModal1} setBaseLocation={setBaseLocation} />
-                                    </div>
-                                </div>
-                            )}
-                            <div className="flex items-center mt-4">
-                                <label htmlFor="showrooms" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    Service Center
-                                </label>
-                                {showrooms.length > 0 && (
-                                    <Select
-                                        className="w-full"
-                                        id="showrooms"
-                                        name="showrooms"
-                                        value={showrooms.find((option) => option.value === showroomLocation) || null}
-                                        options={showrooms}
-                                        onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
-                                        isSearchable={true}
-                                        placeholder="Select showroom"
-                                        styles={{
-                                            control: (provided) => ({
-                                                ...provided,
-                                                width: '100%',
-                                                padding: '0.5rem',
-                                                border: '1px solid #ccc',
-                                                borderRadius: '5px',
-                                                fontSize: '1rem',
-                                                outline: 'none',
-                                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                            }),
-                                            placeholder: (provided) => ({
-                                                ...provided,
-                                                fontSize: '1rem',
-                                            }),
-                                        }}
-                                    />
-                                )}
-                                <button
-                                    onClick={() => setShowShowroomModal(true)}
-                                    style={{
-                                        borderRadius: '40px',
-                                        background: 'linear-gradient(135deg, #32CD32, #228B22)',
-                                        color: 'white',
-                                        margin: '10px',
-                                        padding: '10px 10px',
-                                        border: 'none',
-                                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-                                        cursor: 'pointer',
-                                        transition: 'background 0.3s ease',
-                                    }}
-                                    onMouseOver={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg, #228B22, #006400)')}
-                                    onMouseOut={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg, #32CD32, #228B22)')}
-                                >
-                                    <IconPlus />
-                                </button>
-                            </div>
-                            {/* <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#333', marginTop: '10px', background: 'white', padding: '19px', borderRadius: '4px', marginLeft: '24%' }}>
-                                {' '}
-                                {showroomLocation}
-                            </div> */}
-                            {showShowroomModal && <ShowroomModalWithout onClose={() => setShowShowroomModal(false)} updateShowroomLocation={updateShowroomLocation} />}
-
-                            <div className="flex items-center mt-4">
-                                <label htmlFor="dropoffLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    Dropoff Location
-                                </label>
-                                <div className="search-box ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    <input
-                                        className="form-input flex-1"
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.5rem',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '5px',
-                                            fontSize: '1rem',
-                                            outline: 'none',
-                                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                        }}
-                                        type="text"
-                                        placeholder="Dropoff Location"
-                                        onChange={handleLocationChange1}
-                                        value={manualInput1}
-                                    />
-                                </div>
-                                <div className="search-box ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    <input
-                                        className="form-input flex-1"
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.5rem',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '5px',
-                                            fontSize: '1rem',
-                                            outline: 'none',
-                                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                        }}
-                                        type="text"
-                                        placeholder="Latitude"
-                                        value={dropoffLocation && dropoffLocation.lat ? dropoffLocation.lat : ''}
-                                        onChange={(e) => handleManualChange1('lat', e.target.value)}
-                                    />
-                                </div>
-                                <div className="search-box ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    <input
-                                        className="form-input flex-1"
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.5rem',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '5px',
-                                            fontSize: '1rem',
-                                            outline: 'none',
-                                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                        }}
-                                        type="text"
-                                        placeholder="Longitude"
-                                        value={dropoffLocation && dropoffLocation.lng ? dropoffLocation.lng : ''}
-                                        onChange={(e) => handleManualChange1('lng', e.target.value)}
-                                    />
-                                </div>
-                                <a
-                                    href={`https://www.google.co.in/maps/@${dropoffLocation?.lat || '11.0527369'},${dropoffLocation?.lng || '76.0747136'},15z?entry=ttu`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{
-                                        borderRadius: '40px',
-                                        background: 'transparent',
-                                        color: 'blue',
-                                        marginLeft: '10px',
-                                        padding: '10px',
-                                        border: 'none',
-                                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
-                                        cursor: 'pointer',
-                                        transition: 'background 0.3s ease',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}
-                                    onMouseOver={(e) => (e.currentTarget.style.background = 'lightblue')}
-                                    onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
-                                >
-                                    <IconMapPin />
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div className="flex items-center mt-4">
-    <label htmlFor="dis1" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">Distance 1 (Base to Pickup)</label>
-    <input
-        id="dis1"
-        type="text"
-        className="form-input flex-1"
-        placeholder="Enter Distance 1"
-        value={dis1}
-        onChange={(e) => setDis1(e.target.value)}
-        style={inputStyle}
-    />
-    <a
-        href={`https://www.google.com/maps/dir/?api=1&origin=${baseLocation?.lat},${baseLocation?.lng}&destination=${pickupLocation?.lat},${pickupLocation?.lng}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={linkStyle}
-    >
-        <IconMapPin />
-    </a>
-</div>
-
-<div className="flex items-center mt-4">
-    <label htmlFor="dis2" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">Distance 2 (Pickup to Dropoff)</label>
-    <input
-        id="dis2"
-        type="text"
-        className="form-input flex-1"
-        placeholder="Enter Distance 2"
-        value={dis2}
-        onChange={(e) => setDis2(e.target.value)}
-        style={inputStyle}
-    />
-    <a
-        href={`https://www.google.com/maps/dir/?api=1&origin=${pickupLocation?.lat},${pickupLocation?.lng}&destination=${dropoffLocation?.lat},${dropoffLocation?.lng}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={linkStyle}
-    >
-        <IconMapPin />
-    </a>
-</div>
-
-<div className="flex items-center mt-4">
-    <label htmlFor="dis3" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">Distance 3 (Dropoff to Base)</label>
-    <input
-        id="dis3"
-        type="text"
-        className="form-input flex-1"
-        placeholder="Enter Distance 3"
-        value={dis3}
-        onChange={(e) => setDis3(e.target.value)}
-        style={inputStyle}
-    />
-    <a
-        href={`https://www.google.com/maps/dir/?api=1&origin=${dropoffLocation?.lat},${dropoffLocation?.lng}&destination=${baseLocation?.lat},${baseLocation?.lng}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={linkStyle}
-    >
-        <IconMapPin />
-    </a>
-</div>
-<div className="mt-4 flex items-center">
-    <label htmlFor="distance" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-        Distance (KM)
-    </label>
-    <input
-        id="distance"
-        type="number" // Use type="number" to ensure numeric input
-        name="distance"
-        className="form-input flex-1"
-        style={{
-            width: '100%',
-            padding: '0.5rem',
-            border: '1px solid #ccc',
-            borderRadius: '5px',
-            fontSize: '1rem',
-            outline: 'none',
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-        }}
-        onChange={(e) => handleInputChange('distance', e.target.value)}
-        value={parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3)} // Ensure the value is numeric
-    />
-</div>
-
-                    <div className="flex items-center mt-4">
-                        <label htmlFor="trappedLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                            Trapped Location
+                {company === 'self' ? (
+                    <div className={styles.flexRow}>
+                        <label htmlFor="fileNumber" className={`${styles.label}`}>
+                            File Number
                         </label>
-                        <div className="flex items-center">
+                        <div className={styles.inputContainer}>
+                            <input id="fileNumber" type="text" name="fileNumber" placeholder="Enter File Number" className={styles.formControl} value={`PMNA${bookingId}`} readOnly />
+                        </div>
+                    </div>
+                ) : (
+                    <div className={styles.flexRow}>
+                        <label htmlFor="fileNumber" className={`${styles.label}`}>
+                            File Number
+                        </label>
+                        <div className={styles.inputContainer}>
+                            <input
+                                id="fileNumber"
+                                type="text"
+                                name="fileNumber"
+                                className={styles.formControl}
+                                placeholder="Enter File Number"
+                                value={fileNumber}
+                                onChange={(e) => handleInputChange('fileNumber', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                <div className={styles.formGroup}>
+                    <label htmlFor="pickupLocation" className={styles.label}>
+                        Pickup Location
+                    </label>
+                    <div className={styles.inputContainer}>
+                        <input
+                            type="text"
+                            id="pickupLocation"
+                            name="pickupLocation"
+                            className={`${styles.formControl} ${styles.smallInput}`}
+                            placeholder="Pickup Location"
+                            onChange={handleLocationChange}
+                            value={manualInput}
+                        />
+                        <input
+                            type="text"
+                            id="latLng"
+                            name="latLng"
+                            className={`${styles.formControl} ${styles.largeInput}`}
+                            placeholder="Latitude, Longitude"
+                            value={pickupLocation.lat && pickupLocation.lng ? `${pickupLocation.lat}, ${pickupLocation.lng}` : ''}
+                            onChange={(e) => {
+                                const [lat, lng] = e.target.value.split(',').map((coord) => coord.trim());
+                                handleManualChange('lat', lat);
+                                handleManualChange('lng', lng);
+                            }}
+                        />
+                        <a
+                            href={`https://www.google.co.in/maps/@${pickupLocation?.lat || '11.0527369'},${pickupLocation?.lng || '76.0747136'},15z?entry=ttu`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.mapButton}
+                        >
+                            <IconMapPin />
+                        </a>
+                    </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                    <label htmlFor="baseLocation" className={styles.label}>
+                        Start Location
+                    </label>
+                    <input
+                        type="text"
+                        id="baseLocation"
+                        name="baseLocation"
+                        className={styles.formControl}
+                        placeholder="select start location"
+                        value={baseLocation ? `${baseLocation.name} , ${baseLocation.lat} , ${baseLocation.lng}` : ''}
+                        readOnly
+                        onClick={openModal1}
+                    />
+                </div>
+
+                <div className={styles.formGroup}>
+                    <label htmlFor="showrooms" className={styles.label}>
+                        Service Center
+                    </label>
+                    <div className={styles.inputContainer}>
+                        {showrooms.length >= 0 && (
+                            <ReactSelect
+                                id="showrooms"
+                                name="showrooms"
+                                className="w-full"
+                                value={showrooms.find((option) => option.value === showroomLocation) || null}
+                                options={showrooms}
+                                placeholder="Select showroom"
+                                onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
+                                isSearchable={true}
+                            />
+                        )}
+                        <button onClick={handleButtonClick} className={styles.addButton}>
+                            <IconPlus />
+                        </button>
+                    </div>
+                    {showShowroomModal && <ShowroomModalWithout onClose={() => setShowShowroomModal(false)} updateShowroomLocation={updateShowroomLocation} />}
+                </div>
+
+                <div className={styles.formGroup}>
+                    <label htmlFor="showrooms" className={styles.label}>
+                        Dropoff location
+                    </label>
+                    <div className={styles.inputRowOfdropoff}>
+                        <input onChange={handleLocationChange1} type="text" className={styles.formControlDropOff} placeholder="Dropoff Location" value={manualInput1} />
+
+                        <input
+                            onChange={(e) => handleManualChange1('lat', e.target.value)}
+                            type="text"
+                            className={styles.formControlDropOff}
+                            placeholder="Latitude"
+                            value={dropoffLocation && dropoffLocation.lat ? dropoffLocation.lat : ''}
+                        />
+
+                        <input
+                            onChange={(e) => handleManualChange1('lng', e.target.value)}
+                            type="text"
+                            className={styles.formControlDropOff}
+                            placeholder="Longitude"
+                            value={dropoffLocation && dropoffLocation.lng ? dropoffLocation.lng : ''}
+                        />
+
+                        <a
+                            href={`https://www.google.co.in/maps/@${dropoffLocation?.lat || '11.0527369'},${dropoffLocation?.lng || '76.0747136'},15z?entry=ttu`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.mapButton}
+                        >
+                            <IconMapPin />
+                        </a>
+                    </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                    <label htmlFor="dis1" className={styles.label}>
+                        Distance 1 (Base to Pickup)
+                    </label>
+                    <div className={styles.inputWithIcon}>
+                        <input id="dis1" type="text" placeholder="Enter Distance 1" onChange={(e) => setDis1(e.target.value)} value={dis1} className={styles.formControl} />
+                        <a
+                            href={`https://www.google.com/maps/dir/?api=1&origin=${baseLocation?.lat},${baseLocation?.lng}&destination=${pickupLocation?.lat},${pickupLocation?.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.iconWrapper}
+                        >
+                            <IconMapPin />
+                        </a>
+                    </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                    <label htmlFor="dis2" className={styles.label}>
+                        Distance 2 (Pickup to Dropoff)
+                    </label>
+                    <div className={styles.inputWithIcon}>
+                        <input id="dis2" type="text" placeholder="Enter Distance 2" onChange={(e) => setDis2(e.target.value)} value={dis2} className={styles.formControl} />
+                        <a
+                            href={`https://www.google.com/maps/dir/?api=1&origin=${pickupLocation?.lat},${pickupLocation?.lng}&destination=${dropoffLocation?.lat},${dropoffLocation?.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.iconWrapper}
+                        >
+                            <IconMapPin />
+                        </a>
+                    </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                    <label htmlFor="dis3" className={styles.label}>
+                        Distance 3 (Dropoff to Base)
+                    </label>
+                    <div className={styles.inputWithIcon}>
+                        <input id="dis3" type="text" placeholder="Enter Distance 3" onChange={(e) => setDis3(e.target.value)} value={dis3} className={styles.formControl} />
+                        <a
+                            href={`https://www.google.com/maps/dir/?api=1&origin=${dropoffLocation?.lat},${dropoffLocation?.lng}&destination=${baseLocation?.lat},${baseLocation?.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.iconWrapper}
+                        >
+                            <IconMapPin />
+                        </a>
+                    </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                    <label htmlFor="distance" className={styles.label}>
+                        Distance (KM)
+                    </label>
+                    <input
+                        id="distance"
+                        type="number"
+                        name="distance"
+                        placeholder="Dropoff Location"
+                        onChange={(e) => handleInputChange('distance', e.target.value)}
+                        value={parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3)}
+                        className={styles.formControl}
+                    />
+                </div>
+
+                <div className={styles.trappedLocationContainer}>
+                    <label htmlFor="trappedLocation" className={styles.trappedLocationLabel}>
+                        Trapped Location
+                    </label>
+                    <div className={styles.radioButtonsGroup}>
+                        <div className={styles.radioButton}>
                             <input
                                 type="radio"
                                 id="onRoad"
@@ -1385,11 +1157,13 @@ if (editData?.adjustValue) {
                                 value="onRoad"
                                 checked={trappedLocation === 'onRoad'}
                                 onChange={(e) => handleInputChange('trappedLocation', e.target.value)}
-                                className="mr-2"
+                                className={styles.radioInput}
                             />
-                            <label htmlFor="onRoad" className="mr-4">
+                            <label htmlFor="onRoad" className={styles.radioLabel}>
                                 On Road
                             </label>
+                        </div>
+                        <div className={styles.radioButton}>
                             <input
                                 type="radio"
                                 id="inHouse"
@@ -1397,11 +1171,13 @@ if (editData?.adjustValue) {
                                 value="inHouse"
                                 checked={trappedLocation === 'inHouse'}
                                 onChange={(e) => handleInputChange('trappedLocation', e.target.value)}
-                                className="mr-2"
+                                className={styles.radioInput}
                             />
-                            <label htmlFor="inHouse" className="mr-4">
+                            <label htmlFor="inHouse" className={styles.radioLabel}>
                                 In House
                             </label>
+                        </div>
+                        <div className={styles.radioButton}>
                             <input
                                 type="radio"
                                 id="outsideOfRoad"
@@ -1409,172 +1185,159 @@ if (editData?.adjustValue) {
                                 value="outsideOfRoad"
                                 checked={trappedLocation === 'outsideOfRoad'}
                                 onChange={(e) => handleInputChange('trappedLocation', e.target.value)}
-                                className="mr-2"
+                                className={styles.radioInput}
                             />
-                            <label htmlFor="outsideOfRoad" className="text-danger">
+                            <label htmlFor="outsideOfRoad" className={`${styles.radioLabel} ${styles.textDanger}`}>
                                 Outside of Road
                             </label>
                         </div>
                     </div>
-                    {trappedLocation === 'outsideOfRoad' && (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="updatedTotalSalary" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                Updated Total Amount
-                            </label>
-                            <input
-                                id="updatedTotalSalary"
-                                type="text"
-                                name="updatedTotalSalary"
-                                className="form-input flex-1"
-                                placeholder="Enter Total Salary"
-                                value={updatedTotalSalary}
-                                onChange={(e) => setUpdatedTotalSalary(e.target.value)}
-                                required
-                            />
-                        </div>
-                    )}
-                    {!disableFields && (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="serviceType" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                Service Type
-                            </label>
-                            <select
+                </div>
+
+                {trappedLocation === 'outsideOfRoad' && (
+                    <div className={styles.formGroup}>
+                        <label htmlFor="updatedTotalSalary" className={styles.label}>
+                            Updated Total Amount
+                        </label>
+                        <input
+                            id="updatedTotalSalary"
+                            type="number"
+                            name="updatedTotalSalary"
+                            placeholder="Enter Total Salary"
+                            onChange={(e) => setUpdatedTotalSalary(e.target.value)}
+                            required
+                            value={updatedTotalSalary}
+                            className={styles.formControl}
+                        />
+                    </div>
+                )}
+                {!disableFields && (
+                    <div className={styles.formGroup}>
+                        <label htmlFor="serviceType" className={styles.label}>
+                            Service Type
+                        </label>
+                        <div className={styles.inputContainer}>
+                            <ReactSelect
                                 id="serviceType"
                                 name="serviceType"
-                                className="form-select flex-1"
-                                value={serviceType}
-                                style={{
-                                    width: '100%',
-                                    padding: '0.5rem',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '5px',
-                                    fontSize: '1rem',
-                                    outline: 'none',
-                                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                }}
-                                onChange={(e) => handleInputChange('serviceType', e.target.value)}
-                            >
-                                <option value="">Select Service Type</option>
-                                {serviceTypes.map((service) => (
-                                    <option key={service.id} value={service.name}>
-                                        {service.name}
-                                    </option>
-                                ))}
-                            </select>
+                                className="w-full"
+                                value={serviceTypes.find((option) => option.value === serviceType)}
+                                options={serviceTypes.map((service) => ({
+                                    value: service.name,
+                                    label: service.name,
+                                }))}
+                                placeholder="Select showroom"
+                                onChange={(option) => handleInputChange('serviceType', option.value)}
+                            />
                         </div>
-                    )}
-                    {!disableFields && (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="driver" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                Driver
-                            </label>
-                            <div className="form-input flex-1" style={{ position: 'relative', width: '100%' }}>
-                                <input
-                                    id="driver"
-                                    type="text"
-                                    name="driver"
-                                    className="w-full"
-                                    placeholder="Select your driver"
-                                    style={{
-                                        padding: '0.5rem',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '5px',
-                                        fontSize: '1rem',
-                                        outline: 'none',
-                                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                    }}
-                                    value={selectedDriver ? selectedDriverData?.driverName || 'Dummy Driver' : ''}
-                                    onClick={() => openModal(distance)}
-                                    readOnly
-                                />
-                            </div>
-                            <ReactModal
-                                isOpen={isModalOpen}
-                                onRequestClose={closeModal}
-                                style={{
-                                    overlay: {
-                                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                                    },
-                                    content: {
-                                        top: '50%',
-                                        left: '50%',
-                                        right: 'auto',
-                                        bottom: 'auto',
-                                        transform: 'translate(-50%, -50%)',
-                                        borderRadius: '10px',
-                                        maxWidth: '90vw',
-                                        maxHeight: '80vh',
-                                        boxShadow: '0 0 20px rgba(0, 0, 0, 0.7)',
-                                        padding: '20px',
-                                        overflow: 'auto',
-                                    },
-                                }}
-                            >
-                                <div style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 999 }}>
-                                    <h2 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>Available Drivers for {serviceType}</h2>
-                                    <button
-                                        onClick={closeModal}
-                                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-1"
-                                        style={{ marginLeft: 'auto', marginRight: '20px' }}
-                                    >
-                                        OK
-                                    </button>
-                                </div>
+                    </div>
+                )}
 
-                                <div style={{ marginTop: '10px' }}>
-                <div className="grid grid-cols-1 gap-4">
-                    {[
-                        { id: 'dummy', driverName: 'Dummy Driver', companyName: 'Dummy Company' },
-                        ...drivers.sort((a, b) => {
-                            if (a.companyName === 'RSA' && b.companyName !== 'RSA') {
-                                return -1;
-                            }
-                            if (a.companyName !== 'RSA' && b.companyName === 'RSA') {
-                                return 1;
-                            }
-                            return 0;
-                        }),
-                    ].map((driver) => (
-                        <div key={driver.id} className="flex items-center border border-gray-200 p-2 rounded-lg">
-                            <table className="panel p-4 w-full">
-                                <thead>
-                                    <tr>
-                                        <th>Driver Name</th>
-                                        <th>Company Name</th>
-                                        <th>Select</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td style={{ fontSize: '18px', fontWeight: 'bold', color: 'green' }}>
-                                            {driver.driverName || 'Unknown Driver'}
-                                        </td>
-                                        <td>{driver.companyName || 'Unknown Company'}</td>
-                                        <td>
-                                            <input
-                                                type="radio"
-                                                name="selectedDriver"
-                                                value={driver.id}
-                                                checked={selectedDriver === driver.id}
-                                                onChange={() => handleInputChange('selectedDriver', driver.id)}
-                                            />
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                {!disableFields && (
+                    <div className={styles.formGroup}>
+                        <label htmlFor="driver" className={styles.label}>
+                            Driver
+                        </label>
+                        <input
+                            id="driver"
+                            type="text"
+                            name="driver"
+                            placeholder="Select your driver"
+                            onClick={() => openModal(distance)}
+                            value={selectedDriver ? selectedDriverData?.driverName || 'Dummy Driver' : ''}
+                            readOnly
+                            className={styles.formControl}
+                        />
+                    </div>
+                )}
+                <ReactModal
+                    isOpen={isModalOpen}
+                    onRequestClose={closeModal}
+                    style={{
+                        overlay: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        },
+                        content: {
+                            top: '50%',
+                            left: '50%',
+                            right: 'auto',
+                            bottom: 'auto',
+                            transform: 'translate(-50%, -50%)',
+                            borderRadius: '15px',
+                            maxWidth: '90%',
+                            width: '500px',
+                            maxHeight: '80%',
+                            boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
+                            padding: '20px',
+                            overflow: 'auto',
+                            border: 'none',
+                        },
+                    }}
+                >
+                    <div
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '15px',
+                        }}
+                    >
+                        <div style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 999 }}>
+                            <h2 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>Available Drivers for {serviceType}</h2>
+                            <button onClick={closeModal} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-1" style={{ marginLeft: 'auto', marginRight: '20px' }}>
+                                OK
+                            </button>
                         </div>
-                    ))}
-                </div>
-            </div>
-        </ReactModal>
+
+                        <div style={{ marginTop: '10px' }}>
+                            <div className="grid grid-cols-1 gap-4">
+                                {[
+                                    { id: 'dummy', driverName: 'Dummy Driver', companyName: 'Dummy Company' },
+                                    ...drivers.sort((a, b) => {
+                                        if (a.companyName === 'RSA' && b.companyName !== 'RSA') {
+                                            return -1;
+                                        }
+                                        if (a.companyName !== 'RSA' && b.companyName === 'RSA') {
+                                            return 1;
+                                        }
+                                        return 0;
+                                    }),
+                                ].map((driver) => (
+                                    <div key={driver.id} className="flex items-center border border-gray-200 p-2 rounded-lg">
+                                        <table className="panel p-4 w-full">
+                                            <thead>
+                                                <tr>
+                                                    <th>Driver Name</th>
+                                                    <th>Company Name</th>
+                                                    <th>Select</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td style={{ fontSize: '18px', fontWeight: 'bold', color: 'green' }}>{driver.driverName || 'Unknown Driver'}</td>
+                                                    <td>{driver.companyName || 'Unknown Company'}</td>
+                                                    <td>
+                                                        <input
+                                                            type="radio"
+                                                            name="selectedDriver"
+                                                            value={driver.id}
+                                                            checked={selectedDriver === driver.id}
+                                                            onChange={() => handleInputChange('selectedDriver', driver.id)}
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                </ReactModal>
                 {selectedDriver && selectedDriverData && (
                     <React.Fragment>
                         <div>
-                        <VehicleSection
-                    showroomLocation={showroomLocation}
+                            <VehicleSection
+                                showroomLocation={showroomLocation}
                                 totalSalary={totalSalary}
                                 updatedTotalSalary={updatedTotalSalary}
                                 onUpdateTotalSalary={handleUpdateTotalSalary}
@@ -1615,11 +1378,7 @@ if (editData?.adjustValue) {
                                 <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
                                     Insurance Amount Body
                                 </label>
-                                <div className="form-input flex-1">
-
-                                {insuranceAmountBody}
-                                </div>
-
+                                <div className="form-input flex-1">{insuranceAmountBody}</div>
                             </div>
                             <div className="mt-4 flex items-center">
                                 <label htmlFor="updatedTotalSalary" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
@@ -1647,66 +1406,123 @@ if (editData?.adjustValue) {
                         </div>
                     </React.Fragment>
                 )}
-                <div className="flex items-center mt-4" style={{ width: '100%' }}>
-                    <label htmlFor="serviceVehicle" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
+                <div className={styles.formGroup}>
+                    <label htmlFor="serviceVehicle" className={styles.label}>
                         Service Vehicle Number
                     </label>
-
                     <input
                         id="serviceVehicle"
-                        type="text"
                         name="serviceVehicle"
-                        className="form-input flex-1"
+                        type="text"
                         placeholder="Enter Service Vehicle Number"
-                        value={serviceVehicle}
                         onChange={(e) => handleInputChange('serviceVehicle', e.target.value)}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
                         required
+                        value={serviceVehicle}
+                        className={styles.formControl}
                     />
                 </div>
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="totalDriverDistance" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
+
+                <div className={styles.formGroup}>
+                    <label htmlFor="totalDriverDistance" className={styles.label}>
                         Total Driver Distance
                     </label>
                     <input
                         id="totalDriverDistance"
                         type="text"
                         name="totalDriverDistance"
-                        className="form-input flex-1"
                         placeholder="Enter Driver Distance"
-                        value={totalDriverDistance}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
                         onChange={(e) => handleInputChange('totalDriverDistance', e.target.value)}
+                        value={totalDriverDistance}
+                        className={styles.formControl}
                     />
                 </div>
                 {totalDriverDistance && (
-                    <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                        <label htmlFor="totalDriverSalary" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
+                    <div className={styles.formGroup}>
+                        <label htmlFor="totalDriverSalary" className={styles.label}>
                             Driver Salary
                         </label>
                         <input
                             id="totalDriverSalary"
                             type="text"
                             name="totalDriverSalary"
-                            className="form-input flex-1"
                             placeholder="Enter Driver Salary"
+                            onChange={(e) => handleInputChange('totalDriverSalary', e.target.value)}
                             value={totalDriverSalary}
+                            className={styles.formControl}
+                        />
+                    </div>
+                )}
+                <div className={styles.formGroup}>
+                    <label htmlFor="customerName" className={styles.label}>
+                        Customer Name
+                    </label>
+                    <input
+                        id="customerName"
+                        name="customerName"
+                        type="text"
+                        placeholder="Enter Name"
+                        onChange={(e) => handleInputChange('customerName', e.target.value)}
+                        value={customerName}
+                        className={styles.formControl}
+                    />
+                </div>
+
+                <div className={styles.formGroup}>
+                    <label htmlFor="phoneNumber" className={styles.label}>
+                        Phone Number
+                    </label>
+                    <input
+                        id="phoneNumber"
+                        type="tel"
+                        name="phoneNumber"
+                        onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                        className={styles.formControl}
+                        value={phoneNumber}
+                        placeholder="Enter Phone number"
+                    />
+                    {errors.phoneNumber && <p className="text-red-500 text-sm mt-1">{errors.phoneNumber}</p>}
+                </div>
+
+                <div className={styles.formGroup}>
+                    <label htmlFor="mobileNumber" className={styles.label}>
+                        Mobile Number
+                    </label>
+                    <input
+                        type="tel"
+                        id="mobileNumber"
+                        onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
+                        name="mobileNumber"
+                        className={styles.formControl}
+                        value={mobileNumber}
+                        placeholder="Enter your Mobile number"
+                    />
+                    {errors.mobileNumber && <p className="text-red-500 text-sm mt-1">{errors.mobileNumber}</p>}
+                </div>
+
+                <div className={styles.formGroup}>
+                    <label htmlFor="vehicleNumber" className={styles.label}>
+                        Customer Vehicle Number
+                    </label>
+                    <input
+                        id="vehicleNumber"
+                        type="text"
+                        name="vehicleNumber"
+                        placeholder="Enter vehicle number"
+                        onChange={(e) => handleInputChange('vehicleNumber', e.target.value)}
+                        value={vehicleNumber}
+                        className={styles.formControl}
+                    />
+                </div>
+                <div className={styles.formGroup}>
+                    <label htmlFor="vehicleType" className={styles.label}>
+                        Vehicle Type (2 or 3 or 4 wheeler)
+                    </label>
+                    <div className={styles.inputContainer}>
+                        <select
+                            id="vehicleType"
+                            name="vehicleType"
+                            className="form-select flex-1"
+                            value={vehicleType}
                             style={{
                                 width: '100%',
                                 padding: '0.5rem',
@@ -1716,190 +1532,54 @@ if (editData?.adjustValue) {
                                 outline: 'none',
                                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                             }}
-                            onChange={(e) => handleInputChange('totalDriverSalary', e.target.value)}
-                        />
+                            onChange={(e) => handleInputChange('vehicleType', e.target.value)}
+                        >
+                            <option value="">Select vehicle type</option>
+                            <option value="2">2 Wheeler</option>
+                            <option value="3">3 Wheeler</option>
+                            <option value="4">4 Wheeler</option>
+                            <option value="6">8 Wheeler</option>
+                            <option value="8">12 Wheeler</option>
+                            <option value="8">14 Wheeler</option>
+
+                            <option value="8">16 Wheeler</option>
+                            <option value="8">20 Wheeler</option>
+                        </select>
                     </div>
-                )}
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="customerName" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Customer Name
-                    </label>
-                    <input
-                        id="customerName"
-                        type="text"
-                        name="customerName"
-                        className="form-input flex-1"
-                        placeholder="Enter Name"
-                        value={customerName}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('customerName', e.target.value)}
-                    />
                 </div>
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="phoneNumber" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Phone Number
-                    </label>
-                    <input
-                        id="phoneNumber"
-                        type="phoneNumber"
-                        name="phoneNumber"
-                        className="form-input flex-1"
-                        placeholder="Enter Phone number"
-                        value={phoneNumber}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                    />
-                    {errors.phoneNumber && <p className="text-red-500 text-sm mt-1">{errors.phoneNumber}</p>}
-                </div>
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="mobileNumber" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Mobile Number
-                    </label>
-                    <input
-                        id="mobileNumber"
-                        type="text"
-                        name="mobileNumber"
-                        className="form-input flex-1"
-                        placeholder="Enter Mobile number"
-                        value={mobileNumber}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
-                    />
-                    {errors.mobileNumber && <p className="text-red-500 text-sm mt-1">{errors.mobileNumber}</p>}
-                </div>{' '}
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="vehicleNumber" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Customer Vehicle Number
-                    </label>
-                    <input
-                        id="vehicleNumber"
-                        type="text"
-                        name="vehicleNumber"
-                        className="form-input flex-1"
-                        placeholder="Enter vehicle number"
-                        value={vehicleNumber}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('vehicleNumber', e.target.value)}
-                    />
-                </div>
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="vehicleType" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Vehicle Type (2 or 3 or 4 wheeler)
-                    </label>
-                    <select
-                        id="vehicleType"
-                        name="vehicleType"
-                        className="form-select flex-1"
-                        value={vehicleType}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('vehicleType', e.target.value)}
-                    >
-                        <option value="">Select vehicle type</option>
-                        <option value="2">2 Wheeler</option>
-                        <option value="3">3 Wheeler</option>
-                        <option value="4">4 Wheeler</option>
-                        <option value="6">8 Wheeler</option>
-                        <option value="8">12 Wheeler</option>
-                        <option value="8">14 Wheeler</option>
 
-                        <option value="8">16 Wheeler</option>
-                        <option value="8">20 Wheeler</option>
-
-
-                    </select>
-                </div>
-                <div className="flex items-center mt-4" style={{ width: '100%' }}>
-                    <label htmlFor="vehicleModel" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
+                <div className={styles.formGroup}>
+                    <label htmlFor="vehicleModel" className={styles.label}>
                         Brand Name
                     </label>
                     <input
                         id="vehicleModel"
                         name="vehicleModel"
-                        className="form-input flex-1"
-                        value={vehicleModel}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
+                        type="text"
+                        placeholder="Brand name"
                         onChange={(e) => handleInputChange('vehicleModel', e.target.value)}
+                        value={vehicleModel}
+                        className={styles.formControl}
                     />
                 </div>
-            </div>
+                <div className={styles.formGroup}>
+                    <label htmlFor="showrooms" className={styles.label}>
+                        Comments
+                    </label>
+                    <textarea
+                        id="reciever-name"
+                        placeholder="Comments"
+                        name="reciever-name"
+                        onChange={(e) => handleInputChange('comments', e.target.value)}
+                        value={comments}
+                        className={styles.formControl}
+                    />
+                </div>
 
-            <div className="mt-4 flex items-center">
-                <textarea
-                    id="reciever-name"
-                    name="reciever-name"
-                    className="form-input flex-1"
-                    placeholder="Comments"
-                    value={comments}
-                    style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        border: '1px solid #ccc',
-                        borderRadius: '5px',
-                        fontSize: '1rem',
-                        outline: 'none',
-                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    }}
-                    onChange={(e) => handleInputChange('comments', e.target.value)}
-                />
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 gap-4">
-                <button
-                    type="button"
-                    className={`btn btn-primary bg-green-600 text-white py-2 w-full border-none rounded cursor-pointer ${editData ? 'hover:bg-green-700' : 'hover:bg-green-500'}`}
-                    onClick={addOrUpdateItem}
-                >
+                <button type="button" onClick={addOrUpdateItem} className={styles.submitButton}>
                     {editData ? 'Update' : 'Save'}
                 </button>
-            </div>
+            </form>
         </div>
     );
 };
