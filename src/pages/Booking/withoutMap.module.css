@@ -1,0 +1,256 @@
+.bookingFormContainer {
+    width: 100%;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    /* text-align: center; */
+  }
+  
+  .dateTime {
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 10px;
+  }
+  
+  .formHeading {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    font-weight: bold;
+    color: #007bff;
+  }
+  
+  .bookingForm {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+
+  .formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Spacing between the elements */
+    margin-bottom: 20px;
+}
+
+.inputContainer {
+    display: flex;
+    gap: 10px;
+}
+
+.smallInput {
+    flex: 1; /* Smaller input */
+}
+
+.largeInput {
+    flex: 2; /* Larger input */
+}
+
+
+
+
+
+
+
+  
+  .label {
+    margin-bottom: 5px;
+    font-weight: 600;
+  }
+  
+  .formControl {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+  }
+  .inputRowOfdropoff{
+    display: flex;
+    flex-wrap: wrap; /* Ensures items wrap onto the next line on smaller screens */
+    gap: 10px; /* Adds space between items */
+  }
+  .formControlDropOff {
+    flex: 1; /* Allows inputs to take up remaining space */
+    min-width: 0; /* Prevents inputs from growing too large */
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+  .formControlDropOffloc {
+   
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+  
+  .submitButton {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .inputWithIcon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.inputWithIcon input {
+    width: 100%;
+    padding-right: 40px; /* Add padding to accommodate the icon */
+    padding-left: 10px; /* Optional: padding on the left for symmetry */
+    height: 40px; /* Adjust height as needed */
+    border: 1px solid #ccc; /* Border styling */
+    border-radius: 4px; /* Rounded corners */
+    font-size: 14px; /* Adjust font size */
+}
+
+.inputWithIcon .iconWrapper {
+    position: absolute;
+    right: 10px; /* Adjust the positioning as needed */
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: #555; /* Icon color */
+}
+
+.iconWrapper:hover {
+    color: #000; /* Icon color on hover */
+}
+  .submitButton:hover {
+    background-color: #0056b3;
+  }
+  .mapButton {
+    background: #51a7ff;
+    color: white;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+    border-radius: 50%;
+}
+
+
+.mapButton:hover {
+    background: lightblue;
+}
+.addButton {
+    border-radius: 50%;
+    background: linear-gradient(135deg, #32CD32, #228B22);
+    color: white;
+    padding: 10px 10px;
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: background 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.addButton:hover {
+    background: linear-gradient(135deg, #228B22, #006400);
+}
+.trappedLocationContainer {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1rem;
+}
+
+.trappedLocationLabel {
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.radioButtonsGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.radioButton {
+  display: flex;
+  align-items: center;
+}
+
+.radioInput {
+  margin-right: 0.5rem;
+}
+
+.radioLabel {
+  font-size: 1rem;
+  color: #555;
+  cursor: pointer;
+}
+
+.textDanger {
+  color: #e63946;
+}
+
+
+
+  @media (max-width: 600px) {
+    .bookingFormContainer {
+      padding: 10px;
+    }
+  
+    .formHeading {
+      font-size: 1.2rem;
+    }
+  
+    .formGroup {
+      width: 100%;
+    }
+  
+    .formControl {
+      font-size: 0.9rem;
+    }
+    .inputContainer {
+        flex-direction: column;
+    }
+    .mapButton {
+        margin-left: 0;
+         /* Add some space on top when stacked */
+        width: 100%; /* Full width on small screens */
+        justify-content: center; /* Center the content */
+        border-radius: 7px;
+    }
+    .addButton {
+        width: 100%; /* Full width on small screens */
+        border-radius: 8px; /* Add some space on top when stacked */
+    }
+    .inputRowOfdropoff {
+        flex-direction: column; /* Stacks items vertically on small screens */
+    }
+
+    .formControlDropOff {
+        width: 100%; /* Inputs take full width on small screens */
+    }
+    .radioButtonsGroup {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  
+    .radioButton {
+      margin-bottom: 0.5rem;
+    }
+  
+    .radioLabel {
+      font-size: 0.9rem;
+    }
+  }
+  

@@ -31,7 +31,6 @@ import {getMessaging, getToken} from "firebase/messaging";
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCih6LyMfSvEJ7qDluDHSInumgdLPKtxe8",
   authDomain: "rsapmna-de966.firebaseapp.com",
@@ -43,12 +42,14 @@ const firebaseConfig = {
 };
 
 const app = firebase.initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
 
 const db = getFirestore(app);
 
-const storage = getStorage(app)
+// Initialize services
 const auth = getAuth(app);
+const storage = getStorage(app);
+const messaging = getMessaging(app);
+getToken(messaging, {vapidKey:"BKPoKIWRkx6sdBatbMyNn_rw0aT7kw52-FNKZIlfYV6QD2knwxCSEUBU_CDMJSjJnYflUix08tmsJ2-ddbnrzoQ"})
 
 export { auth ,storage , messaging};
 export default app;
