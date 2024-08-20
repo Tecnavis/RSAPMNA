@@ -7,12 +7,17 @@ import 'tippy.js/dist/tippy.css';
 import IconUserPlus from '../../components/Icon/IconUserPlus';
 import { getFirestore, collection, getDocs, where, query, doc, updateDoc } from 'firebase/firestore';
 import IconMenuScrumboard from '../../components/Icon/Menu/IconMenuScrumboard';
+import defaultImage from '../../assets/css/images/user-front-side-with-white-background.jpg'
+import ConfirmationModal from './ConfirmationModal/ConfirmationModal'; // Import the modal component
 
 const CompanyCreatn = () => {
     const [items, setItems] = useState([] as any);
     const db = getFirestore();
     const navigate = useNavigate();
     const uid = sessionStorage.getItem('uid')
+    const [isModalVisible, setModalVisible] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
+    const role =sessionStorage.getItem('role');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -38,27 +43,25 @@ const CompanyCreatn = () => {
         fetchData();
     }, [uid, db]);
 
-    const handleDelete = async (userId: string) => {
-        const confirmDelete = window.confirm('Are you sure you want to delete this user?');
-        if (confirmDelete) {
-            const enteredPassword = window.prompt('Please enter the password to confirm deletion:');
-            const requiredPassword = 'RSA@123';
-
-            if (enteredPassword === requiredPassword) {
-                try {
-                    const userDoc = doc(db, `user/${uid}/driver`, userId);
+    const handleDelete = async (userId) => {
+        try {
+            const userDoc = doc(db, `user/${uid}/driver`, userId);
                     await updateDoc(userDoc, { status: 'deleted from UI' });
                     
+                    // Update local state
                     setItems((prevItems: any) => prevItems.filter((item: any) => item.id !== userId));
-                    alert('User deleted successfully.');
-                } catch (error) {
-                    console.error('Error deleting user:', error);
-                    alert('Failed to delete user.');
-                }
-            } else {
-                window.alert('Incorrect password. Deletion aborted.');
-            }
+        } catch (error) {
+            console.error('Error deleting document: ', error);
         }
+        setModalVisible(false);
+    };
+    const openDeleteModal = (item) => {
+        setItemToDelete(item);
+        setModalVisible(true);
+    };
+    const closeModal = () => {
+        setModalVisible(false);
+        setItemToDelete(null);
     };
 
     const handleEdit = (item) => {
@@ -125,11 +128,11 @@ const CompanyCreatn = () => {
                                                 </Tippy>
                                             </li>
                                             <li>
-                                                <Tippy content="Delete">
-                                                    <button type="button" onClick={() => handleDelete(item.id)}>
-                                                        <IconTrashLines className="text-danger" />
-                                                    </button>
-                                                </Tippy>
+                                            <Tippy content="Delete">
+                                                        <button type="button" onClick={() => openDeleteModal(item)}>
+                                                            <IconTrashLines className="text-danger" />
+                                                        </button>
+                                                    </Tippy>
                                             </li>
                                             <li>
                                                 <Tippy content="More">
@@ -146,6 +149,8 @@ const CompanyCreatn = () => {
                     </table>
                 </div>
             </div>
+            <ConfirmationModal isVisible={isModalVisible} onConfirm={() => handleDelete(itemToDelete?.id)} onCancel={closeModal} />
+
         </div>
     );
 };
