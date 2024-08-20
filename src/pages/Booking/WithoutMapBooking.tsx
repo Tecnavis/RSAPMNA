@@ -13,7 +13,8 @@ import Select from 'react-select';
 import BaseLocationWithout from '../BaseLocation/BaseLocationWithout';
 import { format } from 'date-fns';
 import ShowroomModalWithout from './ShowroomModalWithout';
-
+import { generateToken, messaging } from '../../config/config';
+import {getMessaging, onMessage } from 'firebase/messaging';
 interface Showroom {
     id: string;
     name: string;
@@ -23,6 +24,8 @@ const WithoutMapBooking = ({ activeForm }) => {
     const db = getFirestore();
     const navigate = useNavigate();
     const [bookingId, setBookingId] = useState<string>('');
+    const [userFcmToken, setUserFcmToken] = useState<string | null>(null);
+
     useEffect(() => {
         const newBookingId = uuid().substring(0, 6);
         setBookingId(newBookingId);
@@ -179,6 +182,12 @@ console.log("role",role)
             setDisableFields(false);
         }
     }, [state]);
+    useEffect(()=>{
+generateToken();
+onMessage(messaging, (payload)=>{
+    console.log(payload)
+})
+    },[]);
     useEffect(() => {
         const now = new Date();
         const formattedDateTime = now.toLocaleString();
@@ -850,9 +859,10 @@ if (editData?.adjustValue) {
                     fileNumber: finalFileNumber,
                     selectedDriver: selectedDriver || '',
                     trappedLocation: trappedLocation || '',
-                    updatedTotalSalary: updatedTotalSalary || '',
+                    updatedTotalSalary: updatedTotalSalary || 0,
                     insuranceAmountBody: insuranceAmountBody || '',
                     paymentStatus: 'Not Paid',
+                    fcmToken: userFcmToken 
                 };
                 if (editData) {
                     if (role === 'admin') {
@@ -862,7 +872,7 @@ if (editData?.adjustValue) {
                     }                    bookingData.editedTime = formatDate(new Date());
                 }
                 console.log('Data to be added/updated:', bookingData); // Log the data before adding or updating
-
+                let docRef;
                 if (editData) {
                     const docRef = doc(db, `user/${uid}/bookings`, editData.id);
                     await updateDoc(docRef, bookingData);
@@ -872,14 +882,47 @@ if (editData?.adjustValue) {
                     console.log('Document written with ID: ', docRef.id);
                     console.log('Document added');
                 }
-
+ // Generate FCM token and send notification
+ const token = await generateToken();
+ if (token) {
+     await saveTokenToFirestore(token, docRef.id); // Store token in Firestore associated with the booking
+     await sendPushNotification(token, bookingData); // Trigger push notification
+ }
                 navigate('/bookings/newbooking');
             } catch (e) {
                 console.error('Error adding/updating document: ', e);
             }
         }
     };
-
+    const saveTokenToFirestore = async (token, bookingId) => {
+        try {
+            await updateDoc(doc(db, `user/${uid}/bookings`, bookingId), {
+                fcmToken: token,
+            });
+            console.log('FCM token saved to Firestore');
+        } catch (e) {
+            console.error('Error saving FCM token to Firestore:', e);
+        }
+    };
+    
+    // Function to send push notification
+    const sendPushNotification = async (token, bookingData) => {
+        try {
+            const messagePayload = {
+                notification: {
+                    title: 'Booking Update',
+                    body: `Booking for ${bookingData.customerName} has been ${bookingData.status}`,
+                },
+                token: token,
+            };
+    
+            // Send notification through Firebase Cloud Messaging (this should ideally be done from your server or a Cloud Function)
+            // await yourSendNotificationFunction(messagePayload);
+            console.log('Push notification sent:', messagePayload);
+        } catch (e) {
+            console.error('Error sending push notification:', e);
+        }
+    };
  
   return (
         <div className="p-1 flex-1 mt-4 mx-24 shadow-lg rounded-lg bg-lightblue-100" style={{ background: 'lightblue' }}>

@@ -19,6 +19,7 @@ import useGoogleMaps from './GoogleMaps';
 import MapView from './Map';
 import { backgroundClip } from 'html2canvas/dist/types/css/property-descriptors/background-clip';
 import Placeholder from 'react-select/dist/declarations/src/components/Placeholder';
+import MapWithRoutes from './MapWithRoutes';
 interface Showroom {
     id: string;
     name: string;
@@ -887,15 +888,15 @@ if (editData?.adjustValue) {
                 }
                 const bookingData = {
                     ...bookingDetails,
-                    driver: driverName,
-                    totalSalary: totalSalary,
+                    driver: driverName || '',
+                    totalSalary: totalSalary || 0,
                     pickupLocation: formattedPickupLocation,
                     dropoffLocation: dropoffLocation || '',
                     status: 'booking added',
                     statusEdit: activeForm === 'map' ? 'withoutmapbooking' : 'mapbooking',
                     dateTime: dateTime,
-                    totalDriverSalary: totalDriverSalary,
-                    totalDriverDistance: totalDriverDistance,
+                    totalDriverSalary: totalDriverSalary || 0,
+                    totalDriverDistance: totalDriverDistance || 0,
                     bookingId: `${bookingId}`,
                     createdAt: serverTimestamp(),
                     comments: comments || '',
@@ -923,7 +924,7 @@ if (editData?.adjustValue) {
                     fileNumber: finalFileNumber,
                     selectedDriver: selectedDriver || '',
                     trappedLocation: trappedLocation || '',
-                    updatedTotalSalary: updatedTotalSalary || '',
+                    updatedTotalSalary: updatedTotalSalary || 0,
                     insuranceAmountBody: insuranceAmountBody || '',
                     bodyShope: bodyShope || '',
                     paymentStatus: 'Not Paid',
@@ -1312,6 +1313,7 @@ if (editData?.adjustValue) {
     useEffect(() => {
         handleCalculateDistance();
     }, [selectedDriver, pickupLocation, dropoffLocation]);
+    
     //------------------------------------------------------
     return (
         <div className="p-1 flex-1 mt-4 mx-24 shadow-lg rounded-lg bg-lightblue-100" style={{ background: 'lightblue' }}>
@@ -1623,8 +1625,11 @@ if (editData?.adjustValue) {
                                 </div>
                             </div>
 <div className='mt-4'>
-<MapView />
-
+<MapWithRoutes 
+                baseLocation={baseLocation} 
+                pickupLocation={pickupLocation} 
+                dropoffLocation={dropoffLocation} 
+            />
 </div>
                         </div>
                         {/* )} */}
