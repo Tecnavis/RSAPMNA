@@ -1,0 +1,31 @@
+.buttonContainer {
+    display: flex;
+    gap: 1rem; /* Adjust spacing between buttons */
+    padding: 20px;
+}
+
+.button {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.3rem;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.icon {
+    margin-right: 0.5rem;
+}
+
+.button:hover:not(:disabled) {
+    background-color: #333;
+}

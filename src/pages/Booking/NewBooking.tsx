@@ -101,66 +101,73 @@ const NewBooking = () => {
         </div>
 
         <div className={styles.tableContainer}>
-            <table className={styles.table}>
-                <thead>
-                    <tr>
-                        <th>Date & Time</th>
-                        <th>Name</th>
-                        <th>File Number</th>
-                        <th>Phone Number</th>
-                        <th>Driver</th>
-                        <th>View More</th>
-                        <th>Edit</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {recordsData.map((rowData) => (
-                        <tr key={rowData.id}>
-                            <td data-label="Date & Time">{rowData.dateTime}</td>
-                            <td data-label="Name">{rowData.customerName}</td>
-                            <td data-label="File Number">{rowData.fileNumber}</td>
-                            <td data-label="Phone Number">{rowData.phoneNumber}</td>
-                            <td data-label="Driver">{rowData.driver}</td>
-                            <td data-label="View More">
-                                <Link
-                                    to={`/bookings/newbooking/viewmore/${rowData.id}`}
-                                    style={{
-                                        padding: '5px 10px',
-                                        color: '#fff',
-                                        backgroundColor: '#007bff',
-                                        borderRadius: '5px',
-                                        textDecoration: 'none',
-                                        display: 'inline-block',
-                                        transition: 'background-color 0.3s',
-                                    }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0056b3')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#007bff')}
-                                >
-                                    View More
-                                </Link>
-                            </td>
-                            <td data-label="Edit">
-                                <button
-                                    onClick={() => handleEdit(rowData)}
-                                    style={{
-                                        padding: '5px 10px',
-                                        color: '#fff',
-                                        backgroundColor: '#ffc107',
-                                        border: 'none',
-                                        borderRadius: '5px',
-                                        cursor: 'pointer',
-                                        transition: 'background-color 0.3s',
-                                    }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e0a800')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffc107')}
-                                >
-                                    Edit
-                                </button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+        <table className={styles.table}>
+    <thead>
+        <tr>
+            <th>Date & Time</th>
+            <th>Name</th>
+            <th>File Number</th>
+            <th>Phone Number</th>
+            <th>Driver</th>
+            <th>View More</th>
+            <th>Edit</th>
+        </tr>
+    </thead>
+    <tbody>
+        {recordsData.map((rowData) => (
+            <tr
+                key={rowData.id}
+                style={{
+                    backgroundColor: rowData.bookingStatus === "ShowRoom Booking" ? "#f8d7da" : "transparent", 
+                    // Adjust color as needed
+                }}
+            >
+                <td data-label="Date & Time">{rowData.dateTime}</td>
+                <td data-label="Name">{rowData.customerName}</td>
+                <td data-label="File Number">{rowData.fileNumber}</td>
+                <td data-label="Phone Number">{rowData.phoneNumber}</td>
+                <td data-label="Driver">{rowData.driver}</td>
+                <td data-label="View More">
+                    <Link
+                        to={`/bookings/newbooking/viewmore/${rowData.id}`}
+                        style={{
+                            padding: '5px 10px',
+                            color: '#fff',
+                            backgroundColor: '#007bff',
+                            borderRadius: '5px',
+                            textDecoration: 'none',
+                            display: 'inline-block',
+                            transition: 'background-color 0.3s',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0056b3')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#007bff')}
+                    >
+                        View More
+                    </Link>
+                </td>
+                <td data-label="Edit">
+                    <button
+                        onClick={() => handleEdit(rowData)}
+                        style={{
+                            padding: '5px 10px',
+                            color: '#fff',
+                            backgroundColor: '#ffc107',
+                            border: 'none',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.3s',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e0a800')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffc107')}
+                    >
+                        Edit
+                    </button>
+                </td>
+            </tr>
+        ))}
+    </tbody>
+</table>
+
         </div>
     </div>
     );
