@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import ReactModal from 'react-modal';
 import { v4 as uuid } from 'uuid';
@@ -7,19 +7,14 @@ import { query, where } from 'firebase/firestore';
 import { serverTimestamp } from 'firebase/firestore';
 import VehicleSection from './VehicleSection';
 import IconPlus from '../../components/Icon/IconPlus';
-import ShowroomModal from './ShowroomModal';
 import IconMapPin from '../../components/Icon/IconMapPin';
-import Select from 'react-select';
-import BaseLocationWithout from '../BaseLocation/BaseLocationWithout';
-import { format } from 'date-fns';
 import ShowroomModalWithout from './ShowroomModalWithout';
-import { title } from 'process';
-import axios from 'axios';
 import styles from './withoutMap.module.css';
 import ReactSelect from 'react-select';
 
 import { generateToken, messaging } from '../../config/config';
-import {getMessaging, onMessage } from 'firebase/messaging';
+import { getMessaging, onMessage } from 'firebase/messaging';
+import axios from 'axios';
 interface Showroom {
     id: string;
     name: string;
@@ -100,7 +95,6 @@ const WithoutMapBooking = ({ activeForm }) => {
     const [showroomLocation, setShowroomLocation] = useState('');
     const [insuranceAmountBody, setInsuranceAmountBody] = useState(0);
     const [showrooms, setShowrooms] = useState<Showroom[]>([]);
-    console.log(showrooms);
     const [distance, setDistance] = useState(0);
     const [drivers, setDrivers] = useState([]);
     const [editData, setEditData] = useState(null);
@@ -119,7 +113,6 @@ const WithoutMapBooking = ({ activeForm }) => {
     const uid = sessionStorage.getItem('uid');
     const userName = sessionStorage.getItem('username');
     const role = sessionStorage.getItem('role');
-    console.log('role', role);
     const [dis1, setDis1] = useState('');
     const [dis2, setDis2] = useState('');
     const [dis3, setDis3] = useState('');
@@ -150,8 +143,6 @@ const WithoutMapBooking = ({ activeForm }) => {
 
     useEffect(() => {
         if (state && state.editData) {
-            console.log('first');
-            console.log('state.editData', state.editData);
             const editData = state.editData;
             setEditData(editData);
             setBookingId(editData.bookingId || '');
@@ -184,10 +175,8 @@ const WithoutMapBooking = ({ activeForm }) => {
             setBaseLocation(editData.baseLocation || '');
             setPickupLocation(editData.pickupLocation || '');
             // setUpdatedTotalSalary(editData.updatedTotalSalary || '');
-            console.log('updatedTotalSalaryyy', editData.updatedTotalSalary);
             setServiceType(editData.serviceType || '');
             setAdjustValue(editData.adjustValue || '');
-            console.log('editData.adjustValue', editData.adjustValue);
 
             setTotalSalary(editData.totalSalary || 0);
             setDropoffLocation(editData.dropoffLocation || '');
@@ -196,20 +185,46 @@ const WithoutMapBooking = ({ activeForm }) => {
             setDisableFields(false);
         }
     }, [state]);
-    useEffect(()=>{
-generateToken();
-onMessage(messaging, (payload)=>{
-    console.log(payload)
-})
-    },[]);
     useEffect(() => {
-        const now = new Date();
-        const formattedDateTime = now.toLocaleString();
-        setCurrentDateTime(formattedDateTime);
+        generateToken();
+        onMessage(messaging, (payload) => {
+            console.log(payload);
+        });
     }, []);
 
+    
     useEffect(() => {
-        console.log('pickupLocationnnn', pickupLocation);
+        const formatDate = (date) => {
+            const options = {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true,
+            };
+            return new Intl.DateTimeFormat('en-GB', options).format(date);
+        };
+
+        const updateDateTime = () => {
+            const now = new Date();
+            const formattedDateTime = formatDate(now);
+            setCurrentDateTime(formattedDateTime);
+        };
+
+        // Update date and time immediately on mount
+        updateDateTime();
+
+        // Set up interval to update every second
+        const intervalId = setInterval(updateDateTime, 1000);
+
+        // Clean up interval on unmount
+        return () => clearInterval(intervalId);
+    }, []);
+
+
+    useEffect(() => {
         // Set the manual input field with the pickup location's name when the location changes
         setManualInput(pickupLocation.name || '');
     }, [pickupLocation]);
@@ -257,12 +272,9 @@ onMessage(messaging, (payload)=>{
                         ...doc.data(),
                     })) as Company[];
 
-                    console.log('fetchedCompanies', fetchedCompanies);
-
                     // Filter fetched companies based on status
                     const filteredCompanies = fetchedCompanies.filter((company) => company.status !== 'deleted from UI' && (company.status === '' || !company.status));
 
-                    console.log('filteredCompanies', filteredCompanies);
                     setCompanies(filteredCompanies);
                 } catch (error) {
                     console.error('Error fetching companies:', error);
@@ -276,30 +288,25 @@ onMessage(messaging, (payload)=>{
     //     setUpdatedTotalSalary(newTotalSalary);
     // };
     const handleUpdateTotalSalary = (newTotaSalary) => {
-        console.log('newTotalSalary', newTotaSalary);
         setUpdatedTotalSalary(newTotaSalary);
     };
 
     const handleInsuranceAmountBodyChange = (amount) => {
-        console.log('firstamount', amount);
         setInsuranceAmountBody(amount);
     };
     const handleAdjustValueChange = (newAdjustValue) => {
-        console.log('Adjust Valuee:', newAdjustValue);
         setAdjustValue(newAdjustValue);
     };
     const handleServiceCategoryChange = (service) => {
         setServiceCategory(service);
     };
     const handleBodyInsuranceChange = (insurance) => {
-        console.log('firstinsurance', insurance);
         setBodyShope(insurance);
     };
 
     useEffect(() => {
         if (selectedDriver) {
             const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-            console.log('selectedDriverData', selectedDriverData);
 
             if (selectedDriverData) {
                 if (selectedDriverData.serviceVehicle) {
@@ -314,34 +321,24 @@ onMessage(messaging, (payload)=>{
     const handleInputChange = (field, value) => {
         switch (field) {
             case 'showroomLocation':
-                console.log('Setting showroomLocation:', value);
                 setShowroomLocation(value);
 
                 // Find the selected showroom based on the selected value
                 const selectedShowroom = showrooms.find((show) => show.value === value);
-                console.log('Selected Showroom:', selectedShowroom);
 
                 if (selectedShowroom) {
-                    console.log('Found showroom:', selectedShowroom.value);
-                    console.log('Setting insuranceAmountBody to:', selectedShowroom.insuranceAmountBody);
                     setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
 
                     // Ensure lat and lng are stored as strings
                     const latString = selectedShowroom.locationLatLng.lat.toString();
                     const lngString = selectedShowroom.locationLatLng.lng.toString();
 
-                    console.log('Setting dropoffLocation to:', {
-                        name: selectedShowroom.value,
-                        lat: latString,
-                        lng: lngString,
-                    });
                     setDropoffLocation({
                         name: selectedShowroom.value,
                         lat: latString,
                         lng: lngString,
                     });
                 } else {
-                    console.log('No showroom found, resetting values');
                     setInsuranceAmountBody('');
                     setDropoffLocation({
                         name: '',
@@ -423,10 +420,7 @@ onMessage(messaging, (payload)=>{
                 setDis3(value || 0);
                 break;
             case 'distance':
-                console.log('Distance type before savingdis1:', typeof distance);
                 const totalDistance = parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3);
-                console.log('Setting distance to:', totalDistance);
-                console.log('Distance type before saving:', typeof distance);
 
                 setDistance(totalDistance || 0); // Default to 0 if totalDistance is NaN
                 break;
@@ -435,13 +429,10 @@ onMessage(messaging, (payload)=>{
                 break;
             case 'selectedDriver':
                 setSelectedDriver(value || '');
-                console.log('Selected Driver ID:', value);
 
                 const selectedDriverData = drivers.find((driver) => driver.id === value);
-                console.log('Selected Driver Data:', selectedDriverData);
                 if (selectedDriverData) {
                     const calculatedSalary = calculateTotalSalary(serviceDetails.salary, distance, serviceDetails.basicSalaryKM, serviceDetails.salaryPerKM);
-                    console.log('Calculated Salary:', calculatedSalary);
 
                     setTotalSalary(calculatedSalary);
                 }
@@ -479,7 +470,6 @@ onMessage(messaging, (payload)=>{
                 setVehicleModel(value || '');
                 break;
             case 'baseLocation':
-                console.log('baseLocation', baseLocation);
                 setBaseLocation(value || '');
                 break;
 
@@ -536,14 +526,9 @@ onMessage(messaging, (payload)=>{
     }, [uid]);
 
     // -------------------------------------------------------------------------------------
-    // useEffect(() => {
-    //     console.log("Current Showroom Location:", showroomLocation);
-    //     console.log("Current Showrooms Options:", showrooms.map(show => ({
-    //         value: show.Location,
-    //         label: show.Location,
-    //     })));
-    // }, [showroomLocation, showrooms]);
+
     useEffect(() => {}, [showroomLocation]);
+    
 
     useEffect(() => {
         setManualInput1(dropoffLocation ? dropoffLocation.name : '');
@@ -560,7 +545,6 @@ onMessage(messaging, (payload)=>{
     };
     const handleLocationChange = (e) => {
         const value = e.target.value;
-        console.log('Input Value:', value);
 
         setManualInput(value);
 
@@ -609,7 +593,6 @@ onMessage(messaging, (payload)=>{
     useEffect(() => {
         const fetchDrivers = async () => {
             if (!serviceType || !serviceDetails) {
-                console.log('Service details not found, cannot proceed with fetching drivers.');
                 setDrivers([]);
                 return;
             }
@@ -634,7 +617,6 @@ onMessage(messaging, (payload)=>{
                     .filter(Boolean); // Remove null entries
 
                 setDrivers(filteredDrivers);
-                console.log('Filtered Drivers:', filteredDrivers);
             } catch (error) {
                 console.error('Error fetching drivers:', error);
             }
@@ -649,7 +631,6 @@ onMessage(messaging, (payload)=>{
     useEffect(() => {
         const fetchServiceDetails = async () => {
             if (!serviceType) {
-                console.log('No service type selected');
                 setServiceDetails({});
                 return;
             }
@@ -658,12 +639,10 @@ onMessage(messaging, (payload)=>{
                 const serviceQuery = query(collection(db, `user/${uid}/service`), where('name', '==', serviceType));
                 const snapshot = await getDocs(serviceQuery);
                 if (snapshot.empty) {
-                    console.log('No matching service details found.');
                     setServiceDetails({});
                     return;
                 }
                 const details = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))[0];
-                console.log('details', details);
                 setServiceDetails(details);
             } catch (error) {
                 console.error('Error fetching service details:', error);
@@ -690,7 +669,6 @@ onMessage(messaging, (payload)=>{
     useEffect(() => {
         if (selectedDriver && Array.isArray(drivers)) {
             const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-            console.log('Selected Driver Dataaa:', selectedDriverData);
 
             if (selectedDriverData) {
                 // Access the nested properties
@@ -716,17 +694,11 @@ onMessage(messaging, (payload)=>{
                     return;
                 }
 
-                console.log('DistanceDistance::', totalDriverDistance);
-                console.log('Basic Salary KMmm:', basicSalaryKM);
-                console.log('Salary per KMmm:', salaryPerKM);
-                console.log('Base Salaryyy:', salary);
                 if (totalDriverDistance < basicSalaryKM) {
-                    console.log('Distance is less than Basic Salary KM. Returning Base Salary:', salary);
                     setTotalDriverSalary(salary); // If distance is less than basicSalaryKM, return the base salary
                 }
                 const calculatedSalary = calculateTotalDriverSalary(totalDriverDistance, basicSalaryKM, salaryPerKM, salary);
 
-                console.log('Setting Total Driver Salary:', calculatedSalary);
                 setTotalDriverSalary(calculatedSalary);
             } else {
                 console.error('Driver not found:', selectedDriver);
@@ -739,16 +711,8 @@ onMessage(messaging, (payload)=>{
         const numericTotalDistance = Number(totalDistance) || 0;
         const numericKmValueNumeric = Number(basicSalaryKM) || 0;
         const numericPerKmValueNumeric = Number(salaryPerKM) || 0;
-        console.log('numericBasicSalary', numericBasicSalary);
-        console.log('numericTotalDistance', numericTotalDistance);
-
-        console.log('numericKmValueNumeric', numericKmValueNumeric);
-
-        console.log('numericPerKmValueNumeric', numericPerKmValueNumeric);
 
         if (numericTotalDistance > numericKmValueNumeric) {
-            console.log('numericBasicSalaryy', numericTotalDistance - numericKmValueNumeric);
-
             return numericBasicSalary + (numericTotalDistance - numericKmValueNumeric) * numericPerKmValueNumeric;
         } else {
             return numericBasicSalary;
@@ -760,14 +724,12 @@ onMessage(messaging, (payload)=>{
             const totalDistances = drivers.map((driver) => {
                 return { driverId: driver.id, totalDistance: distance };
             });
-            console.log('Total Distances:', totalDistances);
 
             const totalSalaries = drivers.map((driver) => {
                 return parseFloat(calculateTotalSalary(serviceDetails.salary, distance, serviceDetails.basicSalaryKM, serviceDetails.salaryPerKM).toFixed(2));
             });
 
             const totalSalary = totalSalaries.reduce((acc, salary) => salary, 0);
-            console.log('totalSalary', totalSalary);
 
             setTotalDistances(totalDistances); // Set totalDistances state
             setTotalSalary(totalSalary);
@@ -776,11 +738,9 @@ onMessage(messaging, (payload)=>{
     }, [drivers, serviceDetails, distance]);
     useEffect(() => {
         let newTotalSalary = totalSalary;
-        console.log('editData.updatedTotalSalary', updatedTotalSalary);
         if (serviceCategory === 'Body Shop' && bodyShope === 'insurance') {
             newTotalSalary -= parseFloat(insuranceAmountBody || 0);
         }
-        console.log('newTotalSalary', newTotalSalary);
         if (editData?.adjustValue) {
             // If editData has adjustValue, prioritize it
             setUpdatedTotalSalary(parseFloat(editData.adjustValue) || 0);
@@ -828,7 +788,6 @@ onMessage(messaging, (payload)=>{
                 } else if (company === 'rsa') {
                     finalFileNumber = fileNumber;
                 }
-                console.log('Distance type before saving:', typeof distance);
 
                 const bookingData = {
                     ...bookingDetails,
@@ -871,7 +830,7 @@ onMessage(messaging, (payload)=>{
                     updatedTotalSalary: updatedTotalSalary || 0,
                     insuranceAmountBody: insuranceAmountBody || '',
                     paymentStatus: 'Not Paid',
-                    fcmToken: userFcmToken 
+                    fcmToken: userFcmToken,
                 };
                 if (editData) {
                     if (role === 'admin') {
@@ -881,13 +840,10 @@ onMessage(messaging, (payload)=>{
                     }
                     bookingData.editedTime = formatDate(new Date());
                 }
-                console.log('Data to be added/updated:', bookingData); // Log the data before adding or updating
                 let docRef;
                 if (editData) {
                     const docRef = doc(db, `user/${uid}/bookings`, editData.id);
-                    console.log(docRef, 'this is the doc ref', bookingData);
                     await updateDoc(docRef, bookingData);
-                    console.log('Document updated');
                     const notificationPayload = {
                         notification: {
                             title: 'New Booking!',
@@ -901,15 +857,15 @@ onMessage(messaging, (payload)=>{
                     };
                 } else {
                     const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
-                    console.log('Document written with ID: ', docRef.id);
-                    console.log('Document added');
                 }
- // Generate FCM token and send notification
- const token = await generateToken();
- if (token) {
-     await saveTokenToFirestore(token, docRef.id); // Store token in Firestore associated with the booking
-     await sendPushNotification(token, bookingData); // Trigger push notification
- }
+                // Generate FCM token and send notification
+        
+                const token = await generateToken();
+                if (token) {
+                 
+                    await saveTokenToFirestore(token, docRef.id); // Store token in Firestore associated with the booking
+                    await sendPushNotification(token, bookingData); // Trigger push notification
+                }
                 navigate('/bookings/newbooking');
             } catch (e) {
                 console.error('Error adding/updating document: ', e);
@@ -921,12 +877,11 @@ onMessage(messaging, (payload)=>{
             await updateDoc(doc(db, `user/${uid}/bookings`, bookingId), {
                 fcmToken: token,
             });
-            console.log('FCM token saved to Firestore');
         } catch (e) {
             console.error('Error saving FCM token to Firestore:', e);
         }
     };
-    
+
     // Function to send push notification
     const sendPushNotification = async (token, bookingData) => {
         try {
@@ -937,14 +892,15 @@ onMessage(messaging, (payload)=>{
                 },
                 token: token,
             };
-    
+
             // Send notification through Firebase Cloud Messaging (this should ideally be done from your server or a Cloud Function)
             // await yourSendNotificationFunction(messagePayload);
-            console.log('Push notification sent:', messagePayload);
         } catch (e) {
             console.error('Error sending push notification:', e);
         }
     };
+
+   
 
     const handleButtonClick = (event) => {
         event.preventDefault();
@@ -1628,5 +1584,4 @@ onMessage(messaging, (payload)=>{
         </div>
     );
 };
-
 export default WithoutMapBooking;

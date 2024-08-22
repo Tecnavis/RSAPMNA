@@ -18,9 +18,6 @@ import Select from 'react-select';
 import useGoogleMaps from './GoogleMaps';
 import styles from './mapbooking.module.css';
 import MapView from './Map';
-import { backgroundClip } from 'html2canvas/dist/types/css/property-descriptors/background-clip';
-import Placeholder from 'react-select/dist/declarations/src/components/Placeholder';
-import { Col, Container, Row } from 'react-bootstrap';
 import MapWithRoutes from './MapWithRoutes';
 interface Showroom {
     id: string;
@@ -171,15 +168,33 @@ const role =sessionStorage.getItem('role');
     }, [state]);
 
     useEffect(() => {
-        const now = new Date();
-        const formattedDateTime = now.toLocaleString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-        });
-        setCurrentDateTime(formattedDateTime);
+        const formatDate = (date) => {
+            const options = {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true,
+            };
+            return new Intl.DateTimeFormat('en-GB', options).format(date);
+        };
+
+        const updateDateTime = () => {
+            const now = new Date();
+            const formattedDateTime = formatDate(now);
+            setCurrentDateTime(formattedDateTime);
+        };
+
+        // Update date and time immediately on mount
+        updateDateTime();
+
+        // Set up interval to update every second
+        const intervalId = setInterval(updateDateTime, 1000);
+
+        // Clean up interval on unmount
+        return () => clearInterval(intervalId);
     }, []);
 
     useEffect(() => {
@@ -510,6 +525,10 @@ const role =sessionStorage.getItem('role');
 
         fetchServiceTypes();
     }, [db]);
+
+    const handleCloseModal = () => {
+        setShowShowroomModal(false);
+    };
 
     useEffect(() => {
         const db = getFirestore();
@@ -1313,117 +1332,85 @@ const role =sessionStorage.getItem('role');
         handleCalculateDistance();
     }, [selectedDriver, pickupLocation, dropoffLocation]);
     
+    const handleButtonClick = (event) => {
+        event.preventDefault();
+        openModal1()
+    };
+
+    const handelAddbuttonClick = (event)=>{
+        event.preventDefault();
+        setShowShowroomModal(true)
+    }
     //------------------------------------------------------
     return (
-        <div className="p-1 flex-1 mt-4 mx-24 shadow-lg rounded-lg bg-lightblue-100" style={{ background: 'lightblue' }}>
-            <div className={styles.dateContainer}>
-                <div className={styles.dateBox}>
-                    <h5 className={styles.dateText}>{currentDateTime}</h5>
+      
+            <div className={styles.bookingFormContainer}>
+             <form className={styles.bookingForm}>
+             <div className={styles.dateTime}>{currentDateTime}</div>
+             <h2 className={styles.formHeading}>BOOK WITH MAP</h2>
+             <div className={styles.formGroup}>
+                    <label htmlFor="company" className={styles.label}>
+                    Company
+                    </label>
+                    <select id="company" name="company" value={company} className={styles.formControl} onChange={(e) => handleInputChange('company', e.target.value)}>
+                        <option value="">Select company</option>
+                        <option value="rsa">RSA Work</option>
+                        <option value="self">Payment Work</option>
+                    </select>
                 </div>
-            </div>
-
-            <div className="flex flex-wrap p-4">
-                <h5 className="font-semibold text-lg dark:text-white-light mb-5">Book Now</h5>
-                <div className="w-full">
-                    <div className="flex flex-col md:flex-row items-start mt-4">
-                        <label htmlFor="company" className="w-full md:w-1/3 mb-2 md:mb-0 text-gray-800 font-semibold">
-                            Company
-                        </label>
-                        <select
-                            id="company"
-                            name="company"
-                            value={company}
-                            className="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                            onChange={(e) => handleInputChange('company', e.target.value)}
-                        >
-                            <option value="">Select Company</option>
-                            <option value="rsa">RSA Work</option>
-                            <option value="self">Payment Work</option>
-                        </select>
-                    </div>
-
-                    {company === 'rsa' && (
-                        <div style={{ display: 'flex', alignItems: 'center', marginTop: '1rem' }}>
-                            <label htmlFor="selectedCompany" style={{ marginRight: '0.5rem', marginLeft: '0.5rem', marginBottom: '0', color: '#333' }}>
-                                Select Company
-                            </label>
-                            <select
-                                id="selectedCompany"
-                                name="selectedCompany"
-                                style={{
-                                    width: '100%',
-                                    padding: '0.5rem',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '5px',
-                                    fontSize: '1rem',
-                                    outline: 'none',
-                                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                }}
-                                onChange={(e) => handleInputChange('selectedCompany', e.target.value)}
-                            >
-                                <option value="">Select Company</option>
+                {company === 'rsa' && (
+             <div className={styles.formGroup}>
+                    <label htmlFor="selectedCompany" className={styles.label}>
+                    Select Company
+                    </label>
+                    <select  id="selectedCompany"  name="selectedCompany"   onChange={(e) => handleInputChange('selectedCompany', e.target.value)} className={styles.formControl} >
+                    <option value="">Select Company</option>
                                 {companies.map((comp) => (
                                     <option key={comp.id} value={comp.id}>
                                         {comp.company}
                                     </option>
                                 ))}
-                            </select>
-                            {companies.length === 0 && <p>No companies available</p>}
-                        </div>
-                    )}
-                    {company === 'self' ? (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="fileNumber" className="mr-2 ml-2 w-1/3 mb-0 text-gray-800 font-semibold">
-                                File Number
-                            </label>
-                            <div className='search-box ltr:mr-2 rtl:ml-2  mb-0"' style={{ width: '100%' }}>
-                                <input
-                                    id="fileNumber"
-                                    type="text"
-                                    name="fileNumber"
-                                    placeholder="Enter File Number"
-                                    className="form-input lg:w-[250px] w-2/3 p-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 focus:outline-none"
-                                    value={`PMNA${bookingId}`}
-                                    readOnly
-                                />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="fileNumber" className="mr-2 ml-2 w-1/3 mb-0 text-gray-800 font-semibold">
-                                File Number
-                            </label>
-                            <div className='search-box ltr:mr-2 rtl:ml-2  mb-0"' style={{ width: '100%' }}>
-                                <input
-                                    id="fileNumber"
-                                    type="text"
-                                    name="fileNumber"
-                                    className="form-input lg:w-[250px] w-2/3 p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                                    placeholder="Enter File Number"
-                                    value={fileNumber}
-                                    onChange={(e) => handleInputChange('fileNumber', e.target.value)}
-                                />
-                            </div>
-                        </div>
-                    )}
-                    <div style={{ width: '100%' }}>
-                          
-                        <div>
-                            <div className="flex items-center mt-4">
-                                <label htmlFor="pickupLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    Pickup Location
-                                </label>
-                                <Box
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.5rem',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '5px',
-                                        fontSize: '1rem',
-                                        outline: 'none',
-                                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                    }}
-                                >
+                    </select>
+                    {companies.length === 0 && <p>No companies available</p>}
+                </div>
+                )}
+                {company === 'self' ? (
+                     <div className={styles.formGroup}>
+                     <label htmlFor="fileNumber" className={styles.label}>
+                     File Number
+                     </label>
+                     <input
+                      value={`PMNA${bookingId}`}
+                      readOnly
+                      id="fileNumber"
+                      type="text"
+                      name="fileNumber"
+                      placeholder="Enter File Number"
+                         className={styles.formControl}
+                     />
+                 </div>
+                ):(
+                    <div className={styles.formGroup}>
+                    <label htmlFor="fileNumber" className={styles.label}>
+                    File Number
+                    </label>
+                    <input
+                        className={styles.formControl}
+                        id="fileNumber"
+                        type="text"
+                        name="fileNumber"
+                        placeholder="Enter File Number"
+                        value={fileNumber}
+                        onChange={(e) => handleInputChange('fileNumber', e.target.value)}
+                    />
+                </div>
+                )}
+
+                 <div className={styles.formGroup}>
+                  <label htmlFor="pickupLocation" className={styles.label}>
+                  Pickup Location
+                  </label>
+                  <Box >
                                     <Autocomplete
                                         value={{ label: pickupLocation }}
                                         onInputChange={(event, newInputValue) => {
@@ -1461,55 +1448,36 @@ const role =sessionStorage.getItem('role');
 
                                     {pickupCoords.lat !== undefined && pickupCoords.lng !== undefined && <Typography>{`Pickup Location Lat/Lng: ${pickupCoords.lat}, ${pickupCoords.lng}`}</Typography>}
                                 </Box>
-                            </div>
+              </div>
 
-                            <div className="mt-4 flex items-center">
-                                <label htmlFor="baseLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    Start Location
-                                </label>
-                                <input
-                                    id="baseLocation"
-                                    type="text"
-                                    name="baseLocation"
-                                    className="form-input flex-1"
-                                    placeholder="select start location"
-                                    value={baseLocation ? `${baseLocation.name} , ${baseLocation.lat} , ${baseLocation.lng}` : ''}
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.5rem',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '5px',
-                                        fontSize: '1rem',
-                                        outline: 'none',
-                                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                    }}
-                                    readOnly
-                                    onClick={openModal1}
-                                />
-                                <button
-                                    onClick={openModal1}
-                                    style={{
-                                        borderRadius: '40px',
-                                        background: 'transparent',
-                                        color: 'blue',
-                                        marginLeft: '10px',
-                                        padding: '10px',
-                                        border: 'none',
-                                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
-                                        cursor: 'pointer',
-                                        transition: 'background 0.3s ease',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}
-                                    onMouseOver={(e) => (e.currentTarget.style.background = 'lightblue')}
-                                    onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
-                                >
-                                    <IconMapPin style={{ color: '#FF6347', fontSize: '1.5rem' }} />
-                                </button>
-                            </div>
+              <div className={styles.formGroup}>
+  <label htmlFor="startLocation" className={styles.label}>
+    Start Location
+  </label>
+  <div className={styles.inputContainer}>
+    <input 
+      id="startLocation"
+      type="text"
+      name="startLocation"
+      className={styles.fullWidthInput} /* New class */
+      placeholder="Select start location"
+      value={baseLocation ? `${baseLocation.name} , ${baseLocation.lat} , ${baseLocation.lng}` : ''}
+      readOnly
+      onClick={openModal1}
+    />
+    <button
+      onClick={handleButtonClick}
+      type="button"
+      onMouseOver={(e) => (e.currentTarget.style.background = 'lightblue')}
+       onMouseOut={(e) => (e.currentTarget.style.background = '#51a7ff')}
+      className={styles.mapButton}
+    >
+      <IconMapPin />
+    </button>
+  </div>
+</div>
 
-                            {isModalOpen1 && (
+{isModalOpen1 && (
                                 <div
                                     className="modal"
                                     style={{
@@ -1528,80 +1496,64 @@ const role =sessionStorage.getItem('role');
                                     </div>
                                 </div>
                             )}
-                            <div className="flex items-center mt-4">
-                                <label htmlFor="showrooms" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    Service Center
-                                </label>
-                                {showrooms.length > 0 && (
-                                    <Select
-                                        className="w-full"
-                                        id="showrooms"
-                                        name="showrooms"
-                                        value={showrooms.find((option) => option.value === showroomLocation) || null}
-                                        options={showrooms}
-                                        onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
-                                        isSearchable={true}
-                                        placeholder="Select showroom"
-                                        styles={{
-                                            control: (provided) => ({
-                                                ...provided,
-                                                width: '100%',
-                                                padding: '0.5rem',
-                                                border: '1px solid #ccc',
-                                                borderRadius: '5px',
-                                                fontSize: '1rem',
-                                                outline: 'none',
-                                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                            }),
-                                            placeholder: (provided) => ({
-                                                ...provided,
-                                                fontSize: '1rem',
-                                            }),
-                                        }}
-                                    />
-                                )}
-                                <button
-                                    onClick={() => setShowShowroomModal(true)}
-                                    style={{
-                                        borderRadius: '40px',
-                                        background: 'linear-gradient(135deg, #32CD32, #228B22)',
-                                        color: 'white',
-                                        margin: '10px',
-                                        padding: '10px 10px',
-                                        border: 'none',
-                                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-                                        cursor: 'pointer',
-                                        transition: 'background 0.3s ease',
-                                    }}
-                                    onMouseOver={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg, #228B22, #006400)')}
-                                    onMouseOut={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg, #32CD32, #228B22)')}
-                                >
-                                    <IconPlus />
-                                </button>
-                            </div>
-                            {/* <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#333', marginTop: '10px', background: 'white', padding: '19px', borderRadius: '4px',marginLeft:"24%" }}> {showroomLocation}</div> */}
-                            {showShowroomModal && <ShowroomModal onClose={() => setShowShowroomModal(false)} updateShowroomLocation={updateShowroomLocation} />}
+ <div className={styles.formGroup}>
+  <label htmlFor="showrooms" className={styles.label}>
+    Service Center
+  </label>
+  <div className={styles.inputContainer}>
+    {showrooms.length > 0 && (
+      <Select
+        className={styles.fullWidthSelect}
+        id="showrooms"
+        name="showrooms"
+        value={showrooms.find((option) => option.value === showroomLocation) || null}
+        options={showrooms}
+        onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
+        isSearchable={true}
+        placeholder="Select showroom"
+        styles={{
+          control: (provided) => ({
+            ...provided,
+            width: '100%',
+            padding: '0.5rem',
+            border: '1px solid #ccc',
+            borderRadius: '5px',
+            fontSize: '1rem',
+            outline: 'none',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+          }),
+          placeholder: (provided) => ({
+            ...provided,
+            fontSize: '1rem',
+          }),
+        }}
+      />
+    )}
+    <button
+      onClick={handelAddbuttonClick}
+      className={styles.addButton}
+      onMouseOver={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg, #228B22, #006400)')}
+      onMouseOut={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg, #32CD32, #228B22)')}
+    >
+      <IconPlus />
+    </button>
+  </div>
+     {showShowroomModal && <ShowroomModal onClose={() => setShowShowroomModal(false)} updateShowroomLocation={updateShowroomLocation} />}
+</div>
 
-                            <div className="flex items-center mt-4 ">
-                                <label htmlFor="dropoffLocation" className="  w-1/3 mb-0">
-                                    Drop off Location
-                                </label>
-                                <div className="search-box " style={{ width: '100%' }}>
-                                    <input
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.5rem',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '5px',
-                                            fontSize: '1rem',
-                                            outline: 'none',
-                                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                        }}
-                                        value={showroomLocation}
-                                    />
-                                </div>
-                            </div>
-                            <div className="mt-4">
+
+              <div className={styles.formGroup}>
+                  <label htmlFor="dropoffLocation" className={styles.label}>
+                  Drop off Location
+                  </label>
+                  <input
+                   value={showroomLocation}
+                      className={styles.formControl}
+                  />
+              </div>
+
+              <div className={styles.formGroup}>
+              <div className="mt-4">
                                 <MapView />
                             </div>
 <div className='mt-4'>
@@ -1611,38 +1563,27 @@ const role =sessionStorage.getItem('role');
                 dropoffLocation={dropoffLocation} 
             />
 </div>
-                        </div>
-                        {/* )} */}
-                    </div>
-                    <div className="mt-4 flex items-center">
-                        <label htmlFor="distance" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                            Distance (KM)
-                        </label>
-                        <input
-                            id="distance"
-                            type="text"
-                            name="distance"
-                            className="form-input flex-1"
-                            style={{
-                                width: '100%',
-                                padding: '0.5rem',
-                                border: '1px solid #ccc',
-                                borderRadius: '5px',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                            }}
-                            onChange={(e) => handleInputChange('distance', e.target.value)}
-                            value={distance}
-                            readOnly={!manualDistance}
-                            onClick={() => setManualDistance(true)}
-                        />
-                    </div>
-                    <div className="flex items-center mt-4">
-                        <label htmlFor="trappedLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                            Trapped Location
-                        </label>
-                        <div className="flex items-center">
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="distance" className={styles.label}>
+                  Distance (KM)
+                  </label>
+                  <input
+                      className={styles.formControl}
+                      id="distance"
+                      type="text"
+                      name="distance"
+                      onChange={(e) => handleInputChange('distance', e.target.value)}
+                      value={distance}
+                      readOnly={!manualDistance}
+                      onClick={() => setManualDistance(true)}
+                  />
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="trappedLocation" className={styles.label}>
+                  Trapped Location
+                  </label>
+                  <div className="flex items-center">
                             <input
                                 type="radio"
                                 id="onRoad"
@@ -1680,30 +1621,30 @@ const role =sessionStorage.getItem('role');
                                 Outside of Road
                             </label>
                         </div>
-                    </div>
-                    {trappedLocation === 'outsideOfRoad' && (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="updatedTotalSalary" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                Updated Total Amount
-                            </label>
-                            <input
-                                id="updatedTotalSalary"
-                                type="text"
-                                name="updatedTotalSalary"
-                                className="form-input flex-1"
-                                placeholder="Enter Total Salary"
-                                value={updatedTotalSalary}
-                                onChange={(e) => setUpdatedTotalSalary(e.target.value)}
-                                required
-                            />
-                        </div>
-                    )}
-                    {!disableFields && (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="serviceType" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                Service Type
-                            </label>
-                            <select
+              </div>
+              {trappedLocation === 'outsideOfRoad' && (
+              <div className={styles.formGroup}>
+                  <label htmlFor="updatedTotalSalary" className={styles.label}>
+                  Updated Total Amount
+                  </label>
+                  <input
+                   id="updatedTotalSalary"
+                   type="text"
+                   name="updatedTotalSalary"
+                      className={styles.formControl}
+                      placeholder="Enter Total Salary"
+                      value={updatedTotalSalary}
+                      onChange={(e) => setUpdatedTotalSalary(e.target.value)}
+                      required
+                  />
+              </div>
+              )}
+ {!disableFields && (
+              <div className={styles.formGroup}>
+                  <label htmlFor="serviceType" className={styles.label}>
+                  Service Type
+                  </label>
+                  <select
                                 id="serviceType"
                                 name="serviceType"
                                 className="form-select flex-1"
@@ -1726,38 +1667,29 @@ const role =sessionStorage.getItem('role');
                                     </option>
                                 ))}
                             </select>
-                        </div>
-                    )}
-                 {!disableFields && (
-    <div className="flex items-center mt-4">
-        <label htmlFor="driver" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-            Driver
-        </label>
-        <div className="form-input flex-1" style={{ position: 'relative', width: '100%' }}>
-            <input
-                id="driver"
-                type="text"
-                name="driver"
-                className="w-full"
-                placeholder="Select your driver"
-                style={{
-                    padding: '0.5rem',
-                    border: '1px solid #ccc',
-                    borderRadius: '5px',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                }}
-                value={
-                    selectedDriver
-                        ? drivers.find((driver) => driver.id === selectedDriver)?.driverName || 'Dummy Driver'
-                        : 'Dummy Driver'
-                }
-                onClick={() => openModal(distance)}
-                readOnly
-            />
-        </div>
-        <ReactModal
+              </div>
+ )}
+  {!disableFields && (
+              <div className={styles.formGroup}>
+                  <label htmlFor="driver" className={styles.label}>
+                  Driver
+                  </label>
+                  <input
+                   id="driver"
+                   type="text"
+                   name="driver"
+                   placeholder="Select your driver"
+                      className={styles.formControl}
+                      value={
+                        selectedDriver
+                            ? drivers.find((driver) => driver.id === selectedDriver)?.driverName || 'Dummy Driver'
+                            : 'Dummy Driver'
+                    }
+                    onClick={() => openModal(distance)}
+                    readOnly
+                  />
+                  <div>
+                  <ReactModal
             isOpen={isModalOpen}
             onRequestClose={closeModal}
             style={{
@@ -1855,11 +1787,11 @@ const role =sessionStorage.getItem('role');
                 </div>
             </div>
         </ReactModal>
-    </div>
-)}
-
-                </div>
-                <React.Fragment>
+                  </div>
+              </div>
+  )}
+              <div className={styles.formGroup}>
+              <React.Fragment>
                     <div>
                         <VehicleSection
                             showroomLocation={showroomLocation}
@@ -1930,174 +1862,113 @@ const role =sessionStorage.getItem('role');
                         </div>
                     </div>
                 </React.Fragment>
-                {selectedDriver && (
-                    <div>
-                        <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column' }}>
-                            <label htmlFor="totalDriverSalary" style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                                Total Driver Salary
-                            </label>
-                            <input
-                                id="totalDriverSalary"
-                                type="text"
-                                value={totalDriverSalary}
-                                readOnly
-                                style={{
-                                    width: '100%',
-                                    padding: '0.5rem',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '5px',
-                                    fontSize: '1rem',
-                                    outline: 'none',
-                                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                }}
-                            />
-                        </div>
-                        <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column' }}>
-                            <label htmlFor="totalDriverDistance" style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                                Total Driver Distance
-                            </label>
-                            <input
-                                id="totalDriverDistance"
-                                type="text"
-                                value={totalDriverDistance}
-                                readOnly
-                                style={{
-                                    width: '100%',
-                                    padding: '0.5rem',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '5px',
-                                    fontSize: '1rem',
-                                    outline: 'none',
-                                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                }}
-                            />
-                        </div>
-                    </div>
-                )}
-                <div className="flex items-center mt-4" style={{ width: '100%' }}>
-                    <label htmlFor="serviceVehicle" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Service Vehicle Number
-                    </label>
-
-                    <input
-                        id="serviceVehicle"
-                        type="text"
-                        name="serviceVehicle"
-                        className="form-input flex-1"
-                        placeholder="Enter Service Vehicle Number"
-                        value={serviceVehicle}
-                        onChange={(e) => handleInputChange('serviceVehicle', e.target.value)}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        required
-                    />
-                </div>
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="customerName" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Customer Name
-                    </label>
-                    <input
-                        id="customerName"
-                        type="text"
-                        name="customerName"
-                        className="form-input flex-1"
-                        placeholder="Enter Name"
+              </div>
+              {selectedDriver && (
+                <div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="totalDriverSalary" className={styles.label}>
+                  Total Driver Salary
+                  </label>
+                  <input
+                   id="totalDriverSalary"
+                   type="text"
+                   value={totalDriverSalary}
+                   readOnly
+                      className={styles.formControl}
+                  />
+              </div>
+               <div className={styles.formGroup}>
+               <label htmlFor="totalDriverDistance" className={styles.label}>
+               Total Driver Distance
+               </label>
+               <input
+                id="totalDriverDistance"
+                type="text"
+                value={totalDriverDistance}
+                readOnly
+                   className={styles.formControl}
+               />
+           </div>
+           </div>
+              )}
+              <div className={styles.formGroup}>
+                  <label htmlFor="serviceVehicle" className={styles.label}>
+                  Service Vehicle Number
+                  </label>
+                  <input
+                   id="serviceVehicle"
+                   type="text"
+                   name="serviceVehicle"
+                   placeholder="Enter Service Vehicle Number"
+                   value={serviceVehicle}
+                   onChange={(e) => handleInputChange('serviceVehicle', e.target.value)}
+                      className={styles.formControl}
+                      required
+                  />
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="customerName" className={styles.label}>
+                  Customer Name
+                  </label>
+                  <input
+                   id="customerName"
+                   type="text"
+                   name="customerName"
+                   placeholder="Enter Name"
                         value={customerName}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('customerName', e.target.value)}
-                    />
-                </div>
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="phoneNumber" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Phone Number
-                    </label>
-                    <input
-                        id="phoneNumber"
-                        type="phoneNumber"
-                        name="phoneNumber"
-                        className="form-input flex-1"
-                        placeholder="Enter Phone number"
-                        value={phoneNumber}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                    />
+                      className={styles.formControl}
+                      onChange={(e) => handleInputChange('customerName', e.target.value)}
+                  />
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="phoneNumber" className={styles.label}>
+                  Phone Number
+                  </label>
+                  <input
+                  id="phoneNumber"
+                  type="number"
+                  name="phoneNumber"
+                  placeholder="Enter Phone number"
+                  value={phoneNumber}
+                      className={styles.formControl}
+                      onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                  />
                     {errors.phoneNumber && <p className="text-red-500 text-sm mt-1">{errors.phoneNumber}</p>}
-                </div>
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="mobileNumber" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Mobile Number
-                    </label>
-                    <input
-                        id="mobileNumber"
-                        type="text"
-                        name="mobileNumber"
-                        className="form-input flex-1"
-                        placeholder="Enter Mobile number"
-                        value={mobileNumber}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
-                    />
-                    {errors.mobileNumber && <p className="text-red-500 text-sm mt-1">{errors.mobileNumber}</p>}
-                </div>{' '}
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="vehicleNumber" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Customer Vehicle Number
-                    </label>
-                    <input
-                        id="vehicleNumber"
-                        type="text"
-                        name="vehicleNumber"
-                        className="form-input flex-1"
-                        placeholder="Enter vehicle number"
-                        value={vehicleNumber}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('vehicleNumber', e.target.value)}
-                    />
-                </div>
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="vehicleType" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Vehicle Type (2 or 3 or 4 wheeler)
-                    </label>
-                    <select
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="mobileNumber" className={styles.label}>
+                  Mobile Number
+                  </label>
+                  <input
+                   id="mobileNumber"
+                   type="number"
+                   name="mobileNumber"
+                   placeholder="Enter Mobile number"
+                   value={mobileNumber}
+                      className={styles.formControl}
+                      onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
+                  />
+                   {errors.mobileNumber && <p className="text-red-500 text-sm mt-1">{errors.mobileNumber}</p>}
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="vehicleNumber" className={styles.label}>
+                  Customer Vehicle Number
+                  </label>
+                  <input
+                    id="vehicleNumber"
+                    type="text"
+                    name="vehicleNumber"
+                      className={styles.formControl}
+                      placeholder="Enter vehicle number"
+                      value={vehicleNumber}
+                      onChange={(e) => handleInputChange('vehicleNumber', e.target.value)}
+                  />
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="vehicleType" className={styles.label}>
+                  Vehicle Type (2 or 3 or 4 wheeler)
+                  </label>
+                  <select
                         id="vehicleType"
                         name="vehicleType"
                         className="form-select flex-1"
@@ -2122,51 +1993,31 @@ const role =sessionStorage.getItem('role');
                         <option value="7">7 Wheeler</option>
                         <option value="8">8 Wheeler</option>
                     </select>
-                </div>
-                <div className="flex items-center mt-4" style={{ width: '100%' }}>
-                    <label htmlFor="vehicleModel" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Brand Name
-                    </label>
-                    <input
-                        id="vehicleModel"
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="vehicleModel" className={styles.label}>
+                  Brand Name
+                  </label>
+                  <input
+                   id="vehicleModel"
                         name="vehicleModel"
-                        className="form-input flex-1"
                         value={vehicleModel}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('vehicleModel', e.target.value)}
-                    />
-                </div>
-            </div>
-
-            <div className="mt-4 flex items-center">
-                <textarea
+                      className={styles.formControl}
+                      onChange={(e) => handleInputChange('vehicleModel', e.target.value)}
+                  />
+              </div>
+              <div className={styles.formGroup}>
+              <textarea
                     id="reciever-name"
                     name="reciever-name"
-                    className="form-input flex-1"
+                    className={styles.formControl}
                     placeholder="Comments"
                     value={comments}
-                    style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        border: '1px solid #ccc',
-                        borderRadius: '5px',
-                        fontSize: '1rem',
-                        outline: 'none',
-                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    }}
+                   
                     onChange={(e) => handleInputChange('comments', e.target.value)}
                 />
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 gap-4">
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-4">
                 <button
                     type="button"
                     className={`btn btn-primary bg-green-600 text-white py-2 w-full border-none rounded cursor-pointer ${editData ? 'hover:bg-green-700' : 'hover:bg-green-500'}`}
@@ -2175,7 +2026,9 @@ const role =sessionStorage.getItem('role');
                     {editData ? 'Update' : 'Save'}
                 </button>
             </div>
-        </div>
+             </form>
+             </div>
+       
     );
 };
 

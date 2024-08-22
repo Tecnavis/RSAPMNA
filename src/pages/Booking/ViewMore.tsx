@@ -127,10 +127,19 @@ const ViewMore = () => {
                          <strong>Pickup Kilometer:</strong> {bookingDetails.kilometerPick}
                      </div>
                  )}
+
+
+
                  {bookingDetails.kilometerPickImage && (
-                     <div className="my-4 flex">
-                         <strong>Pickup Km Photo:</strong>
-                         <img src={bookingDetails.kilometerPickImage} alt="Pickup Km Photo" className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5" />
+                    <div>
+
+                    
+                     <h3 className="text-xl font-bold mt-5">Pickup Km Photo:</h3>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                     <div  className="max-w-xs">
+                     <img src={bookingDetails.kilometerPickImage} alt="Pickup Km Photo" className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5" />
+                     </div>
+                     </div>
                      </div>
                  )}
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { IRootState } from '../../store';
 import { toggleRTL, toggleTheme, toggleSidebar } from '../../store/themeConfigSlice';
 import { useTranslation } from 'react-i18next';
@@ -37,6 +37,7 @@ const Header = () => {
     const location = useLocation();
     const role =sessionStorage.getItem('role');
     const userName =sessionStorage.getItem('username');
+    const navigate = useNavigate()
 
     useEffect(() => {
         const selector = document.querySelector('ul.horizontal-menu a[href="' + window.location.pathname + '"]');
@@ -69,6 +70,16 @@ const Header = () => {
 
 
     const { t } = useTranslation();
+
+    const handleSignOut = () => {
+        // Clear uid and role from sessionStorage
+        sessionStorage.removeItem('uid');
+        sessionStorage.removeItem('role');
+        sessionStorage.removeItem('username');
+
+        // Navigate to the login page
+        navigate('/auth/cover-login');
+    };
 
     return (
         <header className={`z-40 ${themeConfig.semidark && themeConfig.menu === 'horizontal' ? 'dark' : ''}`}>
@@ -166,10 +177,14 @@ const Header = () => {
                                     </li>
                                  
                                     <li className="border-t border-white-light dark:border-white-light/10">
-                                        <Link to="/auth/cover-login" className="text-danger !py-3">
+                                    <button
+                                            type="button"
+                                            className="text-danger !py-3 flex items-center w-full"
+                                            onClick={handleSignOut}
+                                        >
                                             <IconLogout className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 rotate-90 shrink-0" />
                                             Sign Out
-                                        </Link>
+                                        </button>
                                     </li>
                                 </ul>
                             </Dropdown>
