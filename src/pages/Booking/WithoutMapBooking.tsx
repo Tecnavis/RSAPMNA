@@ -20,7 +20,6 @@ import ReactSelect from 'react-select';
 
 import { generateToken, messaging } from '../../config/config';
 import {getMessaging, onMessage } from 'firebase/messaging';
-import NotificationService from '../../Utilities/NotificationService';
 interface Showroom {
     id: string;
     name: string;
@@ -188,7 +187,7 @@ const WithoutMapBooking = ({ activeForm }) => {
             console.log('updatedTotalSalaryyy', editData.updatedTotalSalary);
             setServiceType(editData.serviceType || '');
             setAdjustValue(editData.adjustValue || '');
-            console.log('editData.adjustValue', editData.serviceType);
+            
 
             setTotalSalary(editData.totalSalary || 0);
             setDropoffLocation(editData.dropoffLocation || '');

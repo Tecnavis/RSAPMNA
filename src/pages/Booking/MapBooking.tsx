@@ -1624,9 +1624,15 @@ const role =sessionStorage.getItem('role');
                                 </div>
                             </div>
                             <div className="mt-4">
-                                {/* <MapView /> */}
+                                <MapView />
                             </div>
-
+<div className='mt-4'>
+<MapWithRoutes 
+                baseLocation={baseLocation} 
+                pickupLocation={pickupLocation} 
+                dropoffLocation={dropoffLocation} 
+            />
+</div>
                         </div>
                         {/* )} */}
                     </div>
