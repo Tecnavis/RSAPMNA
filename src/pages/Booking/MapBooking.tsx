@@ -1341,6 +1341,11 @@ const role =sessionStorage.getItem('role');
         event.preventDefault();
         setShowShowroomModal(true)
     }
+    // ----------------------------------------------------------------------------------
+    const openGoogleMaps = () => {
+        const query = encodeURIComponent(pickupLocation);
+        window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+    };
     //------------------------------------------------------
     return (
       
@@ -1444,8 +1449,26 @@ const role =sessionStorage.getItem('role');
                                         renderInput={(params) => (
                                             <TextField {...params} label="Pickup Location" variant="outlined" placeholder="manual pickupLocation entering format: place, lat, lng" />
                                         )}
+                                        
                                     />
-
+                        <button
+                            onClick={openGoogleMaps}
+                            style={{
+                                backgroundColor: 'transparent', // Google Maps blue color
+                                color: 'blue',
+                                border: 'none',
+                                borderRadius: '5px',
+                                padding: '10px',
+                                cursor: 'pointer',
+                                fontSize: '16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                            }}
+                        >
+                            <i className="fas fa-map-marker-alt" style={{ marginRight: '8px' }}></i>
+                            <IconMapPin/>
+                        </button>
+                  
                                     {pickupCoords.lat !== undefined && pickupCoords.lng !== undefined && <Typography>{`Pickup Location Lat/Lng: ${pickupCoords.lat}, ${pickupCoords.lng}`}</Typography>}
                                 </Box>
               </div>

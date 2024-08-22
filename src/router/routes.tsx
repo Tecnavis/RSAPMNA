@@ -45,6 +45,7 @@ import DriverSalaryInvoice from '../pages/DriverReport/DriverSalaryInvoice';
 import EditSalary from '../pages/DriverReport/EditSalary';
 import CompanyCreationDetails from '../pages/Users/CompanyCreationDetails';
 import DummyAdd from '../pages/Users/DummyAdd';
+import ShowRoomDetails from '../pages/ShowRooms/ShowRoomDetails';
 
 
 
@@ -651,7 +652,10 @@ const routes = [
     path: 'showrooms/showroom',
     element: <ShowRoom />,
 },
-
+{
+    path: 'showrooms/showroom/showroomDetails',
+    element: <ShowRoomDetails />,
+},
 
 // service
 {

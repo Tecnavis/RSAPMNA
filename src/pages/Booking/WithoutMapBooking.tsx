@@ -177,6 +177,7 @@ const WithoutMapBooking = ({ activeForm }) => {
             // setUpdatedTotalSalary(editData.updatedTotalSalary || '');
             setServiceType(editData.serviceType || '');
             setAdjustValue(editData.adjustValue || '');
+            
 
             setTotalSalary(editData.totalSalary || 0);
             setDropoffLocation(editData.dropoffLocation || '');
@@ -589,45 +590,45 @@ const WithoutMapBooking = ({ activeForm }) => {
 
         return () => unsubscribe();
     }, []);
-
     useEffect(() => {
         const fetchDrivers = async () => {
             if (!serviceType || !serviceDetails) {
                 setDrivers([]);
                 return;
             }
-
+    
             try {
                 const driversCollection = collection(db, `user/${uid}/driver`);
                 const snapshot = await getDocs(driversCollection);
-
+    
                 const filteredDrivers = snapshot.docs
                     .map((doc) => {
                         const driverData = doc.data();
-                        // Only include drivers who have the selected service type and are not deleted
-                        if (!driverData.selectedServices.includes(serviceType) || driverData.status === 'deleted from UI') {
+                        // Check if selectedServices is defined and if it includes the serviceType
+                        if (!driverData.selectedServices || !driverData.selectedServices.includes(serviceType) || driverData.status === 'deleted from UI') {
                             return null;
                         }
-
+    
                         return {
                             id: doc.id,
                             ...driverData,
                         };
                     })
                     .filter(Boolean); // Remove null entries
-
+    
                 setDrivers(filteredDrivers);
             } catch (error) {
                 console.error('Error fetching drivers:', error);
             }
         };
-
+    
         if (serviceType && serviceDetails) {
             fetchDrivers().catch(console.error);
         } else {
             setDrivers([]);
         }
     }, [db, uid, serviceType, serviceDetails]);
+    
     useEffect(() => {
         const fetchServiceDetails = async () => {
             if (!serviceType) {
@@ -772,10 +773,52 @@ const WithoutMapBooking = ({ activeForm }) => {
 
         return `${day}/${month}/${year}, ${formattedHours}:${minutes}:${seconds} ${ampm}`;
     };
+    // --------------------------------
+    // http://localhost:3000
+    // https://rsanotification.onrender.com
+    const sendPushNotification = async (token, title, body, sound) => {
+        try {
+          const response = await fetch("https://rsanotification.onrender.com/send-notification", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              token: token,
+              title: title,
+              body: body,
+              sound: sound,
+            }),
+          });
+      
+          if (response.ok) {
+            console.log("Notification sent successfully");
+          } else {
+            console.log("Failed to send notification");
+          }
+        } catch (error) {
+          console.error("Error sending notification:", error);
+        }
+      };
+      
+      // Usage
+     
+      
 
     const addOrUpdateItem = async () => {
         if (validateForm()) {
             try {
+                const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
+                if (!selectedDriverData) {
+                    console.error('Selected driver does not exist in the database.');
+                    return;
+                }
+                const fcmToken = selectedDriverData.fcmToken;
+                if (!fcmToken) {
+                    console.error('FCM Token is missing for the selected driver:', selectedDriver);
+                    return;
+                }
+    
                 const selectedDriverObject = drivers.find((driver) => driver.id === selectedDriver) || { driverName: 'Dummy Driver' };
                 const driverName = selectedDriverObject.driverName || 'Dummy Driver'; // Ensure Dummy Driver is handled
                 const currentDate = new Date();
@@ -1020,7 +1063,26 @@ const WithoutMapBooking = ({ activeForm }) => {
                         onClick={openModal1}
                     />
                 </div>
-
+                {isModalOpen1 && (
+                                <div
+                                    className="modal"
+                                    style={{
+                                        position: 'fixed',
+                                        zIndex: 1,
+                                        left: 0,
+                                        top: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        overflow: 'auto',
+                                        // backgroundColor: 'rgb(0,0,0)',
+                                        backgroundColor: 'rgba(0,0,0,0.4)',
+                                    }}
+                                >
+                                    <div className="modal-body">
+                                        <BaseLocationWithout onClose={closeModal1} setBaseLocation={setBaseLocation} />
+                                    </div>
+                                </div>
+                            )}
                 <div className={styles.formGroup}>
                     <label htmlFor="showrooms" className={styles.label}>
                         Service Center
@@ -1214,24 +1276,33 @@ const WithoutMapBooking = ({ activeForm }) => {
                 )}
                 {!disableFields && (
                     <div className={styles.formGroup}>
-                        <label htmlFor="serviceType" className={styles.label}>
-                            Service Type
-                        </label>
-                        <div className={styles.inputContainer}>
-                            <ReactSelect
-                                id="serviceType"
-                                name="serviceType"
-                                className="w-full"
-                                value={serviceTypes.find((option) => option.value === serviceType)}
-                                options={serviceTypes.map((service) => ({
-                                    value: service.name,
-                                    label: service.name,
-                                }))}
-                                placeholder="Select showroom"
-                                onChange={(option) => handleInputChange('serviceType', option.value)}
-                            />
-                        </div>
-                    </div>
+                   <label htmlFor="serviceType" className={styles.label}>
+                       Service Type
+                   </label>
+                   <select
+                       id="serviceType"
+                       name="serviceType"
+                       className="form-select flex-1"
+                       value={serviceType}
+                       style={{
+                           width: '100%',
+                           padding: '0.5rem',
+                           border: '1px solid #ccc',
+                           borderRadius: '5px',
+                           fontSize: '1rem',
+                           outline: 'none',
+                           boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                       }}
+                       onChange={(e) => handleInputChange('serviceType', e.target.value)}
+                   >
+                       <option value="">Select Service Type</option>
+                       {serviceTypes.map((service) => (
+                           <option key={service.id} value={service.name}>
+                               {service.name}
+                           </option>
+                       ))}
+                   </select>
+               </div>
                 )}
 
                 {!disableFields && (
