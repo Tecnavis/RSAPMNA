@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { FaEye, FaEyeSlash } from 'react-icons/fa'; // Import eye icons
@@ -12,14 +12,21 @@ const LoginCover = () => {
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false); // State to toggle password visibility
     const [role, setRole] = useState("admin"); // Default to admin
+    const [errorMessage, setErrorMessage] = useState(""); // State to store error messages
     const navigate = useNavigate();
+    const uid = import.meta.env.VITE_REACT_APP_UID
+    useEffect(() => {
+        // If the user is already signed in, redirect to the home page
+        if (sessionStorage.getItem('uid')) {
+            navigate('/index');
+        }
+    }, [navigate]);
 
     const signIn = () => {
         // Store role in local storage
         localStorage.setItem('role', role);
 
         const db = getFirestore();
-
         const auth = getAuth();
 
         if (role === "staff") {
@@ -39,21 +46,20 @@ const LoginCover = () => {
                     const errorCode = error.code;
                     const errorMessage = error.message;
                     console.error("Error signing in:", errorCode, errorMessage);
+                    setErrorMessage("Incorrect email or password. Please try again."); // Set error message
                 });
         }
     };
+
     const checkStaffCredentials = async () => {
         const db = getFirestore();
-        
-        // Retrieve the ID from session storage or some other source
-       
     
         try {
             console.log("Attempting to fetch staff credentials...");
-            console.log(`Username: ${username}, Password: ${password}, Role:${role} `);
+            console.log(`Username: ${username}, Password: ${password}, Role:${role}`);
     
             const q = query(
-                collection(db, `user/V9e4v0UtSzUrPVgxtJzOTkq71do2/users`),
+                collection(db, `user/${uid}/users`),
                 where('userName', '==', username),
                 where('password', '==', password),
                 where('role', '==', 'staff')
@@ -74,16 +80,18 @@ const LoginCover = () => {
                 });
 
                 sessionStorage.setItem('role', role);
-                sessionStorage.setItem('username', username);// Store username
-                sessionStorage.setItem('uid','V9e4v0UtSzUrPVgxtJzOTkq71do2') ;
+                sessionStorage.setItem('username', username); // Store username
+                sessionStorage.setItem('uid', 'V9e4v0UtSzUrPVgxtJzOTkq71do2');
 
                 console.log("Staff user signed in successfully with UID:", userId);
                 navigate('/index');
             } else {
                 console.error("Invalid credentials for staff: No matching document found.");
+                setErrorMessage("Incorrect username or password. Please try again."); // Set error message
             }
         } catch (error) {
             console.error("Error fetching staff credentials:", error);
+            setErrorMessage("An error occurred. Please try again later."); // Set error message for any other errors
         }
     };
     
@@ -93,10 +101,12 @@ const LoginCover = () => {
         setEmail("");
         setUsername("");
         setPassword("");
+        setErrorMessage(""); // Clear any previous error message
     };
 
     const handleSubmit = (event) => {
         event.preventDefault();
+        setErrorMessage(""); // Clear any previous error message before attempting sign-in
         signIn();
     };
 
@@ -130,7 +140,7 @@ const LoginCover = () => {
                                 <p className="text-base font-bold leading-normal text-white-dark">Enter your email/username and password to login</p>
                             </div>
                             <form className="space-y-5 dark:text-white" onSubmit={handleSubmit}>
-                            <div>
+                                <div>
                                     <label htmlFor="Role">Role</label>
                                     <select
                                         id="Role"
@@ -169,36 +179,53 @@ const LoginCover = () => {
                                         </span>
                                     </div>
                                 </div>
-                            
                                 <div>
-                                    <label htmlFor="Password">Password</label>
+                                    <label htmlFor="password">Password</label>
                                     <div className="relative text-white-dark">
-                                        <input 
-                                            id="Password" 
-                                            type={showPassword ? "text" : "password"} // Toggle password visibility
-                                            placeholder="Enter Password" 
-                                            value={password} 
-                                            onChange={(e) => setPassword(e.target.value)} 
-                                            className="form-input ps-10 placeholder:text-white-dark" 
+                                        <input
+                                            id="password"
+                                            type={showPassword ? "text" : "password"} // Conditionally set input type
+                                            placeholder="Enter Password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="form-input ps-10 placeholder:text-white-dark"
                                         />
                                         <span className="absolute start-4 top-1/2 -translate-y-1/2">
                                             <IconLockDots fill={true} />
                                         </span>
-                                        <span 
+                                        {/* Toggle eye icons */}
+                                        <span
                                             className="absolute end-4 top-1/2 -translate-y-1/2 cursor-pointer"
-                                            onClick={() => setShowPassword(!showPassword)} // Toggle showPassword state
+                                            onClick={() => setShowPassword(!showPassword)}
                                         >
-                                            {showPassword ? <FaEyeSlash /> : <FaEye />} {/* Toggle between eye open and eye close */}
+                                            {showPassword ? <FaEyeSlash /> : <FaEye />}
                                         </span>
                                     </div>
                                 </div>
+                                {/* Display error message */}
+                                {errorMessage && (
+                                    <div className="text-red-500 text-sm">{errorMessage}</div>
+                                )}
+                                <div>
                                 <button
                                     type="submit"
                                     className="btn-primary mt-4 w-full rounded-md bg-danger py-3 text-center text-base font-medium text-white shadow-md transition hover:bg-danger-dark focus:outline-none focus:ring-2 focus:ring-danger-dark"
                                 >
                                     Sign In
                                 </button>
+                                </div>
                             </form>
+                            <div className="mt-4 flex items-center justify-between">
+                                <Link to="#" className="block text-sm font-bold text-white-dark hover:text-danger">
+                                    Forgot Password?
+                                </Link>
+                                <Link to="/signup-cover" className="block text-sm font-bold text-white-dark hover:text-danger">
+                                    Create Account
+                                </Link>
+                            </div>
+                        </div>
+                        <div className="absolute bottom-0 end-0 hidden md:block">
+                            <img src="/assets/images/auth/polygon-object2.svg" alt="polygon" />
                         </div>
                     </div>
                 </div>

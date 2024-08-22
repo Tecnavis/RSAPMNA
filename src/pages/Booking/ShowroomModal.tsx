@@ -4,7 +4,7 @@ import { collection, addDoc, getFirestore, onSnapshot } from 'firebase/firestore
 import { Autocomplete, TextField, Typography } from '@mui/material';
 import axios from 'axios';
 
-const ShowroomModal = ({ updateShowroomLocation }) => {
+const ShowroomModal = ({ updateShowroomLocation , onClose}) => {
     const [showRoom, setShowRoom] = useState('');
     const [showrooms, setShowrooms] = useState([]);
     const [description, setDescription] = useState('');
@@ -154,6 +154,11 @@ const ShowroomModal = ({ updateShowroomLocation }) => {
         return () => unsubscribe();
     }, [db]);
 
+    const handleClose = () => {
+        if (onClose) {
+            onClose(); // Call the onClose function passed from the parent component
+        }
+    };
     return (
         <div className="showroom-modal">
             <form onSubmit={handleSubmit} className="showroom-form">
@@ -207,6 +212,7 @@ const ShowroomModal = ({ updateShowroomLocation }) => {
                 </div>
                 {/* Add other form fields here */}
                 <button type="submit" className="btn btn-primary">Save Showroom</button>
+                <button className="btn btn-danger my-3" onClick={handleClose}>close</button>
             </form>
         </div>
     );
