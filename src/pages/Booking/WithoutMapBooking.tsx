@@ -883,68 +883,26 @@ const WithoutMapBooking = ({ activeForm }) => {
                     }
                     bookingData.editedTime = formatDate(new Date());
                 }
-                let docRef;
-                if (editData) {
-                    const docRef = doc(db, `user/${uid}/bookings`, editData.id);
-                    await updateDoc(docRef, bookingData);
-                    const notificationPayload = {
-                        notification: {
-                            title: 'New Booking!',
-                            body: `Booking ID: ${bookingData.bookingId} has been ${editData ? 'updated' : 'added'}.`,
-                        },
-                        data: {
-                            bookingId: 'the booking id',
-                            driverName: 'the driver nam',
-                            // Other relevant booking details
-                        },
-                    };
-                } else {
-                    const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
-                }
-                // Generate FCM token and send notification
-        
-                const token = await generateToken();
-                if (token) {
-                 
-                    await saveTokenToFirestore(token, docRef.id); // Store token in Firestore associated with the booking
-                    await sendPushNotification(token, bookingData); // Trigger push notification
-                }
-                navigate('/bookings/newbooking');
-            } catch (e) {
-                console.error('Error adding/updating document: ', e);
-            }
-        }
-    };
-    const saveTokenToFirestore = async (token, bookingId) => {
-        try {
-            await updateDoc(doc(db, `user/${uid}/bookings`, bookingId), {
-                fcmToken: token,
-            });
-        } catch (e) {
-            console.error('Error saving FCM token to Firestore:', e);
-        }
-    };
-
-    // Function to send push notification
-    const sendPushNotification = async (token, bookingData) => {
-        try {
-            const messagePayload = {
-                notification: {
-                    title: 'Booking Update',
-                    body: `Booking for ${bookingData.customerName} has been ${bookingData.status}`,
-                },
-                token: token,
-            };
-
-            // Send notification through Firebase Cloud Messaging (this should ideally be done from your server or a Cloud Function)
-            // await yourSendNotificationFunction(messagePayload);
-        } catch (e) {
-            console.error('Error sending push notification:', e);
-        }
-    };
-
-   
-
+                console.log('Data to be added/updated:', bookingData); // Log the data before adding or updating
+               
+ 
+      
+    if (editData) {
+        const docRef = doc(db, `user/${uid}/bookings`, editData.id);
+        await updateDoc(docRef, bookingData);
+        console.log('Document updated');
+    } else {
+        const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
+        console.log('Document written with ID: ', docRef.id);
+        console.log('Document added');
+    }
+    sendPushNotification(fcmToken, "Booking Notification", "Your booking has been updated", "alert_notification");
+    navigate('/bookings/newbooking');
+} catch (error) {
+    console.error('Error adding/updating item:', error);
+}
+}
+};
     const handleButtonClick = (event) => {
         event.preventDefault();
         setShowShowroomModal(true);
