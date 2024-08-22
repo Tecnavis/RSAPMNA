@@ -20,6 +20,7 @@ import ReactSelect from 'react-select';
 
 import { generateToken, messaging } from '../../config/config';
 import {getMessaging, onMessage } from 'firebase/messaging';
+import NotificationService from '../../Utilities/NotificationService';
 interface Showroom {
     id: string;
     name: string;
@@ -187,7 +188,7 @@ const WithoutMapBooking = ({ activeForm }) => {
             console.log('updatedTotalSalaryyy', editData.updatedTotalSalary);
             setServiceType(editData.serviceType || '');
             setAdjustValue(editData.adjustValue || '');
-            console.log('editData.adjustValue', editData.adjustValue);
+            console.log('editData.adjustValue', editData.serviceType);
 
             setTotalSalary(editData.totalSalary || 0);
             setDropoffLocation(editData.dropoffLocation || '');
@@ -605,7 +606,6 @@ onMessage(messaging, (payload)=>{
 
         return () => unsubscribe();
     }, []);
-
     useEffect(() => {
         const fetchDrivers = async () => {
             if (!serviceType || !serviceDetails) {
@@ -613,39 +613,40 @@ onMessage(messaging, (payload)=>{
                 setDrivers([]);
                 return;
             }
-
+    
             try {
                 const driversCollection = collection(db, `user/${uid}/driver`);
                 const snapshot = await getDocs(driversCollection);
-
+    
                 const filteredDrivers = snapshot.docs
                     .map((doc) => {
                         const driverData = doc.data();
-                        // Only include drivers who have the selected service type and are not deleted
-                        if (!driverData.selectedServices.includes(serviceType) || driverData.status === 'deleted from UI') {
+                        // Check if selectedServices is defined and if it includes the serviceType
+                        if (!driverData.selectedServices || !driverData.selectedServices.includes(serviceType) || driverData.status === 'deleted from UI') {
                             return null;
                         }
-
+    
                         return {
                             id: doc.id,
                             ...driverData,
                         };
                     })
                     .filter(Boolean); // Remove null entries
-
+    
                 setDrivers(filteredDrivers);
                 console.log('Filtered Drivers:', filteredDrivers);
             } catch (error) {
                 console.error('Error fetching drivers:', error);
             }
         };
-
+    
         if (serviceType && serviceDetails) {
             fetchDrivers().catch(console.error);
         } else {
             setDrivers([]);
         }
     }, [db, uid, serviceType, serviceDetails]);
+    
     useEffect(() => {
         const fetchServiceDetails = async () => {
             if (!serviceType) {
@@ -812,10 +813,52 @@ onMessage(messaging, (payload)=>{
 
         return `${day}/${month}/${year}, ${formattedHours}:${minutes}:${seconds} ${ampm}`;
     };
+    // --------------------------------
+    // http://localhost:3000
+    // https://rsanotification.onrender.com
+    const sendPushNotification = async (token, title, body, sound) => {
+        try {
+          const response = await fetch("https://rsanotification.onrender.com/send-notification", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              token: token,
+              title: title,
+              body: body,
+              sound: sound,
+            }),
+          });
+      
+          if (response.ok) {
+            console.log("Notification sent successfully");
+          } else {
+            console.log("Failed to send notification");
+          }
+        } catch (error) {
+          console.error("Error sending notification:", error);
+        }
+      };
+      
+      // Usage
+     
+      
 
     const addOrUpdateItem = async () => {
         if (validateForm()) {
             try {
+                const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
+                if (!selectedDriverData) {
+                    console.error('Selected driver does not exist in the database.');
+                    return;
+                }
+                const fcmToken = selectedDriverData.fcmToken;
+                if (!fcmToken) {
+                    console.error('FCM Token is missing for the selected driver:', selectedDriver);
+                    return;
+                }
+    
                 const selectedDriverObject = drivers.find((driver) => driver.id === selectedDriver) || { driverName: 'Dummy Driver' };
                 const driverName = selectedDriverObject.driverName || 'Dummy Driver'; // Ensure Dummy Driver is handled
                 const currentDate = new Date();
@@ -882,70 +925,25 @@ onMessage(messaging, (payload)=>{
                     bookingData.editedTime = formatDate(new Date());
                 }
                 console.log('Data to be added/updated:', bookingData); // Log the data before adding or updating
-                let docRef;
-                if (editData) {
-                    const docRef = doc(db, `user/${uid}/bookings`, editData.id);
-                    console.log(docRef, 'this is the doc ref', bookingData);
-                    await updateDoc(docRef, bookingData);
-                    console.log('Document updated');
-                    const notificationPayload = {
-                        notification: {
-                            title: 'New Booking!',
-                            body: `Booking ID: ${bookingData.bookingId} has been ${editData ? 'updated' : 'added'}.`,
-                        },
-                        data: {
-                            bookingId: 'the booking id',
-                            driverName: 'the driver nam',
-                            // Other relevant booking details
-                        },
-                    };
-                } else {
-                    const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
-                    console.log('Document written with ID: ', docRef.id);
-                    console.log('Document added');
-                }
- // Generate FCM token and send notification
- const token = await generateToken();
- if (token) {
-     await saveTokenToFirestore(token, docRef.id); // Store token in Firestore associated with the booking
-     await sendPushNotification(token, bookingData); // Trigger push notification
- }
-                navigate('/bookings/newbooking');
-            } catch (e) {
-                console.error('Error adding/updating document: ', e);
-            }
-        }
-    };
-    const saveTokenToFirestore = async (token, bookingId) => {
-        try {
-            await updateDoc(doc(db, `user/${uid}/bookings`, bookingId), {
-                fcmToken: token,
-            });
-            console.log('FCM token saved to Firestore');
-        } catch (e) {
-            console.error('Error saving FCM token to Firestore:', e);
-        }
-    };
-    
-    // Function to send push notification
-    const sendPushNotification = async (token, bookingData) => {
-        try {
-            const messagePayload = {
-                notification: {
-                    title: 'Booking Update',
-                    body: `Booking for ${bookingData.customerName} has been ${bookingData.status}`,
-                },
-                token: token,
-            };
-    
-            // Send notification through Firebase Cloud Messaging (this should ideally be done from your server or a Cloud Function)
-            // await yourSendNotificationFunction(messagePayload);
-            console.log('Push notification sent:', messagePayload);
-        } catch (e) {
-            console.error('Error sending push notification:', e);
-        }
-    };
-
+               
+ 
+      
+    if (editData) {
+        const docRef = doc(db, `user/${uid}/bookings`, editData.id);
+        await updateDoc(docRef, bookingData);
+        console.log('Document updated');
+    } else {
+        const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
+        console.log('Document written with ID: ', docRef.id);
+        console.log('Document added');
+    }
+    sendPushNotification(fcmToken, "Booking Notification", "Your booking has been updated", "alert_notification");
+    navigate('/bookings/newbooking');
+} catch (error) {
+    console.error('Error adding/updating item:', error);
+}
+}
+};
     const handleButtonClick = (event) => {
         event.preventDefault();
         setShowShowroomModal(true);
@@ -1064,7 +1062,26 @@ onMessage(messaging, (payload)=>{
                         onClick={openModal1}
                     />
                 </div>
-
+                {isModalOpen1 && (
+                                <div
+                                    className="modal"
+                                    style={{
+                                        position: 'fixed',
+                                        zIndex: 1,
+                                        left: 0,
+                                        top: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        overflow: 'auto',
+                                        // backgroundColor: 'rgb(0,0,0)',
+                                        backgroundColor: 'rgba(0,0,0,0.4)',
+                                    }}
+                                >
+                                    <div className="modal-body">
+                                        <BaseLocationWithout onClose={closeModal1} setBaseLocation={setBaseLocation} />
+                                    </div>
+                                </div>
+                            )}
                 <div className={styles.formGroup}>
                     <label htmlFor="showrooms" className={styles.label}>
                         Service Center
@@ -1258,24 +1275,33 @@ onMessage(messaging, (payload)=>{
                 )}
                 {!disableFields && (
                     <div className={styles.formGroup}>
-                        <label htmlFor="serviceType" className={styles.label}>
-                            Service Type
-                        </label>
-                        <div className={styles.inputContainer}>
-                            <ReactSelect
-                                id="serviceType"
-                                name="serviceType"
-                                className="w-full"
-                                value={serviceTypes.find((option) => option.value === serviceType)}
-                                options={serviceTypes.map((service) => ({
-                                    value: service.name,
-                                    label: service.name,
-                                }))}
-                                placeholder="Select showroom"
-                                onChange={(option) => handleInputChange('serviceType', option.value)}
-                            />
-                        </div>
-                    </div>
+                   <label htmlFor="serviceType" className={styles.label}>
+                       Service Type
+                   </label>
+                   <select
+                       id="serviceType"
+                       name="serviceType"
+                       className="form-select flex-1"
+                       value={serviceType}
+                       style={{
+                           width: '100%',
+                           padding: '0.5rem',
+                           border: '1px solid #ccc',
+                           borderRadius: '5px',
+                           fontSize: '1rem',
+                           outline: 'none',
+                           boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                       }}
+                       onChange={(e) => handleInputChange('serviceType', e.target.value)}
+                   >
+                       <option value="">Select Service Type</option>
+                       {serviceTypes.map((service) => (
+                           <option key={service.id} value={service.name}>
+                               {service.name}
+                           </option>
+                       ))}
+                   </select>
+               </div>
                 )}
 
                 {!disableFields && (

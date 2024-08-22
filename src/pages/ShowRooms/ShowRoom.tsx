@@ -77,7 +77,8 @@ const ShowRoom = () => {
     const [manualLocationName, setManualLocationName] = useState('');
     const [manualLat, setManualLat] = useState('');
     const [manualLng, setManualLng] = useState('');
-    
+    const [generatedLink, setGeneratedLink] = useState('');
+
     const uid = sessionStorage.getItem('uid');
     useEffect(() => {
         const term = searchTerm.toLowerCase();
@@ -358,6 +359,27 @@ const ShowRoom = () => {
     };
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
+    const generateShowRoomLink = () => {
+        const baseUrl = 'http://localhost:5173/showrooms/showroom/showroomDetails'; // Your actual base URL
+        const queryParams = new URLSearchParams({
+            id: showRoom.ShowRoomId,
+            name: showRoom.ShowRoom,
+            location: showRoom.Location,
+            img: showRoom.img,
+
+            tollfree: showRoom.tollfree,
+
+            phoneNumber: showRoom.phoneNumber,
+
+            state: showRoom.state,
+            district: showRoom.district,
+
+        }).toString();
+    
+        const link = `${baseUrl}?${queryParams}`;
+        setGeneratedLink(link);
+    };
+    
     return (
         <div className="mb-5">
             <h5 className="font-semibold text-lg dark:text-white-light mb-5">Showroom Details</h5>
@@ -867,7 +889,33 @@ const ShowRoom = () => {
                             />
                         </div>
 
-                        <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
+                       
+                      {/* Display the generated link */}
+                {generatedLink && (
+                    <div style={{ marginBottom: '16px', textAlign: 'center' }}>
+                        <Typography variant="body1">
+                            Generated Link: <a href={generatedLink} target="_blank" rel="noopener noreferrer">{generatedLink}</a>
+                        </Typography>
+                    </div>
+                )}
+                    <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
+                    <Button
+                        onClick={generateShowRoomLink}
+                        variant="contained"
+                        color="primary"
+                        style={{
+                            width: '100%',
+                            padding: '12px',
+                            fontSize: '1em',
+                            fontWeight: 'bold',
+                            textTransform: 'uppercase',
+                        }}
+                    >
+                        Generate Showroom Link
+                    </Button>
+                </div>
+                
+                <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
                             <button
                                 type="submit"
                                 className="btn btn-primary w-full"

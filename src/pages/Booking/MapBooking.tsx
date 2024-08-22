@@ -1312,7 +1312,11 @@ const role =sessionStorage.getItem('role');
     useEffect(() => {
         handleCalculateDistance();
     }, [selectedDriver, pickupLocation, dropoffLocation]);
-    
+    // ----------------------------------------------------------------------------------
+    const openGoogleMaps = () => {
+        const query = encodeURIComponent(pickupLocation);
+        window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+    };
     //------------------------------------------------------
     return (
         <div className="p-1 flex-1 mt-4 mx-24 shadow-lg rounded-lg bg-lightblue-100" style={{ background: 'lightblue' }}>
@@ -1457,8 +1461,26 @@ const role =sessionStorage.getItem('role');
                                         renderInput={(params) => (
                                             <TextField {...params} label="Pickup Location" variant="outlined" placeholder="manual pickupLocation entering format: place, lat, lng" />
                                         )}
+                                        
                                     />
-
+                        <button
+                            onClick={openGoogleMaps}
+                            style={{
+                                backgroundColor: 'transparent', // Google Maps blue color
+                                color: 'blue',
+                                border: 'none',
+                                borderRadius: '5px',
+                                padding: '10px',
+                                cursor: 'pointer',
+                                fontSize: '16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                            }}
+                        >
+                            <i className="fas fa-map-marker-alt" style={{ marginRight: '8px' }}></i>
+                            <IconMapPin/>
+                        </button>
+                  
                                     {pickupCoords.lat !== undefined && pickupCoords.lng !== undefined && <Typography>{`Pickup Location Lat/Lng: ${pickupCoords.lat}, ${pickupCoords.lng}`}</Typography>}
                                 </Box>
                             </div>
@@ -1602,15 +1624,9 @@ const role =sessionStorage.getItem('role');
                                 </div>
                             </div>
                             <div className="mt-4">
-                                <MapView />
+                                {/* <MapView /> */}
                             </div>
-<div className='mt-4'>
-<MapWithRoutes 
-                baseLocation={baseLocation} 
-                pickupLocation={pickupLocation} 
-                dropoffLocation={dropoffLocation} 
-            />
-</div>
+
                         </div>
                         {/* )} */}
                     </div>

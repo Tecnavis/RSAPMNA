@@ -324,16 +324,18 @@ const SalaryReport = () => {
                 </div>
             </div>
             {showInvoiceModal && (
-                <InvoiceModal
-                    selectedBookings={selectedBookings}
-                    bookings={bookings}
-                    onClose={closeInvoiceModal}
-                    onGenerateInvoice={() => {
-                        closeInvoiceModal();
-                        navigate('/driverreport/salaryreport/driversalaryInvoice', { state: { selectedBookings } });
-                    }}
-                />
-            )}
+    <InvoiceModal
+        selectedBookings={selectedBookings}
+        bookings={bookings}
+        onClose={closeInvoiceModal}
+        onGenerateInvoice={() => {
+            console.log('Selected Bookings:', selectedBookings); // This will log the selectedBookings array
+            closeInvoiceModal();
+            navigate('/driverreport/salaryreport/driversalaryInvoice', { state: { selectedBookings } });
+        }}
+    />
+)}
+
         </div>
     )}
 
