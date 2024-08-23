@@ -1,8 +1,9 @@
 import React from 'react'
+import ComingSoonBoxed from '../../Pages/ComingSoonBoxed'
 
 const InvoiceWiseSheet = () => {
   return (
-    <div>InvoiceWiseSheet</div>
+    <div><ComingSoonBoxed/></div>
   )
 }
 
