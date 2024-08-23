@@ -9,6 +9,7 @@ import IconTrashLines from '../../../components/Icon/IconTrashLines';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconEdit from '../../../components/Icon/IconEdit';
 import IconEye from '../../../components/Icon/IconEye';
+import ComingSoonBoxed from '../../Pages/ComingSoonBoxed';
 
 const List = () => {
     const dispatch = useDispatch();
@@ -208,107 +209,110 @@ const List = () => {
     }, [sortStatus]);
 
     return (
-        <div className="panel px-0 border-white-light dark:border-[#1b2e4b]">
-            <div className="invoice-table">
-                <div className="mb-4.5 px-5 flex md:items-center md:flex-row flex-col gap-5">
-                    <div className="flex items-center gap-2">
-                        <button type="button" className="btn btn-danger gap-2" onClick={() => deleteRow()}>
-                            <IconTrashLines />
-                            Delete
-                        </button>
-                        <Link to="/apps/invoice/add" className="btn btn-primary gap-2">
-                            <IconPlus />
-                            Add New
-                        </Link>
-                    </div>
-                    <div className="ltr:ml-auto rtl:mr-auto">
-                        <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
-                    </div>
-                </div>
-
-                <div className="datatables pagination-padding">
-                    <DataTable
-                        className="whitespace-nowrap table-hover invoice-table"
-                        records={records}
-                        columns={[
-                            {
-                                accessor: 'invoice',
-                                sortable: true,
-                                render: ({ invoice }) => (
-                                    <NavLink to="/apps/invoice/preview">
-                                        <div className="text-primary underline hover:no-underline font-semibold">{`#${invoice}`}</div>
-                                    </NavLink>
-                                ),
-                            },
-                            {
-                                accessor: 'name',
-                                sortable: true,
-                                render: ({ name, id }) => (
-                                    <div className="flex items-center font-semibold">
-                                        <div className="p-0.5 bg-white-dark/30 rounded-full w-max ltr:mr-2 rtl:ml-2">
-                                            <img className="h-8 w-8 rounded-full object-cover" src={`/assets/images/profile-${id}.jpeg`} alt="" />
-                                        </div>
-                                        <div>{name}</div>
-                                    </div>
-                                ),
-                            },
-                            {
-                                accessor: 'email',
-                                sortable: true,
-                            },
-                            {
-                                accessor: 'date',
-                                sortable: true,
-                            },
-                            {
-                                accessor: 'amount',
-                                sortable: true,
-                                titleClassName: 'text-right',
-                                render: ({ amount, id }) => <div className="text-right font-semibold">{`$${amount}`}</div>,
-                            },
-                            {
-                                accessor: 'status',
-                                sortable: true,
-                                render: ({ status }) => <span className={`badge badge-outline-${status.color} `}>{status.tooltip}</span>,
-                            },
-                            {
-                                accessor: 'action',
-                                title: 'Actions',
-                                sortable: false,
-                                textAlignment: 'center',
-                                render: ({ id }) => (
-                                    <div className="flex gap-4 items-center w-max mx-auto">
-                                        <NavLink to="/apps/invoice/edit" className="flex hover:text-info">
-                                            <IconEdit className="w-4.5 h-4.5" />
-                                        </NavLink>
-                                        <NavLink to="/apps/invoice/preview" className="flex hover:text-primary">
-                                            <IconEye />
-                                        </NavLink>
-                                        {/* <NavLink to="" className="flex"> */}
-                                        <button type="button" className="flex hover:text-danger" onClick={(e) => deleteRow(id)}>
-                                            <IconTrashLines />
-                                        </button>
-                                        {/* </NavLink> */}
-                                    </div>
-                                ),
-                            },
-                        ]}
-                        highlightOnHover
-                        totalRecords={initialRecords.length}
-                        recordsPerPage={pageSize}
-                        page={page}
-                        onPageChange={(p) => setPage(p)}
-                        recordsPerPageOptions={PAGE_SIZES}
-                        onRecordsPerPageChange={setPageSize}
-                        sortStatus={sortStatus}
-                        onSortStatusChange={setSortStatus}
-                        selectedRecords={selectedRecords}
-                        onSelectedRecordsChange={setSelectedRecords}
-                        paginationText={({ from, to, totalRecords }) => `Showing  ${from} to ${to} of ${totalRecords} entries`}
-                    />
-                </div>
-            </div>
+        <div>
+            <ComingSoonBoxed/>
         </div>
+        // <div className="panel px-0 border-white-light dark:border-[#1b2e4b]">
+        //     <div className="invoice-table">
+        //         <div className="mb-4.5 px-5 flex md:items-center md:flex-row flex-col gap-5">
+        //             <div className="flex items-center gap-2">
+        //                 <button type="button" className="btn btn-danger gap-2" onClick={() => deleteRow()}>
+        //                     <IconTrashLines />
+        //                     Delete
+        //                 </button>
+        //                 <Link to="/apps/invoice/add" className="btn btn-primary gap-2">
+        //                     <IconPlus />
+        //                     Add New
+        //                 </Link>
+        //             </div>
+        //             <div className="ltr:ml-auto rtl:mr-auto">
+        //                 <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        //             </div>
+        //         </div>
+
+        //         <div className="datatables pagination-padding">
+        //             <DataTable
+        //                 className="whitespace-nowrap table-hover invoice-table"
+        //                 records={records}
+        //                 columns={[
+        //                     {
+        //                         accessor: 'invoice',
+        //                         sortable: true,
+        //                         render: ({ invoice }) => (
+        //                             <NavLink to="/apps/invoice/preview">
+        //                                 <div className="text-primary underline hover:no-underline font-semibold">{`#${invoice}`}</div>
+        //                             </NavLink>
+        //                         ),
+        //                     },
+        //                     {
+        //                         accessor: 'name',
+        //                         sortable: true,
+        //                         render: ({ name, id }) => (
+        //                             <div className="flex items-center font-semibold">
+        //                                 <div className="p-0.5 bg-white-dark/30 rounded-full w-max ltr:mr-2 rtl:ml-2">
+        //                                     <img className="h-8 w-8 rounded-full object-cover" src={`/assets/images/profile-${id}.jpeg`} alt="" />
+        //                                 </div>
+        //                                 <div>{name}</div>
+        //                             </div>
+        //                         ),
+        //                     },
+        //                     {
+        //                         accessor: 'email',
+        //                         sortable: true,
+        //                     },
+        //                     {
+        //                         accessor: 'date',
+        //                         sortable: true,
+        //                     },
+        //                     {
+        //                         accessor: 'amount',
+        //                         sortable: true,
+        //                         titleClassName: 'text-right',
+        //                         render: ({ amount, id }) => <div className="text-right font-semibold">{`$${amount}`}</div>,
+        //                     },
+        //                     {
+        //                         accessor: 'status',
+        //                         sortable: true,
+        //                         render: ({ status }) => <span className={`badge badge-outline-${status.color} `}>{status.tooltip}</span>,
+        //                     },
+        //                     {
+        //                         accessor: 'action',
+        //                         title: 'Actions',
+        //                         sortable: false,
+        //                         textAlignment: 'center',
+        //                         render: ({ id }) => (
+        //                             <div className="flex gap-4 items-center w-max mx-auto">
+        //                                 <NavLink to="/apps/invoice/edit" className="flex hover:text-info">
+        //                                     <IconEdit className="w-4.5 h-4.5" />
+        //                                 </NavLink>
+        //                                 <NavLink to="/apps/invoice/preview" className="flex hover:text-primary">
+        //                                     <IconEye />
+        //                                 </NavLink>
+        //                                 {/* <NavLink to="" className="flex"> */}
+        //                                 <button type="button" className="flex hover:text-danger" onClick={(e) => deleteRow(id)}>
+        //                                     <IconTrashLines />
+        //                                 </button>
+        //                                 {/* </NavLink> */}
+        //                             </div>
+        //                         ),
+        //                     },
+        //                 ]}
+        //                 highlightOnHover
+        //                 totalRecords={initialRecords.length}
+        //                 recordsPerPage={pageSize}
+        //                 page={page}
+        //                 onPageChange={(p) => setPage(p)}
+        //                 recordsPerPageOptions={PAGE_SIZES}
+        //                 onRecordsPerPageChange={setPageSize}
+        //                 sortStatus={sortStatus}
+        //                 onSortStatusChange={setSortStatus}
+        //                 selectedRecords={selectedRecords}
+        //                 onSelectedRecordsChange={setSelectedRecords}
+        //                 paginationText={({ from, to, totalRecords }) => `Showing  ${from} to ${to} of ${totalRecords} entries`}
+        //             />
+        //         </div>
+        //     </div>
+        // </div>
     );
 };
 

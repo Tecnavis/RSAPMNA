@@ -134,7 +134,7 @@ if (!editData || editData.phone_number !== phone_number) {
                 }
 
                 const itemData = {
-                    name: name.toUpperCase(),
+                    name,
                     email,
                     address,
                     phone_number,

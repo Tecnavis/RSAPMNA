@@ -10,6 +10,8 @@ import axios from 'axios';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import ConfirmationModal from '../../pages/Users/ConfirmationModal/ConfirmationModal';
+import QRCode from 'qrcode.react';
+
 const style = {
     position: 'absolute' as 'absolute',
     top: '50%',
@@ -165,7 +167,8 @@ const ShowRoom = () => {
             ...showRoom,
             createdAt: timestamp,
             status: 'admin added showroom',
-            // Assuming Location field should contain the string along with lat and lng
+            showroomLink: generatedLink || '',
+            qrCode: generatedLink ? `QR code for: ${generatedLink}` : '', // Store a reference or placeholder for the QR code
             Location: `${showRoom.Location}, ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`,
         };
 
@@ -360,7 +363,7 @@ const ShowRoom = () => {
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
     const generateShowRoomLink = () => {
-        const baseUrl = 'http://localhost:5173/showrooms/showroom/showroomDetails'; // Your actual base URL
+        const baseUrl = 'http:rsapmna-de966/showrooms/showroom/showroomDetails'; // Your actual base URL
         const queryParams = new URLSearchParams({
             id: showRoom.ShowRoomId,
             name: showRoom.ShowRoom,
@@ -379,7 +382,7 @@ const ShowRoom = () => {
         const link = `${baseUrl}?${queryParams}`;
         setGeneratedLink(link);
     };
-    
+
     return (
         <div className="mb-5">
             <h5 className="font-semibold text-lg dark:text-white-light mb-5">Showroom Details</h5>
@@ -450,6 +453,9 @@ const ShowRoom = () => {
                             <th className="tableCell">Mobile Number</th>
                             <th className="tableCell">State</th>
                             <th className="tableCell">District</th>
+                            <th className="tableCell">QR</th>
+                            <th className="tableCell">Link</th>
+
                             <th className="tableCell">Available Services</th>
                             <th className="tableCell">
                                 Has Insurance
@@ -507,6 +513,17 @@ const ShowRoom = () => {
                                 <td className="tableCell" data-label="District">
                                     {room.district}
                                 </td>
+                                <td className="tableCell" data-label="generatedLink">
+                                    {room.showroomLink}
+                                </td>
+                                <td className="tableCell" data-label="QR">
+                                {room.showroomLink ? (
+                            <QRCode value={room.showroomLink} size={64} />
+                        ) : (
+                            <p>No QR Available</p>
+                        )}
+</td>                      
+                                
                                 <td className="tableCell" data-label="Available Services">
                                     {room.availableServices}
                                 </td>
@@ -891,13 +908,13 @@ const ShowRoom = () => {
 
                        
                       {/* Display the generated link */}
-                {generatedLink && (
-                    <div style={{ marginBottom: '16px', textAlign: 'center' }}>
-                        <Typography variant="body1">
-                            Generated Link: <a href={generatedLink} target="_blank" rel="noopener noreferrer">{generatedLink}</a>
-                        </Typography>
-                    </div>
-                )}
+               {generatedLink && (
+                <>
+                    <p>Scan the QR code below to view the showroom details:</p>
+                    <QRCode value={generatedLink} size={256} />
+                    <p>{generatedLink}</p>
+                </>
+            )}
                     <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
                     <Button
                         onClick={generateShowRoomLink}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Autocomplete, TextField, Box, Button, Typography } from '@mui/material';
+import { Autocomplete, TextField, Box, Button, Typography, IconButton } from '@mui/material';
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { GoogleMap, useGoogleMap } from '@react-google-maps/api';
 import ReactModal from 'react-modal';
@@ -885,10 +885,46 @@ const role =sessionStorage.getItem('role');
             name: `${name}, ${lat}, ${lng}`,
         };
     };
-
+     // --------------------------------
+    // http://localhost:3000
+    // https://rsanotification.onrender.com
+    const sendPushNotification = async (token, title, body, sound) => {
+        try {
+          const response = await fetch("https://rsanotification.onrender.com/send-notification", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              token: token,
+              title: title,
+              body: body,
+              sound: sound,
+            }),
+          });
+      
+          if (response.ok) {
+            console.log("Notification sent successfully");
+          } else {
+            console.log("Failed to send notification");
+          }
+        } catch (error) {
+          console.error("Error sending notification:", error);
+        }
+      };
     const addOrUpdateItem = async () => {
         if (validateForm()) {
             try {
+                const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
+                if (!selectedDriverData) {
+                    console.error('Selected driver does not exist in the database.');
+                    return;
+                }
+                const fcmToken = selectedDriverData.fcmToken;
+                if (!fcmToken) {
+                    console.error('FCM Token is missing for the selected driver:', selectedDriver);
+                    return;
+                }
                 const selectedDriverObject = drivers.find((driver) => driver.id === selectedDriver);
                 // const driverName = selectedDriverObject ? selectedDriverObject.driverName : ''  || 'Dummy Driver';
                 const driverName = selectedDriverObject?.driverName || 'Dummy Driver';
@@ -948,6 +984,8 @@ const role =sessionStorage.getItem('role');
                     insuranceAmountBody: insuranceAmountBody || '',
                     bodyShope: bodyShope || '',
                     paymentStatus: 'Not Paid',
+                    fcmToken: userFcmToken,
+
                 };
                 if (editData) {
                     if (role === 'admin') {
@@ -967,6 +1005,7 @@ const role =sessionStorage.getItem('role');
                     console.log('Document written with ID: ', docRef.id);
                     console.log('Document added');
                 }
+                sendPushNotification(fcmToken, "Booking Notification", "Your booking has been updated", "alert_notification");
 
                 navigate('/bookings/newbooking');
             } catch (e) {
@@ -1577,14 +1616,21 @@ const role =sessionStorage.getItem('role');
 
               <div className={styles.formGroup}>
               <div className="mt-4">
-                                <MapView />
+                                {/* <MapView /> */}
                             </div>
 <div className='mt-4'>
-<MapWithRoutes 
-                baseLocation={baseLocation} 
-                pickupLocation={pickupLocation} 
-                dropoffLocation={dropoffLocation} 
-            />
+<div className={styles.inputWithIcon}>
+    <a
+        href={`https://www.google.com/maps/dir/?api=1&origin=${baseLocation?.lat},${baseLocation?.lng}&destination=${baseLocation?.lat},${baseLocation?.lng}&waypoints=${pickupLocation?.lat},${pickupLocation?.lng}|${dropoffLocation?.lat},${dropoffLocation?.lng}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={styles.iconWrapper}
+    >
+        <IconMapPin />
+    </a>
+</div>
+
+
 </div>
               </div>
               <div className={styles.formGroup}>

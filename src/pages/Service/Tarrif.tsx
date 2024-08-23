@@ -1,8 +1,9 @@
 import React from 'react'
+import ComingSoonBoxed from '../Pages/ComingSoonBoxed'
 
 const Tarrif = () => {
   return (
-    <div>Tarrif</div>
+    <div><ComingSoonBoxed/></div>
   )
 }
 

@@ -147,3 +147,67 @@
         width: 48%;
     }
 }
+/* ShowRoomDetails.css */
+
+.showroom-details-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    font-family: 'Arial', sans-serif;
+}
+
+.showroom-header {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.showroom-header h1 {
+    font-size: 2.5em;
+    margin: 0;
+    font-weight: 700;
+}
+
+.showroom-details {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    font-size: 1.1em;
+    color: #555;
+}
+
+.showroom-details img {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.showroom-details p {
+    margin: 0;
+}
+
+.showroom-details p strong {
+    color: #333;
+}
+
+.showroom-details-item {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #ddd;
+    padding: 10px 0;
+}
+
+.showroom-details-item:last-child {
+    border-bottom: none;
+}
+
+.showroom-footer {
+    text-align: center;
+    margin-top: 20px;
+    color: #888;
+    font-size: 0.9em;
+}

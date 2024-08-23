@@ -1,8 +1,9 @@
 import React from 'react'
+import ComingSoonBoxed from '../../Pages/ComingSoonBoxed'
 
 const ComCusOutstanding = () => {
   return (
-    <div>ComCusOutstanding</div>
+    <div><ComingSoonBoxed/></div>
   )
 }
 
