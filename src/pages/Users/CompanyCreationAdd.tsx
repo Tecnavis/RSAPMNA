@@ -35,6 +35,7 @@ const [phoneError, setPhoneError] = useState('');
     const [confirmPasswordError, setConfirmPasswordError] = useState('');
     const [serviceTypeError, setServiceTypeError] = useState('');
     const [imagePreview, setImagePreview] = useState('');
+    const [driverNameError, setDriverNameError] = useState('');
 
     const storage = getStorage();
     const uid = sessionStorage.getItem('uid')
@@ -196,7 +197,14 @@ const [phoneError, setPhoneError] = useState('');
 
     const addOrUpdateItem = async () => {
         let isValid = true;
+        if (!driverName) {
+            setDriverNameError('Driver name is required');
+            isValid = false;
+        } else {
+            setDriverNameError('');
+        }
 
+      
         let isPhoneUnique = true;
         if (!editData || editData.phone !== phone) {
             isPhoneUnique = await checkPhoneUnique(phone);
@@ -325,6 +333,8 @@ const [phoneError, setPhoneError] = useState('');
                                 <div>
                                     <label htmlFor="driverName">Driver Name</label>
                                     <input id="driverName" type="text" placeholder="Enter driver Name" className="form-input" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
+                                    {driverNameError && <span className={`${styles.error}`}>{driverNameError}</span>}
+
                                 </div>
                                 {/* <div>
                                     <label htmlFor="companyName">Section</label>
@@ -344,13 +354,14 @@ const [phoneError, setPhoneError] = useState('');
                                 </div>
                                 <div>
                                     <label htmlFor="phone">Phone</label>
-                                    <input id="phone" type="phone" placeholder="" className="form-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                                    <input id="phone" type="number" placeholder="phone number" className={`${styles.formInput} form-input`} value={phone} onChange={(e) => setPhone(e.target.value)} />
+                                    {phoneError && <span className={`${styles.error}`}>{phoneError}</span>}
                                 </div>
                                 
 
                                 <div>
                                     <label htmlFor="personalphone">Personal PhoneNumber</label>
-                                    <input id="personalphone" type="personalphone" className="form-input" value={personalphone} onChange={(e) => setPersonalPhone(e.target.value)} />
+                                    <input id="personalphone" type="personalphone" className={`${styles.formInput} form-input`} value={personalphone} onChange={(e) => setPersonalPhone(e.target.value)} />
                                 </div>
                                 <div>
                                     <label htmlFor="password">Password</label>

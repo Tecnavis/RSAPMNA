@@ -37,13 +37,6 @@ const CompanyAdd = () => {
     const [serviceTypeError, setServiceTypeError] = useState('');
     const [imagePreview, setImagePreview] = useState('');
 
-    const togglePasswordVisibility = () => {
-        setShowPassword(!showPassword);
-    };
-
-    const toggleConfirmPasswordVisibility = () => {
-        setShowConfirmPassword(!showConfirmPassword);
-    };
 
     const storage = getStorage();
     const db = getFirestore();

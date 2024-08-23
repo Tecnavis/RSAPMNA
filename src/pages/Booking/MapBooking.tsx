@@ -106,7 +106,7 @@ const MapBooking = ({ activeForm }) => {
     const [manualInput, setManualInput] = useState(pickupLocation ? pickupLocation.name : '');
     const [disableFields, setDisableFields] = useState(false); // State to control field disabling
     const [pickupDistances, setPickupDistances] = useState([]);
-    console.log('totalSalary', totalSalary);
+    const [userFcmToken, setUserFcmToken] = useState<string | null>(null);
     const [errors, setErrors] = useState({});
     const [serviceCategory, setServiceCategory] = useState('');
     const [availableServices, setAvailableServices] = useState('');
@@ -1614,25 +1614,21 @@ const role =sessionStorage.getItem('role');
                   />
               </div>
 
-              <div className={styles.formGroup}>
-              <div className="mt-4">
-                                {/* <MapView /> */}
-                            </div>
-<div className='mt-4'>
+              {/* <div className={styles.formGroup}> */}
+              
+{/* <div className='mt-4'>
 <div className={styles.inputWithIcon}>
-    <a
-        href={`https://www.google.com/maps/dir/?api=1&origin=${baseLocation?.lat},${baseLocation?.lng}&destination=${baseLocation?.lat},${baseLocation?.lng}&waypoints=${pickupLocation?.lat},${pickupLocation?.lng}|${dropoffLocation?.lat},${dropoffLocation?.lng}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={styles.iconWrapper}
-    >
-        <IconMapPin />
-    </a>
-</div>
-
-
-</div>
-              </div>
+                        <a
+                            href={`https://www.google.com/maps/dir/?api=1&origin=${baseLocation?.lat},${baseLocation?.lng}&destination=${pickupLocation?.lat},${pickupLocation?.lng}&&origin=${pickupLocation?.lat},${pickupLocation?.lng}&destination=${dropoffLocation?.lat},${dropoffLocation?.lng}&&origin=${dropoffLocation?.lat},${dropoffLocation?.lng}&destination=${baseLocation?.lat},${dropoffLocation?.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.iconWrapper}
+                        >
+                            <IconMapPin />
+                        </a>
+                    </div>
+</div> */}
+              {/* </div> */}
               <div className={styles.formGroup}>
                   <label htmlFor="distance" className={styles.label}>
                   Distance (KM)
