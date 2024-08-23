@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './ShowroomModal.css';
 import { collection, addDoc, getFirestore, onSnapshot } from 'firebase/firestore';
-import { Autocomplete, TextField, Typography } from '@mui/material';
+import { Autocomplete, IconButton, TextField, Typography } from '@mui/material';
 import axios from 'axios';
+import IconMapPin from '../../components/Icon/IconMapPin';
 
 const ShowroomModal = ({ updateShowroomLocation , onClose}) => {
     const [showRoom, setShowRoom] = useState('');
@@ -159,6 +160,10 @@ const ShowroomModal = ({ updateShowroomLocation , onClose}) => {
             onClose(); // Call the onClose function passed from the parent component
         }
     };
+    const openGoogleMaps = () => {
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(showRoom)}`;
+        window.open(googleMapsUrl, '_blank');
+    };
     return (
         <div className="showroom-modal">
             <form onSubmit={handleSubmit} className="showroom-form">
@@ -174,6 +179,9 @@ const ShowroomModal = ({ updateShowroomLocation , onClose}) => {
                         isOptionEqualToValue={(option, value) => option.label === value.label}
                         renderInput={(params) => <TextField {...params} label="Location" variant="outlined" />}
                     />
+                     <IconButton onClick={openGoogleMaps} className="icon-button">
+                            <IconMapPin />
+                        </IconButton>
                 </div>
                 <div className="form-group">
                     <label htmlFor="lat">Latitude:</label>

@@ -15,6 +15,7 @@ import ReactSelect from 'react-select';
 import { generateToken, messaging } from '../../config/config';
 import { getMessaging, onMessage } from 'firebase/messaging';
 import axios from 'axios';
+import BaseLocationWithout from '../BaseLocation/BaseLocationWithout';
 interface Showroom {
     id: string;
     name: string;
@@ -907,6 +908,10 @@ const WithoutMapBooking = ({ activeForm }) => {
         event.preventDefault();
         setShowShowroomModal(true);
     };
+    const openGoogleMaps = () => {
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pickupLocation)}`;
+        window.open(googleMapsUrl, '_blank');
+    };
     return (
         <div className={styles.bookingFormContainer}>
             <div className={styles.dateTime}>{currentDateTime}</div>
@@ -968,43 +973,44 @@ const WithoutMapBooking = ({ activeForm }) => {
                     </div>
                 )}
 
-                <div className={styles.formGroup}>
-                    <label htmlFor="pickupLocation" className={styles.label}>
-                        Pickup Location
-                    </label>
-                    <div className={styles.inputContainer}>
-                        <input
-                            type="text"
-                            id="pickupLocation"
-                            name="pickupLocation"
-                            className={`${styles.formControl} ${styles.smallInput}`}
-                            placeholder="Pickup Location"
-                            onChange={handleLocationChange}
-                            value={manualInput}
-                        />
-                        <input
-                            type="text"
-                            id="latLng"
-                            name="latLng"
-                            className={`${styles.formControl} ${styles.largeInput}`}
-                            placeholder="Latitude, Longitude"
-                            value={pickupLocation.lat && pickupLocation.lng ? `${pickupLocation.lat}, ${pickupLocation.lng}` : ''}
-                            onChange={(e) => {
-                                const [lat, lng] = e.target.value.split(',').map((coord) => coord.trim());
-                                handleManualChange('lat', lat);
-                                handleManualChange('lng', lng);
-                            }}
-                        />
-                        <a
-                            href={`https://www.google.co.in/maps/@${pickupLocation?.lat || '11.0527369'},${pickupLocation?.lng || '76.0747136'},15z?entry=ttu`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.mapButton}
-                        >
-                            <IconMapPin />
-                        </a>
-                    </div>
-                </div>
+<div className={styles.formGroup}>
+    <label htmlFor="pickupLocation" className={styles.label}>
+        Pickup Location
+    </label>
+    <div className={styles.inputContainer}>
+        <input
+            type="text"
+            id="pickupLocation"
+            name="pickupLocation"
+            className={`${styles.formControl} ${styles.smallInput}`}
+            placeholder="Pickup Location"
+            onChange={handleLocationChange}
+            value={manualInput}
+        />
+        <input
+            type="text"
+            id="latLng"
+            name="latLng"
+            className={`${styles.formControl} ${styles.largeInput}`}
+            placeholder="Latitude, Longitude"
+            value={pickupLocation.lat && pickupLocation.lng ? `${pickupLocation.lat}, ${pickupLocation.lng}` : ''}
+            onChange={(e) => {
+                const [lat, lng] = e.target.value.split(',').map((coord) => coord.trim());
+                handleManualChange('lat', parseFloat(lat));
+                handleManualChange('lng', parseFloat(lng));
+            }}
+        />
+        <a
+            href={`https://www.google.com/maps/search/?api=1&query=${pickupLocation.lat},${pickupLocation.lng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.mapButton}
+        >
+            <IconMapPin />
+        </a>
+    </div>
+</div>
+
 
                 <div className={styles.formGroup}>
                     <label htmlFor="baseLocation" className={styles.label}>
@@ -1088,14 +1094,14 @@ const WithoutMapBooking = ({ activeForm }) => {
                             value={dropoffLocation && dropoffLocation.lng ? dropoffLocation.lng : ''}
                         />
 
-                        <a
+                        {/* <a
                             href={`https://www.google.co.in/maps/@${dropoffLocation?.lat || '11.0527369'},${dropoffLocation?.lng || '76.0747136'},15z?entry=ttu`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className={styles.mapButton}
                         >
                             <IconMapPin />
-                        </a>
+                        </a> */}
                     </div>
                 </div>
 

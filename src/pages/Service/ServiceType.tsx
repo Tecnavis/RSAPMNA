@@ -109,7 +109,7 @@ function ServiceType() {
         }
 
         const newService = {
-            name: newServiceType.toUpperCase(),
+            name: newServiceType,
             salary: newSalary,
             basicSalaryKM: newBasicSalaryKM,
             salaryPerKM: newSalaryPerKM,
@@ -138,7 +138,7 @@ function ServiceType() {
 
         const { id } = currentService;
         const updatedService = {
-            name: newServiceType.toUpperCase(),
+            name: newServiceType,
             salary: newSalary,
             basicSalaryKM: newBasicSalaryKM,
             salaryPerKM: newSalaryPerKM,

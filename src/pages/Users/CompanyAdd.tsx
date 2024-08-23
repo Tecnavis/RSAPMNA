@@ -290,7 +290,7 @@ const CompanyAdd = () => {
             }
 
             const itemData = {
-                driverName: driverName.toUpperCase(),
+                driverName,
                 idnumber,
                 companyName,
                 advancePayment,
