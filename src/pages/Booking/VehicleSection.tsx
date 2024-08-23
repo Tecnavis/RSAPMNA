@@ -26,9 +26,10 @@ const VehicleSection = ({
     const adjustmentApplied = useRef(false);
     const uid = sessionStorage.getItem('uid');
     //    ------------------------------------------------------------
+    const db = getFirestore();
+
     useEffect(() => {
         const fetchInsuranceAmountBody = async () => {
-            const db = getFirestore();
             const showroomRef = collection(db, `user/${uid}/showroom`);
             const q = query(showroomRef, where('Location', '==', showroomLocation));
             const querySnapshot = await getDocs(q);
@@ -109,24 +110,36 @@ const VehicleSection = ({
         const { value } = e.target;
         onAdjustValueChange(value);
     };
-    const applyAdjustment = () => {
+    const applyAdjustment = (event) => {
+        // Prevent default form behavior if applicable
+        if (event) event.preventDefault();
+    
         const adjustedSalary = parseFloat(adjustValue);
-
+    
         if (adjustedSalary > updatedTotalSalary) {
-            // setUpdatedTotalSalary(adjustedSalary);
+            // Call the function to update the total salary
             onUpdateTotalSalary(adjustedSalary);
             adjustmentApplied.current = true;
         } else {
-            const password = prompt('Enter password to apply the adjustment: Password=Adjust');
-            if (password === 'Adjust') {
-                // setUpdatedTotalSalary(adjustedSalary);
-                onUpdateTotalSalary(adjustedSalary);
-                adjustmentApplied.current = true;
+            // Show confirmation dialog
+            const confirmAction = window.confirm('Adjusting salary below the current total. Are you sure?');
+            
+            if (confirmAction) {
+                const password = prompt('Enter password to apply the adjustment: Password=Adjust');
+                
+                if (password === 'Adjust') {
+                    // Call the function to update the total salary
+                    onUpdateTotalSalary(adjustedSalary);
+                    adjustmentApplied.current = true;
+                } else {
+                    alert('Incorrect password. Adjustment not applied.');
+                }
             } else {
-                alert('Incorrect password. Adjustment not applied.');
+                alert('Adjustment not applied.');
             }
         }
     };
+    
 
     return (
         <div className="mb-5">

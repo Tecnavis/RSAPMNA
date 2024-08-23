@@ -12,8 +12,8 @@ import ShowroomModalWithout from './ShowroomModalWithout';
 import styles from './withoutMap.module.css';
 import ReactSelect from 'react-select';
 
-import { generateToken, messaging } from '../../config/config';
-import { getMessaging, onMessage } from 'firebase/messaging';
+// import { generateToken, messaging } from '../../config/config';
+// import { getMessaging, onMessage } from 'firebase/messaging';
 import axios from 'axios';
 import BaseLocationWithout from '../BaseLocation/BaseLocationWithout';
 interface Showroom {
@@ -187,12 +187,12 @@ const WithoutMapBooking = ({ activeForm }) => {
             setDisableFields(false);
         }
     }, [state]);
-    useEffect(() => {
-        generateToken();
-        onMessage(messaging, (payload) => {
-            console.log(payload);
-        });
-    }, []);
+    // useEffect(() => {
+    //     generateToken();
+    //     onMessage(messaging, (payload) => {
+    //         console.log(payload);
+    //     });
+    // }, []);
 
     
     useEffect(() => {
@@ -412,33 +412,54 @@ const WithoutMapBooking = ({ activeForm }) => {
             case 'updatedTotalSalary':
                 setUpdatedTotalSalary(value || '');
                 break;
-            case 'dis1':
-                setDis1(value || 0);
-                break;
-            case 'dis2':
-                setDis2(value || 0);
-                break;
-            case 'dis3':
-                setDis3(value || 0);
-                break;
-            case 'distance':
-                const totalDistance = parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3);
-
-                setDistance(totalDistance || 0); // Default to 0 if totalDistance is NaN
-                break;
+                case 'dis1':
+                    const parsedDis1 = parseFloat(value) || 0;
+                    setDis1(parsedDis1);
+                    setDistance(parsedDis1 + dis2 + dis3);
+                    break;
+                case 'dis2':
+                    const parsedDis2 = parseFloat(value) || 0;
+                    setDis2(parsedDis2);
+                    setDistance(dis1 + parsedDis2 + dis3);
+                    break;
+                case 'dis3':
+                    const parsedDis3 = parseFloat(value) || 0;
+                    setDis3(parsedDis3);
+                    setDistance(dis1 + dis2 + parsedDis3);
+                    break;
+                case 'distance':
+                    setDistance(value || 0); // Default to 0 if totalDistance is NaN
+                    break;
             case 'serviceVehicle':
                 setServiceVehicle(value);
                 break;
-            case 'selectedDriver':
-                setSelectedDriver(value || '');
-
-                const selectedDriverData = drivers.find((driver) => driver.id === value);
-                if (selectedDriverData) {
-                    const calculatedSalary = calculateTotalSalary(serviceDetails.salary, distance, serviceDetails.basicSalaryKM, serviceDetails.salaryPerKM);
-
-                    setTotalSalary(calculatedSalary);
-                }
-                break;
+                case 'selectedDriver':
+                    console.log("Selected Driver ID:", value);
+                
+                    setSelectedDriver(value || '');
+                
+                    const selectedDriverData = drivers.find((driver) => driver.id === value);
+                    console.log("Selected Driver Data:", selectedDriverData);
+                
+                    if (selectedDriverData) {
+                        console.log("Service Details for Salary Calculation:", serviceDetails);
+                        console.log("Distance for Salary Calculation:", distance);
+                
+                        const calculatedSalary = calculateTotalSalary(
+                            serviceDetails.salary,
+                            distance,
+                            serviceDetails.basicSalaryKM,
+                            serviceDetails.salaryPerKM
+                        );
+                
+                        console.log("Calculated Salary for Selected Driver:", calculatedSalary);
+                
+                        setTotalSalary(calculatedSalary);
+                    } else {
+                        console.log("No driver data found for the selected driver.");
+                    }
+                    break;
+                
 
             case 'dropoffLocation':
                 if (typeof value === 'string') {
@@ -660,6 +681,7 @@ const WithoutMapBooking = ({ activeForm }) => {
         basicSalaryKM = parseFloat(basicSalaryKM);
         salaryPerKM = parseFloat(salaryPerKM);
         salary = parseFloat(salary);
+        console.log("totalDriverDistance",totalDriverDistance)
 
         if (totalDriverDistance > basicSalaryKM) {
             return salary + (totalDriverDistance - basicSalaryKM) * salaryPerKM;
@@ -713,7 +735,7 @@ const WithoutMapBooking = ({ activeForm }) => {
         const numericTotalDistance = Number(totalDistance) || 0;
         const numericKmValueNumeric = Number(basicSalaryKM) || 0;
         const numericPerKmValueNumeric = Number(salaryPerKM) || 0;
-
+console.log("numericTotalDistance",numericTotalDistance)
         if (numericTotalDistance > numericKmValueNumeric) {
             return numericBasicSalary + (numericTotalDistance - numericKmValueNumeric) * numericPerKmValueNumeric;
         } else {
@@ -723,19 +745,38 @@ const WithoutMapBooking = ({ activeForm }) => {
 
     useEffect(() => {
         if (drivers.length > 0) {
+            console.log("Drivers List:", drivers);
+            console.log("Distancew:", distance);
+            console.log("Service Details:", serviceDetails);
+    
+            // Calculate total distances for each driver
             const totalDistances = drivers.map((driver) => {
+                console.log(`Calculating total distance for driver ${driver.id}`);
                 return { driverId: driver.id, totalDistance: distance };
             });
-
+            console.log("Total Distances:", totalDistances);
+    
+            // Calculate total salaries for each driver
             const totalSalaries = drivers.map((driver) => {
-                return parseFloat(calculateTotalSalary(serviceDetails.salary, distance, serviceDetails.basicSalaryKM, serviceDetails.salaryPerKM).toFixed(2));
+                const salary = parseFloat(
+                    calculateTotalSalary(
+                        serviceDetails.salary,
+                        distance,
+                        serviceDetails.basicSalaryKM,
+                        serviceDetails.salaryPerKM
+                    ).toFixed(2)
+                );
+                console.log(`Salary for driver ${driver.id}:`, salary);
+                return salary;
             });
-
-            const totalSalary = totalSalaries.reduce((acc, salary) => salary, 0);
-
+            console.log("Total Salaries:", totalSalaries);
+    
+            // Sum all salaries to get the total salary
+            const totalSalary = totalSalaries.reduce((acc, salary) => acc + salary, 0);
+            console.log("Total Salary:", totalSalary);
+    
             setTotalDistances(totalDistances); // Set totalDistances state
             setTotalSalary(totalSalary);
-            // setUpdatedTotalSalary(totalSalary);
         }
     }, [drivers, serviceDetails, distance]);
     useEffect(() => {
@@ -1105,71 +1146,64 @@ const WithoutMapBooking = ({ activeForm }) => {
                     </div>
                 </div>
 
-                <div className={styles.formGroup}>
-                    <label htmlFor="dis1" className={styles.label}>
-                        Distance 1 (Base to Pickup)
-                    </label>
-                    <div className={styles.inputWithIcon}>
-                        <input id="dis1" type="text" placeholder="Enter Distance 1" onChange={(e) => setDis1(e.target.value)} value={dis1} className={styles.formControl} />
-                        <a
-                            href={`https://www.google.com/maps/dir/?api=1&origin=${baseLocation?.lat},${baseLocation?.lng}&destination=${pickupLocation?.lat},${pickupLocation?.lng}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.iconWrapper}
-                        >
-                            <IconMapPin />
-                        </a>
-                    </div>
-                </div>
-
-                <div className={styles.formGroup}>
-                    <label htmlFor="dis2" className={styles.label}>
-                        Distance 2 (Pickup to Dropoff)
-                    </label>
-                    <div className={styles.inputWithIcon}>
-                        <input id="dis2" type="text" placeholder="Enter Distance 2" onChange={(e) => setDis2(e.target.value)} value={dis2} className={styles.formControl} />
-                        <a
-                            href={`https://www.google.com/maps/dir/?api=1&origin=${pickupLocation?.lat},${pickupLocation?.lng}&destination=${dropoffLocation?.lat},${dropoffLocation?.lng}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.iconWrapper}
-                        >
-                            <IconMapPin />
-                        </a>
-                    </div>
-                </div>
-
-                <div className={styles.formGroup}>
-                    <label htmlFor="dis3" className={styles.label}>
-                        Distance 3 (Dropoff to Base)
-                    </label>
-                    <div className={styles.inputWithIcon}>
-                        <input id="dis3" type="text" placeholder="Enter Distance 3" onChange={(e) => setDis3(e.target.value)} value={dis3} className={styles.formControl} />
-                        <a
-                            href={`https://www.google.com/maps/dir/?api=1&origin=${dropoffLocation?.lat},${dropoffLocation?.lng}&destination=${baseLocation?.lat},${baseLocation?.lng}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.iconWrapper}
-                        >
-                            <IconMapPin />
-                        </a>
-                    </div>
-                </div>
-
-                <div className={styles.formGroup}>
-                    <label htmlFor="distance" className={styles.label}>
-                        Distance (KM)
-                    </label>
-                    <input
-                        id="distance"
-                        type="number"
-                        name="distance"
-                        placeholder="Dropoff Location"
-                        onChange={(e) => handleInputChange('distance', e.target.value)}
-                        value={parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3)}
-                        className={styles.formControl}
-                    />
-                </div>
+                <div>
+        <div className={styles.formGroup}>
+            <label htmlFor="dis1" className={styles.label}>
+                Distance 1 (KM)
+            </label>
+            <input
+                id="dis1"
+                type="number"
+                name="dis1"
+                placeholder="Distance 1"
+                onChange={(e) => handleInputChange('dis1', e.target.value)}
+                value={dis1}
+                className={styles.formControl}
+            />
+        </div>
+        <div className={styles.formGroup}>
+            <label htmlFor="dis2" className={styles.label}>
+                Distance 2 (KM)
+            </label>
+            <input
+                id="dis2"
+                type="number"
+                name="dis2"
+                placeholder="Distance 2"
+                onChange={(e) => handleInputChange('dis2', e.target.value)}
+                value={dis2}
+                className={styles.formControl}
+            />
+        </div>
+        <div className={styles.formGroup}>
+            <label htmlFor="dis3" className={styles.label}>
+                Distance 3 (KM)
+            </label>
+            <input
+                id="dis3"
+                type="number"
+                name="dis3"
+                placeholder="Distance 3"
+                onChange={(e) => handleInputChange('dis3', e.target.value)}
+                value={dis3}
+                className={styles.formControl}
+            />
+        </div>
+        <div className={styles.formGroup}>
+            <label htmlFor="distance" className={styles.label}>
+                Total Distance (KM)
+            </label>
+            <input
+                id="distance"
+                type="number"
+                name="distance"
+                placeholder="Total Distance"
+                value={distance}
+                readOnly
+                className={styles.formControl}
+            />
+        </div>
+    </div>
 
                 <div className={styles.trappedLocationContainer}>
                     <label htmlFor="trappedLocation" className={styles.trappedLocationLabel}>
