@@ -17,9 +17,25 @@ const DriverAdd = () => {
     const [personalphone, setPersonalPhone] = useState('');
     const [salaryPerKm, setSalaryPerKm] = useState({});
     const [basicSalaryKm, setBasicSalaryKm] = useState({});
-    const [editData, setEditData] = useState(null);
-    const [showTable, setShowTable] = useState(false);
-    const [selectedServices, setSelectedServices] = useState([]);
+    type EditData = {
+        id: string;
+        phone: string;
+        driverName?: string;
+        idnumber?: string;
+        password?: string;
+        confirmPassword?: string;
+        serviceVehicle?: string;
+        personalphone?: string;
+        salaryPerKm?: string;
+        basicSalaryKm?: string;
+        selectedServices?: string[];
+        basicSalaries?: { [key: string]: string };
+        profileImageUrl?: string;
+    };
+    
+    const [editData, setEditData] = useState<EditData | null>(null);
+        const [showTable, setShowTable] = useState(false);
+    const [selectedServices, setSelectedServices] = useState<string[]>([]);
     const [basicSalaries, setBasicSalaries] = useState({}); // Ensure basicSalaries is defined here
     const [profileImage, setProfileImage] = useState(null); // State to store profile image file
     const [showPassword, setShowPassword] = useState(false);
@@ -62,25 +78,28 @@ const DriverAdd = () => {
         setConfirmPassword(e.target.value);
     };
 
-    const handleBasicSalaryChange = (service, e) => {
+    const handleBasicSalaryChange = (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedSalaries = { ...basicSalaries, [service]: e.target.value };
         setBasicSalaries(updatedSalaries);
     };
-    const handleBasicSalaryKmChange = (service, e) => {
+    
+    const handleBasicSalaryKmChange = (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedKm = { ...basicSalaryKm, [service]: e.target.value };
         setBasicSalaryKm(updatedKm);
     };
-    const handleSalaryPerKmChange = (service, e) => {
+    
+    const handleSalaryPerKmChange = (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedsalaryPerKm = { ...salaryPerKm, [service]: e.target.value };
         setSalaryPerKm(updatedsalaryPerKm);
     };
-
-    const handleServiceVehicle = (service, e) => {
+    
+    const handleServiceVehicle = (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedServiceVehicle = { ...serviceVehicle, [service]: e.target.value };
         setServiceVehicle(updatedServiceVehicle);
     };
-    const handleProfileImageChange = (e) => {
-        const file = e.target.files[0];
+    
+    const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (file) {
             setProfileImage(file);
             setImagePreview(URL.createObjectURL(file));
@@ -141,7 +160,7 @@ const DriverAdd = () => {
         );
     };
 
-    const handleCheckboxChange = (value, isChecked) => {
+    const handleCheckboxChange = (value: string, isChecked: boolean) => {
         if (isChecked) {
             setSelectedServices([...selectedServices, value]);
         } else {
@@ -174,22 +193,21 @@ const DriverAdd = () => {
             // setAdvancePayment(state.editData.advancePayment || '');
         }
     }, [state]);
-    const checkPhoneUnique = async (phone) => {
+    const checkPhoneUnique = async (phone: string): Promise<boolean> => {
         const db = getFirestore();
         const uid = sessionStorage.getItem('uid');
         const driversRef = collection(db, `user/${uid}/driver`);
         const querySnapshot = await getDocs(driversRef);
         let isUnique = true;
-
+    
         querySnapshot.forEach((doc) => {
             if (doc.data().phone === phone) {
                 isUnique = false;
             }
         });
-
+    
         return isUnique;
     };
-
     const addOrUpdateItem = async () => {
         let isValid = true;
 
@@ -243,8 +261,8 @@ const DriverAdd = () => {
                 const storageRef = ref(storage, `profile_images/${profileImage.name}`);
                 await uploadBytes(storageRef, profileImage);
                 profileImageUrl = await getDownloadURL(storageRef);
-            } else if (editData && editData.profileImage) {
-                profileImageUrl = editData.profileImage;
+            } else if (editData?.profileImageUrl) {
+                profileImageUrl = editData.profileImageUrl;
             }
 
             const itemData = {

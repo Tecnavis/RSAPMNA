@@ -7,7 +7,18 @@ import Tippy from '@tippyjs/react';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import { useNavigate } from 'react-router-dom';
+interface BaseLocationItem {
+    id: string;
+    name: string;
+    lat: string;
+    lng: string;
+}
 
+interface AutocompleteOption {
+    label: string;
+    lat: string;
+    lng: string;
+}
 const BaseLocation = () => {
     const [baseLocation, setBaseLocation] = useState(null);
     const [baseOptions, setBaseOptions] = useState([]);
