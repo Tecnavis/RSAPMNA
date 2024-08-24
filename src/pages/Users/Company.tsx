@@ -9,14 +9,26 @@ import { getFirestore, collection, getDocs, where, query, doc, updateDoc } from 
 import IconMenuScrumboard from '../../components/Icon/Menu/IconMenuScrumboard';
 import defaultImage from '../../assets/css/images/user-front-side-with-white-background.jpg'
 import ConfirmationModal from './ConfirmationModal/ConfirmationModal'; // Import the modal component
-const Company = () => {
-    const [items, setItems] = useState([] as any);
+interface Item {
+    id: string;
+    driverName: string;
+    idnumber: string;
+    phone: string;
+    selectedServices: Record<string, string>;
+    basicSalaries: Record<string, number>;
+    profileImageUrl?: string;
+    companyName?: string;
+    status?: string;
+}
+
+const Company: React.FC = () => {
+    const [items, setItems] = useState<Item[]>([]);
     const db = getFirestore();
     const navigate = useNavigate();
-    const uid = sessionStorage.getItem('uid')
+    const uid = sessionStorage.getItem('uid');
     const [isModalVisible, setModalVisible] = useState(false);
-    const [itemToDelete, setItemToDelete] = useState(null);
-    const role =sessionStorage.getItem('role');
+    const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
+    const role = sessionStorage.getItem('role');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -59,7 +71,7 @@ const Company = () => {
         fetchData().catch(console.error); // Correctly call fetchData inside useEffect
     }, []);
    
-    const handleDelete = async (userId) => {
+    const handleDelete = async (userId: string) => {
         try {
             const userDoc = doc(db, `user/${uid}/driver`, userId);
                     await updateDoc(userDoc, { status: 'deleted from UI' });
@@ -71,7 +83,7 @@ const Company = () => {
         }
         setModalVisible(false);
     };
-    const openDeleteModal = (item) => {
+    const openDeleteModal = (item: Item) => {
         setItemToDelete(item);
         setModalVisible(true);
     };
@@ -81,7 +93,7 @@ const Company = () => {
     };
 
     
-    const handleEdit = (item) => {
+    const handleEdit = (item: Item) => {
         navigate(`/users/company-add/${item.id}`, { state: { editData: item } });
     };
 

@@ -11,9 +11,6 @@ import IconMapPin from '../../components/Icon/IconMapPin';
 import ShowroomModalWithout from './ShowroomModalWithout';
 import styles from './withoutMap.module.css';
 import ReactSelect from 'react-select';
-
-// import { generateToken, messaging } from '../../config/config';
-// import { getMessaging, onMessage } from 'firebase/messaging';
 import axios from 'axios';
 import BaseLocationWithout from '../BaseLocation/BaseLocationWithout';
 interface Showroom {
@@ -1147,7 +1144,7 @@ console.log("numericTotalDistance",numericTotalDistance)
                 </div>
 
                 <div>
-        <div className={styles.formGroup}>
+        {/* <div className={styles.formGroup}>
             <label htmlFor="dis1" className={styles.label}>
                 Distance 1 (KM)
             </label>
@@ -1160,35 +1157,56 @@ console.log("numericTotalDistance",numericTotalDistance)
                 value={dis1}
                 className={styles.formControl}
             />
-        </div>
+        </div> */}
         <div className={styles.formGroup}>
-            <label htmlFor="dis2" className={styles.label}>
-                Distance 2 (KM)
-            </label>
-            <input
-                id="dis2"
-                type="number"
-                name="dis2"
-                placeholder="Distance 2"
-                onChange={(e) => handleInputChange('dis2', e.target.value)}
-                value={dis2}
-                className={styles.formControl}
-            />
-        </div>
-        <div className={styles.formGroup}>
-            <label htmlFor="dis3" className={styles.label}>
-                Distance 3 (KM)
-            </label>
-            <input
-                id="dis3"
-                type="number"
-                name="dis3"
-                placeholder="Distance 3"
-                onChange={(e) => handleInputChange('dis3', e.target.value)}
-                value={dis3}
-                className={styles.formControl}
-            />
-        </div>
+                    <label htmlFor="dis1" className={styles.label}>
+                        Distance 1 (Base to Pickup)
+                    </label>
+                    <div className={styles.inputWithIcon}>
+                        <input id="dis1" type="number" placeholder="Enter Distance 1" onChange={(e) => handleInputChange('dis1', e.target.value)} value={dis1} className={styles.formControl} />
+                        <a
+                            href={`https://www.google.com/maps/dir/?api=1&origin=${baseLocation?.lat},${baseLocation?.lng}&destination=${pickupLocation?.lat},${pickupLocation?.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.iconWrapper}
+                        >
+                            <IconMapPin />
+                        </a>
+                    </div>
+                </div>
+                <div className={styles.formGroup}>
+                    <label htmlFor="dis2" className={styles.label}>
+                        Distance 2 (Pickup to Dropoff)
+                    </label>
+                    <div className={styles.inputWithIcon}>
+                        <input id="dis2" type="text" placeholder="Enter Distance 2" onChange={(e) => handleInputChange('dis2', e.target.value)} value={dis2} className={styles.formControl} />
+                        <a
+                            href={`https://www.google.com/maps/dir/?api=1&origin=${pickupLocation?.lat},${pickupLocation?.lng}&destination=${dropoffLocation?.lat},${dropoffLocation?.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.iconWrapper}
+                        >
+                            <IconMapPin />
+                        </a>
+                    </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                    <label htmlFor="dis3" className={styles.label}>
+                        Distance 3 (Dropoff to Base)
+                    </label>
+                    <div className={styles.inputWithIcon}>
+                        <input id="dis3" type="text" placeholder="Enter Distance 3" onChange={(e) => handleInputChange('dis3', e.target.value)} value={dis3} className={styles.formControl} />
+                        <a
+                            href={`https://www.google.com/maps/dir/?api=1&origin=${dropoffLocation?.lat},${dropoffLocation?.lng}&destination=${baseLocation?.lat},${baseLocation?.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.iconWrapper}
+                        >
+                            <IconMapPin />
+                        </a>
+                    </div>
+                </div>
         <div className={styles.formGroup}>
             <label htmlFor="distance" className={styles.label}>
                 Total Distance (KM)

@@ -27,7 +27,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e:any) => {
         e.preventDefault();
         const location = `${locationName}, ${locationCoords.lat}, ${locationCoords.lng}`;
         try {
@@ -91,7 +91,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
         });
 
         return () => unsubscribe();
-    }, [db]);
+    }, [db, uid]);
 
     const openGoogleMaps = () => {
         const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName)}`;

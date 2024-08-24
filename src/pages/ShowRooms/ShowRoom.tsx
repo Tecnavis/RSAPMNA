@@ -227,13 +227,13 @@ const ShowRoom = () => {
         }
     };
 
-    const handleEdit = (roomId) => {
+    const handleEdit = (roomId: string) => {
         setCurrentRoomId(roomId);
         setIsEditing(true);
         setIsModalVisible(true); // Show the confirmation modal
     };
 
-    const handleDelete = (roomId) => {
+    const handleDelete = (roomId: string) => {
         setCurrentRoomId(roomId);
         setIsEditing(false);
         setIsModalVisible(true); // Show the confirmation modal

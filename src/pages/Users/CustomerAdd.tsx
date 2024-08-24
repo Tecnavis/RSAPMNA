@@ -1,24 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { addDoc, collection, getFirestore, doc, updateDoc, getDocs } from 'firebase/firestore';
-import styles from './customer.module.css'
-const CustomerAdd = () => {
-    const [customerName, setCustomerName] = useState('');
-    const [customerNameError, setCustomerNameError] = useState('')
-    const [location, setLocation] = useState('');
+import styles from './customer.module.css';
 
-    const [email, setEmail] = useState('');
-    const [address, setAddress] = useState('');
-    const [phone_number, setPhone] = useState('');
-    const [phoneNumberError, setPhoneNumberError]= useState('')
-    const [editData, setEditData] = useState(null);
+// Define an interface for the customer item
+interface CustomerItem {
+    id?: string;
+    customerName: string;
+    location: string;
+    email: string;
+    address: string;
+    phone_number: string;
+}
+
+// Define the location state type
+interface LocationState {
+    editData?: CustomerItem;
+}
+
+const CustomerAdd: React.FC = () => {
+    const [customerName, setCustomerName] = useState<string>('');
+    const [customerNameError, setCustomerNameError] = useState<string>('');
+    const [location, setLocation] = useState<string>('');
+    const [email, setEmail] = useState<string>('');
+    const [address, setAddress] = useState<string>('');
+    const [phone_number, setPhone] = useState<string>('');
+    const [phoneNumberError, setPhoneNumberError] = useState<string>('');
+    const [editData, setEditData] = useState<CustomerItem | null>(null);
     const navigate = useNavigate();
     const db = getFirestore();
-    const uid = sessionStorage.getItem('uid')
-    const { state } = useLocation(); // Use the useLocation hook to access location state
+    const uid = sessionStorage.getItem('uid')!;
+    const { state } = useLocation<LocationState>();
 
     useEffect(() => {
-        if (state && state.editData) {
+        if (state?.editData) {
             setEditData(state.editData);
             setCustomerName(state.editData.customerName || '');
             setLocation(state.editData.location || '');
@@ -28,8 +43,7 @@ const CustomerAdd = () => {
         }
     }, [state]);
 
-    const checkPhoneUnique = async (phone_number) => {
-        const db = getFirestore();
+    const checkPhoneUnique = async (phone_number: string): Promise<boolean> => {
         const driversRef = collection(db, `user/${uid}/customer`);
         const querySnapshot = await getDocs(driversRef);
         let isUnique = true;
@@ -42,17 +56,18 @@ const CustomerAdd = () => {
 
         return isUnique;
     };
+
     const addOrUpdateItem = async () => {
         let isValid = true;
 
         // Validation checks
         if (!customerName) {
-            setCustomerNameError('Driver name is required');
+            setCustomerNameError('Customer name is required');
             isValid = false;
         } else {
             setCustomerNameError('');
         }
-   
+
         let isPhoneUnique = true;
         if (!editData || editData.phone_number !== phone_number) {
             isPhoneUnique = await checkPhoneUnique(phone_number);
@@ -70,19 +85,20 @@ const CustomerAdd = () => {
         } else {
             setPhoneNumberError('');
         }
+
         if (!isValid) return;
+
         try {
-            const itemData = {
-                customerName:customerName.toUpperCase(),
+            const itemData: CustomerItem = {
+                customerName: customerName.toUpperCase(),
                 location,
                 email,
                 address,
                 phone_number,
-                
             };
 
             if (editData) {
-                const docRef = doc(db,  `user/${uid}/customer`, editData.id);
+                const docRef = doc(db, `user/${uid}/customer`, editData.id!);
                 await updateDoc(docRef, itemData);
                 console.log('Document updated');
             } else {
@@ -95,7 +111,7 @@ const CustomerAdd = () => {
             console.error('Error adding/updating document: ', e);
         }
     };
-    
+
     return (
         <div>
             <ul className="flex space-x-2 rtl:space-x-reverse">
@@ -119,40 +135,73 @@ const CustomerAdd = () => {
                         <h6 className="text-lg font-bold mb-5">General Information</h6>
                         <div className="flex flex-col sm:flex-row">
                             <div className="ltr:sm:mr-4 rtl:sm:ml-4 w-full sm:w-2/12 mb-5">
-                                <img src="/assets//images/profile-34.jpeg" alt="img" className="w-20 h-20 md:w-32 md:h-32 rounded-full object-cover mx-auto" />
+                                <img src="/assets/images/profile-34.jpeg" alt="img" className="w-20 h-20 md:w-32 md:h-32 rounded-full object-cover mx-auto" />
                             </div>
                             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
                                     <label htmlFor="customerName">Customer Name</label>
-                                    <input id="customerName" type="text" placeholder="Enter Customer Name" className="form-input" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+                                    <input
+                                        id="customerName"
+                                        type="text"
+                                        placeholder="Enter Customer Name"
+                                        className="form-input"
+                                        value={customerName}
+                                        onChange={(e) => setCustomerName(e.target.value)}
+                                    />
                                     {customerNameError && <span className={`${styles.error}`}>{customerNameError}</span>}
                                 </div>
                                 <div>
                                     <label htmlFor="location">Location</label>
-                                    <input id="location" type="location"  className="form-input" value={location} onChange={(e) => setLocation(e.target.value)} />
+                                    <input
+                                        id="location"
+                                        type="text"
+                                        className="form-input"
+                                        value={location}
+                                        onChange={(e) => setLocation(e.target.value)}
+                                    />
                                 </div>
                                 <div>
                                     <label htmlFor="email">Email</label>
-                                    <input id="email" type="email" placeholder="@gmail.com" className="form-input" value={email} onChange={(e) => setEmail(e.target.value)} />
+                                    <input
+                                        id="email"
+                                        type="email"
+                                        placeholder="@gmail.com"
+                                        className="form-input"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                    />
                                 </div>
                                 <div>
                                     <label htmlFor="address">Address</label>
-                                    <textarea id="address" placeholder="Enter Address" className="form-input" value={address} onChange={(e) => setAddress(e.target.value)} />
+                                    <textarea
+                                        id="address"
+                                        placeholder="Enter Address"
+                                        className="form-input"
+                                        value={address}
+                                        onChange={(e) => setAddress(e.target.value)}
+                                    />
                                 </div>
-
                                 <div>
                                     <label htmlFor="phone_number">Phone</label>
-                                    <input id="phone_number" type="number" placeholder="phone number" className={`${styles.formInput} form-input`} value={phone_number} onChange={(e) => setPhone(e.target.value)} />
+                                    <input
+                                        id="phone_number"
+                                        type="tel"
+                                        placeholder="Phone number"
+                                        className={`${styles.formInput} form-input`}
+                                        value={phone_number}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                    />
                                     {phoneNumberError && <span className={`${styles.error}`}>{phoneNumberError}</span>}
                                 </div>
-                               
-        
-
                                 <div className="sm:col-span-2 mt-3">
-            <button type="button" className="btn btn-primary" onClick={addOrUpdateItem}>
-                {editData ? 'Update' : 'Save'}
-            </button>
-        </div>
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary"
+                                        onClick={addOrUpdateItem}
+                                    >
+                                        {editData ? 'Update' : 'Save'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </form>

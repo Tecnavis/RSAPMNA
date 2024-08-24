@@ -6,6 +6,28 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import IconArrowLeft from '../../components/Icon/IconArrowLeft';
 
+// Define TypeScript interfaces
+interface Record {
+    id: string;
+    dateTime: string;
+    driver: string;
+    vehicleNumber: string;
+    customerName: string;
+    phoneNumber: string;
+    mobileNumber: string;
+    pickupLocation: { name: string } | null;
+    dropoffLocation: { name: string } | null;
+    status: 'Rejected' | 'Order Completed' | 'pending' | string;
+    bookingStatus?: string;
+    selectedDriver?: string;
+}
+
+interface Driver {
+    name: string;
+    phone: string;
+    // Add other relevant driver fields here
+}
+
 const Container = styled.div`
     padding: 20px;
 `;
@@ -41,7 +63,7 @@ const SearchInput = styled.input`
     margin-bottom: 20px;
 `;
 
-const StatusBadge = styled.span`
+const StatusBadge = styled.span<{ status: string }>`
     padding: 8px 12px;
     border-radius: 20px;
     font-weight: bold;
@@ -104,6 +126,7 @@ const Label = styled.span`
 const Value = styled.span`
     color: #555;
 `;
+
 const OrderDetailsButton = styled.button`
     background-color: #3498db;
     color: white;
@@ -126,14 +149,15 @@ const OrderDetailsButton = styled.button`
         background-color: #1c598a;
     }
 `;
-const StatusTable = () => {
+
+const StatusTable: React.FC = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const [recordsData, setRecordsData] = useState([]);
-    const [drivers, setDrivers] = useState({});
-    const [searchQuery, setSearchQuery] = useState('');
+    const [recordsData, setRecordsData] = useState<Record[]>([]);
+    const [drivers, setDrivers] = useState<Record<string, Driver>>({});
+    const [searchQuery, setSearchQuery] = useState<string>('');
     const db = getFirestore();
-    const uid = sessionStorage.getItem('uid')
+    const uid = sessionStorage.getItem('uid') || '';
 
     useEffect(() => {
         dispatch(setPageTitle('Status'));
@@ -141,20 +165,20 @@ const StatusTable = () => {
         const fetchBookings = async () => {
             const q = query(collection(db, `user/${uid}/bookings`), orderBy('createdAt', 'desc'));
             const querySnapshot = await getDocs(q);
-            const updatedBookingsData = querySnapshot.docs.map((doc) => ({
+            const updatedBookingsData = querySnapshot.docs.map(doc => ({
                 id: doc.id,
-                ...doc.data(),
-            }));
+                ...(doc.data() as Record<string, any>),
+            })) as Record[];
             setRecordsData(updatedBookingsData);
 
-            const driverData = {};
+            const driverData: Record<string, Driver> = {};
             for (const record of updatedBookingsData) {
                 const driverId = record.selectedDriver;
 
                 if (driverId && !driverData[driverId]) {
                     const driverDoc = await getDoc(doc(db, `user/${uid}/driver`, driverId));
                     if (driverDoc.exists()) {
-                        driverData[driverId] = driverDoc.data();
+                        driverData[driverId] = driverDoc.data() as Driver;
                     }
                 }
             }
@@ -166,35 +190,34 @@ const StatusTable = () => {
         });
 
         return () => unsubscribe();
-    }, [db, dispatch]);
+    }, [db, dispatch, uid]);
 
-    const handleReassignClick = (record) => {
+    const handleReassignClick = (record: Record) => {
         navigate(`/bookings/booking/${record.id}`, { state: { editData: record } });
     };
 
-    const handleSearchChange = (e) => {
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value);
     };
-    const handleOrderDetails = (record) => {
-        navigate(`/bookings/newbooking/viewmore/${record.id}` );
+
+    const handleOrderDetails = (record: Record) => {
+        navigate(`/bookings/newbooking/viewmore/${record.id}`);
     };
-    
-    const filteredRecordsData = recordsData.filter((record) =>
-        Object.values(record).some(
-            (value) =>
-                value &&
-                value.toString().toLowerCase().includes(searchQuery.toLowerCase())
+
+    const filteredRecordsData = recordsData.filter(record =>
+        Object.values(record).some(value =>
+            value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())
         )
     );
 
     const sortedRecordsData = filteredRecordsData.slice().sort((a, b) => {
         const dateA = new Date(a.dateTime);
         const dateB = new Date(b.dateTime);
-        return dateB - dateA;
+        return dateB.getTime() - dateA.getTime();
     });
 
-    const completedBookings = sortedRecordsData.filter((record) => record.status === 'Order Completed');
-    const ongoingBookings = sortedRecordsData.filter((record) => record.status !== 'Order Completed');
+    const completedBookings = sortedRecordsData.filter(record => record.status === 'Order Completed');
+    const ongoingBookings = sortedRecordsData.filter(record => record.status !== 'Order Completed');
 
     return (
         <Container>
