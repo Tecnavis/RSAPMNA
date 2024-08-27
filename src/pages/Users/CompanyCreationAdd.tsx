@@ -363,7 +363,7 @@ const [phoneError, setPhoneError] = useState('');
                             </div>
                             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
-                                    <label htmlFor="driverName">Driver Name</label>
+                                    <label htmlFor="driverName">Company Name</label>
                                     <input id="driverName" type="text" placeholder="Enter driver Name" className="form-input" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
                                     {driverNameError && <span className={`${styles.error}`}>{driverNameError}</span>}
 
@@ -372,10 +372,10 @@ const [phoneError, setPhoneError] = useState('');
                                     <label htmlFor="companyName">Section</label>
                                     <input id="companyName" type="text" placeholder="Enter Company Name" className="form-input" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
                                 </div> */}
-                                <div>
+                                {/* <div>
                                     <label htmlFor="company">Company Name</label>
                                     <input id="company" type="text" placeholder="Enter Company Name" className="form-input" value={company} onChange={(e) => setCompany(e.target.value)} />
-                                </div>
+                                </div> */}
                                 <div>
                                     <label htmlFor="idnumber">ID number</label>
                                     <input id="idnumber" type="idnumber"  className="form-input" value={idnumber} onChange={(e) => setIdnumber(e.target.value)} />

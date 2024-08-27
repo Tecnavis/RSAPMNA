@@ -100,8 +100,8 @@ const CompanyCreatn: React.FC = () => {
                         <thead>
                             <tr>
                                 <th>Id</th>
+                                {/* <th>Company Name</th> */}
                                 <th>Company Name</th>
-                                <th>Driver Name</th>
                                 <th>Driver ID Number</th>
                                 <th>Phone Number</th>
                                 <th>Service Types</th>
@@ -113,7 +113,7 @@ const CompanyCreatn: React.FC = () => {
                             {items.map((item, index) => (
                                 <tr key={item.id}>
                                     <td>{index + 1}</td>
-                                    <td>{item.companyName}</td>
+                                    {/* <td>{item.companyName}</td> */}
                                     <td>
                                         <div className="whitespace-nowrap">{item.driverName}</div>
                                     </td>

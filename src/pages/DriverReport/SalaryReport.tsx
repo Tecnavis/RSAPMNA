@@ -347,7 +347,7 @@ const SalaryReport = () => {
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">File Number</th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Date</th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Service Type</th>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Service Vehicle</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Service Vehicle Number</th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Total Driver Salary</th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Transferred Salary</th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Balance Salary</th>

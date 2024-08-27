@@ -7,6 +7,8 @@ import Tippy from '@tippyjs/react';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import { useNavigate } from 'react-router-dom';
+import IconMapPin from '../../components/Icon/IconMapPin';
+
 interface BaseLocationItem {
     id: string;
     name: string;
@@ -169,7 +171,22 @@ const BaseLocation = () => {
         }
         setBaseOptions([]);
     };
+    // const handleMapIconClick = () => {
+    //     if (baseLocation && baseLocation.lat && baseLocation.lng) {
+    //         const { lat, lng } = baseLocation;
+    //         console.log(`Opening map at: ${lat}, ${lng}`); // Log coordinates
 
+    //         window.open(`https://www.google.com/maps/search/?api=1&query=${newValue.lat},${newValue.lng}`, '_blank');
+    //     } else {
+    //         alert('Please select a base location first.');
+    //     }
+    // };
+    
+
+    
+    
+    
+    
     return (
         <div className="base-location-form-container">
             <form onSubmit={handleFormSubmit} className="base-location-form">
@@ -203,6 +220,14 @@ const BaseLocation = () => {
                         value={baseLocationName}
                         onChange={(e) => setBaseLocationName(e.target.value)}
                     />
+            <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(baseLocationName)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            <IconMapPin />
+        </a>
+
                 </div>
 
                 <div className="form-group">

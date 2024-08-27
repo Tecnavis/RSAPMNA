@@ -80,7 +80,7 @@ const MapBooking = ({ activeForm }) => {
     const [selectedDriver, setSelectedDriver] = useState(null);
     const [serviceDetails, setServiceDetails] = useState('');
     const [serviceType, setServiceType] = useState('');
-    const [totalDriverSalary, setTotalDriverSalary] = useState(0);
+    const [totalDriverSalary, setTotalDriverSalary] = useState('');
 
     const [pickupLocation, setPickupLocation] = useState('');
     const [dropoffLocation, setDropoffLocation] = useState('');
@@ -102,7 +102,7 @@ const MapBooking = ({ activeForm }) => {
     const [showRooms, setShowRooms] = useState([]);
     const [manualDistance, setManualDistance] = useState(false);
     const [selectedCompany, setSelectedCompany] = useState([]);
-    const [currentDateTime, setCurrentDateTime] = useState('');
+    // const [currentDateTime, setCurrentDateTime] = useState('');
     const [manualInput, setManualInput] = useState(pickupLocation ? pickupLocation.name : '');
     const [disableFields, setDisableFields] = useState(false); // State to control field disabling
     const [pickupDistances, setPickupDistances] = useState([]);
@@ -153,13 +153,13 @@ const role =sessionStorage.getItem('role');
             } else {
                 setPickupLocation(editData.pickupLocation || '');
             }
-            setTotalDriverDistance(editData.totalDriverDistance || '');
+            setTotalDriverDistance(editData.totalDriverDistance || 0);
             setAvailableServices(editData.availableServices || '');
             setShowRooms(editData.showRooms || '');
-            setUpdatedTotalSalary(editData.updatedTotalSalary || '');
+            setUpdatedTotalSalary(editData.updatedTotalSalary || 0);
             console.log('editData.updatedTotalSalary', editData.updatedTotalSalary);
 
-            setDistance(editData.distance || '');
+            setDistance(editData.distance || 0);
             setServiceType(editData.serviceType || '');
             setTotalSalary(editData.totalSalary || 0);
             setDropoffLocation(editData.dropoffLocation || '');
@@ -167,35 +167,35 @@ const role =sessionStorage.getItem('role');
         }
     }, [state]);
 
-    useEffect(() => {
-        const formatDate = (date) => {
-            const options = {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true,
-            };
-            return new Intl.DateTimeFormat('en-GB', options).format(date);
-        };
+    // useEffect(() => {
+    //     const formatDate = (date) => {
+    //         const options = {
+    //             day: '2-digit',
+    //             month: '2-digit',
+    //             year: 'numeric',
+    //             hour: '2-digit',
+    //             minute: '2-digit',
+    //             second: '2-digit',
+    //             hour12: true,
+    //         };
+    //         return new Intl.DateTimeFormat('en-GB', options).format(date);
+    //     };
 
-        const updateDateTime = () => {
-            const now = new Date();
-            const formattedDateTime = formatDate(now);
-            setCurrentDateTime(formattedDateTime);
-        };
+    //     const updateDateTime = () => {
+    //         const now = new Date();
+    //         const formattedDateTime = formatDate(now);
+    //         setCurrentDateTime(formattedDateTime);
+    //     };
 
-        // Update date and time immediately on mount
-        updateDateTime();
+    //     // Update date and time immediately on mount
+    //     updateDateTime();
 
-        // Set up interval to update every second
-        const intervalId = setInterval(updateDateTime, 1000);
+    //     // Set up interval to update every second
+    //     const intervalId = setInterval(updateDateTime, 1000);
 
-        // Clean up interval on unmount
-        return () => clearInterval(intervalId);
-    }, []);
+    //     // Clean up interval on unmount
+    //     return () => clearInterval(intervalId);
+    // }, []);
 
     useEffect(() => {
         setManualInput(pickupLocation ? pickupLocation.name : '');
@@ -933,8 +933,8 @@ const role =sessionStorage.getItem('role');
                 const pickupDistance = selectedDriverDistanceData ? selectedDriverDistanceData.distance : 0;
 
                 let finalFileNumber = '';
-                const currentDate = new Date();
-                const dateTime = formatDate(currentDate); // Use the formatted date
+                // const currentDate = new Date();
+                // const dateTime = formatDate(currentDate); // Use the formatted date
                 const formattedPickupLocation = formatLocation(pickupLocation);
 
                 if (company === 'self') {
@@ -950,7 +950,7 @@ const role =sessionStorage.getItem('role');
                     dropoffLocation: dropoffLocation || '',
                     status: 'booking added',
                     statusEdit: activeForm === 'map' ? 'withoutmapbooking' : 'mapbooking',
-                    dateTime: dateTime,
+                    // dateTime: dateTime,
                     totalDriverSalary: totalDriverSalary || 0,
                     totalDriverDistance: totalDriverDistance || 0,
                     bookingId: `${bookingId}`,
@@ -992,7 +992,8 @@ const role =sessionStorage.getItem('role');
                         bookingData.newStatus = `Edited by ${role}`;
                     } else if (role === 'staff') {
                         bookingData.newStatus = `Edited by ${role} ${userName}`;
-                    }                    bookingData.editedTime = currentDate.toLocaleString();
+                    }                                       bookingData.editedTime = formatDate(new Date());
+
                 }
                 console.log('Data to be added/updated:', bookingData); // Log the data before adding or updating
 
@@ -1390,7 +1391,7 @@ const role =sessionStorage.getItem('role');
       
             <div className={styles.bookingFormContainer}>
              <form className={styles.bookingForm}>
-             <div className={styles.dateTime}>{currentDateTime}</div>
+             {/* <div className={styles.dateTime}>{currentDateTime}</div> */}
              <h2 className={styles.formHeading}>BOOK WITH MAP</h2>
              <div className={styles.formGroup}>
                     <label htmlFor="company" className={styles.label}>
@@ -1820,17 +1821,19 @@ const role =sessionStorage.getItem('role');
                                         <thead>
                                             <tr className="text-left">
                                                 <th className="border-b-2 p-2">Driver Name</th>
-                                                <th className="border-b-2 p-2">Company Name</th>
+                                                {/* <th className="border-b-2 p-2">Company Name</th> */}
                                                 <th className="border-b-2 p-2">Pickup Distance (KM)</th>
                                                 <th className="border-b-2 p-2">Pickup Duration</th>
-                                                <th className="border-b-2 p-2">Salary</th>
+                                                <th className="border-b-2 p-2">PayableAmount</th>
+                                                <th className="border-b-2 p-2">Profit after deducting expenses</th>
+
                                                 <th className="border-b-2 p-2">Select Driver</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <tr className="text-left">
                                                 <td className="border-b-2 p-2">{driver.driverName}</td>
-                                                <td className="border-b-2 p-2">{driver.companyName}</td>
+                                                {/* <td className="border-b-2 p-2">{driver.companyName}</td> */}
                                                 <td className="border-b-2 p-2">{pickupDistanceData.distance}</td>
                                                 <td className="border-b-2 p-2">{pickupDistanceData.duration}</td>
                                                 <td className="border-b-2 p-2">{driverTotalSalary}</td>
@@ -1936,7 +1939,7 @@ const role =sessionStorage.getItem('role');
                   </label>
                   <input
                    id="totalDriverSalary"
-                   type="text"
+                   type="number"
                    value={totalDriverSalary}
                    readOnly
                       className={styles.formControl}

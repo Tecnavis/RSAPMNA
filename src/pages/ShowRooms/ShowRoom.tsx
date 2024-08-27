@@ -11,6 +11,7 @@ import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import ConfirmationModal from '../../pages/Users/ConfirmationModal/ConfirmationModal';
 import QRCode from 'qrcode.react';
+import IconMapPin from '../../components/Icon/IconMapPin';
 
 const style = {
     position: 'absolute' as 'absolute',
@@ -762,6 +763,13 @@ const ShowRoom = () => {
                     fullWidth
                     variant="outlined"
                 />
+                   <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(manualLocationName)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            <IconMapPin />
+        </a>
                 <TextField
                     label="Latitude"
                     name="manualLat"

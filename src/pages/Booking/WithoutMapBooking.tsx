@@ -99,7 +99,7 @@ const WithoutMapBooking = ({ activeForm }) => {
     const [serviceTypes, setServiceTypes] = useState([]);
     const [showRooms, setShowRooms] = useState([]);
     const [selectedCompany, setSelectedCompany] = useState([]);
-    const [currentDateTime, setCurrentDateTime] = useState('');
+    // const [currentDateTime, setCurrentDateTime] = useState('');
     const [manualInput, setManualInput] = useState('');
     const [manualInput1, setManualInput1] = useState(dropoffLocation ? dropoffLocation.name : '');
     const [disableFields, setDisableFields] = useState(false); // State to control field disabling
@@ -114,30 +114,7 @@ const WithoutMapBooking = ({ activeForm }) => {
     const [dis1, setDis1] = useState('');
     const [dis2, setDis2] = useState('');
     const [dis3, setDis3] = useState('');
-    const inputStyle = {
-        width: '100%',
-        padding: '0.5rem',
-        border: '1px solid #ccc',
-        borderRadius: '5px',
-        fontSize: '1rem',
-        outline: 'none',
-        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-    };
-
-    const linkStyle = {
-        borderRadius: '40px',
-        background: 'transparent',
-        color: 'blue',
-        marginLeft: '10px',
-        padding: '10px',
-        border: 'none',
-        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
-        cursor: 'pointer',
-        transition: 'background 0.3s ease',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-    };
+   
 
     useEffect(() => {
         if (state && state.editData) {
@@ -192,35 +169,35 @@ const WithoutMapBooking = ({ activeForm }) => {
     // }, []);
 
     
-    useEffect(() => {
-        const formatDate = (date) => {
-            const options = {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true,
-            };
-            return new Intl.DateTimeFormat('en-GB', options).format(date);
-        };
+    // useEffect(() => {
+    //     const formatDate = (date) => {
+    //         const options = {
+    //             day: '2-digit',
+    //             month: '2-digit',
+    //             year: 'numeric',
+    //             hour: '2-digit',
+    //             minute: '2-digit',
+    //             second: '2-digit',
+    //             hour12: true,
+    //         };
+    //         return new Intl.DateTimeFormat('en-GB', options).format(date);
+    //     };
 
-        const updateDateTime = () => {
-            const now = new Date();
-            const formattedDateTime = formatDate(now);
-            setCurrentDateTime(formattedDateTime);
-        };
+    //     const updateDateTime = () => {
+    //         const now = new Date();
+    //         const formattedDateTime = formatDate(now);
+    //         setCurrentDateTime(formattedDateTime);
+    //     };
 
-        // Update date and time immediately on mount
-        updateDateTime();
+    //     // Update date and time immediately on mount
+    //     updateDateTime();
 
-        // Set up interval to update every second
-        const intervalId = setInterval(updateDateTime, 1000);
+    //     // Set up interval to update every second
+    //     const intervalId = setInterval(updateDateTime, 1000);
 
-        // Clean up interval on unmount
-        return () => clearInterval(intervalId);
-    }, []);
+    //     // Clean up interval on unmount
+    //     return () => clearInterval(intervalId);
+    // }, []);
 
 
     useEffect(() => {
@@ -673,6 +650,111 @@ const WithoutMapBooking = ({ activeForm }) => {
         fetchServiceDetails();
     }, [db, serviceType]);
 
+//     const calculateTotalSalary = (salary, totalDistance, basicSalaryKM, salaryPerKM) => {
+//         const numericBasicSalary = Number(salary) || 0;
+//         const numericTotalDistance = Number(totalDistance) || 0;
+//         const numericKmValueNumeric = Number(basicSalaryKM) || 0;
+//         const numericPerKmValueNumeric = Number(salaryPerKM) || 0;
+// console.log("numericTotalDistance",numericTotalDistance)
+//         if (numericTotalDistance > numericKmValueNumeric) {
+//             return numericBasicSalary + (numericTotalDistance - numericKmValueNumeric) * numericPerKmValueNumeric;
+//         } else {
+//             return numericBasicSalary;
+//         }
+//     };
+
+    const calculateTotalSalary = (salary, totalDistance, basicSalaryKM, salaryPerKM, isRSA) => {
+        const numericBasicSalary = Number(salary) || 0;
+        const numericTotalDistance = Number(totalDistance) || 0;
+        const numericKmValueNumeric = Number(basicSalaryKM) || 0;
+        const numericPerKmValueNumeric = Number(salaryPerKM) || 0;
+    
+        if (isRSA) {
+            // For RSA company
+            if (numericTotalDistance > numericKmValueNumeric) {
+                return numericBasicSalary + (numericTotalDistance - numericKmValueNumeric) * numericPerKmValueNumeric;
+            } else {
+                return numericBasicSalary;
+            }
+        } else {
+            // For non-RSA companies
+            if (numericTotalDistance > numericKmValueNumeric) {
+                return numericBasicSalary + (numericTotalDistance - numericKmValueNumeric) * numericPerKmValueNumeric;
+            } else {
+                return numericBasicSalary;
+            }        }
+    };
+    useEffect(() => {
+        const fetchDriverData = async () => {
+            const companyNamesList = [];
+            const driverData = [];
+    
+            try {
+                const querySnapshot = await getDocs(collection(db, `user/${uid}/driver`));
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.companyName) {
+                        companyNamesList.push(data.companyName);
+                    }
+                    driverData.push(data);
+                });
+    
+                setCompanyNames(companyNamesList);
+                setDrivers(driverData);
+            } catch (error) {
+                console.error("Error fetching company names: ", error);
+            }
+        };
+    
+        fetchDriverData();
+    }, [db, uid]);
+    
+    useEffect(() => {
+        if (drivers.length > 0) {
+            console.log("Drivers List:", drivers);
+            console.log("Distance:", distance);
+            console.log("Service Details:", serviceDetails);
+    
+            // Calculate total distances for each driver
+            const totalDistances = drivers.map((driver) => {
+                console.log(`Calculating total distance for driver ${driver.id}`);
+                return { driverId: driver.id, totalDistance: distance };
+            });
+            console.log("Total Distances:", totalDistances);
+    
+            // Calculate total salaries for each driver
+            const totalSalaries = drivers.map((driver) => {
+                const isRSA = driver.companyName === 'RSA';
+    
+                // Use driver values if companyName is not 'RSA'
+                const salary = !isRSA ? driver.basicSalaries[driver.selectedServices[0]] : serviceDetails.salary;
+                const basicSalaryKM = !isRSA ? driver.basicSalaryKm[driver.selectedServices[0]] : serviceDetails.basicSalaryKM;
+                const salaryPerKM = !isRSA ? driver.salaryPerKm[driver.selectedServices[0]] : serviceDetails.salaryPerKM;
+    
+                const calculatedSalary = calculateTotalSalary(
+                    salary,
+                    distance,
+                    basicSalaryKM,
+                    salaryPerKM,
+                    isRSA
+                );
+                console.log(`Salary for driver ${driver.id}:`, calculatedSalary);
+                return calculatedSalary;
+            });
+            console.log("Total Salaries:", totalSalaries);
+    
+            // Sum all salaries to get the total salary
+            const totalSalary = totalSalaries.reduce((acc, salary) => acc + salary, 0);
+            console.log("Total Salary:", totalSalary);
+    
+            setTotalDistances(totalDistances); // Set totalDistances state
+            setTotalSalary(totalSalary);
+        }
+    }, [drivers, serviceDetails, distance]);
+    
+    
+    // --------------------------------------------------------------------------------
+    
     const calculateTotalDriverSalary = (totalDriverDistance, basicSalaryKM, salaryPerKM, salary) => {
         totalDriverDistance = parseFloat(totalDriverDistance);
         basicSalaryKM = parseFloat(basicSalaryKM);
@@ -727,55 +809,7 @@ const WithoutMapBooking = ({ activeForm }) => {
         }
     }, [selectedDriver, totalDriverDistance, drivers]);
     // ----------------------------------------
-    const calculateTotalSalary = (salary, totalDistance, basicSalaryKM, salaryPerKM) => {
-        const numericBasicSalary = Number(salary) || 0;
-        const numericTotalDistance = Number(totalDistance) || 0;
-        const numericKmValueNumeric = Number(basicSalaryKM) || 0;
-        const numericPerKmValueNumeric = Number(salaryPerKM) || 0;
-console.log("numericTotalDistance",numericTotalDistance)
-        if (numericTotalDistance > numericKmValueNumeric) {
-            return numericBasicSalary + (numericTotalDistance - numericKmValueNumeric) * numericPerKmValueNumeric;
-        } else {
-            return numericBasicSalary;
-        }
-    };
-
-    useEffect(() => {
-        if (drivers.length > 0) {
-            console.log("Drivers List:", drivers);
-            console.log("Distancew:", distance);
-            console.log("Service Details:", serviceDetails);
-    
-            // Calculate total distances for each driver
-            const totalDistances = drivers.map((driver) => {
-                console.log(`Calculating total distance for driver ${driver.id}`);
-                return { driverId: driver.id, totalDistance: distance };
-            });
-            console.log("Total Distances:", totalDistances);
-    
-            // Calculate total salaries for each driver
-            const totalSalaries = drivers.map((driver) => {
-                const salary = parseFloat(
-                    calculateTotalSalary(
-                        serviceDetails.salary,
-                        distance,
-                        serviceDetails.basicSalaryKM,
-                        serviceDetails.salaryPerKM
-                    ).toFixed(2)
-                );
-                console.log(`Salary for driver ${driver.id}:`, salary);
-                return salary;
-            });
-            console.log("Total Salaries:", totalSalaries);
-    
-            // Sum all salaries to get the total salary
-            const totalSalary = totalSalaries.reduce((acc, salary) => acc + salary, 0);
-            console.log("Total Salary:", totalSalary);
-    
-            setTotalDistances(totalDistances); // Set totalDistances state
-            setTotalSalary(totalSalary);
-        }
-    }, [drivers, serviceDetails, distance]);
+   
     useEffect(() => {
         let newTotalSalary = totalSalary;
         if (serviceCategory === 'Body Shop' && bodyShope === 'insurance') {
@@ -860,8 +894,8 @@ console.log("numericTotalDistance",numericTotalDistance)
     
                 const selectedDriverObject = drivers.find((driver) => driver.id === selectedDriver) || { driverName: 'Dummy Driver' };
                 const driverName = selectedDriverObject.driverName || 'Dummy Driver'; // Ensure Dummy Driver is handled
-                const currentDate = new Date();
-                const dateTime = formatDate(currentDate); // Use the formatted date
+                // const currentDate = new Date();
+                // const dateTime = formatDate(currentDate); // Use the formatted date
                 const distance = (parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3)).toString();
                 let finalFileNumber = '';
 
@@ -870,15 +904,19 @@ console.log("numericTotalDistance",numericTotalDistance)
                 } else if (company === 'rsa') {
                     finalFileNumber = fileNumber;
                 }
-
+                const formattedPickupLocation = {
+                    name: pickupLocation?.name || '',
+                    lat: pickupLocation?.lat?.toString() || '',
+                    lng: pickupLocation?.lng?.toString() || ''
+                };
                 const bookingData = {
                     ...bookingDetails,
                     driver: driverName,
                     totalSalary: totalSalary,
-                    pickupLocation: pickupLocation,
+                    pickupLocation: formattedPickupLocation,
                     dropoffLocation: dropoffLocation || {},
                     status: 'booking added',
-                    dateTime: dateTime, // Use the formatted date
+                    // dateTime: dateTime, // Use the formatted date
                     bookingId: `${bookingId}`,
                     createdAt: serverTimestamp(),
                     comments: comments || '',
@@ -952,7 +990,7 @@ console.log("numericTotalDistance",numericTotalDistance)
     };
     return (
         <div className={styles.bookingFormContainer}>
-            <div className={styles.dateTime}>{currentDateTime}</div>
+            {/* <div className={styles.dateTime}>{currentDateTime}</div> */}
             <h2 className={styles.formHeading}>BOOK WITHOUT MAP</h2>
             <form className={styles.bookingForm}>
                 <div className={styles.formGroup}>
@@ -1338,89 +1376,98 @@ console.log("numericTotalDistance",numericTotalDistance)
                         />
                     </div>
                 )}
-                <ReactModal
-                    isOpen={isModalOpen}
-                    onRequestClose={closeModal}
-                    style={{
-                        overlay: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                        },
-                        content: {
-                            top: '50%',
-                            left: '50%',
-                            right: 'auto',
-                            bottom: 'auto',
-                            transform: 'translate(-50%, -50%)',
-                            borderRadius: '15px',
-                            maxWidth: '90%',
-                            width: '500px',
-                            maxHeight: '80%',
-                            boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
-                            padding: '20px',
-                            overflow: 'auto',
-                            border: 'none',
-                        },
-                    }}
-                >
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '15px',
-                        }}
-                    >
-                        <div style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 999 }}>
-                            <h2 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>Available Drivers for {serviceType}</h2>
-                            <button onClick={closeModal} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-1" style={{ marginLeft: 'auto', marginRight: '20px' }}>
-                                OK
-                            </button>
-                        </div>
+      <ReactModal
+    isOpen={isModalOpen}
+    onRequestClose={closeModal}
+    style={{
+        overlay: {
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        },
+        content: {
+            top: '50%',
+            left: '50%',
+            right: 'auto',
+            bottom: 'auto',
+            transform: 'translate(-50%, -50%)',
+            borderRadius: '15px',
+            maxWidth: '90%',
+            width: '500px',
+            maxHeight: '80%',
+            boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
+            padding: '20px',
+            overflow: 'auto',
+            border: 'none',
+        },
+    }}
+>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        <div style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 999 }}>
+            <h2 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>
+                Available Drivers for {serviceType}
+            </h2>
+            <button
+                onClick={closeModal}
+                className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-1"
+                style={{ marginLeft: 'auto', marginRight: '20px' }}
+            >
+                OK
+            </button>
+        </div>
 
-                        <div style={{ marginTop: '10px' }}>
-                            <div className="grid grid-cols-1 gap-4">
-                                {[
-                                    { id: 'dummy', driverName: 'Dummy Driver', companyName: 'Dummy Company' },
-                                    ...drivers.sort((a, b) => {
-                                        if (a.companyName === 'RSA' && b.companyName !== 'RSA') {
-                                            return -1;
-                                        }
-                                        if (a.companyName !== 'RSA' && b.companyName === 'RSA') {
-                                            return 1;
-                                        }
-                                        return 0;
-                                    }),
-                                ].map((driver) => (
-                                    <div key={driver.id} className="flex items-center border border-gray-200 p-2 rounded-lg">
-                                        <table className="panel p-4 w-full">
-                                            <thead>
-                                                <tr>
-                                                    <th>Driver Name</th>
-                                                    <th>Company Name</th>
-                                                    <th>Select</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td style={{ fontSize: '18px', fontWeight: 'bold', color: 'green' }}>{driver.driverName || 'Unknown Driver'}</td>
-                                                    <td>{driver.companyName || 'Unknown Company'}</td>
-                                                    <td>
-                                                        <input
-                                                            type="radio"
-                                                            name="selectedDriver"
-                                                            value={driver.id}
-                                                            checked={selectedDriver === driver.id}
-                                                            onChange={() => handleInputChange('selectedDriver', driver.id)}
-                                                        />
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                ))}
-                            </div>
+        <div style={{ marginTop: '10px' }}>
+            <div className="grid grid-cols-1 gap-4">
+                {drivers.sort((a, b) => {
+                    if (a.companyName === 'RSA' && b.companyName !== 'RSA') return -1;
+                    if (a.companyName !== 'RSA' && b.companyName === 'RSA') return 1;
+                    return 0;
+                }).map((driver) => {
+                    const isRSA = driver.companyName === 'RSA';
+                    const calculatedSalary = calculateTotalSalary(
+                        driver.salary || serviceDetails.salary,
+                        distance,
+                        driver.basicSalaryKM || serviceDetails.basicSalaryKM,
+                        driver.salaryPerKM || serviceDetails.salaryPerKM,
+                        isRSA
+                    );
+
+                    return (
+                        <div key={driver.id} className="flex items-center border border-gray-200 p-2 rounded-lg">
+                            <table className="panel p-4 w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Driver Name</th>
+                                        <th>Company Name</th>
+                                        <th>Payable Amount</th>
+                                        <th>Select</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style={{ fontSize: '18px', fontWeight: 'bold', color: 'green' }}>
+                                            {driver.driverName || 'Unknown Driver'}
+                                        </td>
+                                        <td>{driver.companyName || 'Unknown Company'}</td>
+                                        <td>{calculatedSalary}</td>
+                                        <td>
+                                            <input
+                                                type="radio"
+                                                name="selectedDriver"
+                                                value={driver.id}
+                                                checked={selectedDriver === driver.id}
+                                                onChange={() => handleInputChange('selectedDriver', driver.id)}
+                                            />
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
-                </ReactModal>
+                    );
+                })}
+            </div>
+        </div>
+    </div>
+</ReactModal>
+
                 {selectedDriver && selectedDriverData && (
                     <React.Fragment>
                         <div>
