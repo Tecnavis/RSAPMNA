@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { addDoc, collection, getFirestore, doc, updateDoc, getDocs } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
@@ -153,7 +153,7 @@ const UserAdd: React.FC = () => {
                     profileImage: profileImageUrl,
                 };
 
-                if (editData) {
+                if (editData?.id) {
                     const docRef = doc(db, `user/${uid}/users`, editData.id);
                     await updateDoc(docRef, itemData);
                     console.log('Document updated');

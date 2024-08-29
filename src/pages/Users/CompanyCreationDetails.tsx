@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, Firestore, DocumentReference } from 'firebase/firestore';
 import IconArrowLeft from '../../components/Icon/IconArrowLeft'; // Adjust the import path if necessary
 
 // Define types for driver data
@@ -23,12 +23,18 @@ const CompanyCreationDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>(); // Define the type of params
     const [driver, setDriver] = useState<Driver | null>(null); // Annotate state with type
     const db = getFirestore();
-    const uid = sessionStorage.getItem('uid') as string;
+    const uid = sessionStorage.getItem('uid') as string | null; // Allow null
 
     useEffect(() => {
         const fetchDriver = async () => {
+            if (!uid || !id) {
+                console.error('UID or ID is missing');
+                return;
+            }
+            
             try {
-                const docRef = doc(db, `user/${uid}/driver`, id);
+                // Ensure uid is a string
+                const docRef: DocumentReference = doc(db, `user/${uid}/driver`, id);
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
@@ -103,7 +109,9 @@ const CompanyCreationDetails: React.FC = () => {
                     onMouseLeave={(e) => (e.target as HTMLAnchorElement).style.color = '#007bff'}
                 >
                     Click here for more details
-                    <IconArrowLeft style={{ marginLeft: '8px' }} />
+                    <span style={{ marginLeft: '8px' }}>
+                        <IconArrowLeft />
+                    </span>
                 </Link>
             </h2>
             {driver.selectedServices && (

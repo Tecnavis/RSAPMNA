@@ -78,6 +78,8 @@ const StatusBadge = styled.span<{ status: string }>`
                 return '#27ae60';
             case 'pending':
                 return '#3498db';
+                case 'Cancelled':
+                    return '#e67e22';
             default:
                 return '#f39c12';
         }
@@ -94,6 +96,8 @@ const StatusBadge = styled.span<{ status: string }>`
                     return '#2ecc71';
                 case 'pending':
                     return '#e67e22';
+                    case 'Cancelled':
+                        return '#d35400';
                 default:
                     return '#e67e22';
             }
@@ -282,7 +286,13 @@ const StatusTable: React.FC = () => {
                             </StatusBadge>
                         </Value>
                     </DataItem>
-                    {record.status === 'Rejected' && (
+                    {record.status === 'Cancelled' && (
+                        <DataItem>
+                            <Label>Cancellation Reason:</Label>
+                            <Value>{record.cancelReason}</Value>
+                        </DataItem>
+                    )}
+                    {(record.status === 'Rejected' || record.status === 'Cancelled') && (
                         <ReassignButton onClick={() => handleReassignClick(record)}>
                             Reassign
                         </ReassignButton>

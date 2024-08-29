@@ -102,9 +102,12 @@ const [phoneError, setPhoneError] = useState('');
         const updatedKm = { ...basicSalaryKm, [service]: e.target.value };
         setBasicSalaryKm(updatedKm);
     };
-    const handleSalaryPerKmChange =  (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
-        const updatedsalaryPerKm = { ...salaryPerKm, [service]: e.target.value };
-        setSalaryPerKm(updatedsalaryPerKm);
+    const handleSalaryPerKmChange = (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseFloat(e.target.value);
+        if (!isNaN(value)) {
+            const updatedSalaryPerKm: SalaryPerKm = { ...salaryPerKm, [service]: value };
+            setSalaryPerKm(updatedSalaryPerKm);
+        }
     };
     const handleServiceVehicle =  (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedServiceVehicle= { ...serviceVehicle, [service]: e.target.value };

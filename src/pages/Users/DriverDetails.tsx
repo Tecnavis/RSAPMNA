@@ -25,23 +25,27 @@ const DriverDetails = () => {
 
     useEffect(() => {
         const fetchDriver = async () => {
-            try {
-                const docRef = doc(db, `user/${uid}/driver`, id);
-                const docSnap = await getDoc(docRef);
+            if (uid && id) { // Ensure uid and id are defined
+                try {
+                    const docRef = doc(db, `user/${uid}/driver`, id);
+                    const docSnap = await getDoc(docRef);
 
-                if (docSnap.exists()) {
-                    const data = docSnap.data() as Driver;
-                    setDriver(data);
-                } else {
-                    console.log(`Document with ID ${id} does not exist!`);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data() as Driver;
+                        setDriver(data);
+                    } else {
+                        console.log(`Document with ID ${id} does not exist!`);
+                    }
+                } catch (error) {
+                    console.error('Error fetching data:', error);
                 }
-            } catch (error) {
-                console.error('Error fetching data:', error);
+            } else {
+                console.error('UID or ID is undefined.');
             }
         };
 
         fetchDriver().catch(console.error);
-    }, [db, id]);
+    }, [db, id, uid]);
 
     if (!driver) {
         return <div>Loading...</div>;
@@ -106,7 +110,7 @@ const DriverDetails = () => {
                             <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left", backgroundColor: "#f2f2f2", fontWeight: "bold" }}>Basic Amount</th>
                             <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left", backgroundColor: "#f2f2f2", fontWeight: "bold" }}>KM for Basic Salary</th>
                             <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left", backgroundColor: "#f2f2f2", fontWeight: "bold" }}>Salary Per Km</th>
-                            <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left", backgroundColor: "#f2f2f2", fontWeight: "bold" }}>Vehicle Number</th>
+                            <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left" }}>Vehicle Number</th>
                         </tr>
                     </thead>
                     <tbody>

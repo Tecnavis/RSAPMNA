@@ -18,7 +18,9 @@ interface Driver {
     salaryPerKm?: { [key: string]: number };
     serviceVehicle?: { [key: string]: string };
 }
-
+interface IconArrowLeftProps {
+    style?: React.CSSProperties; // Add style prop here
+}
 const CompanyDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>(); // Type the useParams hook
     const [driver, setDriver] = useState<Driver | null>(null); // Type state
@@ -88,25 +90,29 @@ const CompanyDetails: React.FC = () => {
                 </tbody>
             </table>
             <h2 style={{ textAlign: 'center', margin: '20px 0' }}>
-                <Link
-                    to={`/users/driver/driverdetails/cashcollection/${id}`}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textDecoration: 'none',
-                        color: '#007bff',
-                        fontWeight: 'bold',
-                        fontSize: '1.5em',
-                        transition: 'color 0.3s',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = '#0056b3')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = '#007bff')}
-                >
-                    Click here for more details
-                    <IconArrowLeft style={{ marginLeft: '8px' }} />
-                </Link>
-            </h2>
+    <Link
+        to={`/users/driver/driverdetails/cashcollection/${id}`}
+        style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textDecoration: 'none',
+            color: '#007bff',
+            fontWeight: 'bold',
+            fontSize: '1.5em',
+            transition: 'color 0.3s',
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = '#0056b3')}
+        onMouseLeave={(e) => (e.currentTarget.style.color = '#007bff')}
+    >
+        Click here for more details
+        <span style={{ marginLeft: '8px' }}>
+            <IconArrowLeft />
+        </span>
+    </Link>
+</h2>
+
+
             {driver.selectedServices && (
                 <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", borderSpacing: "0" }}>

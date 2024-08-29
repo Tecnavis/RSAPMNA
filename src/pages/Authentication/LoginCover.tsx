@@ -95,7 +95,7 @@ const LoginCover = () => {
         }
     };
     
-    const handleRoleChange = (e) => {
+    const handleRoleChange = (e:any) => {
         setRole(e.target.value);
         // Clear email/username and password when role changes
         setEmail("");
@@ -104,7 +104,7 @@ const LoginCover = () => {
         setErrorMessage(""); // Clear any previous error message
     };
 
-    const handleSubmit = (event) => {
+    const handleSubmit = (event:any) => {
         event.preventDefault();
         setErrorMessage(""); // Clear any previous error message before attempting sign-in
         signIn();

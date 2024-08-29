@@ -19,12 +19,14 @@ import useGoogleMaps from './GoogleMaps';
 import styles from './mapbooking.module.css';
 import MapView from './Map';
 import MapWithRoutes from './MapWithRoutes';
+import ReactSelect from 'react-select';
 interface Showroom {
     id: string;
     name: string;
 }
 
 const MapBooking = ({ activeForm }) => {
+    
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
     const navigate = useNavigate();
@@ -88,7 +90,7 @@ const MapBooking = ({ activeForm }) => {
     const [pickupCoords, setPickupCoords] = useState({ lat: undefined, lng: undefined });
 
     const [baseLocation, setBaseLocation] = useState(null);
-    console.log('baseLocationpickupLocation', baseLocation);
+    // console.log('baseLocationpickupLocation', baseLocation);
 
     const [trappedLocation, setTrappedLocation] = useState('');
     const [totalSalary, setTotalSalary] = useState(0);
@@ -102,7 +104,7 @@ const MapBooking = ({ activeForm }) => {
     const [showRooms, setShowRooms] = useState([]);
     const [manualDistance, setManualDistance] = useState(false);
     const [selectedCompany, setSelectedCompany] = useState([]);
-    // const [currentDateTime, setCurrentDateTime] = useState('');
+    const [currentDateTime, setCurrentDateTime] = useState('');
     const [manualInput, setManualInput] = useState(pickupLocation ? pickupLocation.name : '');
     const [disableFields, setDisableFields] = useState(false); // State to control field disabling
     const [pickupDistances, setPickupDistances] = useState([]);
@@ -167,35 +169,35 @@ const role =sessionStorage.getItem('role');
         }
     }, [state]);
 
-    // useEffect(() => {
-    //     const formatDate = (date) => {
-    //         const options = {
-    //             day: '2-digit',
-    //             month: '2-digit',
-    //             year: 'numeric',
-    //             hour: '2-digit',
-    //             minute: '2-digit',
-    //             second: '2-digit',
-    //             hour12: true,
-    //         };
-    //         return new Intl.DateTimeFormat('en-GB', options).format(date);
-    //     };
+    useEffect(() => {
+        const formatDate = (date) => {
+            const options = {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true,
+            };
+            return new Intl.DateTimeFormat('en-GB', options).format(date);
+        };
 
-    //     const updateDateTime = () => {
-    //         const now = new Date();
-    //         const formattedDateTime = formatDate(now);
-    //         setCurrentDateTime(formattedDateTime);
-    //     };
+        const updateDateTime = () => {
+            const now = new Date();
+            const formattedDateTime = formatDate(now);
+            setCurrentDateTime(formattedDateTime);
+        };
 
-    //     // Update date and time immediately on mount
-    //     updateDateTime();
+        // Update date and time immediately on mount
+        updateDateTime();
 
-    //     // Set up interval to update every second
-    //     const intervalId = setInterval(updateDateTime, 1000);
+        // Set up interval to update every second
+        const intervalId = setInterval(updateDateTime, 1000);
 
-    //     // Clean up interval on unmount
-    //     return () => clearInterval(intervalId);
-    // }, []);
+        // Clean up interval on unmount
+        return () => clearInterval(intervalId);
+    }, []);
 
     useEffect(() => {
         setManualInput(pickupLocation ? pickupLocation.name : '');
@@ -378,19 +380,37 @@ const role =sessionStorage.getItem('role');
             case 'selectedCompany':
                 setSelectedCompany(value || '');
                 break;
-            case 'selectedDriver':
-                setSelectedDriver(value || '');
-                console.log('Selected Driver ID:', value);
-
-                const selectedDriverData = drivers.find((driver) => driver.id === value);
-                console.log('Selected Driver Dataaa:', selectedDriverData);
-                if (selectedDriverData) {
-                    const calculatedSalary = calculateTotalSalary(serviceDetails.salary, distance, serviceDetails.basicSalaryKM, serviceDetails.salaryPerKM);
-                    console.log('Calculated Salary:', calculatedSalary);
-
-                    setTotalSalary(calculatedSalary);
-                }
-                break;
+                case 'selectedDriver':
+                    console.log("Selected Driver ID:", value);
+        
+                    setSelectedDriver(value || '');
+        
+                    const selectedDriverData = drivers.find((driver) => driver.id === value);
+                    console.log("Selected Driver Data:", selectedDriverData);
+        
+                    if (selectedDriverData) {
+                        const isRSA = selectedDriverData.companyName === 'RSA';
+                        const salary = isRSA ? serviceDetails.salary : selectedDriverData.basicSalaries[selectedDriverData.selectedServices[0]];
+                        const basicSalaryKM = isRSA ? serviceDetails.basicSalaryKM : selectedDriverData.basicSalaryKm[selectedDriverData.selectedServices[0]];
+                        const salaryPerKM = isRSA ? serviceDetails.salaryPerKM : selectedDriverData.salaryPerKm[selectedDriverData.selectedServices[0]];
+        
+                        const calculatedSalary = calculateTotalSalary(
+                            salary,
+                            distance,
+                            basicSalaryKM,
+                            salaryPerKM,
+                            isRSA
+                        );
+        
+                        const formattedSalary = parseFloat(calculatedSalary.toFixed(2));
+                        console.log("Calculated Salary for Selected Driver:", formattedSalary);
+                
+                        setTotalSalary(formattedSalary);
+                    } else {
+                        console.log("No driver data found for the selected driver.");
+                        setTotalSalary(0); // Clear the total salary if no driver is selected
+                    }
+                    break;
             case 'companies':
                 setCompanies(value || '');
                 break;
@@ -477,6 +497,8 @@ const role =sessionStorage.getItem('role');
         }
         handleCalculateDistance();
     };
+    const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
+
     const openModal = () => {
         setIsModalOpen(true);
     };
@@ -490,14 +512,14 @@ const role =sessionStorage.getItem('role');
     useEffect(() => {
         const db = getFirestore();
         const serviceCollection = collection(db, `user/${uid}/showroom`);
-
+    
         // Set up the real-time listener
         const unsubscribe = onSnapshot(
             serviceCollection,
             (snapshot) => {
                 const servicesList = snapshot.docs.map((doc) => ({
-                    value: doc.data().Location, // Assuming 'Location' is a unique identifier
-                    label: doc.data().Location,
+                    value: doc.data().Location, // Keep this if Location is used as the value for selecting an option
+                    label: doc.data().ShowRoom, // ShowRoom will be displayed as the label in the dropdown
                     insuranceAmountBody: doc.data().insuranceAmountBody, // Include this field if needed
                     locationLatLng: doc.data().locationLatLng, // Include this field if needed
                 }));
@@ -507,10 +529,11 @@ const role =sessionStorage.getItem('role');
                 console.error('Error fetching services:', error);
             }
         );
-
+    
         // Clean up the listener on component unmount
         return () => unsubscribe();
     }, [uid]);
+    
     useEffect(() => {
         const fetchServiceTypes = async () => {
             try {
@@ -679,23 +702,26 @@ const role =sessionStorage.getItem('role');
             return { id, distance: null, duration: null };
         }
     };
-    const calculateTotalSalary = (salary, distance, basicSalaryKM, salaryPerKM) => {
+    const calculateTotalSalary = (salary, totalDistance, basicSalaryKM, salaryPerKM, isRSA) => {
         const numericBasicSalary = Number(salary) || 0;
-        const numericTotalDistance = Number(distance) || 0;
+        const numericTotalDistance = Number(totalDistance) || 0;
         const numericKmValueNumeric = Number(basicSalaryKM) || 0;
         const numericPerKmValueNumeric = Number(salaryPerKM) || 0;
-        console.log('numericBasicSalary', numericBasicSalary);
-        console.log('numericTotalDistance', numericTotalDistance);
-
-        console.log('numericKmValueNumeric', numericKmValueNumeric);
-
-        console.log('numericPerKmValueNumeric', numericPerKmValueNumeric);
-
-        if (numericTotalDistance > numericKmValueNumeric) {
-            return numericBasicSalary + (numericTotalDistance - numericKmValueNumeric) * numericPerKmValueNumeric;
+    
+        if (isRSA) {
+            // For RSA company
+            if (numericTotalDistance > numericKmValueNumeric) {
+                return numericBasicSalary + (numericTotalDistance - numericKmValueNumeric) * numericPerKmValueNumeric;
+            } else {
+                return numericBasicSalary;
+            }
         } else {
-            return numericBasicSalary;
-        }
+            // For non-RSA companies
+            if (numericTotalDistance > numericKmValueNumeric) {
+                return numericBasicSalary + (numericTotalDistance - numericKmValueNumeric) * numericPerKmValueNumeric;
+            } else {
+                return numericBasicSalary;
+            }        }
     };
 
     useEffect(() => {
@@ -705,30 +731,32 @@ const role =sessionStorage.getItem('role');
                 const driversCollection = collection(db, `user/${uid}/driver`);
                 const snapshot = await getDocs(driversCollection);
                 console.log('Firestore snapshot:', snapshot);
-
+    
                 if (!serviceDetails) {
                     console.log('Service details not found, cannot proceed with fetching drivers.');
                     return;
                 }
-
+    
                 const filteredDrivers = snapshot.docs
                     .map((doc) => ({
                         id: doc.id,
                         ...doc.data(),
                     }))
-                    .filter((driver) => driver.selectedServices && driver.selectedServices.includes(serviceType));
-
+                    .filter((driverData) => {
+                        return driverData.selectedServices.includes(serviceType) && driverData.status !== 'deleted from UI';
+                    });
+    
                 console.log('Filtered drivers:', filteredDrivers);
-
+    
                 const distancePromises = filteredDrivers.map(async (driver) => {
                     console.log('Processing driver:', driver);
-
+    
                     if (driver.currentLocation && driver.currentLocation.latitude && driver.currentLocation.longitude) {
                         const origin = {
                             lat: driver.currentLocation.latitude,
                             lng: driver.currentLocation.longitude,
                         };
-
+    
                         if (pickupLocation) {
                             const [locationName, lat, lng] = pickupLocation.split(',').map((part) => part.trim());
                             const parsedPickupLocation = {
@@ -736,7 +764,7 @@ const role =sessionStorage.getItem('role');
                                 lng: parseFloat(lng),
                             };
                             console.log('Parsed Pickup Location:', parsedPickupLocation);
-
+    
                             if (!isNaN(parsedPickupLocation.lat) && !isNaN(parsedPickupLocation.lng)) {
                                 const destination = {
                                     lat: parsedPickupLocation.lat,
@@ -744,7 +772,7 @@ const role =sessionStorage.getItem('role');
                                 };
                                 console.log('Origin for driver:', origin);
                                 console.log('Destination for driver:', destination);
-
+    
                                 const distanceData = await fetchTravelDistance(origin, destination, driver.id);
                                 console.log('Distance and duration for driver:', distanceData);
                                 return distanceData;
@@ -759,17 +787,17 @@ const role =sessionStorage.getItem('role');
                     }
                     return { id: driver.id, distance: 0, duration: 0 };
                 });
-
+    
                 const resolvedDistances = await Promise.all(distancePromises);
                 console.log('Resolved distances:', resolvedDistances);
-
+    
                 setPickupDistances(resolvedDistances);
                 setDrivers(filteredDrivers);
             } catch (error) {
                 console.error('Error fetching drivers:', error);
             }
         };
-
+    
         if (serviceType && serviceDetails) {
             console.log('Fetching drivers based on service type and service details');
             fetchDrivers().catch(console.error);
@@ -778,8 +806,9 @@ const role =sessionStorage.getItem('role');
             setDrivers([]);
         }
     }, [serviceType, serviceDetails, pickupLocation]);
+    
 
-    console.log('Effect dependencies:', { serviceType, serviceDetails, pickupLocation });
+    // console.log('Effect dependencies:', { serviceType, serviceDetails, pickupLocation });
     useEffect(() => {
         let newTotalSalary = totalSalary;
         console.log('editData.updatedTotalSalary', updatedTotalSalary);
@@ -886,7 +915,7 @@ const role =sessionStorage.getItem('role');
         };
     };
      // --------------------------------
-    // http://localhost:3000
+     // http://localhost:3000
     // https://rsanotification.onrender.com
     const sendPushNotification = async (token, title, body, sound) => {
         try {
@@ -912,29 +941,35 @@ const role =sessionStorage.getItem('role');
           console.error("Error sending notification:", error);
         }
       };
+      
+      const sendNotificationsToAllDrivers = async () => {
+        try {
+            // Extract all FCM tokens from drivers
+            const tokens = drivers.map(driver => driver.fcmToken).filter(token => token);
+            const notificationTitle = "Booking Notification";
+            const notificationBody = "A new booking has been added or updated.";
+            const sound = "alert_notification";
+    
+            for (const token of tokens) {
+                await sendPushNotification(token, notificationTitle, notificationBody, sound);
+            }
+        } catch (error) {
+            console.error("Error sending notifications to all drivers:", error);
+        }
+    }; 
     const addOrUpdateItem = async () => {
         if (validateForm()) {
             try {
                 const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-                if (!selectedDriverData) {
-                    console.error('Selected driver does not exist in the database.');
-                    return;
-                }
-                const fcmToken = selectedDriverData.fcmToken;
-                if (!fcmToken) {
-                    console.error('FCM Token is missing for the selected driver:', selectedDriver);
-                    return;
-                }
-                const selectedDriverObject = drivers.find((driver) => driver.id === selectedDriver);
-                // const driverName = selectedDriverObject ? selectedDriverObject.driverName : ''  || 'Dummy Driver';
-                const driverName = selectedDriverObject?.driverName || 'Dummy Driver';
-
+                const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
+                const fcmToken = selectedDriverData ? selectedDriverData.fcmToken : null;
+    
                 const selectedDriverDistanceData = pickupDistances.find((dist) => dist.id === selectedDriver);
                 const pickupDistance = selectedDriverDistanceData ? selectedDriverDistanceData.distance : 0;
 
                 let finalFileNumber = '';
-                // const currentDate = new Date();
-                // const dateTime = formatDate(currentDate); // Use the formatted date
+                const currentDate = new Date();
+                const dateTime = formatDate(currentDate); // Use the formatted date
                 const formattedPickupLocation = formatLocation(pickupLocation);
 
                 if (company === 'self') {
@@ -950,7 +985,7 @@ const role =sessionStorage.getItem('role');
                     dropoffLocation: dropoffLocation || '',
                     status: 'booking added',
                     statusEdit: activeForm === 'map' ? 'withoutmapbooking' : 'mapbooking',
-                    // dateTime: dateTime,
+                    dateTime: dateTime,
                     totalDriverSalary: totalDriverSalary || 0,
                     totalDriverDistance: totalDriverDistance || 0,
                     bookingId: `${bookingId}`,
@@ -1006,8 +1041,11 @@ const role =sessionStorage.getItem('role');
                     console.log('Document written with ID: ', docRef.id);
                     console.log('Document added');
                 }
-                sendPushNotification(fcmToken, "Booking Notification", "Your booking has been updated", "alert_notification");
-
+                if (selectedDriver === 'dummy') {
+                    await sendNotificationsToAllDrivers();
+                } else if (fcmToken) {
+                    await sendPushNotification(fcmToken, "Booking Notification", "Your booking has been updated", "alert_notification");
+                } 
                 navigate('/bookings/newbooking');
             } catch (e) {
                 console.error('Error adding/updating document: ', e);
@@ -1261,8 +1299,8 @@ const role =sessionStorage.getItem('role');
         return { lat: 0, lng: 0 };
     };
 
-    console.log('Normalized Pickup Location:', normalizeLocation(pickupLocation));
-    console.log('Normalized Dropoff Location:', normalizeLocation(dropoffLocation));
+    // console.log('Normalized Pickup Location:', normalizeLocation(pickupLocation));
+    // console.log('Normalized Dropoff Location:', normalizeLocation(dropoffLocation));
 
     const getDistance = async (origin, destination) => {
         if (!origin || !destination) {
@@ -1374,7 +1412,7 @@ const role =sessionStorage.getItem('role');
     
     const handleButtonClick = (event) => {
         event.preventDefault();
-        openModal1()
+        setShowShowroomModal(true);
     };
 
     const handelAddbuttonClick = (event)=>{
@@ -1391,7 +1429,7 @@ const role =sessionStorage.getItem('role');
       
             <div className={styles.bookingFormContainer}>
              <form className={styles.bookingForm}>
-             {/* <div className={styles.dateTime}>{currentDateTime}</div> */}
+             <div className={styles.dateTime}>{currentDateTime}</div>
              <h2 className={styles.formHeading}>BOOK WITH MAP</h2>
              <div className={styles.formGroup}>
                     <label htmlFor="company" className={styles.label}>
@@ -1479,7 +1517,7 @@ const role =sessionStorage.getItem('role');
                                         sx={{ background: 'white', width: '100%', border: '20px' }}
                                         options={pickupOptions}
                                         getOptionLabel={(option) => {
-                                            console.log('Get option label:', option);
+                                            // console.log('Get option label:', option);
                                             return option.label;
                                         }}
                                         isOptionEqualToValue={(option, value) => {
@@ -1528,15 +1566,7 @@ const role =sessionStorage.getItem('role');
       readOnly
       onClick={openModal1}
     />
-    <button
-      onClick={handleButtonClick}
-      type="button"
-      onMouseOver={(e) => (e.currentTarget.style.background = 'lightblue')}
-       onMouseOut={(e) => (e.currentTarget.style.background = '#51a7ff')}
-      className={styles.mapButton}
-    >
-      <IconMapPin />
-    </button>
+    
   </div>
 </div>
 
@@ -1560,48 +1590,32 @@ const role =sessionStorage.getItem('role');
                                 </div>
                             )}
  <div className={styles.formGroup}>
-  <label htmlFor="showrooms" className={styles.label}>
-    Service Center
-  </label>
-  <div className={styles.inputContainer}>
-    {showrooms.length > 0 && (
-      <Select
-        className={styles.fullWidthSelect}
-        id="showrooms"
-        name="showrooms"
-        value={showrooms.find((option) => option.value === showroomLocation) || null}
-        options={showrooms}
-        onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
-        isSearchable={true}
-        placeholder="Select showroom"
-        styles={{
-          control: (provided) => ({
-            ...provided,
-            width: '100%',
-            padding: '0.5rem',
-            border: '1px solid #ccc',
-            borderRadius: '5px',
-            fontSize: '1rem',
-            outline: 'none',
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-          }),
-          placeholder: (provided) => ({
-            ...provided,
-            fontSize: '1rem',
-          }),
-        }}
-      />
+    <label htmlFor="showrooms" className={styles.label}>
+        Service Center
+    </label>
+    <div className={styles.inputContainer}>
+        {showrooms.length > 0 && (
+            <ReactSelect
+                id="showrooms"
+                name="showrooms"
+                className="w-full"
+                value={showrooms.find((option) => option.value === showroomLocation) || null}
+                options={showrooms}
+                placeholder="Select showroom"
+                onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
+                isSearchable={true}
+            />
+        )}
+        <button onClick={handleButtonClick}  className={styles.addButton}>
+            <IconPlus />
+        </button>
+    </div>
+    {showShowroomModal && (
+        <ShowroomModal
+            onClose={() => setShowShowroomModal(false)}
+            updateShowroomLocation={updateShowroomLocation}
+        />
     )}
-    <button
-      onClick={handelAddbuttonClick}
-      className={styles.addButton}
-      onMouseOver={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg, #228B22, #006400)')}
-      onMouseOut={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg, #32CD32, #228B22)')}
-    >
-      <IconPlus />
-    </button>
-  </div>
-     {showShowroomModal && <ShowroomModal onClose={() => setShowShowroomModal(false)} updateShowroomLocation={updateShowroomLocation} />}
 </div>
 
 
@@ -1756,108 +1770,156 @@ const role =sessionStorage.getItem('role');
                   />
                   <div>
                   <ReactModal
-            isOpen={isModalOpen}
-            onRequestClose={closeModal}
-            style={{
-                overlay: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                },
-                content: {
-                    top: '50%',
-                    left: '50%',
-                    right: 'auto',
-                    bottom: 'auto',
-                    transform: 'translate(-50%, -50%)',
-                    borderRadius: '10px',
-                    maxWidth: '90vw',
-                    maxHeight: '80vh',
-                    boxShadow: '0 0 20px rgba(0, 0, 0, 0.7)',
-                    padding: '20px',
-                    overflow: 'auto',
-                },
-            }}
+    isOpen={isModalOpen}
+    onRequestClose={closeModal}
+    style={{
+        overlay: {
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        },
+        content: {
+            top: '50%',
+            left: '50%',
+            right: 'auto',
+            bottom: 'auto',
+            transform: 'translate(-50%, -50%)',
+            borderRadius: '10px',
+            maxWidth: '90vw',
+            maxHeight: '80vh',
+            boxShadow: '0 0 20px rgba(0, 0, 0, 0.7)',
+            padding: '20px',
+            overflow: 'auto',
+        },
+    }}
+>
+    <div style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 999, padding: '10px 0' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>
+            Available Drivers for {serviceType}
+        </h2>
+        <button
+            onClick={closeModal}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-1"
+            style={{ marginLeft: 'auto', marginRight: '20px' }}
         >
-            <div style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 999 }}>
-                <h2 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>Available Drivers for {serviceType}</h2>
-                <button
-                    onClick={closeModal}
-                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-1"
-                    style={{ marginLeft: 'auto', marginRight: '20px' }}
-                >
-                    OK
-                </button>
+            OK
+        </button>
+    </div>
+
+    <div style={{ marginTop: '10px' }}>
+        <div className="grid grid-cols-1 gap-4">
+            {/* Add "Dummy Driver" to the top of the list */}
+            <div className="flex items-center border border-gray-200 p-2 rounded-lg">
+                <table className="panel p-4 w-full">
+                    <thead>
+                        <tr>
+                            <th className="border-b-2 p-2">Driver Name</th>
+                            <th className="border-b-2 p-2">Pickup Distance (KM)</th>
+                            <th className="border-b-2 p-2">Pickup Duration</th>
+
+                            <th className="border-b-2 p-2">Payable Amount</th>
+
+                            <th className="border-b-2 p-2">Profit after deducting expenses</th>
+                            <th className="border-b-2 p-2">Select</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style={{ fontSize: '18px', fontWeight: 'bold', color: 'red' }}>
+                                DummyDriver
+                            </td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+
+                            <td>
+                                <input
+                                    type="radio"
+                                    name="selectedDriver"
+                                    value="dummy"
+                                    checked={selectedDriver === 'dummy'}
+                                    onChange={() => handleInputChange('selectedDriver', 'dummy')}
+                                />
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
-            <div style={{ marginTop: '10px' }}>
-                <div className="grid grid-cols-1 gap-4">
-                    {/* Add "Dummy Driver" to the top of the list */}
-                    {[{ driver: { id: 'dummy', driverName: 'Dummy Driver', companyName: '' }, pickupDistanceData: { distance: 0, duration: 0 } }]
-                        .concat(
-                            drivers
-                                .map((driver, index) => ({
-                                    driver,
-                                    pickupDistanceData: pickupDistances[index] || { distance: 0, duration: 0 },
-                                }))
-                                .sort((a, b) => {
-                                    if (a.driver.id === 'dummy') return -1; // Ensure Dummy Driver is always first
-                                    if (b.driver.id === 'dummy') return 1;  // Ensure Dummy Driver is always first
-                                    
-                                    if (a.driver.companyName === 'RSA' && b.driver.companyName !== 'RSA') {
-                                        return -1;
-                                    }
-                                    if (a.driver.companyName !== 'RSA' && b.driver.companyName === 'RSA') {
-                                        return 1;
-                                    }
-                                    return a.pickupDistanceData.distance - b.pickupDistanceData.distance;
-                                })
-                        )
-                        .map(({ driver, pickupDistanceData }, index) => {
-                            const totalDistance = pickupDistances.find((dist) => dist.id === driver.id)?.distance || 0;
-                            const driverTotalSalary = calculateTotalSalary(serviceDetails.salary, distance, serviceDetails.basicSalaryKM, serviceDetails.salaryPerKM);
+            {drivers
+                .map((driver, index) => ({
+                    driver,
+                    pickupDistanceData: pickupDistances[index] || { distance: 0, duration: 0 },
+                }))
+                .sort((a, b) => {
+                    
+                    if (a.driver.companyName === 'RSA' && b.driver.companyName !== 'RSA') {
+                        return -1;
+                    }
+                    if (a.driver.companyName !== 'RSA' && b.driver.companyName === 'RSA') {
+                        return 1;
+                    }
+                    return a.pickupDistanceData.distance - b.pickupDistanceData.distance;
+                })
 
-                            return (
-                                <div key={driver.id} className="flex items-center border border-gray-200 p-2 rounded-lg">
-                                    <table className="panel p-4 w-full">
-                                        <thead>
-                                            <tr className="text-left">
-                                                <th className="border-b-2 p-2">Driver Name</th>
-                                                {/* <th className="border-b-2 p-2">Company Name</th> */}
-                                                <th className="border-b-2 p-2">Pickup Distance (KM)</th>
-                                                <th className="border-b-2 p-2">Pickup Duration</th>
-                                                <th className="border-b-2 p-2">PayableAmount</th>
-                                                <th className="border-b-2 p-2">Profit after deducting expenses</th>
 
-                                                <th className="border-b-2 p-2">Select Driver</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr className="text-left">
-                                                <td className="border-b-2 p-2">{driver.driverName}</td>
-                                                {/* <td className="border-b-2 p-2">{driver.companyName}</td> */}
-                                                <td className="border-b-2 p-2">{pickupDistanceData.distance}</td>
-                                                <td className="border-b-2 p-2">{pickupDistanceData.duration}</td>
-                                                <td className="border-b-2 p-2">{driverTotalSalary}</td>
-                                                <td>
-                                                    <input
-                                                        type="radio"
-                                                        name="selectedDriver"
-                                                        value={driver.id}
-                                                        checked={selectedDriver === driver.id}
-                                                        onChange={() => handleInputChange('selectedDriver', driver.id)}
-                                                    />
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            );
-                        })}
-                </div>
-            </div>
-        </ReactModal>
+                .map(({ driver, pickupDistanceData }, index) => {
+                    const isRSA = driver.companyName === 'RSA';
+
+                    // Calculate salary using company-specific logic
+                    const calculatedSalary = calculateTotalSalary(
+                        isRSA ? serviceDetails.salary : driver.basicSalaries[driver.selectedServices[0]],
+                        distance,
+                        isRSA ? serviceDetails.basicSalaryKM : driver.basicSalaryKm[driver.selectedServices[0]],
+                        isRSA ? serviceDetails.salaryPerKM : driver.salaryPerKm[driver.selectedServices[0]],
+                        isRSA
+                    );
+                    const expensePerKM = serviceDetails.expensePerKM || 0;
+                    const profit = calculatedSalary - (distance * expensePerKM);
+
+                    return (
+                        <div key={driver.id} className="flex items-center border border-gray-200 p-2 rounded-lg">
+                            <table className="panel p-4 w-full">
+                                <thead>
+                                    <tr className="text-left">
+                                        <th className="border-b-2 p-2">Driver Name</th>
+                                        <th className="border-b-2 p-2">Pickup Distance (KM)</th>
+                                        <th className="border-b-2 p-2">Pickup Duration</th>
+                                        <th className="border-b-2 p-2">Payable Amount</th>
+                                        <th className="border-b-2 p-2">Profit after deducting expenses</th>
+                                        <th className="border-b-2 p-2">Select Driver</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr className="text-left">
+                                        <td className="border-b-2 p-2">{driver.driverName}</td>
+                                        <td className="border-b-2 p-2">{pickupDistanceData.distance}</td>
+                                        <td className="border-b-2 p-2">{pickupDistanceData.duration}</td>
+                                        <td className="border-b-2 p-2">{calculatedSalary.toFixed(2)}</td>
+                                        <td className="border-b-2 p-2">{profit.toFixed(2)}</td>
+                                        <td>
+                                            <input
+                                                type="radio"
+                                                name="selectedDriver"
+                                                value={driver.id}
+                                                checked={selectedDriver === driver.id}
+                                                onChange={() => handleInputChange('selectedDriver', driver.id)}
+                                            />
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    );
+                })}
+        </div>
+    </div>
+</ReactModal>
+
                   </div>
               </div>
   )}
+                  {selectedDriver && selectedDriverData && (
+
               <div className={styles.formGroup}>
               <React.Fragment>
                     <div>
@@ -1931,6 +1993,7 @@ const role =sessionStorage.getItem('role');
                     </div>
                 </React.Fragment>
               </div>
+               )}
               {selectedDriver && (
                 <div>
               <div className={styles.formGroup}>

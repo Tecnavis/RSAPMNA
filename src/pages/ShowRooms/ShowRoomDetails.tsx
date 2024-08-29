@@ -2,9 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import './ShowRoom.css'; // Import the CSS file
 
-const ShowRoomDetails = () => {
+// Define the type for the showroom details state
+interface ShowRoomDetailsType {
+    id: string;
+    name: string;
+    location: string;
+    img: string;
+    tollfree: string;
+    phoneNumber: string;
+    state: string;
+    district: string;
+}
+
+const ShowRoomDetails: React.FC = () => {
     const location = useLocation();
-    const [showRoomDetails, setShowRoomDetails] = useState({
+    
+    // Initialize state with default values
+    const [showRoomDetails, setShowRoomDetails] = useState<ShowRoomDetailsType>({
         id: '',
         name: '',
         location: '',
@@ -18,17 +32,26 @@ const ShowRoomDetails = () => {
     useEffect(() => {
         // Extract the query parameters from the URL
         const queryParams = new URLSearchParams(location.search);
-        const id = queryParams.get('id');
-        const name = queryParams.get('name');
-        const showroomLocation = queryParams.get('location');
-        const img = queryParams.get('img');
-        const tollfree = queryParams.get('tollfree');
-        const phoneNumber = queryParams.get('phoneNumber');
-        const state = queryParams.get('state');
-        const district = queryParams.get('district');
+        const id = queryParams.get('id') || '';
+        const name = queryParams.get('name') || '';
+        const showroomLocation = queryParams.get('location') || '';
+        const img = queryParams.get('img') || '';
+        const tollfree = queryParams.get('tollfree') || '';
+        const phoneNumber = queryParams.get('phoneNumber') || '';
+        const state = queryParams.get('state') || '';
+        const district = queryParams.get('district') || '';
 
         // Set the showroom details state
-        setShowRoomDetails({ id, name, location: showroomLocation, img, tollfree, phoneNumber, state, district });
+        setShowRoomDetails({
+            id,
+            name,
+            location: showroomLocation,
+            img,
+            tollfree,
+            phoneNumber,
+            state,
+            district
+        });
     }, [location.search]);
 
     return (

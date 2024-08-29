@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './ShowroomModal.css';
+// import './ShowroomModal.css';
 import { collection, addDoc, getFirestore, onSnapshot } from 'firebase/firestore';
 import { Autocomplete, IconButton, TextField, Typography } from '@mui/material';
 import axios from 'axios';
@@ -141,6 +141,8 @@ const ShowroomModal = ({ updateShowroomLocation , onClose}) => {
             setHasInsuranceBody('');
             setInsuranceAmountBody('');
             setImg('');
+            onClose();
+
         } catch (error) {
             console.error('Error adding document:', error);
         }
@@ -166,7 +168,7 @@ const ShowroomModal = ({ updateShowroomLocation , onClose}) => {
     };
     return (
         <div className="showroom-modal">
-            <form onSubmit={handleSubmit} className="showroom-form">
+            <div className="showroom-form">
                 <div className="form-group">
                     <label htmlFor="showRoom">Showroom Name:</label>
                     <Autocomplete
@@ -219,9 +221,9 @@ const ShowroomModal = ({ updateShowroomLocation , onClose}) => {
                     ></textarea>
                 </div>
                 {/* Add other form fields here */}
-                <button type="submit" className="btn btn-primary">Save Showroom</button>
+                <button onClick={handleSubmit} className="btn btn-primary">Save Showroom</button>
                 <button className="btn btn-danger my-3" onClick={handleClose}>close</button>
-            </form>
+            </div>
         </div>
     );
 };

@@ -40,14 +40,14 @@ const WithoutMapBooking = ({ activeForm }) => {
     }, []);
     const [updatedTotalSalary, setUpdatedTotalSalary] = useState(0);
     const [companies, setCompanies] = useState([]);
-    const [totalDriverDistance, setTotalDriverDistance] = useState(0);
+    const [totalDriverDistance, setTotalDriverDistance] = useState('');
 
     const [bookingDetails, setBookingDetails] = useState({
         company: '',
         fileNumber: '',
         customerName: '',
         totalDriverSalary: '',
-        totalDriverDistance: '',
+        totalDriverDistance: 0,
         phoneNumber: '',
         mobileNumber: '',
         totalSalary: '',
@@ -93,13 +93,13 @@ const WithoutMapBooking = ({ activeForm }) => {
     const [showroomLocation, setShowroomLocation] = useState('');
     const [insuranceAmountBody, setInsuranceAmountBody] = useState(0);
     const [showrooms, setShowrooms] = useState<Showroom[]>([]);
-    const [distance, setDistance] = useState(0);
+    const [distance, setDistance] = useState('');
     const [drivers, setDrivers] = useState([]);
     const [editData, setEditData] = useState(null);
     const [serviceTypes, setServiceTypes] = useState([]);
     const [showRooms, setShowRooms] = useState([]);
     const [selectedCompany, setSelectedCompany] = useState([]);
-    // const [currentDateTime, setCurrentDateTime] = useState('');
+    const [currentDateTime, setCurrentDateTime] = useState('');
     const [manualInput, setManualInput] = useState('');
     const [manualInput1, setManualInput1] = useState(dropoffLocation ? dropoffLocation.name : '');
     const [disableFields, setDisableFields] = useState(false); // State to control field disabling
@@ -127,8 +127,8 @@ const WithoutMapBooking = ({ activeForm }) => {
             setComments(editData.comments || '');
             setFileNumber(editData.fileNumber || '');
             setCompany(editData.company || '');
-            setTotalDriverSalary(editData.totalDriverSalary || '');
-            setTotalDriverDistance(editData.totalDriverDistance || '');
+            setTotalDriverSalary(editData.totalDriverSalary || 0);
+            setTotalDriverDistance(editData.totalDriverDistance || 0);
             setCustomerName(editData.customerName || '');
             setPhoneNumber(editData.phoneNumber || '');
             setVehicleType(editData.vehicleType || '');
@@ -149,7 +149,7 @@ const WithoutMapBooking = ({ activeForm }) => {
             setSelectedDriver(editData.selectedDriver || '');
             setBaseLocation(editData.baseLocation || '');
             setPickupLocation(editData.pickupLocation || '');
-            // setUpdatedTotalSalary(editData.updatedTotalSalary || '');
+            setUpdatedTotalSalary(editData.updatedTotalSalary || 0);
             setServiceType(editData.serviceType || '');
             setAdjustValue(editData.adjustValue || '');
             
@@ -161,43 +161,38 @@ const WithoutMapBooking = ({ activeForm }) => {
             setDisableFields(false);
         }
     }, [state]);
-    // useEffect(() => {
-    //     generateToken();
-    //     onMessage(messaging, (payload) => {
-    //         console.log(payload);
-    //     });
-    // }, []);
+   
 
     
-    // useEffect(() => {
-    //     const formatDate = (date) => {
-    //         const options = {
-    //             day: '2-digit',
-    //             month: '2-digit',
-    //             year: 'numeric',
-    //             hour: '2-digit',
-    //             minute: '2-digit',
-    //             second: '2-digit',
-    //             hour12: true,
-    //         };
-    //         return new Intl.DateTimeFormat('en-GB', options).format(date);
-    //     };
+    useEffect(() => {
+        const formatDate = (date) => {
+            const options = {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true,
+            };
+            return new Intl.DateTimeFormat('en-GB', options).format(date);
+        };
 
-    //     const updateDateTime = () => {
-    //         const now = new Date();
-    //         const formattedDateTime = formatDate(now);
-    //         setCurrentDateTime(formattedDateTime);
-    //     };
+        const updateDateTime = () => {
+            const now = new Date();
+            const formattedDateTime = formatDate(now);
+            setCurrentDateTime(formattedDateTime);
+        };
 
-    //     // Update date and time immediately on mount
-    //     updateDateTime();
+        // Update date and time immediately on mount
+        updateDateTime();
 
-    //     // Set up interval to update every second
-    //     const intervalId = setInterval(updateDateTime, 1000);
+        // Set up interval to update every second
+        const intervalId = setInterval(updateDateTime, 1000);
 
-    //     // Clean up interval on unmount
-    //     return () => clearInterval(intervalId);
-    // }, []);
+        // Clean up interval on unmount
+        return () => clearInterval(intervalId);
+    }, []);
 
 
     useEffect(() => {
@@ -409,28 +404,33 @@ const WithoutMapBooking = ({ activeForm }) => {
                 break;
                 case 'selectedDriver':
                     console.log("Selected Driver ID:", value);
-                
+        
                     setSelectedDriver(value || '');
-                
+        
                     const selectedDriverData = drivers.find((driver) => driver.id === value);
                     console.log("Selected Driver Data:", selectedDriverData);
-                
+        
                     if (selectedDriverData) {
-                        console.log("Service Details for Salary Calculation:", serviceDetails);
-                        console.log("Distance for Salary Calculation:", distance);
-                
+                        const isRSA = selectedDriverData.companyName === 'RSA';
+                        const salary = isRSA ? serviceDetails.salary : selectedDriverData.basicSalaries[selectedDriverData.selectedServices[0]];
+                        const basicSalaryKM = isRSA ? serviceDetails.basicSalaryKM : selectedDriverData.basicSalaryKm[selectedDriverData.selectedServices[0]];
+                        const salaryPerKM = isRSA ? serviceDetails.salaryPerKM : selectedDriverData.salaryPerKm[selectedDriverData.selectedServices[0]];
+        
                         const calculatedSalary = calculateTotalSalary(
-                            serviceDetails.salary,
+                            salary,
                             distance,
-                            serviceDetails.basicSalaryKM,
-                            serviceDetails.salaryPerKM
+                            basicSalaryKM,
+                            salaryPerKM,
+                            isRSA
                         );
+        
+                        const formattedSalary = parseFloat(calculatedSalary.toFixed(2));
+                        console.log("Calculated Salary for Selected Driver:", formattedSalary);
                 
-                        console.log("Calculated Salary for Selected Driver:", calculatedSalary);
-                
-                        setTotalSalary(calculatedSalary);
+                        setTotalSalary(formattedSalary);
                     } else {
                         console.log("No driver data found for the selected driver.");
+                        setTotalSalary(0); // Clear the total salary if no driver is selected
                     }
                     break;
                 
@@ -500,14 +500,14 @@ const WithoutMapBooking = ({ activeForm }) => {
     useEffect(() => {
         const db = getFirestore();
         const serviceCollection = collection(db, `user/${uid}/showroom`);
-
+    
         // Set up the real-time listener
         const unsubscribe = onSnapshot(
             serviceCollection,
             (snapshot) => {
                 const servicesList = snapshot.docs.map((doc) => ({
-                    value: doc.data().Location, // Assuming 'Location' is a unique identifier
-                    label: doc.data().Location,
+                    value: doc.data().Location, // Keep this if Location is used as the value for selecting an option
+                    label: doc.data().ShowRoom, // ShowRoom will be displayed as the label in the dropdown
                     insuranceAmountBody: doc.data().insuranceAmountBody, // Include this field if needed
                     locationLatLng: doc.data().locationLatLng, // Include this field if needed
                 }));
@@ -517,16 +517,13 @@ const WithoutMapBooking = ({ activeForm }) => {
                 console.error('Error fetching services:', error);
             }
         );
-
+    
         // Clean up the listener on component unmount
         return () => unsubscribe();
     }, [uid]);
-
-    // -------------------------------------------------------------------------------------
-
-    useEffect(() => {}, [showroomLocation]);
     
-
+    
+    //-------------------------------------------------------------------------------------
     useEffect(() => {
         setManualInput1(dropoffLocation ? dropoffLocation.name : '');
     }, [dropoffLocation]);
@@ -650,19 +647,6 @@ const WithoutMapBooking = ({ activeForm }) => {
         fetchServiceDetails();
     }, [db, serviceType]);
 
-//     const calculateTotalSalary = (salary, totalDistance, basicSalaryKM, salaryPerKM) => {
-//         const numericBasicSalary = Number(salary) || 0;
-//         const numericTotalDistance = Number(totalDistance) || 0;
-//         const numericKmValueNumeric = Number(basicSalaryKM) || 0;
-//         const numericPerKmValueNumeric = Number(salaryPerKM) || 0;
-// console.log("numericTotalDistance",numericTotalDistance)
-//         if (numericTotalDistance > numericKmValueNumeric) {
-//             return numericBasicSalary + (numericTotalDistance - numericKmValueNumeric) * numericPerKmValueNumeric;
-//         } else {
-//             return numericBasicSalary;
-//         }
-//     };
-
     const calculateTotalSalary = (salary, totalDistance, basicSalaryKM, salaryPerKM, isRSA) => {
         const numericBasicSalary = Number(salary) || 0;
         const numericTotalDistance = Number(totalDistance) || 0;
@@ -684,30 +668,7 @@ const WithoutMapBooking = ({ activeForm }) => {
                 return numericBasicSalary;
             }        }
     };
-    useEffect(() => {
-        const fetchDriverData = async () => {
-            const companyNamesList = [];
-            const driverData = [];
-    
-            try {
-                const querySnapshot = await getDocs(collection(db, `user/${uid}/driver`));
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    if (data.companyName) {
-                        companyNamesList.push(data.companyName);
-                    }
-                    driverData.push(data);
-                });
-    
-                setCompanyNames(companyNamesList);
-                setDrivers(driverData);
-            } catch (error) {
-                console.error("Error fetching company names: ", error);
-            }
-        };
-    
-        fetchDriverData();
-    }, [db, uid]);
+   
     
     useEffect(() => {
         if (drivers.length > 0) {
@@ -715,13 +676,7 @@ const WithoutMapBooking = ({ activeForm }) => {
             console.log("Distance:", distance);
             console.log("Service Details:", serviceDetails);
     
-            // Calculate total distances for each driver
-            const totalDistances = drivers.map((driver) => {
-                console.log(`Calculating total distance for driver ${driver.id}`);
-                return { driverId: driver.id, totalDistance: distance };
-            });
-            console.log("Total Distances:", totalDistances);
-    
+           
             // Calculate total salaries for each driver
             const totalSalaries = drivers.map((driver) => {
                 const isRSA = driver.companyName === 'RSA';
@@ -741,14 +696,7 @@ const WithoutMapBooking = ({ activeForm }) => {
                 console.log(`Salary for driver ${driver.id}:`, calculatedSalary);
                 return calculatedSalary;
             });
-            console.log("Total Salaries:", totalSalaries);
-    
-            // Sum all salaries to get the total salary
-            const totalSalary = totalSalaries.reduce((acc, salary) => acc + salary, 0);
-            console.log("Total Salary:", totalSalary);
-    
-            setTotalDistances(totalDistances); // Set totalDistances state
-            setTotalSalary(totalSalary);
+            
         }
     }, [drivers, serviceDetails, distance]);
     
@@ -874,28 +822,32 @@ const WithoutMapBooking = ({ activeForm }) => {
         }
       };
       
-      // Usage
-     
+      const sendNotificationsToAllDrivers = async () => {
+        try {
+            // Extract all FCM tokens from drivers
+            const tokens = drivers.map(driver => driver.fcmToken).filter(token => token);
+            const notificationTitle = "Booking Notification";
+            const notificationBody = "A new booking has been added or updated.";
+            const sound = "alert_notification";
+    
+            for (const token of tokens) {
+                await sendPushNotification(token, notificationTitle, notificationBody, sound);
+            }
+        } catch (error) {
+            console.error("Error sending notifications to all drivers:", error);
+        }
+    };     
       
 
     const addOrUpdateItem = async () => {
         if (validateForm()) {
             try {
                 const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-                if (!selectedDriverData) {
-                    console.error('Selected driver does not exist in the database.');
-                    return;
-                }
-                const fcmToken = selectedDriverData.fcmToken;
-                if (!fcmToken) {
-                    console.error('FCM Token is missing for the selected driver:', selectedDriver);
-                    return;
-                }
+                const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
+                const fcmToken = selectedDriverData ? selectedDriverData.fcmToken : null;
     
-                const selectedDriverObject = drivers.find((driver) => driver.id === selectedDriver) || { driverName: 'Dummy Driver' };
-                const driverName = selectedDriverObject.driverName || 'Dummy Driver'; // Ensure Dummy Driver is handled
-                // const currentDate = new Date();
-                // const dateTime = formatDate(currentDate); // Use the formatted date
+                const currentDate = new Date();
+                const dateTime = formatDate(currentDate); // Use the formatted date
                 const distance = (parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3)).toString();
                 let finalFileNumber = '';
 
@@ -909,6 +861,8 @@ const WithoutMapBooking = ({ activeForm }) => {
                     lat: pickupLocation?.lat?.toString() || '',
                     lng: pickupLocation?.lng?.toString() || ''
                 };
+                const totalDriverDistanceNumber = parseFloat(totalDriverDistance) || 0;
+
                 const bookingData = {
                     ...bookingDetails,
                     driver: driverName,
@@ -916,18 +870,18 @@ const WithoutMapBooking = ({ activeForm }) => {
                     pickupLocation: formattedPickupLocation,
                     dropoffLocation: dropoffLocation || {},
                     status: 'booking added',
-                    // dateTime: dateTime, // Use the formatted date
+                    dateTime: dateTime, // Use the formatted date
                     bookingId: `${bookingId}`,
                     createdAt: serverTimestamp(),
                     comments: comments || '',
                     // totalDistance: totalDistance,
-                    distance: distance || 0,
+                    distance: distance || '',
                     baseLocation: baseLocation || '',
                     showroomLocation: showroomLocation,
                     company: company || '',
                     adjustValue: adjustValue || '',
                     customerName: customerName || '',
-                    totalDriverDistance: totalDriverDistance || 0,
+                    totalDriverDistance: totalDriverDistanceNumber || 0,
                     totalDriverSalary: totalDriverSalary || 0,
                     mobileNumber: mobileNumber || '',
                     dis1: dis1 || 0,
@@ -973,8 +927,13 @@ const WithoutMapBooking = ({ activeForm }) => {
         console.log('Document written with ID: ', docRef.id);
         console.log('Document added');
     }
-    sendPushNotification(fcmToken, "Booking Notification", "Your booking has been updated", "alert_notification");
-    navigate('/bookings/newbooking');
+  // Check if the dummy driver is selected
+  if (selectedDriver === 'dummy') {
+    await sendNotificationsToAllDrivers();
+} else if (fcmToken) {
+    await sendPushNotification(fcmToken, "Booking Notification", "Your booking has been updated", "alert_notification");
+}  
+  navigate('/bookings/newbooking');
 } catch (error) {
     console.error('Error adding/updating item:', error);
 }
@@ -990,7 +949,7 @@ const WithoutMapBooking = ({ activeForm }) => {
     };
     return (
         <div className={styles.bookingFormContainer}>
-            {/* <div className={styles.dateTime}>{currentDateTime}</div> */}
+            <div className={styles.dateTime}>{currentDateTime}</div>
             <h2 className={styles.formHeading}>BOOK WITHOUT MAP</h2>
             <form className={styles.bookingForm}>
                 <div className={styles.formGroup}>
@@ -1124,28 +1083,34 @@ const WithoutMapBooking = ({ activeForm }) => {
                                 </div>
                             )}
                 <div className={styles.formGroup}>
-                    <label htmlFor="showrooms" className={styles.label}>
-                        Service Center
-                    </label>
-                    <div className={styles.inputContainer}>
-                        {showrooms.length >= 0 && (
-                            <ReactSelect
-                                id="showrooms"
-                                name="showrooms"
-                                className="w-full"
-                                value={showrooms.find((option) => option.value === showroomLocation) || null}
-                                options={showrooms}
-                                placeholder="Select showroom"
-                                onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
-                                isSearchable={true}
-                            />
-                        )}
-                        <button onClick={handleButtonClick} className={styles.addButton}>
-                            <IconPlus />
-                        </button>
-                    </div>
-                    {showShowroomModal && <ShowroomModalWithout onClose={() => setShowShowroomModal(false)} updateShowroomLocation={updateShowroomLocation} />}
-                </div>
+    <label htmlFor="showrooms" className={styles.label}>
+        Service Center
+    </label>
+    <div className={styles.inputContainer}>
+        {showrooms.length > 0 && (
+            <ReactSelect
+                id="showrooms"
+                name="showrooms"
+                className="w-full"
+                value={showrooms.find((option) => option.value === showroomLocation) || null}
+                options={showrooms}
+                placeholder="Select showroom"
+                onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
+                isSearchable={true}
+            />
+        )}
+        <button onClick={handleButtonClick} className={styles.addButton}>
+            <IconPlus />
+        </button>
+    </div>
+    {showShowroomModal && (
+        <ShowroomModalWithout
+            onClose={() => setShowShowroomModal(false)}
+            updateShowroomLocation={updateShowroomLocation}
+        />
+    )}
+</div>
+
 
                 <div className={styles.formGroup}>
                     <label htmlFor="showrooms" className={styles.label}>
@@ -1370,13 +1335,13 @@ const WithoutMapBooking = ({ activeForm }) => {
                             name="driver"
                             placeholder="Select your driver"
                             onClick={() => openModal(distance)}
-                            value={selectedDriver ? selectedDriverData?.driverName || 'Dummy Driver' : ''}
+                            value={selectedDriver ? selectedDriverData?.driverName || 'DummyDriver' : ''}
                             readOnly
                             className={styles.formControl}
                         />
                     </div>
                 )}
-      <ReactModal
+   <ReactModal
     isOpen={isModalOpen}
     onRequestClose={closeModal}
     style={{
@@ -1416,28 +1381,68 @@ const WithoutMapBooking = ({ activeForm }) => {
 
         <div style={{ marginTop: '10px' }}>
             <div className="grid grid-cols-1 gap-4">
+                {/* Dummy driver with placeholder values */}
+                <div className="flex items-center border border-gray-200 p-2 rounded-lg">
+                    <table className="panel p-4 w-full">
+                        <thead>
+                            <tr>
+                                <th>Driver Name</th>
+                                <th>Payable Amount</th>
+                                <th >Profit after deducting expenses</th>
+
+                                <th>Select</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style={{ fontSize: '18px', fontWeight: 'bold', color: 'red' }}>
+                                    DummyDriver
+                                </td>
+                                <td>0</td>
+                                <td>0</td>
+
+                                <td>
+                                    <input
+                                        type="radio"
+                                        name="selectedDriver"
+                                        value="dummy"
+                                        checked={selectedDriver === 'dummy'}
+                                        onChange={() => handleInputChange('selectedDriver', 'dummy')}
+                                    />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Actual drivers */}
                 {drivers.sort((a, b) => {
                     if (a.companyName === 'RSA' && b.companyName !== 'RSA') return -1;
                     if (a.companyName !== 'RSA' && b.companyName === 'RSA') return 1;
                     return 0;
                 }).map((driver) => {
                     const isRSA = driver.companyName === 'RSA';
+
+                    // Calculate salary using company-specific logic
                     const calculatedSalary = calculateTotalSalary(
-                        driver.salary || serviceDetails.salary,
+                        isRSA ? serviceDetails.salary : driver.basicSalaries[driver.selectedServices[0]],
                         distance,
-                        driver.basicSalaryKM || serviceDetails.basicSalaryKM,
-                        driver.salaryPerKM || serviceDetails.salaryPerKM,
+                        isRSA ? serviceDetails.basicSalaryKM : driver.basicSalaryKm[driver.selectedServices[0]],
+                        isRSA ? serviceDetails.salaryPerKM : driver.salaryPerKm[driver.selectedServices[0]],
                         isRSA
                     );
-
+                    const expensePerKM = serviceDetails.expensePerKM || 0;
+                    const profit = calculatedSalary - (distance * expensePerKM);
+                
                     return (
                         <div key={driver.id} className="flex items-center border border-gray-200 p-2 rounded-lg">
                             <table className="panel p-4 w-full">
                                 <thead>
                                     <tr>
                                         <th>Driver Name</th>
-                                        <th>Company Name</th>
                                         <th>Payable Amount</th>
+                                        <th >Profit after deducting expenses</th>
+
                                         <th>Select</th>
                                     </tr>
                                 </thead>
@@ -1446,9 +1451,8 @@ const WithoutMapBooking = ({ activeForm }) => {
                                         <td style={{ fontSize: '18px', fontWeight: 'bold', color: 'green' }}>
                                             {driver.driverName || 'Unknown Driver'}
                                         </td>
-                                        <td>{driver.companyName || 'Unknown Company'}</td>
-                                        <td>{calculatedSalary}</td>
-                                        <td>
+                                        <td>{calculatedSalary.toFixed(2)}</td> {/* Display Payable Amount */}
+                                        <td>{profit.toFixed(2)}</td> {/* Display Profit */}                                        <td>
                                             <input
                                                 type="radio"
                                                 name="selectedDriver"
@@ -1467,6 +1471,7 @@ const WithoutMapBooking = ({ activeForm }) => {
         </div>
     </div>
 </ReactModal>
+
 
                 {selectedDriver && selectedDriverData && (
                     <React.Fragment>
@@ -1563,7 +1568,7 @@ const WithoutMapBooking = ({ activeForm }) => {
                     </label>
                     <input
                         id="totalDriverDistance"
-                        type="text"
+                        type="number"
                         name="totalDriverDistance"
                         placeholder="Enter Driver Distance"
                         onChange={(e) => handleInputChange('totalDriverDistance', e.target.value)}

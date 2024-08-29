@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './ShowroomModal.css';
+// import './ShowroomModal.css';
 import { collection, addDoc, getFirestore, onSnapshot } from 'firebase/firestore';
 import { TextField, Typography, IconButton, Button } from '@mui/material';
 import IconMapPin from '../../components/Icon/IconMapPin';
@@ -27,7 +27,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
 
-    const handleSubmit = async (e:any) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const location = `${locationName}, ${locationCoords.lat}, ${locationCoords.lng}`;
         try {
@@ -100,7 +100,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
 
     return (
         <div className="showroom-modal">
-            <form onSubmit={handleSubmit} className="showroom-form">
+            <div  className="showroom-form">
                 <div className="form-group">
                     <label htmlFor="showRoom">Showroom Name:</label>
                     <TextField
@@ -159,10 +159,10 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
                 </div>
                 {/* Add other form fields here */}
                 <div className="modal-actions">
-                    <Button type="submit" variant="contained" color="primary">Save Showroom</Button>
+                    <Button onClick={handleSubmit} variant="contained" color="primary">Save Showroom</Button>
                     <Button onClick={onClose} variant="outlined" color="secondary">Close</Button>
                 </div>
-            </form>
+            </div>
         </div>
     );
 };

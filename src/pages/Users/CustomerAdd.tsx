@@ -21,7 +21,7 @@ interface LocationState {
 const CustomerAdd: React.FC = () => {
     const [customerName, setCustomerName] = useState<string>('');
     const [customerNameError, setCustomerNameError] = useState<string>('');
-    const [location, setLocation] = useState<string>('');
+    const [customerLocation, setCustomerLocation] = useState<string>(''); // Renamed from `location` to `customerLocation`
     const [email, setEmail] = useState<string>('');
     const [address, setAddress] = useState<string>('');
     const [phone_number, setPhone] = useState<string>('');
@@ -30,13 +30,14 @@ const CustomerAdd: React.FC = () => {
     const navigate = useNavigate();
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid')!;
-    const { state } = useLocation<LocationState>();
+    const location = useLocation();
+    const state = location.state as LocationState | undefined;
 
     useEffect(() => {
         if (state?.editData) {
             setEditData(state.editData);
             setCustomerName(state.editData.customerName || '');
-            setLocation(state.editData.location || '');
+            setCustomerLocation(state.editData.location || ''); // Updated reference here
             setEmail(state.editData.email || '');
             setAddress(state.editData.address || '');
             setPhone(state.editData.phone_number || '');
@@ -91,7 +92,7 @@ const CustomerAdd: React.FC = () => {
         try {
             const itemData: CustomerItem = {
                 customerName: customerName.toUpperCase(),
-                location,
+                location: customerLocation, // Updated reference here
                 email,
                 address,
                 phone_number,
@@ -99,7 +100,7 @@ const CustomerAdd: React.FC = () => {
 
             if (editData) {
                 const docRef = doc(db, `user/${uid}/customer`, editData.id!);
-                await updateDoc(docRef, itemData);
+                await updateDoc(docRef, itemData as Partial<CustomerItem>);
                 console.log('Document updated');
             } else {
                 const docRef = await addDoc(collection(db, `user/${uid}/customer`), itemData);
@@ -156,8 +157,8 @@ const CustomerAdd: React.FC = () => {
                                         id="location"
                                         type="text"
                                         className="form-input"
-                                        value={location}
-                                        onChange={(e) => setLocation(e.target.value)}
+                                        value={customerLocation} // Updated reference here
+                                        onChange={(e) => setCustomerLocation(e.target.value)} // Updated reference here
                                     />
                                 </div>
                                 <div>

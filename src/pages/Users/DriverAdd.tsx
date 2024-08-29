@@ -15,8 +15,8 @@ const DriverAdd = () => {
     const [companyName, setCompanyName] = useState('RSA');
 
     const [personalphone, setPersonalPhone] = useState('');
-    const [salaryPerKm, setSalaryPerKm] = useState({});
-    const [basicSalaryKm, setBasicSalaryKm] = useState({});
+    const [salaryPerKm, setSalaryPerKm] = useState<{ [key: string]: string }>({});
+    const [basicSalaryKm, setBasicSalaryKm] = useState<{ [key: string]: string }>({});
     type EditData = {
         id: string;
         phone: string;
@@ -36,18 +36,18 @@ const DriverAdd = () => {
     const [editData, setEditData] = useState<EditData | null>(null);
         const [showTable, setShowTable] = useState(false);
     const [selectedServices, setSelectedServices] = useState<string[]>([]);
-    const [basicSalaries, setBasicSalaries] = useState({}); // Ensure basicSalaries is defined here
-    const [profileImage, setProfileImage] = useState(null); // State to store profile image file
+    const [basicSalaries, setBasicSalaries] = useState<{ [key: string]: string }>({});
+    const [profileImage, setProfileImage] = useState<File | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
-    const [serviceVehicle, setServiceVehicle] = useState({});
+    const [serviceVehicle, setServiceVehicle] = useState<{ [key: string]: string }>({});
 
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [advancePayment, setAdvancePayment] = useState('0');
 
     const storage = getStorage();
     const uid = sessionStorage.getItem('uid');
-    const [serviceOptions, setServiceOptions] = useState([]);
+    const [serviceOptions, setServiceOptions] = useState<string[]>([]);
     const [imagePreview, setImagePreview] = useState('');
     const [serviceTypeError, setServiceTypeError] = useState('');
     const [confirmPasswordError, setConfirmPasswordError] = useState('');
@@ -70,13 +70,14 @@ const DriverAdd = () => {
         fetchServiceOptions();
     }, []);
 
-    const handlePasswordChange = (e) => {
+    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setPassword(e.target.value);
     };
-
-    const handleConfirmPasswordChange = (e) => {
+    
+    const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setConfirmPassword(e.target.value);
     };
+    
 
     const handleBasicSalaryChange = (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedSalaries = { ...basicSalaries, [service]: e.target.value };
