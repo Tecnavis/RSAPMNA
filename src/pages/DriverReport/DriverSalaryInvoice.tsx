@@ -21,29 +21,31 @@ const DriverSalaryInvoice = () => {
     const location = useLocation();
     const invoiceRef = useRef();
 
-    // Extract selectedBookings from the state
+    const uid = sessionStorage.getItem('uid');
     const { state } = location;
     const { selectedBookings } = state || { selectedBookings: [] };
-
+console.log("selectedBookings",selectedBookings)
     useEffect(() => {
         const fetchBookings = async () => {
             setLoading(true);
             try {
                 const bookingPromises = selectedBookings.map(async (bookingId) => {
-                    const bookingDocRef = doc(db, 'bookings', bookingId);
+                    console.log('Fetching booking with ID:', bookingId); // Log booking ID
+                    const bookingDocRef = doc(db, `user/${uid}/bookings`, bookingId);
                     const bookingSnapshot = await getDoc(bookingDocRef);
                     if (bookingSnapshot.exists()) {
+                        console.log('Booking found:', bookingSnapshot.data()); // Log booking data
                         return { id: bookingSnapshot.id, ...bookingSnapshot.data() };
                     } else {
                         console.log(`No booking found with ID: ${bookingId}`);
                         return null;
                     }
                 });
-
+        
                 const bookingResults = await Promise.all(bookingPromises);
                 const validBookings = bookingResults.filter((booking) => booking !== null);
                 setBookings(validBookings);
-
+        
                 dispatch(setPageTitle(`Invoice Preview - ${validBookings.length > 0 ? validBookings[0].id : ''}`));
                 setLoading(false);
             } catch (error) {
@@ -51,6 +53,7 @@ const DriverSalaryInvoice = () => {
                 setLoading(false);
             }
         };
+        
 
         if (selectedBookings.length > 0) {
             fetchBookings();

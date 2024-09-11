@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './ShowroomModal.css';
+// import './ShowroomModal.css';
 import { collection, addDoc, getFirestore, onSnapshot } from 'firebase/firestore';
-import { Autocomplete, TextField, Typography } from '@mui/material';
+import { Autocomplete, IconButton, TextField, Typography } from '@mui/material';
 import axios from 'axios';
+import IconMapPin from '../../components/Icon/IconMapPin';
 
-const ShowroomModal = ({ updateShowroomLocation }) => {
+const ShowroomModal = ({ updateShowroomLocation , onClose}) => {
     const [showRoom, setShowRoom] = useState('');
     const [showrooms, setShowrooms] = useState([]);
     const [description, setDescription] = useState('');
@@ -27,6 +28,7 @@ const ShowroomModal = ({ updateShowroomLocation }) => {
     const [locationCoords, setLocationCoords] = useState({ lat: '', lng: '' });
     const db = getFirestore();
     const inputRef = useRef(null);
+    const uid = sessionStorage.getItem('uid')
 
     const handleInputChange = (event, newInputValue) => {
         setShowRoom(newInputValue);
@@ -83,11 +85,19 @@ const ShowroomModal = ({ updateShowroomLocation }) => {
         setLocationOptions([]);
     };
 
+    const handleLatChange = (e) => {
+        setLocationCoords({ ...locationCoords, lat: e.target.value });
+    };
+
+    const handleLngChange = (e) => {
+        setLocationCoords({ ...locationCoords, lng: e.target.value });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await addDoc(collection(db, 'showroom'), {
-                Location: `${location.label}, ${locationCoords.lat}, ${locationCoords.lng}`,
+            await addDoc(collection(db, `user/${uid}/showroom`), {
+                Location: `${location ? location.label : ''}, ${locationCoords.lat}, ${locationCoords.lng}`,
                 ShowRoom: showRoom,
                 description,
                 userName,
@@ -109,8 +119,8 @@ const ShowroomModal = ({ updateShowroomLocation }) => {
                 createdAt: new Date(),
             });
             console.log('Showroom added successfully');
-            console.log('Updating showroom location to:', location.label);
-            updateShowroomLocation(location.label);
+            console.log('Updating showroom location to:', location ? location.label : '');
+            updateShowroomLocation(location ? location.label : '');
 
             // Reset form fields
             setLocation(null);
@@ -131,13 +141,15 @@ const ShowroomModal = ({ updateShowroomLocation }) => {
             setHasInsuranceBody('');
             setInsuranceAmountBody('');
             setImg('');
+            onClose();
+
         } catch (error) {
             console.error('Error adding document:', error);
         }
     };
 
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, 'showroom'), (snapshot) => {
+        const unsubscribe = onSnapshot(collection(db, `user/${uid}/showroom`), (snapshot) => {
             const showroomsList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
             setShowrooms(showroomsList);
         });
@@ -145,9 +157,18 @@ const ShowroomModal = ({ updateShowroomLocation }) => {
         return () => unsubscribe();
     }, [db]);
 
+    const handleClose = () => {
+        if (onClose) {
+            onClose(); // Call the onClose function passed from the parent component
+        }
+    };
+    const openGoogleMaps = () => {
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(showRoom)}`;
+        window.open(googleMapsUrl, '_blank');
+    };
     return (
         <div className="showroom-modal">
-            <form onSubmit={handleSubmit} className="showroom-form">
+            <div className="showroom-form">
                 <div className="form-group">
                     <label htmlFor="showRoom">Showroom Name:</label>
                     <Autocomplete
@@ -160,9 +181,33 @@ const ShowroomModal = ({ updateShowroomLocation }) => {
                         isOptionEqualToValue={(option, value) => option.label === value.label}
                         renderInput={(params) => <TextField {...params} label="Location" variant="outlined" />}
                     />
-                    {locationCoords.lat && locationCoords.lng && (
-                        <Typography>{`Location Lat/Lng: ${locationCoords.lat}, ${locationCoords.lng}`}</Typography>
-                    )}
+                     <IconButton onClick={openGoogleMaps} className="icon-button">
+                            <IconMapPin />
+                        </IconButton>
+                </div>
+                <div className="form-group">
+                    <label htmlFor="lat">Latitude:</label>
+                    <TextField
+                        id="lat"
+                        value={locationCoords.lat}
+                        onChange={handleLatChange}
+                        required
+                        className="form-control"
+                        placeholder="Enter latitude"
+                        variant="outlined"
+                    />
+                </div>
+                <div className="form-group">
+                    <label htmlFor="lng">Longitude:</label>
+                    <TextField
+                        id="lng"
+                        value={locationCoords.lng}
+                        onChange={handleLngChange}
+                        required
+                        className="form-control"
+                        placeholder="Enter longitude"
+                        variant="outlined"
+                    />
                 </div>
                 <div className="form-group">
                     <label htmlFor="description">Description:</label>
@@ -176,8 +221,9 @@ const ShowroomModal = ({ updateShowroomLocation }) => {
                     ></textarea>
                 </div>
                 {/* Add other form fields here */}
-                <button type="submit" className="btn btn-primary">Save Showroom</button>
-            </form>
+                <button onClick={handleSubmit} className="btn btn-primary">Save Showroom</button>
+                <button className="btn btn-danger my-3" onClick={handleClose}>close</button>
+            </div>
         </div>
     );
 };

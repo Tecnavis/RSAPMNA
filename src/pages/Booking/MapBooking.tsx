@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Autocomplete, TextField, Box, Button, Typography } from '@mui/material';
+import { Autocomplete, TextField, Box, Button, Typography, IconButton } from '@mui/material';
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { GoogleMap, useGoogleMap } from '@react-google-maps/api';
 import ReactModal from 'react-modal';
@@ -16,16 +16,19 @@ import BaseLocationModal from '../BaseLocation/BaseLocationModal';
 import IconMapPin from '../../components/Icon/IconMapPin';
 import Select from 'react-select';
 import useGoogleMaps from './GoogleMaps';
+import styles from './mapbooking.module.css';
 import MapView from './Map';
-import { backgroundClip } from 'html2canvas/dist/types/css/property-descriptors/background-clip';
+import MapWithRoutes from './MapWithRoutes';
+import ReactSelect from 'react-select';
 interface Showroom {
     id: string;
     name: string;
 }
 
-const MapBooking = () => {
+const MapBooking = ({ activeForm }) => {
+    
     const db = getFirestore();
-    const uid = sessionStorage.getItem('uid')
+    const uid = sessionStorage.getItem('uid');
     const navigate = useNavigate();
     const [bookingId, setBookingId] = useState<string>('');
     useEffect(() => {
@@ -48,6 +51,7 @@ const MapBooking = () => {
         serviceType: '',
         serviceVehicle: '',
         vehicleType: '',
+        totalDriverDistance: '',
 
         driver: '',
         vehicleNumber: '',
@@ -78,7 +82,7 @@ const MapBooking = () => {
     const [selectedDriver, setSelectedDriver] = useState(null);
     const [serviceDetails, setServiceDetails] = useState('');
     const [serviceType, setServiceType] = useState('');
-    const [totalDriverSalary, setTotalDriverSalary] = useState(0);
+    const [totalDriverSalary, setTotalDriverSalary] = useState('');
 
     const [pickupLocation, setPickupLocation] = useState('');
     const [dropoffLocation, setDropoffLocation] = useState('');
@@ -86,7 +90,7 @@ const MapBooking = () => {
     const [pickupCoords, setPickupCoords] = useState({ lat: undefined, lng: undefined });
 
     const [baseLocation, setBaseLocation] = useState(null);
-    console.log('baseLocationpickupLocation', baseLocation);
+    // console.log('baseLocationpickupLocation', baseLocation);
 
     const [trappedLocation, setTrappedLocation] = useState('');
     const [totalSalary, setTotalSalary] = useState(0);
@@ -104,13 +108,14 @@ const MapBooking = () => {
     const [manualInput, setManualInput] = useState(pickupLocation ? pickupLocation.name : '');
     const [disableFields, setDisableFields] = useState(false); // State to control field disabling
     const [pickupDistances, setPickupDistances] = useState([]);
-    console.log('totalSalary', totalSalary);
-  const [errors, setErrors] = useState({});
+    const [userFcmToken, setUserFcmToken] = useState<string | null>(null);
+    const [errors, setErrors] = useState({});
     const [serviceCategory, setServiceCategory] = useState('');
-    const [legDistances, setLegDistances] = useState([]);
     const [availableServices, setAvailableServices] = useState('');
     const [adjustValue, setAdjustValue] = useState('');
 const [bodyShope, setBodyShope]= useState('');
+const userName =sessionStorage.getItem('username');
+const role =sessionStorage.getItem('role');
     useEffect(() => {
         if (state && state.editData) {
             const editData = state.editData;
@@ -129,15 +134,17 @@ const [bodyShope, setBodyShope]= useState('');
             setServiceVehicle(editData.serviceVehicle || '');
             setVehicleType(editData.vehicleType || '');
             setAdjustValue(editData.adjustValue || '');
+            console.log('editData.adjustValue', editData.adjustValue);
+
             setServiceCategory(editData.serviceCategory || '');
             setAvailableServices(editData.availableServices || '');
             setVehicleModel(editData.vehicleModel || '');
             setVehicleSection(editData.vehicleSection || '');
             setShowroomLocation(editData.showroomLocation || '');
             setDistance(editData.distance || '');
-            console.log("editData.distance", editData.distance);
+            console.log('editData.distance', editData.distance);
             setBodyShope(editData.bodyShope || '');
-            console.log("editData.bodyShope",editData.bodyShope)
+            console.log('editData.bodyShope', editData.bodyShope);
             setSelectedDriver(editData.selectedDriver || '');
             setBaseLocation(editData.baseLocation || '');
             setShowrooms(editData.showrooms || []);
@@ -147,24 +154,51 @@ const [bodyShope, setBodyShope]= useState('');
                 setPickupCoords({ lat, lng });
             } else {
                 setPickupLocation(editData.pickupLocation || '');
-            }            
-            setTotalDriverDistance(editData.totalDriverDistance || '');
+            }
+            setTotalDriverDistance(editData.totalDriverDistance || 0);
             setAvailableServices(editData.availableServices || '');
             setShowRooms(editData.showRooms || '');
-            setUpdatedTotalSalary(editData.updatedTotalSalary || '');
-            setDistance(editData.distance || '');
+            setUpdatedTotalSalary(editData.updatedTotalSalary || 0);
+            console.log('editData.updatedTotalSalary', editData.updatedTotalSalary);
+
+            setDistance(editData.distance || 0);
             setServiceType(editData.serviceType || '');
             setTotalSalary(editData.totalSalary || 0);
             setDropoffLocation(editData.dropoffLocation || '');
             setSelectedCompany(editData.selectedCompany || '');
         }
     }, [state]);
-    
+
     useEffect(() => {
-        const now = new Date();
-        const formattedDateTime = now.toLocaleString();
-        setCurrentDateTime(formattedDateTime);
+        const formatDate = (date) => {
+            const options = {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true,
+            };
+            return new Intl.DateTimeFormat('en-GB', options).format(date);
+        };
+
+        const updateDateTime = () => {
+            const now = new Date();
+            const formattedDateTime = formatDate(now);
+            setCurrentDateTime(formattedDateTime);
+        };
+
+        // Update date and time immediately on mount
+        updateDateTime();
+
+        // Set up interval to update every second
+        const intervalId = setInterval(updateDateTime, 1000);
+
+        // Clean up interval on unmount
+        return () => clearInterval(intervalId);
     }, []);
+
     useEffect(() => {
         setManualInput(pickupLocation ? pickupLocation.name : '');
     }, [pickupLocation]);
@@ -202,16 +236,21 @@ const [bodyShope, setBodyShope]= useState('');
             const fetchCompanies = async () => {
                 try {
                     const driverCollection = collection(db, `user/${uid}/driver`);
+
+                    // Query to fetch companies where companyName is 'Company'
                     const q = query(driverCollection, where('companyName', '==', 'Company'));
                     const querySnapshot = await getDocs(q);
+
                     const fetchedCompanies = querySnapshot.docs.map((doc) => ({
                         id: doc.id,
                         ...doc.data(),
                     })) as Company[];
 
-                    const deletedItemIds = JSON.parse(localStorage.getItem('deletedItems') || '[]');
-                    console.log('deletedItemIds', deletedItemIds);
-                    const filteredCompanies = fetchedCompanies.filter((company) => !deletedItemIds.includes(company.id));
+                    console.log('fetchedCompanies', fetchedCompanies);
+
+                    // Filter fetched companies based on status
+                    const filteredCompanies = fetchedCompanies.filter((company) => company.status !== 'deleted from UI' && (company.status === '' || !company.status));
+
                     console.log('filteredCompanies', filteredCompanies);
                     setCompanies(filteredCompanies);
                 } catch (error) {
@@ -221,14 +260,28 @@ const [bodyShope, setBodyShope]= useState('');
 
             fetchCompanies();
         }
-    }, [company, db]);
+    }, [company, db, uid]);
 
-  
-    const handleUpdatedTotalSalary = (newTotalSalary) => {
-        setUpdatedTotalSalary(newTotalSalary);
+    const handleUpdateTotalSalary = (newTotaSalary) => {
+        console.log('newTotalSalary', newTotaSalary);
+        setUpdatedTotalSalary(newTotaSalary);
+    };
+    const handleInsuranceAmountBodyChange = (amount) => {
+        console.log('firstamount', amount);
+        setInsuranceAmountBody(amount);
+    };
+    const handleAdjustValueChange = (newAdjustValue) => {
+        console.log('Adjust Valuee:', newAdjustValue);
+        setAdjustValue(newAdjustValue);
+    };
+    const handleServiceCategoryChange = (service) => {
+        setServiceCategory(service);
+    };
+    const handleBodyInsuranceChange = (insurance) => {
+        console.log('firstinsurance', insurance);
+        setBodyShope(insurance);
     };
 
-   
     useEffect(() => {
         if (selectedDriver) {
             const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
@@ -244,71 +297,64 @@ const [bodyShope, setBodyShope]= useState('');
         }
     }, [selectedDriver, serviceType, drivers]);
 
-    const handleUpdateTotalSalary = (newTotalSalary) => {
-        console.log("newTotalSalary",newTotalSalary)
-        setUpdatedTotalSalary(newTotalSalary);
-    };
-
-    const handleInsuranceAmountBodyChange = (amount) => {
-        console.log("firstamount",amount)
-        setInsuranceAmountBody(amount);
-
-    };
-    const handleAdjustValueChange = (newAdjustValue) => {
-        console.log('Adjust Valuee:', newAdjustValue);
-        setAdjustValue(newAdjustValue);
-    };
-    const handleServiceCategoryChange = (service) => {
-        setServiceCategory(service);
-    };
-const handleBodyInsuranceChange =(insurance) =>{
-    console.log("firstinsurance",insurance)
-setBodyShope(insurance)
-}
     const handleInputChange = (field, value) => {
         switch (field) {
             case 'showroomLocation':
                 console.log('Setting showroomLocation:', value);
                 setShowroomLocation(value);
-    
+
                 // Find the selected showroom based on the selected value
                 const selectedShowroom = showrooms.find((show) => show.value === value);
                 console.log('Selected Showroom:', selectedShowroom);
-    
+
                 if (selectedShowroom) {
                     console.log('Found showroom:', selectedShowroom.value);
                     console.log('Setting insuranceAmountBody to:', selectedShowroom.insuranceAmountBody);
                     setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
-    
+
+                    // Ensure lat and lng are stored as strings
+                    const latString = selectedShowroom.locationLatLng.lat.toString();
+                    const lngString = selectedShowroom.locationLatLng.lng.toString();
+
                     console.log('Setting dropoffLocation to:', {
                         name: selectedShowroom.value,
-                        lat: selectedShowroom.locationLatLng.lat,
-                        lng: selectedShowroom.locationLatLng.lng,
+                        lat: latString,
+                        lng: lngString,
                     });
                     setDropoffLocation({
                         name: selectedShowroom.value,
-                        lat: selectedShowroom.locationLatLng.lat,
-                        lng: selectedShowroom.locationLatLng.lng,
+                        lat: latString,
+                        lng: lngString,
                     });
                 } else {
                     console.log('No showroom found, resetting values');
                     setInsuranceAmountBody('');
                     setDropoffLocation({
                         name: '',
-                        lat: null,
-                        lng: null,
+                        lat: '',
+                        lng: '',
                     });
                 }
                 break;
             case 'totalSalary':
                 setTotalSalary(value || 0);
-                const newCalculatedSalary = value - parseFloat(insuranceAmountBody);
-                handleUpdatedTotalSalary(newCalculatedSalary);
+
                 break;
+            case 'serviceCategory':
+                setServiceCategory(value || 0);
+
+                break;
+            case 'availableServices':
+                setAvailableServices(value || 0);
+
+                break;
+            case 'bodyShope':
+                setBodyShope(value || '');
+                break;
+
             case 'insuranceAmountBody':
                 setInsuranceAmountBody(value || 0);
-                const recalculatedTotalSalary = totalSalary - parseFloat(value);
-                handleUpdatedTotalSalary(recalculatedTotalSalary);
+
                 break;
             case 'adjustValue':
                 setAdjustValue(value || '');
@@ -317,10 +363,10 @@ setBodyShope(insurance)
             case 'customerName':
                 setCustomerName(value || '');
                 break;
-                case 'showRooms':
-                    setShowRooms(value || '');
-                    break;
-                
+            case 'showRooms':
+                setShowRooms(value || '');
+                break;
+
             case 'company':
                 setCompany(value);
                 setFileNumber(value === 'self' ? bookingId : '');
@@ -334,19 +380,37 @@ setBodyShope(insurance)
             case 'selectedCompany':
                 setSelectedCompany(value || '');
                 break;
-            case 'selectedDriver':
-                setSelectedDriver(value || '');
-                console.log('Selected Driver ID:', value);
-
-                const selectedDriverData = drivers.find((driver) => driver.id === value);
-                console.log('Selected Driver Dataaa:', selectedDriverData);
-                if (selectedDriverData) {
-                    const calculatedSalary = calculateTotalSalary(serviceDetails.salary, distance, serviceDetails.basicSalaryKM, serviceDetails.salaryPerKM);
-                    console.log('Calculated Salary:', calculatedSalary);
-
-                    setTotalSalary(calculatedSalary);
-                }
-                break;
+                case 'selectedDriver':
+                    console.log("Selected Driver ID:", value);
+        
+                    setSelectedDriver(value || '');
+        
+                    const selectedDriverData = drivers.find((driver) => driver.id === value);
+                    console.log("Selected Driver Data:", selectedDriverData);
+        
+                    if (selectedDriverData) {
+                        const isRSA = selectedDriverData.companyName === 'RSA';
+                        const salary = isRSA ? serviceDetails.salary : selectedDriverData.basicSalaries[selectedDriverData.selectedServices[0]];
+                        const basicSalaryKM = isRSA ? serviceDetails.basicSalaryKM : selectedDriverData.basicSalaryKm[selectedDriverData.selectedServices[0]];
+                        const salaryPerKM = isRSA ? serviceDetails.salaryPerKM : selectedDriverData.salaryPerKm[selectedDriverData.selectedServices[0]];
+        
+                        const calculatedSalary = calculateTotalSalary(
+                            salary,
+                            distance,
+                            basicSalaryKM,
+                            salaryPerKM,
+                            isRSA
+                        );
+        
+                        const formattedSalary = parseFloat(calculatedSalary.toFixed(2));
+                        console.log("Calculated Salary for Selected Driver:", formattedSalary);
+                
+                        setTotalSalary(formattedSalary);
+                    } else {
+                        console.log("No driver data found for the selected driver.");
+                        setTotalSalary(0); // Clear the total salary if no driver is selected
+                    }
+                    break;
             case 'companies':
                 setCompanies(value || '');
                 break;
@@ -364,9 +428,9 @@ setBodyShope(insurance)
                 console.log('updatedTotalSalary', updatedTotalSalary);
                 setUpdatedTotalSalary(value || '');
                 break;
-                case 'totalDriverDistance':
-                    setTotalDriverDistance(value || 0);
-                    break;
+            case 'totalDriverDistance':
+                setTotalDriverDistance(value || 0);
+                break;
             case 'distance':
                 console.log('eeee', distance);
 
@@ -403,19 +467,19 @@ setBodyShope(insurance)
             case 'baseLocation':
                 setBaseLocation(value || '');
                 break;
-                case 'bodyShope':
-                    setBodyShope(value || '');
-                    break;
+            case 'bodyShope':
+                setBodyShope(value || '');
+                break;
             case 'trappedLocation':
                 setDisableFields(value === 'outsideOfRoad'); // Disable fields if trappedLocation is 'outsideOfRoad'
 
                 setTrappedLocation(value || '');
                 break;
-                case 'availableServices':
-                    setAvailableServices(value || 0);
-     
-                    break;
-                
+            case 'availableServices':
+                setAvailableServices(value || 0);
+
+                break;
+
             case 'showrooms':
                 setShowrooms(value || '');
                 break;
@@ -433,36 +497,43 @@ setBodyShope(insurance)
         }
         handleCalculateDistance();
     };
+    const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
+
     const openModal = () => {
         setIsModalOpen(true);
     };
     const closeModal = () => {
         setIsModalOpen(false);
     };
-   
+
     const updateShowroomLocation = (location) => {
         setShowroomLocation(location);
     };
     useEffect(() => {
-        const fetchShowroomOptions = async () => {
-            try {
-                const db = getFirestore();
-                const serviceCollection = collection(db, `user/${uid}/showroom`);
-                const serviceSnapshot = await getDocs(serviceCollection);
-                const servicesList = serviceSnapshot.docs.map(doc => ({
-                    value: doc.data().Location, // Assuming 'Location' is a unique identifier
-                    label: doc.data().Location,
-                    insuranceAmountBody: doc.data().insuranceAmountBody, // Make sure to include this
-                    locationLatLng: doc.data().locationLatLng // Make sure to include this
+        const db = getFirestore();
+        const serviceCollection = collection(db, `user/${uid}/showroom`);
+    
+        // Set up the real-time listener
+        const unsubscribe = onSnapshot(
+            serviceCollection,
+            (snapshot) => {
+                const servicesList = snapshot.docs.map((doc) => ({
+                    value: doc.data().Location, // Keep this if Location is used as the value for selecting an option
+                    label: doc.data().ShowRoom, // ShowRoom will be displayed as the label in the dropdown
+                    insuranceAmountBody: doc.data().insuranceAmountBody, // Include this field if needed
+                    locationLatLng: doc.data().locationLatLng, // Include this field if needed
                 }));
                 setShowrooms(servicesList);
-            } catch (error) {
+            },
+            (error) => {
                 console.error('Error fetching services:', error);
             }
-        };
-
-        fetchShowroomOptions();
-    }, []);
+        );
+    
+        // Clean up the listener on component unmount
+        return () => unsubscribe();
+    }, [uid]);
+    
     useEffect(() => {
         const fetchServiceTypes = async () => {
             try {
@@ -478,9 +549,13 @@ setBodyShope(insurance)
         fetchServiceTypes();
     }, [db]);
 
+    const handleCloseModal = () => {
+        setShowShowroomModal(false);
+    };
+
     useEffect(() => {
         const db = getFirestore();
-        const unsubscribe = onSnapshot(collection(db,`user/${uid}/showroom`), (snapshot) => {
+        const unsubscribe = onSnapshot(collection(db, `user/${uid}/showroom`), (snapshot) => {
             const showrooms = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
             setShowRooms(showrooms);
         });
@@ -495,44 +570,39 @@ setBodyShope(insurance)
                 setDrivers([]);
                 return;
             }
-    
+
             try {
                 const driversCollection = collection(db, `user/${uid}/driver`);
                 const snapshot = await getDocs(driversCollection);
-    
-                // Fetch deleted driver IDs from localStorage using the correct key
-                const deletedItemIds = JSON.parse(localStorage.getItem('deletedUserIds') || '[]');
-                console.log('Deleted Driver IDs:', deletedItemIds);
-    
+
                 const filteredDrivers = snapshot.docs
                     .map((doc) => {
                         const driverData = doc.data();
                         // Only include drivers who have the selected service type and are not deleted
-                        if (!driverData.selectedServices.includes(serviceType) || deletedItemIds.includes(doc.id)) {
+                        if (!driverData.selectedServices.includes(serviceType) || driverData.status === 'deleted from UI') {
                             return null;
                         }
-    
+
                         return {
                             id: doc.id,
                             ...driverData,
                         };
                     })
                     .filter(Boolean); // Remove null entries
-    
+
                 setDrivers(filteredDrivers);
                 console.log('Filtered Drivers:', filteredDrivers);
             } catch (error) {
                 console.error('Error fetching drivers:', error);
             }
         };
-    
+
         if (serviceType && serviceDetails) {
             fetchDrivers().catch(console.error);
         } else {
             setDrivers([]);
         }
-    }, [db, serviceType, serviceDetails]);
-    
+    }, [db, uid, serviceType, serviceDetails]);
 
     useEffect(() => {
         const fetchServiceDetails = async () => {
@@ -632,57 +702,61 @@ setBodyShope(insurance)
             return { id, distance: null, duration: null };
         }
     };
-    const calculateTotalSalary = (salary, distance, basicSalaryKM, salaryPerKM) => {
+    const calculateTotalSalary = (salary, totalDistance, basicSalaryKM, salaryPerKM, isRSA) => {
         const numericBasicSalary = Number(salary) || 0;
-        const numericTotalDistance = Number(distance) || 0;
+        const numericTotalDistance = Number(totalDistance) || 0;
         const numericKmValueNumeric = Number(basicSalaryKM) || 0;
         const numericPerKmValueNumeric = Number(salaryPerKM) || 0;
-        console.log('numericBasicSalary', numericBasicSalary);
-        console.log('numericTotalDistance', numericTotalDistance);
-
-        console.log('numericKmValueNumeric', numericKmValueNumeric);
-
-        console.log('numericPerKmValueNumeric', numericPerKmValueNumeric);
-
-        if (numericTotalDistance > numericKmValueNumeric) {
-            return numericBasicSalary + (numericTotalDistance - numericKmValueNumeric) * numericPerKmValueNumeric;
+    
+        if (isRSA) {
+            // For RSA company
+            if (numericTotalDistance > numericKmValueNumeric) {
+                return numericBasicSalary + (numericTotalDistance - numericKmValueNumeric) * numericPerKmValueNumeric;
+            } else {
+                return numericBasicSalary;
+            }
         } else {
-            return numericBasicSalary;
-        }
+            // For non-RSA companies
+            if (numericTotalDistance > numericKmValueNumeric) {
+                return numericBasicSalary + (numericTotalDistance - numericKmValueNumeric) * numericPerKmValueNumeric;
+            } else {
+                return numericBasicSalary;
+            }        }
     };
 
     useEffect(() => {
-        
         const fetchDrivers = async () => {
             console.log('Fetching drivers from Firestore');
             try {
-                const driversCollection = collection(db,`user/${uid}/driver`);
+                const driversCollection = collection(db, `user/${uid}/driver`);
                 const snapshot = await getDocs(driversCollection);
                 console.log('Firestore snapshot:', snapshot);
-
+    
                 if (!serviceDetails) {
                     console.log('Service details not found, cannot proceed with fetching drivers.');
                     return;
                 }
-
+    
                 const filteredDrivers = snapshot.docs
                     .map((doc) => ({
                         id: doc.id,
                         ...doc.data(),
                     }))
-                    .filter((driver) => driver.selectedServices && driver.selectedServices.includes(serviceType));
-
+                    .filter((driverData) => {
+                        return driverData.selectedServices.includes(serviceType) && driverData.status !== 'deleted from UI';
+                    });
+    
                 console.log('Filtered drivers:', filteredDrivers);
-
+    
                 const distancePromises = filteredDrivers.map(async (driver) => {
                     console.log('Processing driver:', driver);
-
+    
                     if (driver.currentLocation && driver.currentLocation.latitude && driver.currentLocation.longitude) {
                         const origin = {
                             lat: driver.currentLocation.latitude,
                             lng: driver.currentLocation.longitude,
                         };
-
+    
                         if (pickupLocation) {
                             const [locationName, lat, lng] = pickupLocation.split(',').map((part) => part.trim());
                             const parsedPickupLocation = {
@@ -690,7 +764,7 @@ setBodyShope(insurance)
                                 lng: parseFloat(lng),
                             };
                             console.log('Parsed Pickup Location:', parsedPickupLocation);
-
+    
                             if (!isNaN(parsedPickupLocation.lat) && !isNaN(parsedPickupLocation.lng)) {
                                 const destination = {
                                     lat: parsedPickupLocation.lat,
@@ -698,7 +772,7 @@ setBodyShope(insurance)
                                 };
                                 console.log('Origin for driver:', origin);
                                 console.log('Destination for driver:', destination);
-
+    
                                 const distanceData = await fetchTravelDistance(origin, destination, driver.id);
                                 console.log('Distance and duration for driver:', distanceData);
                                 return distanceData;
@@ -713,17 +787,17 @@ setBodyShope(insurance)
                     }
                     return { id: driver.id, distance: 0, duration: 0 };
                 });
-
+    
                 const resolvedDistances = await Promise.all(distancePromises);
                 console.log('Resolved distances:', resolvedDistances);
-
+    
                 setPickupDistances(resolvedDistances);
                 setDrivers(filteredDrivers);
             } catch (error) {
                 console.error('Error fetching drivers:', error);
             }
         };
-
+    
         if (serviceType && serviceDetails) {
             console.log('Fetching drivers based on service type and service details');
             fetchDrivers().catch(console.error);
@@ -732,8 +806,24 @@ setBodyShope(insurance)
             setDrivers([]);
         }
     }, [serviceType, serviceDetails, pickupLocation]);
+    
 
-    console.log('Effect dependencies:', { serviceType, serviceDetails, pickupLocation });
+    // console.log('Effect dependencies:', { serviceType, serviceDetails, pickupLocation });
+    useEffect(() => {
+        let newTotalSalary = totalSalary;
+        console.log('editData.updatedTotalSalary', updatedTotalSalary);
+        if (serviceCategory === 'Body Shop' && bodyShope === 'insurance') {
+            newTotalSalary -= parseFloat(insuranceAmountBody || 0);
+        }
+        console.log('newTotalSalary', newTotalSalary);
+        if (editData?.adjustValue) {
+            // If editData has adjustValue, prioritize it
+            setUpdatedTotalSalary(parseFloat(editData.adjustValue) || 0);
+        } else if (newTotalSalary !== updatedTotalSalary) {
+            // Otherwise, use the calculated newTotalSalary
+            setUpdatedTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
+        }
+    }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope, adjustValue]);
 
     const renderServiceVehicle = (serviceVehicle, serviceType) => {
         if (serviceVehicle && serviceVehicle[serviceType]) {
@@ -803,7 +893,6 @@ setBodyShope(insurance)
         }
     }, [selectedDriver, totalDriverDistance, drivers]);
 
-   
     // -------------------------------------------------------------------------------------
     const formatDate = (date) => {
         const day = date.getDate().toString().padStart(2, '0');
@@ -820,22 +909,68 @@ setBodyShope(insurance)
     const formatLocation = (location) => {
         const [name, lat, lng] = location.split(', ').map((item) => item.trim());
         return {
-            lat: parseFloat(lat),
-            lng: parseFloat(lng),
+            lat: lat, // Keep lat as a string
+            lng: lng, // Keep lng as a string
             name: `${name}, ${lat}, ${lng}`,
         };
     };
-
+     // --------------------------------
+     // http://localhost:3000
+    // https://rsanotification.onrender.com
+    const sendPushNotification = async (token, title, body, sound) => {
+        try {
+          const response = await fetch("https://rsanotification.onrender.com/send-notification", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              token: token,
+              title: title,
+              body: body,
+              sound: sound,
+            }),
+          });
+      
+          if (response.ok) {
+            console.log("Notification sent successfully");
+          } else {
+            console.log("Failed to send notification");
+          }
+        } catch (error) {
+          console.error("Error sending notification:", error);
+        }
+      };
+      
+      const sendNotificationsToAllDrivers = async () => {
+        try {
+            // Extract all FCM tokens from drivers
+            const tokens = drivers.map(driver => driver.fcmToken).filter(token => token);
+            const notificationTitle = "Booking Notification";
+            const notificationBody = "A new booking has been added or updated.";
+            const sound = "alert_notification";
+    
+            for (const token of tokens) {
+                await sendPushNotification(token, notificationTitle, notificationBody, sound);
+            }
+        } catch (error) {
+            console.error("Error sending notifications to all drivers:", error);
+        }
+    }; 
     const addOrUpdateItem = async () => {
         if (validateForm()) {
             try {
-                const selectedDriverObject = drivers.find((driver) => driver.id === selectedDriver);
-                const driverName = selectedDriverObject ? selectedDriverObject.driverName : '';
+                const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
+                const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
+                const fcmToken = selectedDriverData ? selectedDriverData.fcmToken : null;
+    
+                const selectedDriverDistanceData = pickupDistances.find((dist) => dist.id === selectedDriver);
+                const pickupDistance = selectedDriverDistanceData ? selectedDriverDistanceData.distance : 0;
+
                 let finalFileNumber = '';
                 const currentDate = new Date();
                 const dateTime = formatDate(currentDate); // Use the formatted date
                 const formattedPickupLocation = formatLocation(pickupLocation);
-                // const formattedLegDistances = formatLegDistances(legDistances);
 
                 if (company === 'self') {
                     finalFileNumber = `PMNA${bookingId}`;
@@ -844,21 +979,22 @@ setBodyShope(insurance)
                 }
                 const bookingData = {
                     ...bookingDetails,
-                    driver: driverName,
-                    totalSalary: totalSalary,
+                    driver: driverName || '',
+                    totalSalary: totalSalary || 0,
                     pickupLocation: formattedPickupLocation,
-                    dropoffLocation: dropoffLocation,
+                    dropoffLocation: dropoffLocation || '',
                     status: 'booking added',
+                    statusEdit: activeForm === 'map' ? 'withoutmapbooking' : 'mapbooking',
                     dateTime: dateTime,
-                    totalDriverSalary: totalDriverSalary,
-                    totalDriverDistance: totalDriverDistance,
+                    totalDriverSalary: totalDriverSalary || 0,
+                    totalDriverDistance: totalDriverDistance || 0,
                     bookingId: `${bookingId}`,
                     createdAt: serverTimestamp(),
                     comments: comments || '',
-                    totalDistance: distance,
+                    // totalDistance: distance,
                     distance: distance,
                     showRooms: showroomLocation,
-                    adjustValue:adjustValue || '',
+                    adjustValue: adjustValue || '',
                     serviceCategory: serviceCategory || '',
 
                     baseLocation: baseLocation || '',
@@ -869,6 +1005,7 @@ setBodyShope(insurance)
                     mobileNumber: mobileNumber || '',
                     phoneNumber: phoneNumber || '',
                     vehicleType: vehicleType || '',
+                    pickupDistance: pickupDistance || '',
 
                     serviceType: serviceType || '',
                     serviceVehicle: serviceVehicle || '',
@@ -878,15 +1015,20 @@ setBodyShope(insurance)
                     fileNumber: finalFileNumber,
                     selectedDriver: selectedDriver || '',
                     trappedLocation: trappedLocation || '',
-                    legDistances: legDistances || '',
-                    updatedTotalSalary: updatedTotalSalary || '',
-                    insuranceAmount: insuranceAmountBody || '',
+                    updatedTotalSalary: updatedTotalSalary || 0,
+                    insuranceAmountBody: insuranceAmountBody || '',
                     bodyShope: bodyShope || '',
                     paymentStatus: 'Not Paid',
+                    fcmToken: userFcmToken,
+
                 };
                 if (editData) {
-                    bookingData.newStatus = 'Edited by Admin';
-                    bookingData.editedTime = currentDate.toLocaleString();
+                    if (role === 'admin') {
+                        bookingData.newStatus = `Edited by ${role}`;
+                    } else if (role === 'staff') {
+                        bookingData.newStatus = `Edited by ${role} ${userName}`;
+                    }                                       bookingData.editedTime = formatDate(new Date());
+
                 }
                 console.log('Data to be added/updated:', bookingData); // Log the data before adding or updating
 
@@ -899,7 +1041,11 @@ setBodyShope(insurance)
                     console.log('Document written with ID: ', docRef.id);
                     console.log('Document added');
                 }
-
+                if (selectedDriver === 'dummy') {
+                    await sendNotificationsToAllDrivers();
+                } else if (fcmToken) {
+                    await sendPushNotification(fcmToken, "Booking Notification", "Your booking has been updated", "alert_notification");
+                } 
                 navigate('/bookings/newbooking');
             } catch (e) {
                 console.error('Error adding/updating document: ', e);
@@ -913,7 +1059,7 @@ setBodyShope(insurance)
         const keralaCenterLat = 10.8505;
         const keralaCenterLng = 76.2711;
         const radius = 200000;
-    
+
         try {
             console.log(`Fetching autocomplete results for input: ${inputText}`);
             const response = await axios.get(`https://api.olamaps.io/places/v1/autocomplete`, {
@@ -925,15 +1071,15 @@ setBodyShope(insurance)
                 },
             });
             console.log('Autocomplete response:', response.data);
-    
+
             if (response.data && Array.isArray(response.data.predictions)) {
                 const predictionsWithCoords = await Promise.all(
                     response.data.predictions.map(async (prediction, index) => {
                         const placeDetails = await getPlaceDetails(prediction.place_id);
-                        console.log("locationName", placeDetails);
-    
+                        console.log('locationName', placeDetails);
+
                         const locationName = prediction.description.split(',')[0];
-    
+
                         return {
                             key: `${prediction.place_id}-${index}`,
                             label: locationName,
@@ -953,7 +1099,7 @@ setBodyShope(insurance)
             setOptions([]);
         }
     };
-    
+
     const getPlaceDetails = async (placeId) => {
         try {
             console.log(`Fetching place details for placeId: ${placeId}`);
@@ -985,30 +1131,30 @@ setBodyShope(insurance)
     const handlePickupChange = (newValue) => {
         console.log('Checking newValue:', newValue);
         console.log('Selected pickup location:', newValue);
-    
+
         const hasLabel = newValue && newValue.label;
         const hasLat = newValue && newValue.lat;
         const hasLng = newValue && newValue.lng;
-    
+
         console.log('newValue exists:', newValue !== undefined && newValue !== null);
         console.log('newValue.label exists:', hasLabel);
         console.log('newValue.lat exists:', hasLat);
         console.log('newValue.lng exists:', hasLng);
-    
+
         if (hasLabel && hasLat && hasLng) {
             const formattedLocation = `${newValue.label}, ${newValue.lat}, ${newValue.lng}`;
             console.log('Setting pickup location formatted...');
             setPickupLocationFormatted(newValue.label);
             console.log('Pickup location formatted:', newValue.label);
-    
+
             console.log('Setting pickup coordinates...');
             setPickupCoords({ lat: newValue.lat, lng: newValue.lng });
             console.log('Pickup coordinates:', { lat: newValue.lat, lng: newValue.lng });
-    
+
             console.log('Setting pickup location...');
             setPickupLocation(formattedLocation);
             console.log('Pickup location:', formattedLocation);
-    
+
             console.log('Base location before check:', baseLocation);
             if (baseLocation) {
                 console.log('Base location is set in pick:', baseLocation);
@@ -1016,7 +1162,7 @@ setBodyShope(insurance)
                     console.log('Dropoff location is set:', dropoffLocation);
                     console.log('Calculating total distance...');
                     console.log('Before calculating distance, baseLocation:', baseLocation);
-    
+
                     calculateTotalDistance(baseLocation, { lat: newValue.lat, lng: newValue.lng }, dropoffLocation);
                 } else {
                     console.log('Dropoff location is not set');
@@ -1029,11 +1175,11 @@ setBodyShope(insurance)
             setPickupCoords({ lat: undefined, lng: undefined });
             setPickupLocationFormatted('');
         }
-    
+
         console.log('Clearing pickup options...');
         setPickupOptions([]);
     };
-    
+
     const calculateTotalDistance = async (base, pickup, dropoff) => {
         try {
             console.log('Calculating total distance...');
@@ -1051,13 +1197,12 @@ setBodyShope(insurance)
 
             const totalDistance = distances.reduce((acc, cur) => acc + (cur.distance ? parseFloat(cur.distance) : 0), 0);
             console.log('Total distance calculated:', totalDistance);
-    
+
             const newTotalDistance = totalDistance.toFixed(2);
             console.log('Total distance set:', newTotalDistance);
-            console.log("pickupLocationdistance",distance);
+            console.log('pickupLocationdistance', distance);
 
             setDistance(newTotalDistance);
-    
         } catch (error) {
             console.error('Error calculating total distance:', error);
         }
@@ -1154,8 +1299,8 @@ setBodyShope(insurance)
         return { lat: 0, lng: 0 };
     };
 
-    console.log('Normalized Pickup Location:', normalizeLocation(pickupLocation));
-    console.log('Normalized Dropoff Location:', normalizeLocation(dropoffLocation));
+    // console.log('Normalized Pickup Location:', normalizeLocation(pickupLocation));
+    // console.log('Normalized Dropoff Location:', normalizeLocation(dropoffLocation));
 
     const getDistance = async (origin, destination) => {
         if (!origin || !destination) {
@@ -1253,229 +1398,179 @@ setBodyShope(insurance)
 
         const driverLocation = selectedDriverData.currentLocation;
         console.log('Driver Location from Selected Driver Data:', driverLocation);
- const totalDriverDistance = await calculateTotalDriverDistance(driverLocation, pickupLocation, dropoffLocation);
-    console.log('Total Driver Distance (before rounding):', totalDriverDistance);
+        const totalDriverDistance = await calculateTotalDriverDistance(driverLocation, pickupLocation, dropoffLocation);
+        console.log('Total Driver Distance (before rounding):', totalDriverDistance);
 
-    // Round and fix the totalDriverDistance to 2 decimal places
-    const roundedTotalDriverDistance = parseFloat(totalDriverDistance.toFixed(2));
-    console.log('Total Driver Distance (rounded):', roundedTotalDriverDistance);
-
+        // Round and fix the totalDriverDistance to 2 decimal places
+        const roundedTotalDriverDistance = parseFloat(totalDriverDistance.toFixed(2));
+        console.log('Total Driver Distance (rounded):', roundedTotalDriverDistance);
     };
 
     useEffect(() => {
         handleCalculateDistance();
     }, [selectedDriver, pickupLocation, dropoffLocation]);
+    
+    const handleButtonClick = (event) => {
+        event.preventDefault();
+        setShowShowroomModal(true);
+    };
+
+    const handelAddbuttonClick = (event)=>{
+        event.preventDefault();
+        setShowShowroomModal(true)
+    }
+    // ----------------------------------------------------------------------------------
+    const openGoogleMaps = () => {
+        const query = encodeURIComponent(pickupLocation);
+        window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+    };
     //------------------------------------------------------
     return (
-        <div className="p-1 flex-1 mt-4 mx-24 shadow-lg rounded-lg bg-lightblue-100" style={{ background: 'lightblue' }}>
-            <div className="flex justify-end w-full mb-4 ">
-                <div
-                    style={{
-                        margin: '5px 0',
-                        color: '#7f8c8d',
-                        fontFamily: 'Georgia, serif',
-                        fontSize: '16px',
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        backgroundColor: '#ecf0f1',
-                        border: '1px solid #bdc3c7',
-                        minWidth: 'fit-content',
-                    }}
-                >
-                    <h5 className="font-semibold text-lg dark:text-white-light">{currentDateTime}</h5>
+      
+            <div className={styles.bookingFormContainer}>
+             <form className={styles.bookingForm}>
+             <div className={styles.dateTime}>{currentDateTime}</div>
+             <h2 className={styles.formHeading}>BOOK WITH MAP</h2>
+             <div className={styles.formGroup}>
+                    <label htmlFor="company" className={styles.label}>
+                    Company
+                    </label>
+                    <select id="company" name="company" value={company} className={styles.formControl} onChange={(e) => handleInputChange('company', e.target.value)}>
+                        <option value="">Select company</option>
+                        <option value="rsa">RSA Work</option>
+                        <option value="self">Payment Work</option>
+                    </select>
                 </div>
-            </div>
-
-            <div className="flex flex-wrap p-4">
-                <h5 className="font-semibold text-lg dark:text-white-light mb-5">Book Now</h5>
-                <div className="w-full">
-                    <div className="flex items-center mt-4">
-                        <label htmlFor="company" className="mr-2 ml-2 w-1/3 mb-0 text-gray-800 font-semibold">
-                            Company
-                        </label>
-                        <select
-                            id="company"
-                            name="company"
-                            value={company}
-                            className="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                            onChange={(e) => handleInputChange('company', e.target.value)}
-                        >
-                            <option value="">Select Company</option>
-                            <option value="rsa">RSA Work</option>
-                            <option value="self">Payment Work</option>
-                        </select>
-                    </div>
-                    {company === 'rsa' && (
-                        <div style={{ display: 'flex', alignItems: 'center', marginTop: '1rem' }}>
-                            <label htmlFor="selectedCompany" style={{ marginRight: '0.5rem', marginLeft: '0.5rem', marginBottom: '0', color: '#333' }}>
-                                Select Company
-                            </label>
-                            <select
-                                id="selectedCompany"
-                                name="selectedCompany"
-                                style={{
-                                    width: '100%',
-                                    padding: '0.5rem',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '5px',
-                                    fontSize: '1rem',
-                                    outline: 'none',
-                                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                }}
-                                onChange={(e) => handleInputChange('selectedCompany', e.target.value)}
-                            >
-                                <option value="">Select Company</option>
+                {company === 'rsa' && (
+             <div className={styles.formGroup}>
+                    <label htmlFor="selectedCompany" className={styles.label}>
+                    Select Company
+                    </label>
+                    <select  id="selectedCompany"  name="selectedCompany"   onChange={(e) => handleInputChange('selectedCompany', e.target.value)} className={styles.formControl} >
+                    <option value="">Select Company</option>
                                 {companies.map((comp) => (
                                     <option key={comp.id} value={comp.id}>
                                         {comp.company}
                                     </option>
                                 ))}
-                            </select>
-                            {companies.length === 0 && <p>No companies available</p>}
-                        </div>
-                    )}
-                    {company === 'self' ? (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="fileNumber" className="mr-2 ml-2 w-1/3 mb-0 text-gray-800 font-semibold">
-                                File Number
-                            </label>
-                            <div className='search-box ltr:mr-2 rtl:ml-2  mb-0"' style={{width:"100%"}}>
-                            <input
-                                id="fileNumber"
-                                type="text"
-                                name="fileNumber"
-                                placeholder="Enter File Number"
-                                className="form-input lg:w-[250px] w-2/3 p-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 focus:outline-none"
-                                value={`PMNA${bookingId}`}
-                                readOnly
-                            />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="fileNumber" className="mr-2 ml-2 w-1/3 mb-0 text-gray-800 font-semibold">
-                                File Number
-                            </label>
-                            <div className='search-box ltr:mr-2 rtl:ml-2  mb-0"' style={{width:"100%"}}>
-                            <input
-                                id="fileNumber"
-                                type="text"
-                                name="fileNumber"
-                                className="form-input lg:w-[250px] w-2/3 p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                                placeholder="Enter File Number"
-                                value={fileNumber}
-                                onChange={(e) => handleInputChange('fileNumber', e.target.value)}
-                            />
-                            </div>
-                        </div>
-                        
-                    )}
-                   <div style={{ width: '100%' }}>
-                          
-                        <div>
-                            <div className="flex items-center mt-4">
-                                <label htmlFor="pickupLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    Pickup Location
-                                </label>
-                                <Box
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.5rem',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '5px',
-                                        fontSize: '1rem',
-                                        outline: 'none',
-                                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                    }}
-                                >
-                               <Autocomplete
-    value={{ label: pickupLocation }}
-    onInputChange={(event, newInputValue) => {
-        console.log('Input change event:', event);
-        console.log('New input value:', newInputValue);
+                    </select>
+                    {companies.length === 0 && <p>No companies available</p>}
+                </div>
+                )}
+                {company === 'self' ? (
+                     <div className={styles.formGroup}>
+                     <label htmlFor="fileNumber" className={styles.label}>
+                     File Number
+                     </label>
+                     <input
+                      value={`PMNA${bookingId}`}
+                      readOnly
+                      id="fileNumber"
+                      type="text"
+                      name="fileNumber"
+                      placeholder="Enter File Number"
+                         className={styles.formControl}
+                     />
+                 </div>
+                ):(
+                    <div className={styles.formGroup}>
+                    <label htmlFor="fileNumber" className={styles.label}>
+                    File Number
+                    </label>
+                    <input
+                        className={styles.formControl}
+                        id="fileNumber"
+                        type="text"
+                        name="fileNumber"
+                        placeholder="Enter File Number"
+                        value={fileNumber}
+                        onChange={(e) => handleInputChange('fileNumber', e.target.value)}
+                    />
+                </div>
+                )}
 
-        setPickupLocation(newInputValue);
-        if (newInputValue) {
-            console.log('Fetching autocomplete results for:', newInputValue);
-            getAutocompleteResults(newInputValue, setPickupOptions);
-        } else {
-            console.log('Clearing pickup options');
-            setPickupOptions([]);
-        }
-    }}
-    onChange={(event, newValue) => {
-        console.log('Autocomplete onChange event:', event);
-        console.log('Autocomplete onChange newValue:', newValue);
-        handlePickupChange(newValue);
-    }}
-    sx={{ background: "white", width: '100%', border: '20px' }}
-    options={pickupOptions}
-    getOptionLabel={(option) => {
-        console.log('Get option label:', option);
-        return option.label;
-    }}
-    isOptionEqualToValue={(option, value) => {
-        console.log('Checking if option is equal to value:', option, value);
-        return option.label === value.label;
-    }}
-    renderInput={(params) => {
-        console.log('Rendering input with params:', params);
-        return <TextField {...params} label="Pickup Location" variant="outlined" />;
-    }}
-/>
+                 <div className={styles.formGroup}>
+                  <label htmlFor="pickupLocation" className={styles.label}>
+                  Pickup Location
+                  </label>
+                  <Box >
+                                    <Autocomplete
+                                        value={{ label: pickupLocation }}
+                                        onInputChange={(event, newInputValue) => {
+                                            console.log('Input change event:', event);
+                                            console.log('New input value:', newInputValue);
 
-
+                                            setPickupLocation(newInputValue);
+                                            if (newInputValue) {
+                                                console.log('Fetching autocomplete results for:', newInputValue);
+                                                getAutocompleteResults(newInputValue, setPickupOptions);
+                                            } else {
+                                                console.log('Clearing pickup options');
+                                                setPickupOptions([]);
+                                            }
+                                        }}
+                                        onChange={(event, newValue) => {
+                                            console.log('Autocomplete onChange event:', event);
+                                            console.log('Autocomplete onChange newValue:', newValue);
+                                            handlePickupChange(newValue);
+                                        }}
+                                        sx={{ background: 'white', width: '100%', border: '20px' }}
+                                        options={pickupOptions}
+                                        getOptionLabel={(option) => {
+                                            // console.log('Get option label:', option);
+                                            return option.label;
+                                        }}
+                                        isOptionEqualToValue={(option, value) => {
+                                            console.log('Checking if option is equal to value:', option, value);
+                                            return option.label === value.label;
+                                        }}
+                                        renderInput={(params) => (
+                                            <TextField {...params} label="Pickup Location" variant="outlined" placeholder="manual pickupLocation entering format: place, lat, lng" />
+                                        )}
+                                        
+                                    />
+                        <button
+                            onClick={openGoogleMaps}
+                            style={{
+                                backgroundColor: 'transparent', // Google Maps blue color
+                                color: 'blue',
+                                border: 'none',
+                                borderRadius: '5px',
+                                padding: '10px',
+                                cursor: 'pointer',
+                                fontSize: '16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                            }}
+                        >
+                            <i className="fas fa-map-marker-alt" style={{ marginRight: '8px' }}></i>
+                            <IconMapPin/>
+                        </button>
+                  
                                     {pickupCoords.lat !== undefined && pickupCoords.lng !== undefined && <Typography>{`Pickup Location Lat/Lng: ${pickupCoords.lat}, ${pickupCoords.lng}`}</Typography>}
                                 </Box>
-                            </div>
+              </div>
 
-                            <div className="mt-4 flex items-center">
-                                <label htmlFor="baseLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    Start Location
-                                </label>
-                                <input
-                                    id="baseLocation"
-                                    type="text"
-                                    name="baseLocation"
-                                    className="form-input flex-1"
-                                    placeholder="select start location"
-                                    value={baseLocation ? `${baseLocation.name} , ${baseLocation.lat} , ${baseLocation.lng}` : ''}
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.5rem',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '5px',
-                                        fontSize: '1rem',
-                                        outline: 'none',
-                                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                    }}
-                                    readOnly
-                                    onClick={openModal1}
-                                />
-                                <button
-                                    onClick={openModal1}
-                                    style={{
-                                        borderRadius: '40px',
-                                        background: 'transparent',
-                                        color: 'blue',
-                                        marginLeft: '10px',
-                                        padding: '10px',
-                                        border: 'none',
-                                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
-                                        cursor: 'pointer',
-                                        transition: 'background 0.3s ease',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}
-                                    onMouseOver={(e) => (e.currentTarget.style.background = 'lightblue')}
-                                    onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
-                                >
-                                    <IconMapPin style={{ color: '#FF6347', fontSize: '1.5rem' }} />
-                                </button>
-                            </div>
+              <div className={styles.formGroup}>
+  <label htmlFor="startLocation" className={styles.label}>
+    Start Location
+  </label>
+  <div className={styles.inputContainer}>
+    <input 
+      id="startLocation"
+      type="text"
+      name="startLocation"
+      className={styles.fullWidthInput} /* New class */
+      placeholder="Select start location"
+      value={baseLocation ? `${baseLocation.name} , ${baseLocation.lat} , ${baseLocation.lng}` : ''}
+      readOnly
+      onClick={openModal1}
+    />
+    
+  </div>
+</div>
 
-                            {isModalOpen1 && (
+{isModalOpen1 && (
                                 <div
                                     className="modal"
                                     style={{
@@ -1489,124 +1584,86 @@ setBodyShope(insurance)
                                         backgroundColor: 'rgb(0,0,0)',
                                     }}
                                 >
-                                  
-                                        <div className="modal-body">
-                                            <BaseLocationModal onClose={closeModal1} setBaseLocation={setBaseLocation} pickupLocation={pickupLocation} />
-                                        </div>
-                                       
+                                    <div className="modal-body">
+                                        <BaseLocationModal onClose={closeModal1} setBaseLocation={setBaseLocation} pickupLocation={pickupLocation} />
+                                    </div>
                                 </div>
                             )}
-    <div className="flex items-center mt-4">
-                            <label htmlFor="showrooms" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                Service Center
-            </label>
-            {showrooms.length > 0 && (
-                <Select
-                    className="w-full"
-                    id="showrooms"
-                    name="showrooms"
-                    value={showrooms.find(option => option.value === showroomLocation) || null}
-                    options={showrooms}
-                    onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
-                    isSearchable={true}
-                    placeholder="Select showroom"
-                    styles={{
-                        control: (provided) => ({
-                            ...provided,
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }),
-                        placeholder: (provided) => ({
-                            ...provided,
-                            fontSize: '1rem',
-                        }),
-                    }}
-                />
-            )}
-                        <button
-                            onClick={() => setShowShowroomModal(true)}
-                            style={{
-                                borderRadius: '40px',
-                                background: 'linear-gradient(135deg, #32CD32, #228B22)',
-                                color: 'white',
-                                margin: '10px',
-                                padding: '10px 10px',
-                                border: 'none',
-                                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-                                cursor: 'pointer',
-                                transition: 'background 0.3s ease',
-                            }}
-                            onMouseOver={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg, #228B22, #006400)')}
-                            onMouseOut={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg, #32CD32, #228B22)')}
-                        >
-                            <IconPlus />
-                        </button>
-                    </div>
-                    <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#333', marginTop: '10px', background: 'white', padding: '19px', borderRadius: '4px',marginLeft:"24%" }}> {showroomLocation}</div>
-                    {showShowroomModal && <ShowroomModal onClose={() => setShowShowroomModal(false)} updateShowroomLocation={updateShowroomLocation} />}
-                    
-                          
-
-                    <div className="flex items-center mt-4">
-                                <label htmlFor="dropoffLocation" className="  mb-0">
-                                    Drop off Location
-                                </label>
-                                <div className="search-box   mb-0" style={{width:"100%"}}>
-                                    <input
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.5rem',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '5px',
-                                            fontSize: '1rem',
-                                            outline: 'none',
-                                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                        }}
-                                        value={showroomLocation}
-                                    />
-                                </div>
-                            </div>
-<div className='mt-4'>
-<MapView />
-
+ <div className={styles.formGroup}>
+    <label htmlFor="showrooms" className={styles.label}>
+        Service Center
+    </label>
+    <div className={styles.inputContainer}>
+        {showrooms.length > 0 && (
+            <ReactSelect
+                id="showrooms"
+                name="showrooms"
+                className="w-full"
+                value={showrooms.find((option) => option.value === showroomLocation) || null}
+                options={showrooms}
+                placeholder="Select showroom"
+                onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
+                isSearchable={true}
+            />
+        )}
+        <button onClick={handleButtonClick}  className={styles.addButton}>
+            <IconPlus />
+        </button>
+    </div>
+    {showShowroomModal && (
+        <ShowroomModal
+            onClose={() => setShowShowroomModal(false)}
+            updateShowroomLocation={updateShowroomLocation}
+        />
+    )}
 </div>
-                        </div>
-                        {/* )} */}
+
+
+              <div className={styles.formGroup}>
+                  <label htmlFor="dropoffLocation" className={styles.label}>
+                  Drop off Location
+                  </label>
+                  <input
+                   value={showroomLocation}
+                      className={styles.formControl}
+                  />
+              </div>
+
+              {/* <div className={styles.formGroup}> */}
+              
+{/* <div className='mt-4'>
+<div className={styles.inputWithIcon}>
+                        <a
+                            href={`https://www.google.com/maps/dir/?api=1&origin=${baseLocation?.lat},${baseLocation?.lng}&destination=${pickupLocation?.lat},${pickupLocation?.lng}&&origin=${pickupLocation?.lat},${pickupLocation?.lng}&destination=${dropoffLocation?.lat},${dropoffLocation?.lng}&&origin=${dropoffLocation?.lat},${dropoffLocation?.lng}&destination=${baseLocation?.lat},${dropoffLocation?.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.iconWrapper}
+                        >
+                            <IconMapPin />
+                        </a>
                     </div>
-                    <div className="mt-4 flex items-center">
-                        <label htmlFor="distance" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                            Distance (KM)
-                        </label>
-                        <input
-                            id="distance"
-                            type="text"
-                            name="distance"
-                            className="form-input flex-1"
-                            style={{
-                                width: '100%',
-                                padding: '0.5rem',
-                                border: '1px solid #ccc',
-                                borderRadius: '5px',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                            }}
-                            onChange={(e) => handleInputChange('distance', e.target.value)}
-                            value={distance}
-                            readOnly={!manualDistance}
-                            onClick={() => setManualDistance(true)}
-                        />
-                    </div>
-                    <div className="flex items-center mt-4">
-                        <label htmlFor="trappedLocation" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                            Trapped Location
-                        </label>
-                        <div className="flex items-center">
+</div> */}
+              {/* </div> */}
+              <div className={styles.formGroup}>
+                  <label htmlFor="distance" className={styles.label}>
+                  Distance (KM)
+                  </label>
+                  <input
+                      className={styles.formControl}
+                      id="distance"
+                      type="text"
+                      name="distance"
+                      onChange={(e) => handleInputChange('distance', e.target.value)}
+                      value={distance}
+                      readOnly={!manualDistance}
+                      onClick={() => setManualDistance(true)}
+                  />
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="trappedLocation" className={styles.label}>
+                  Trapped Location
+                  </label>
+                  <div className="flex items-center">
                             <input
                                 type="radio"
                                 id="onRoad"
@@ -1644,30 +1701,30 @@ setBodyShope(insurance)
                                 Outside of Road
                             </label>
                         </div>
-                    </div>
-                    {trappedLocation === 'outsideOfRoad' && (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="updatedTotalSalary" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                Updated Total Amount
-                            </label>
-                            <input
-                                id="updatedTotalSalary"
-                                type="text"
-                                name="updatedTotalSalary"
-                                className="form-input flex-1"
-                                placeholder="Enter Total Salary"
-                                value={updatedTotalSalary}
-                                onChange={(e) => setUpdatedTotalSalary(e.target.value)}
-                                required
-                            />
-                        </div>
-                    )}
-                    {!disableFields && (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="serviceType" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                Service Type
-                            </label>
-                            <select
+              </div>
+              {trappedLocation === 'outsideOfRoad' && (
+              <div className={styles.formGroup}>
+                  <label htmlFor="updatedTotalSalary" className={styles.label}>
+                  Updated Total Amount
+                  </label>
+                  <input
+                   id="updatedTotalSalary"
+                   type="text"
+                   name="updatedTotalSalary"
+                      className={styles.formControl}
+                      placeholder="Enter Total Salary"
+                      value={updatedTotalSalary}
+                      onChange={(e) => setUpdatedTotalSalary(e.target.value)}
+                      required
+                  />
+              </div>
+              )}
+ {!disableFields && (
+              <div className={styles.formGroup}>
+                  <label htmlFor="serviceType" className={styles.label}>
+                  Service Type
+                  </label>
+                  <select
                                 id="serviceType"
                                 name="serviceType"
                                 className="form-select flex-1"
@@ -1690,148 +1747,196 @@ setBodyShope(insurance)
                                     </option>
                                 ))}
                             </select>
-                        </div>
-                    )}
-                    {!disableFields && (
-                        <div className="flex items-center mt-4">
-                            <label htmlFor="driver" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                Driver
-                            </label>
-                            <div className="form-input flex-1" style={{ position: 'relative', width: '100%' }}>
+              </div>
+ )}
+  {!disableFields && (
+              <div className={styles.formGroup}>
+                  <label htmlFor="driver" className={styles.label}>
+                  Driver
+                  </label>
+                  <input
+                   id="driver"
+                   type="text"
+                   name="driver"
+                   placeholder="Select your driver"
+                      className={styles.formControl}
+                      value={
+                        selectedDriver
+                            ? drivers.find((driver) => driver.id === selectedDriver)?.driverName || 'Dummy Driver'
+                            : 'Dummy Driver'
+                    }
+                    onClick={() => openModal(distance)}
+                    readOnly
+                  />
+                  <div>
+                  <ReactModal
+    isOpen={isModalOpen}
+    onRequestClose={closeModal}
+    style={{
+        overlay: {
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        },
+        content: {
+            top: '50%',
+            left: '50%',
+            right: 'auto',
+            bottom: 'auto',
+            transform: 'translate(-50%, -50%)',
+            borderRadius: '10px',
+            maxWidth: '90vw',
+            maxHeight: '80vh',
+            boxShadow: '0 0 20px rgba(0, 0, 0, 0.7)',
+            padding: '20px',
+            overflow: 'auto',
+        },
+    }}
+>
+    <div style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 999, padding: '10px 0' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>
+            Available Drivers for {serviceType}
+        </h2>
+        <button
+            onClick={closeModal}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-1"
+            style={{ marginLeft: 'auto', marginRight: '20px' }}
+        >
+            OK
+        </button>
+    </div>
+
+    <div style={{ marginTop: '10px' }}>
+        <div className="grid grid-cols-1 gap-4">
+            {/* Add "Dummy Driver" to the top of the list */}
+            <div className="flex items-center border border-gray-200 p-2 rounded-lg">
+                <table className="panel p-4 w-full">
+                    <thead>
+                        <tr>
+                            <th className="border-b-2 p-2">Driver Name</th>
+                            <th className="border-b-2 p-2">Pickup Distance (KM)</th>
+                            <th className="border-b-2 p-2">Pickup Duration</th>
+
+                            <th className="border-b-2 p-2">Payable Amount</th>
+
+                            <th className="border-b-2 p-2">Profit after deducting expenses</th>
+                            <th className="border-b-2 p-2">Select</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style={{ fontSize: '18px', fontWeight: 'bold', color: 'red' }}>
+                                DummyDriver
+                            </td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+
+                            <td>
                                 <input
-                                    id="driver"
-                                    type="text"
-                                    name="driver"
-                                    className="w-full"
-                                    placeholder="Select your driver"
-                                    style={{
-                                        padding: '0.5rem',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '5px',
-                                        fontSize: '1rem',
-                                        outline: 'none',
-                                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                    }}
-                                    value={selectedDriver && drivers.find((driver) => driver.id === selectedDriver)?.driverName}
-                                    onClick={() => openModal(distance)}
+                                    type="radio"
+                                    name="selectedDriver"
+                                    value="dummy"
+                                    checked={selectedDriver === 'dummy'}
+                                    onChange={() => handleInputChange('selectedDriver', 'dummy')}
                                 />
-                            </div>
-                            <ReactModal
-                                isOpen={isModalOpen}
-                                onRequestClose={closeModal}
-                                style={{
-                                    overlay: {
-                                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                                    },
-                                    content: {
-                                        top: '50%',
-                                        left: '50%',
-                                        right: 'auto',
-                                        bottom: 'auto',
-                                        transform: 'translate(-50%, -50%)',
-                                        borderRadius: '10px',
-                                        maxWidth: '90vw',
-                                        maxHeight: '80vh',
-                                        boxShadow: '0 0 20px rgba(0, 0, 0, 0.7)',
-                                        padding: '20px',
-                                        overflow: 'auto',
-                                    },
-                                }}
-                            >
-                                <div style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 999 }}>
-                                    <h2 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>Available Drivers for {serviceType}</h2>
-                                    <button
-                                        onClick={closeModal}
-                                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-1"
-                                        style={{ marginLeft: 'auto', marginRight: '20px' }}
-                                    >
-                                        OK
-                                    </button>
-                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-                                <div style={{ marginTop: '10px' }}>
-                                    <div className="grid grid-cols-1 gap-4">
-                                        {drivers
-                                            .map((driver, index) => ({
-                                                driver,
-                                                pickupDistanceData: pickupDistances[index] || { distance: 0, duration: 0 },
-                                            }))
-                                            .sort((a, b) => {
-                                                if (a.driver.companyName === 'RSA' && b.driver.companyName !== 'RSA') {
-                                                    return -1;
-                                                }
-                                                if (a.driver.companyName !== 'RSA' && b.driver.companyName === 'RSA') {
-                                                    return 1;
-                                                }
-                                                return a.pickupDistanceData.distance - b.pickupDistanceData.distance;
-                                            })
-                                            .map(({ driver, pickupDistanceData }, index) => {
-                                                const totalDistance = pickupDistances.find((dist) => dist.id === driver.id)?.distance || 0;
-                                                const driverTotalSalary = calculateTotalSalary(serviceDetails.salary, distance, serviceDetails.basicSalaryKM, serviceDetails.salaryPerKM);
+            {drivers
+                .map((driver, index) => ({
+                    driver,
+                    pickupDistanceData: pickupDistances[index] || { distance: 0, duration: 0 },
+                }))
+                .sort((a, b) => {
+                    
+                    if (a.driver.companyName === 'RSA' && b.driver.companyName !== 'RSA') {
+                        return -1;
+                    }
+                    if (a.driver.companyName !== 'RSA' && b.driver.companyName === 'RSA') {
+                        return 1;
+                    }
+                    return a.pickupDistanceData.distance - b.pickupDistanceData.distance;
+                })
 
-                                                console.log('Driver Total Salary Calculation:');
-                                                console.log('Service Details Salary:', serviceDetails.salary);
-                                                console.log('Total Distance:', totalDistance);
-                                                console.log('Basic Salary per KM:', serviceDetails.basicSalaryKM);
-                                                console.log('Salary per KM:', serviceDetails.salaryPerKM);
-                                                console.log('Calculated Total Salary:', driverTotalSalary);
 
-                                                return (
-                                                    <div key={driver.id} className="flex items-center border border-gray-200 p-2 rounded-lg">
-                                                        <table className="panel p-4 w-full">
-                                                            <thead>
-                                                                <tr className="text-left">
-                                                                    <th className="border-b-2 p-2">Driver Name</th>
-                                                                    <th className="border-b-2 p-2">Company Name</th>
-                                                                    <th className="border-b-2 p-2">Pickup Distance (KM)</th>
-                                                                    <th className="border-b-2 p-2">Pickup Duration</th>
-                                                                    <th className="border-b-2 p-2">Salary</th>
-                                                                    <th className="border-b-2 p-2">Select Driver</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                <tr className="text-left">
-                                                                    <td className="border-b-2 p-2">{driver.driverName}</td>
-                                                                    <td className="border-b-2 p-2">{driver.companyName}</td>
-                                                                    <td className="border-b-2 p-2">{pickupDistanceData.distance}</td>
-                                                                    <td className="border-b-2 p-2">{pickupDistanceData.duration}</td>
-                                                                    <td className="border-b-2 p-2">{driverTotalSalary}</td>
-                                                                    <td>
-                                                                        <input
-                                                                            type="radio"
-                                                                            name="selectedDriver"
-                                                                            value={driver.id}
-                                                                            checked={selectedDriver === driver.id}
-                                                                            onChange={() => handleInputChange('selectedDriver', driver.id)}
-                                                                        />
-                                                                    </td>
-                                                                </tr>
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                );
-                                            })}
-                                    </div>
-                                </div>
-                            </ReactModal>
+                .map(({ driver, pickupDistanceData }, index) => {
+                    const isRSA = driver.companyName === 'RSA';
+
+                    // Calculate salary using company-specific logic
+                    const calculatedSalary = calculateTotalSalary(
+                        isRSA ? serviceDetails.salary : driver.basicSalaries[driver.selectedServices[0]],
+                        distance,
+                        isRSA ? serviceDetails.basicSalaryKM : driver.basicSalaryKm[driver.selectedServices[0]],
+                        isRSA ? serviceDetails.salaryPerKM : driver.salaryPerKm[driver.selectedServices[0]],
+                        isRSA
+                    );
+                    const expensePerKM = serviceDetails.expensePerKM || 0;
+                    const profit = calculatedSalary - (distance * expensePerKM);
+
+                    return (
+                        <div key={driver.id} className="flex items-center border border-gray-200 p-2 rounded-lg">
+                            <table className="panel p-4 w-full">
+                                <thead>
+                                    <tr className="text-left">
+                                        <th className="border-b-2 p-2">Driver Name</th>
+                                        <th className="border-b-2 p-2">Pickup Distance (KM)</th>
+                                        <th className="border-b-2 p-2">Pickup Duration</th>
+                                        <th className="border-b-2 p-2">Payable Amount</th>
+                                        <th className="border-b-2 p-2">Profit after deducting expenses</th>
+                                        <th className="border-b-2 p-2">Select Driver</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr className="text-left">
+                                        <td className="border-b-2 p-2">{driver.driverName}</td>
+                                        <td className="border-b-2 p-2">{pickupDistanceData.distance}</td>
+                                        <td className="border-b-2 p-2">{pickupDistanceData.duration}</td>
+                                        <td className="border-b-2 p-2">{calculatedSalary.toFixed(2)}</td>
+                                        <td className="border-b-2 p-2">{profit.toFixed(2)}</td>
+                                        <td>
+                                            <input
+                                                type="radio"
+                                                name="selectedDriver"
+                                                value={driver.id}
+                                                checked={selectedDriver === driver.id}
+                                                onChange={() => handleInputChange('selectedDriver', driver.id)}
+                                            />
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                    )}
-                </div>
-                <React.Fragment>
+                    );
+                })}
+        </div>
+    </div>
+</ReactModal>
+
+                  </div>
+              </div>
+  )}
+                  {selectedDriver && selectedDriverData && (
+
+              <div className={styles.formGroup}>
+              <React.Fragment>
                     <div>
-                    <VehicleSection
-                    showroomLocation={showroomLocation}
-                                totalSalary={totalSalary}
-                                onUpdateTotalSalary={handleUpdateTotalSalary}
-                                insuranceAmountBody={insuranceAmountBody}
-                                serviceCategory={serviceCategory}
-                                onInsuranceAmountBodyChange={handleInsuranceAmountBodyChange}
-                                onServiceCategoryChange={handleServiceCategoryChange}
-                                onAdjustValueChange={handleAdjustValueChange}
-                                adjustValue={adjustValue}
-                                bodyShope={bodyShope}
-                                onInsuranceChange={handleBodyInsuranceChange}
-                            />
+                        <VehicleSection
+                            showroomLocation={showroomLocation}
+                            totalSalary={totalSalary}
+                            updatedTotalSalary={updatedTotalSalary}
+                            onUpdateTotalSalary={handleUpdateTotalSalary}
+                            insuranceAmountBody={insuranceAmountBody}
+                            serviceCategory={serviceCategory}
+                            onInsuranceAmountBodyChange={handleInsuranceAmountBodyChange}
+                            onServiceCategoryChange={handleServiceCategoryChange}
+                            onAdjustValueChange={handleAdjustValueChange}
+                            adjustValue={adjustValue}
+                            bodyShope={bodyShope}
+                            onInsuranceChange={handleBodyInsuranceChange}
+                        />
 
                         <div className="mt-4 flex items-center">
                             <label htmlFor="totalSalary" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
@@ -1857,20 +1962,11 @@ setBodyShope(insurance)
                             </div>
                         </div>
                         <div className="mt-4 flex items-center">
-                                <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    Insurance Amount Body
-                                </label>
-                                <div className="form-input flex-1">
-                                    <input
-                                        id="insuranceAmountBody"
-                                        type="text"
-                                        name="insuranceAmountBody"
-                                        className="w-full"
-                                        value={insuranceAmountBody}
-                                        onChange={(e) => handleInputChange('insuranceAmountBody', e.target.value)}
-                                    />
-                                </div>
-                            </div>
+                            <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
+                                Insurance Amount Body
+                            </label>
+                            <div className="form-input flex-1">{insuranceAmountBody}</div>
+                        </div>
                         <div className="mt-4 flex items-center">
                             <label htmlFor="updatedTotalSalary" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
                                 Payable Amount (with insurance)
@@ -1896,175 +1992,114 @@ setBodyShope(insurance)
                         </div>
                     </div>
                 </React.Fragment>
-                {selectedDriver && (
-    <div>
-        <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column' }}>
-            <label htmlFor="totalDriverSalary" style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                Total Driver Salary
-            </label>
-            <input
-                id="totalDriverSalary"
-                type="text"
-                value={totalDriverSalary}
-                readOnly
-                style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid #ccc',
-                    borderRadius: '5px',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                }}
-            />
-        </div>
-        <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column' }}>
-            <label htmlFor="totalDriverDistance" style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                Total Driver Distance
-            </label>
-            <input
+              </div>
+               )}
+              {selectedDriver && (
+                <div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="totalDriverSalary" className={styles.label}>
+                  Total Driver Salary
+                  </label>
+                  <input
+                   id="totalDriverSalary"
+                   type="number"
+                   value={totalDriverSalary}
+                   readOnly
+                      className={styles.formControl}
+                  />
+              </div>
+               <div className={styles.formGroup}>
+               <label htmlFor="totalDriverDistance" className={styles.label}>
+               Total Driver Distance
+               </label>
+               <input
                 id="totalDriverDistance"
                 type="text"
                 value={totalDriverDistance}
                 readOnly
-                style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid #ccc',
-                    borderRadius: '5px',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                }}
-            />
-        </div>
-    </div>
-)}
-
-                <div className="flex items-center mt-4" style={{ width: '100%' }}>
-                    <label htmlFor="serviceVehicle" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Service Vehicle Number
-                    </label>
-
-                    <input
-                        id="serviceVehicle"
-                        type="text"
-                        name="serviceVehicle"
-                        className="form-input flex-1"
-                        placeholder="Enter Service Vehicle Number"
-                        value={serviceVehicle}
-                        onChange={(e) => handleInputChange('serviceVehicle', e.target.value)}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        required
-                    />
-                </div>
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="customerName" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Customer Name
-                    </label>
-                    <input
-                        id="customerName"
-                        type="text"
-                        name="customerName"
-                        className="form-input flex-1"
-                        placeholder="Enter Name"
+                   className={styles.formControl}
+               />
+           </div>
+           </div>
+              )}
+              <div className={styles.formGroup}>
+                  <label htmlFor="serviceVehicle" className={styles.label}>
+                  Service Vehicle Number
+                  </label>
+                  <input
+                   id="serviceVehicle"
+                   type="text"
+                   name="serviceVehicle"
+                   placeholder="Enter Service Vehicle Number"
+                   value={serviceVehicle}
+                   onChange={(e) => handleInputChange('serviceVehicle', e.target.value)}
+                      className={styles.formControl}
+                      required
+                  />
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="customerName" className={styles.label}>
+                  Customer Name
+                  </label>
+                  <input
+                   id="customerName"
+                   type="text"
+                   name="customerName"
+                   placeholder="Enter Name"
                         value={customerName}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('customerName', e.target.value)}
-                    />
-                </div>
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="phoneNumber" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Phone Number
-                    </label>
-                    <input
-                        id="phoneNumber"
-                        type="phoneNumber"
-                        name="phoneNumber"
-                        className="form-input flex-1"
-                        placeholder="Enter Phone number"
-                        value={phoneNumber}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                    />
+                      className={styles.formControl}
+                      onChange={(e) => handleInputChange('customerName', e.target.value)}
+                  />
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="phoneNumber" className={styles.label}>
+                  Phone Number
+                  </label>
+                  <input
+                  id="phoneNumber"
+                  type="number"
+                  name="phoneNumber"
+                  placeholder="Enter Phone number"
+                  value={phoneNumber}
+                      className={styles.formControl}
+                      onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                  />
                     {errors.phoneNumber && <p className="text-red-500 text-sm mt-1">{errors.phoneNumber}</p>}
-                </div>
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="mobileNumber" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Mobile Number
-                    </label>
-                    <input
-                        id="mobileNumber"
-                        type="text"
-                        name="mobileNumber"
-                        className="form-input flex-1"
-                        placeholder="Enter Mobile number"
-                        value={mobileNumber}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
-                    />
-                    {errors.mobileNumber && <p className="text-red-500 text-sm mt-1">{errors.mobileNumber}</p>}
-                </div>{' '}
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="vehicleNumber" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Customer Vehicle Number
-                    </label>
-                    <input
-                        id="vehicleNumber"
-                        type="text"
-                        name="vehicleNumber"
-                        className="form-input flex-1"
-                        placeholder="Enter vehicle number"
-                        value={vehicleNumber}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('vehicleNumber', e.target.value)}
-                    />
-                </div>
-                <div className="mt-4 flex items-center" style={{ width: '100%' }}>
-                    <label htmlFor="vehicleType" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Vehicle Type (2 or 3 or 4 wheeler)
-                    </label>
-                    <select
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="mobileNumber" className={styles.label}>
+                  Mobile Number
+                  </label>
+                  <input
+                   id="mobileNumber"
+                   type="number"
+                   name="mobileNumber"
+                   placeholder="Enter Mobile number"
+                   value={mobileNumber}
+                      className={styles.formControl}
+                      onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
+                  />
+                   {errors.mobileNumber && <p className="text-red-500 text-sm mt-1">{errors.mobileNumber}</p>}
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="vehicleNumber" className={styles.label}>
+                  Customer Vehicle Number
+                  </label>
+                  <input
+                    id="vehicleNumber"
+                    type="text"
+                    name="vehicleNumber"
+                      className={styles.formControl}
+                      placeholder="Enter vehicle number"
+                      value={vehicleNumber}
+                      onChange={(e) => handleInputChange('vehicleNumber', e.target.value)}
+                  />
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="vehicleType" className={styles.label}>
+                  Vehicle Type (2 or 3 or 4 wheeler)
+                  </label>
+                  <select
                         id="vehicleType"
                         name="vehicleType"
                         className="form-select flex-1"
@@ -2089,51 +2124,31 @@ setBodyShope(insurance)
                         <option value="7">7 Wheeler</option>
                         <option value="8">8 Wheeler</option>
                     </select>
-                </div>
-                <div className="flex items-center mt-4" style={{ width: '100%' }}>
-                    <label htmlFor="vehicleModel" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                        Brand Name
-                    </label>
-                    <input
-                        id="vehicleModel"
+              </div>
+              <div className={styles.formGroup}>
+                  <label htmlFor="vehicleModel" className={styles.label}>
+                  Brand Name
+                  </label>
+                  <input
+                   id="vehicleModel"
                         name="vehicleModel"
-                        className="form-input flex-1"
                         value={vehicleModel}
-                        style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            outline: 'none',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
-                        onChange={(e) => handleInputChange('vehicleModel', e.target.value)}
-                    />
-                </div>
-            </div>
-
-            <div className="mt-4 flex items-center">
-                <textarea
+                      className={styles.formControl}
+                      onChange={(e) => handleInputChange('vehicleModel', e.target.value)}
+                  />
+              </div>
+              <div className={styles.formGroup}>
+              <textarea
                     id="reciever-name"
                     name="reciever-name"
-                    className="form-input flex-1"
+                    className={styles.formControl}
                     placeholder="Comments"
                     value={comments}
-                    style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        border: '1px solid #ccc',
-                        borderRadius: '5px',
-                        fontSize: '1rem',
-                        outline: 'none',
-                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    }}
+                   
                     onChange={(e) => handleInputChange('comments', e.target.value)}
                 />
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 gap-4">
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-4">
                 <button
                     type="button"
                     className={`btn btn-primary bg-green-600 text-white py-2 w-full border-none rounded cursor-pointer ${editData ? 'hover:bg-green-700' : 'hover:bg-green-500'}`}
@@ -2142,7 +2157,9 @@ setBodyShope(insurance)
                     {editData ? 'Update' : 'Save'}
                 </button>
             </div>
-        </div>
+             </form>
+             </div>
+       
     );
 };
 

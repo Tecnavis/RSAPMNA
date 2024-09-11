@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { Link, useLocation, useParams } from 'react-router-dom';
@@ -8,36 +7,63 @@ import IconPrinter from '../../../components/Icon/IconPrinter';
 import IconDownload from '../../../components/Icon/IconDownload';
 import IconEdit from '../../../components/Icon/IconEdit';
 import IconPlus from '../../../components/Icon/IconPlus';
-import { getFirestore, doc, getDoc } from 'firebase/firestore'; // Import Firestore methods
+import { getFirestore, doc, getDoc, Firestore } from 'firebase/firestore'; // Import Firestore methods
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+
+// Define TypeScript types for booking data
+interface Booking {
+    id: string;
+    customerName: string;
+    pickupLocation: {
+        name: string;
+        lat: number;
+        lng: number;
+    };
+    phoneNumber: string;
+    mobileNumber: string;
+    invoice: string;
+    dateTime: string;
+    fileNumber: string;
+    bookingId: string;
+    serviceType: string;
+    vehicleModel: string;
+    dropoffLocation: {
+        name: string;
+    };
+    vehicleNumber: string;
+    updatedTotalSalary: number;
+}
+
 const PreviewExpense = () => {
-    const { id } = useParams();
-console.log("id",id)    
-const [booking, setBooking] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const { id } = useParams<{ id: string }>();
+    const [booking, setBooking] = useState<Booking | null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
     const dispatch = useDispatch();
     const db = getFirestore(); // Initialize Firestore
-    const uid = sessionStorage.getItem('uid')
-    const location = useLocation(); // Use useLocation hook to access state
-    const stateId = location.state?.id; // Access id from location state
-    const invoiceRef = useRef();
+    const uid = sessionStorage.getItem('uid') || '';
+    const location = useLocation();
+    const stateId = location.state?.id as string; // Use type assertion
+    const invoiceRef = useRef<HTMLDivElement | null>(null);
+
     useEffect(() => {
         const fetchBooking = async () => {
             setLoading(true);
             try {
-                const bookingDocRef = doc(db, `user/${uid}/bookings`, id); // Reference to the specific booking document
-                const bookingSnapshot = await getDoc(bookingDocRef); // Get the document snapshot
+                if (id) {
+                    const bookingDocRef = doc(db, `user/${uid}/bookings`, id); // Reference to the specific booking document
+                    const bookingSnapshot = await getDoc(bookingDocRef); // Get the document snapshot
 
-                if (bookingSnapshot.exists()) {
-                    // Document exists, extract data
-                    setBooking({ id: bookingSnapshot.id, ...bookingSnapshot.data() });
-                    dispatch(setPageTitle(`Invoice Preview - ${bookingSnapshot.id}`));
-                } else {
-                    // Document does not exist
-                    console.log(`No booking found with ID: ${id}`);
-                    setBooking(null);
-                    dispatch(setPageTitle('Invoice Preview'));
+                    if (bookingSnapshot.exists()) {
+                        // Document exists, extract data
+                        setBooking({ id: bookingSnapshot.id, ...bookingSnapshot.data() } as Booking);
+                        dispatch(setPageTitle(`Invoice Preview - ${bookingSnapshot.id}`));
+                    } else {
+                        // Document does not exist
+                        console.log(`No booking found with ID: ${id}`);
+                        setBooking(null);
+                        dispatch(setPageTitle('Invoice Preview'));
+                    }
                 }
                 setLoading(false);
             } catch (error) {
@@ -46,35 +72,40 @@ const [booking, setBooking] = useState(null);
             }
         };
 
-        if (id) {
-            fetchBooking();
-        }
-    }, [db, id, dispatch]);
+        fetchBooking();
+    }, [db, id, dispatch, uid]);
 
     useEffect(() => {
         // Log id when component mounts or id changes
         console.log('State id:', stateId);
     }, [stateId]);
+
     const handlePrint = () => {
-        const printContent = invoiceRef.current.innerHTML;
-        const originalContent = document.body.innerHTML;
+        if (invoiceRef.current) {
+            const printContent = invoiceRef.current.innerHTML;
+            const originalContent = document.body.innerHTML;
 
-        document.body.innerHTML = printContent;
-        window.print();
-        document.body.innerHTML = originalContent;
-        window.location.reload(); // Reload the page to restore the original content
+            document.body.innerHTML = printContent;
+            window.print();
+            document.body.innerHTML = originalContent;
+            window.location.reload(); // Reload the page to restore the original content
+        }
     };
+
     const handleDownload = async () => {
-        const canvas = await html2canvas(invoiceRef.current);
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        if (invoiceRef.current) {
+            const canvas = await html2canvas(invoiceRef.current);
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgProps = pdf.getImageProperties(imgData);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`invoice-${id}.pdf`);
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`invoice-${id}.pdf`);
+        }
     };
+
     if (loading) {
         return <div>Loading...</div>;
     }
@@ -82,18 +113,17 @@ const [booking, setBooking] = useState(null);
     if (!booking) {
         return <div>No booking found.</div>;
     }
+
     const columns = [
         { key: 'id', label: 'S.NO' },
         { key: 'serviceType', label: 'Service Type' },
         { key: 'vehicleModel', label: 'Vehicle Model' },
         { key: 'pickupLocation', label: 'Pickup Location', class: 'text-center' },
         { key: 'dropoffLocation', label: 'DropOff Location', class: 'text-center' },
-
-
         { key: 'vehicleNumber', label: 'Vehicle Number', class: 'text-center' },
         { key: 'updatedTotalSalary', label: 'AMOUNT', class: 'text-center' },
-
     ];
+
     return (
         <div>
             <div className="flex items-center lg:justify-end justify-center flex-wrap gap-4 mb-6">
@@ -122,7 +152,7 @@ const [booking, setBooking] = useState(null);
                     Edit
                 </Link>
             </div>
-            <div className="panel"  ref={invoiceRef}>
+            <div className="panel" ref={invoiceRef}>
                 <div className="flex justify-between flex-wrap gap-4 px-4">
                     <div className="text-2xl font-semibold uppercase">Invoice</div>
                     <div className="shrink-0">
@@ -162,45 +192,37 @@ const [booking, setBooking] = useState(null);
                                 <div className="text-white-dark">Order ID :</div>
                                 <div>{booking.fileNumber}</div>
                             </div>
-                          
                         </div>
-                       
                     </div>
                 </div>
                 <div className="table-responsive mt-6">
                     <table className="table-striped">
                         <thead>
-                        <tr>
-                                {columns.map((column) => {
-                                    return (
-                                        <th key={column.key} className={column?.class}>
-                                            {column.label}
-                                        </th>
-                                    );
-                                })}
+                            <tr>
+                                {columns.map((column) => (
+                                    <th key={column.key} className={column.class}>
+                                        {column.label}
+                                    </th>
+                                ))}
                             </tr>
                         </thead>
-                      <tbody>
-                         
-                              
-                                        <td>{booking.bookingId}</td>
-                                        <td>{booking.serviceType}</td>
-                                        <td>{booking.vehicleModel}</td>
-                                        <td>{booking.pickupLocation.name}</td>
-                                        <td>{booking.dropoffLocation.name}</td>
-
-                                        <td>{booking.vehicleNumber}</td>
-
-                                        <td>{booking.updatedTotalSalary}</td>
-
-
-                             
-                          
+                        <tbody>
+                            <tr>
+                                <td>{booking.bookingId}</td>
+                                <td>{booking.serviceType}</td>
+                                <td>{booking.vehicleModel}</td>
+                                <td>{booking.pickupLocation.name}</td>
+                                <td>{booking.dropoffLocation.name}</td>
+                                <td>{booking.vehicleNumber}</td>
+                                <td>{booking.updatedTotalSalary}</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
-                <div className="grid sm:grid-cols-2 grid-cols-1 px-4 mt-6">
-                    {/* Additional sections as needed */}
+                <div className="flex flex-wrap justify-between mt-6">
+                    <div className="text-center lg:text-left">
+                        {/* Additional sections as needed */}
+                    </div>
                 </div>
             </div>
         </div>

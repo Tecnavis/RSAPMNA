@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import './ShowroomModal.css';
+import React, { useState, useEffect } from 'react';
+// import './ShowroomModal.css';
 import { collection, addDoc, getFirestore, onSnapshot } from 'firebase/firestore';
-import { TextField, Typography, IconButton } from '@mui/material';
+import { TextField, Typography, IconButton, Button } from '@mui/material';
 import IconMapPin from '../../components/Icon/IconMapPin';
 
-const ShowroomModalWithout = ({ updateShowroomLocation }) => {
+const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
     const [showRoom, setShowRoom] = useState('');
     const [showrooms, setShowrooms] = useState([]);
     const [description, setDescription] = useState('');
@@ -22,29 +22,16 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
     const [hasInsuranceBody, setHasInsuranceBody] = useState('');
     const [insuranceAmountBody, setInsuranceAmountBody] = useState('');
     const [img, setImg] = useState('');
-    const [location, setLocation] = useState('');
+    const [locationName, setLocationName] = useState('');
     const [locationCoords, setLocationCoords] = useState({ lat: '', lng: '' });
     const db = getFirestore();
-    const inputRef = useRef(null);
-
-    const handleLocationChange = (e) => {
-        const value = e.target.value;
-        setLocation(value);
-
-        const parts = value.split(',').map(part => part.trim());
-        if (parts.length >= 3) {
-            const lat = parts[parts.length - 2];
-            const lng = parts[parts.length - 1];
-            setLocationCoords({ lat, lng });
-        } else {
-            setLocationCoords({ lat: '', lng: '' });
-        }
-    };
+    const uid = sessionStorage.getItem('uid');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const location = `${locationName}, ${locationCoords.lat}, ${locationCoords.lng}`;
         try {
-            await addDoc(collection(db, 'showroom'), {
+            await addDoc(collection(db, `user/${uid}/showroom`), {
                 Location: location,
                 ShowRoom: showRoom,
                 description,
@@ -71,7 +58,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
             updateShowroomLocation(location);
 
             // Reset form fields
-            setLocation('');
+            setLocationName('');
             setShowRoom('');
             setDescription('');
             setUserName('');
@@ -89,28 +76,31 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
             setHasInsuranceBody('');
             setInsuranceAmountBody('');
             setImg('');
+
+            // Close the modal
+            onClose();
         } catch (error) {
             console.error('Error adding document:', error);
         }
     };
 
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, 'showroom'), (snapshot) => {
+        const unsubscribe = onSnapshot(collection(db, `user/${uid}/showroom`), (snapshot) => {
             const showroomsList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
             setShowrooms(showroomsList);
         });
 
         return () => unsubscribe();
-    }, [db]);
+    }, [db, uid]);
 
     const openGoogleMaps = () => {
-        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(showRoom)}`;
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName)}`;
         window.open(googleMapsUrl, '_blank');
     };
 
     return (
         <div className="showroom-modal">
-            <form onSubmit={handleSubmit} className="showroom-form">
+            <div  className="showroom-form">
                 <div className="form-group">
                     <label htmlFor="showRoom">Showroom Name:</label>
                     <TextField
@@ -122,22 +112,39 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
                     />
                 </div>
                 <div className="form-group">
-                    <label htmlFor="location">Location:</label>
+                    <label htmlFor="locationName">Location Name:</label>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                         <TextField
-                            value={location}
-                            onChange={handleLocationChange}
+                            value={locationName}
+                            onChange={(e) => setLocationName(e.target.value)}
                             variant="outlined"
-                            label="Location (format: location, lat, lng)"
+                            label="Location Name"
                             fullWidth
                         />
                         <IconButton onClick={openGoogleMaps} className="icon-button">
-                            <IconMapPin/>
+                            <IconMapPin />
                         </IconButton>
                     </div>
-                    {locationCoords.lat && locationCoords.lng && (
-                        <Typography>{`Location Lat/Lng: ${locationCoords.lat}, ${locationCoords.lng}`}</Typography>
-                    )}
+                </div>
+                <div className="form-group">
+                    <label htmlFor="lat">Latitude:</label>
+                    <TextField
+                        value={locationCoords.lat}
+                        onChange={(e) => setLocationCoords({ ...locationCoords, lat: e.target.value })}
+                        variant="outlined"
+                        label="Latitude"
+                        fullWidth
+                    />
+                </div>
+                <div className="form-group">
+                    <label htmlFor="lng">Longitude:</label>
+                    <TextField
+                        value={locationCoords.lng}
+                        onChange={(e) => setLocationCoords({ ...locationCoords, lng: e.target.value })}
+                        variant="outlined"
+                        label="Longitude"
+                        fullWidth
+                    />
                 </div>
                 <div className="form-group">
                     <label htmlFor="description">Description:</label>
@@ -151,8 +158,11 @@ const ShowroomModalWithout = ({ updateShowroomLocation }) => {
                     ></textarea>
                 </div>
                 {/* Add other form fields here */}
-                <button type="submit" className="btn btn-primary">Save Showroom</button>
-            </form>
+                <div className="modal-actions">
+                    <Button onClick={handleSubmit} variant="contained" color="primary">Save Showroom</Button>
+                    <Button onClick={onClose} variant="outlined" color="secondary">Close</Button>
+                </div>
+            </div>
         </div>
     );
 };

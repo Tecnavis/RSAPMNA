@@ -1,0 +1,285 @@
+/* Combined styles.css */
+
+/* Date Box Styles */
+.dateContainer {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.dateBox {
+  margin: 5px 0;
+  color: #7f8c8d;
+  font-family: 'Georgia, serif';
+  font-size: 16px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: #ecf0f1;
+  border: 1px solid #bdc3c7;
+  min-width: fit-content;
+  transition: all 0.3s ease;
+}
+
+.dateBox:hover {
+  background-color: #bdc3c7;
+  color: #34495e;
+  transform: scale(1.05);
+}
+
+.dateText {
+  font-weight: 600;
+  font-size: 1.125rem; /* 18px */
+  color: #2c3e50;
+}
+
+/* Form Styles */
+.bookingForm {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.bookingFormContainer {
+  width: 100%;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* Spacing between the elements */
+  margin-bottom: 20px;
+}
+
+.inputContainer {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.fullWidthSelect {
+  flex: 1;
+}
+
+.formControl {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1rem;
+  margin-right: 10px; /* Space between input and button */
+}
+
+.fullWidthInput {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1rem;
+  margin-right: 10px; /* Space between input and button */
+}
+
+.label {
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #4a4a4a;
+}
+
+.select {
+  padding: 0.5rem;
+  border: 1px solid #d1d5db; /* Equivalent to border-gray-300 */
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* Equivalent to shadow-sm */
+  transition: all 0.2s;
+}
+
+.select:focus {
+  outline: none;
+}
+
+.dateTime {
+  font-size: 1rem;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.formHeading {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.mapButton {
+  background: #51a7ff;
+  color: white;
+  padding: 10px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.mapButton:hover {
+  background: lightblue;
+}
+
+.addButton {
+  border-radius: 40px;
+  background: linear-gradient(135deg, #32CD32, #228B22);
+  color: white;
+  margin-left: 10px; /* Space between input and button */
+  padding: 10px;
+  border: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: background 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.addButton:hover {
+  background: linear-gradient(135deg, #228B22, #006400);
+}
+/* Modal.module.css */
+.modalOverlay {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modalContent {
+  position: absolute;
+  width: 60vw;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  border-radius: 10px;
+  max-width: 90vw;
+  max-height: 80vh;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+  padding: 20px;
+  overflow: auto;
+}
+
+.stickyHeader {
+  position: sticky;
+  top: 0;
+  background-color: #fff;
+  z-index: 999;
+}
+
+.modalTitle {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.okButton {
+  margin-left: auto;
+  margin-right: 20px;
+  background-color: #38a169;
+  color: white;
+  font-weight: bold;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.okButton:hover {
+  background-color: #2f855a;
+}
+
+.driverList {
+  margin-top: 10px;
+}
+
+.driverCard {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.driverTable {
+  width: 100%;
+  padding: 16px;
+}
+
+.driverTable th,
+.driverTable td {
+  padding: 8px;
+  border-bottom: 2px solid #e2e8f0;
+}
+@media (max-width: 600px) {
+  .inputContainer {
+    flex-direction: column;
+  }
+
+  .fullWidthSelect {
+    width: 100%; /* Full width on small screens */
+    margin-right: 0;
+    margin-bottom: 10px; /* Space between input and button on small screens */
+  }
+
+  .fullWidthInput {
+    width: 100%; /* Full width on small screens */
+    margin-right: 0;
+    margin-bottom: 10px; /* Space between input and button on small screens */
+  }
+
+  .addButton {
+    width: 100%;
+    border-radius: 7px;
+    margin: 0; /* Reset margin on small screens */
+  }
+  .mapButton{
+    width: 100%;
+    border-radius: 7px;
+    margin: 0; /* Reset margin on small screens */
+  }
+
+  .bookingFormContainer {
+    padding: 10px;
+  }
+
+  .formHeading {
+    font-size: 1.2rem;
+  }
+
+  .formGroup {
+    width: 100%;
+  }
+
+  .formControl {
+    font-size: 0.9rem;
+  }
+  .modalContent {
+    max-width: 100%;
+    width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+}
+
+.stickyHeader {
+    padding: 16px;
+}
+
+.driverTable th,
+.driverTable td {
+    padding: 12px;
+}
+}

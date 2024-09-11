@@ -24,4 +24,245 @@
     visibility: visible;
     opacity: 1;
   }
-  
+  .tableContainer {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+    background-color: #fff;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.tableHeader {
+    background-color: #004085;
+    color: #fff;
+    text-align: left;
+    padding: 12px;
+    font-size: 16px;
+}
+
+.tableRow {
+    border-bottom: 1px solid #ddd;
+}
+
+.tableCell {
+    padding: 12px;
+    font-size: 14px;
+    color: #333;
+}
+
+.tableActions {
+    display: flex;
+    gap: 10px;
+}
+
+.editButton,
+.deleteButton,
+.addButton {
+    padding: 6px 12px;
+    font-size: 14px;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.editButton {
+    background-color: #2835a7;
+}
+
+.addButton {
+    background-color: #28a745;
+}
+
+.addButton:hover {
+    background-color: #1a692d;
+}
+
+.editButton:hover {
+    background-color: #2b2188;
+}
+
+.deleteButton {
+    background-color: #dc3545;
+}
+
+.deleteButton:hover {
+    background-color: #c82333;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .tableHeader {
+        display: none; /* Hide table headers on small screens */
+    }
+
+    .tableRow {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 15px;
+        border-bottom: none;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        background-color: #f8f9fa;
+        padding: 10px;
+    }
+
+    .tableCell {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        font-size: 14px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .tableCell:last-child {
+        border-bottom: none;
+    }
+
+    .tableCell::before {
+        content: attr(data-label);
+        flex: 1;
+        font-weight: bold;
+        text-transform: capitalize;
+        color: #004085;
+    }
+
+    .tableCell span {
+        flex: 2;
+        text-align: right;
+    }
+
+    .tableActions {
+        justify-content: flex-end;
+        margin-top: 10px;
+        gap: 10px;
+    }
+
+    .editButton,
+    .deleteButton {
+        width: 48%;
+    }
+}
+.showroom-details-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    font-family: 'Arial', sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+}
+
+.showroom-header {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.showroom-header h1 {
+    font-size: 2.5em;
+    margin: 0;
+    font-weight: 700;
+}
+
+.showroom-details {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.showroom-details img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    flex: 1;
+}
+
+.showroom-details-content {
+    flex: 1;
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    font-size: 1.1em;
+    color: #555;
+}
+
+.showroom-details-item {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #ddd;
+    padding: 10px 0;
+}
+
+.showroom-details-item:last-child {
+    border-bottom: none;
+}
+
+.showroom-footer {
+    text-align: center;
+    margin-top: 20px;
+    color: #888;
+    font-size: 0.9em;
+}
+
+/* Hover form styles */
+.hover-form {
+    flex: 1;
+    width: 50%;
+    background-color: rgba(209, 206, 206, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.hover-form h2 {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 1.5em;
+    color: #333;
+}
+
+.hover-form label {
+    display: block;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.hover-form input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1em;
+}
+
+.hover-form button {
+    width: 100%;
+    padding: 10px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1em;
+    cursor: pointer;
+}
+
+.hover-form button:hover {
+    background-color: #0056b3;
+}

@@ -5,53 +5,81 @@ import IconPencil from '../../components/Icon/IconPencil';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import IconUserPlus from '../../components/Icon/IconUserPlus';
-import { getFirestore, collection, getDocs, where, query } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, where, query, doc, updateDoc } from 'firebase/firestore';
 import IconMenuScrumboard from '../../components/Icon/Menu/IconMenuScrumboard';
+import defaultImage from '../../assets/css/images/user-front-side-with-white-background.jpg'
+import ConfirmationModal from './ConfirmationModal/ConfirmationModal'; // Import the modal component
 
-const CompanyCreatn = () => {
-    const [items, setItems] = useState([] as any);
+// Define the type for driver item
+interface DriverItem {
+    id: string;
+    companyName: string;
+    driverName: string;
+    idnumber: string;
+    phone: string;
+    selectedServices: Record<string, string>;
+    basicSalaries: Record<string, number>;
+    status?: string;
+}
+
+// Define the component
+const CompanyCreatn: React.FC = () => {
+    const [items, setItems] = useState<DriverItem[]>([]);
     const db = getFirestore();
     const navigate = useNavigate();
-    console.log("data", items)
-    const uid = sessionStorage.getItem('uid')
+    const uid = sessionStorage.getItem('uid') || '';
+    const [isModalVisible, setModalVisible] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<DriverItem | null>(null);
+    const role = sessionStorage.getItem('role');
 
     useEffect(() => {
         const fetchData = async () => {
-            const driverCollection = collection(db, `user/${uid}/driver`);
-            const q = query(driverCollection, where('companyName', '==', 'Company'));
-            const querySnapshot = await getDocs(q);
-            const fetchedItems = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-            
-            // Filter out deleted items
-            const deletedIds = JSON.parse(localStorage.getItem('deletedUserIds') || '[]');
-            const filteredItems = fetchedItems.filter(item => !deletedIds.includes(item.id));
-            
-            setItems(filteredItems);
-        };
-        fetchData().catch(console.error);
-    }, []);
-
-    const handleDelete = (userId: string) => {
-        const confirmDelete = window.confirm('Are you sure you want to delete this user?');
-        if (confirmDelete) {
-            const enteredIdNumber = window.prompt('Please enter the ID number of the driver:');
-            const driver = items.find((item: any) => item.id === userId);
-
-            if (driver && enteredIdNumber === driver.idnumber) {
-                // Update the local state
-                setItems((prevItems: any) => prevItems.filter((item: any) => item.id !== userId));
+            try {
+                const driverCollection = collection(db, `user/${uid}/driver`);
+                const q = query(driverCollection, where('companyName', '==', 'Company')); 
+                const querySnapshot = await getDocs(q);
                 
-                // Store the deleted ID in localStorage
-                let deletedIds = JSON.parse(localStorage.getItem('deletedUserIds') || '[]');
-                deletedIds.push(userId);
-                localStorage.setItem('deletedUserIds', JSON.stringify(deletedIds));
-            } else {
-                window.alert('ID number is incorrect. Deletion aborted.');
+                // Filter the fetched data based on status
+                const filteredItems = querySnapshot.docs
+                    .filter((doc) => {
+                        const data = doc.data();
+                        return !data.status || data.status === 'Active'; // Adjust status as needed
+                    })
+                    .map((doc) => ({ id: doc.id, ...doc.data() } as DriverItem));
+
+                setItems(filteredItems);
+            } catch (error) {
+                console.error('Error fetching data:', error);
             }
+        };
+
+        fetchData();
+    }, [uid, db]);
+
+    const handleDelete = async (userId: string) => {
+        try {
+            const userDoc = doc(db, `user/${uid}/driver`, userId);
+            await updateDoc(userDoc, { status: 'deleted from UI' });
+            
+            // Update local state
+            setItems(prevItems => prevItems.filter(item => item.id !== userId));
+        } catch (error) {
+            console.error('Error deleting document: ', error);
         }
+        setModalVisible(false);
     };
 
-    const handleEdit = (item) => {
+    const openDeleteModal = (item: DriverItem) => {
+        setItemToDelete(item);
+        setModalVisible(true);
+    };
+
+    const closeModal = () => {
+        setModalVisible(false);
+        setItemToDelete(null);
+    };
+
+    const handleEdit = (item: DriverItem) => {
         navigate(`/users/companycreation/companycreationadd/${item.id}`, { state: { editData: item } });
     };
 
@@ -72,8 +100,8 @@ const CompanyCreatn = () => {
                         <thead>
                             <tr>
                                 <th>Id</th>
+                                {/* <th>Company Name</th> */}
                                 <th>Company Name</th>
-                                <th>Driver Name</th>
                                 <th>Driver ID Number</th>
                                 <th>Phone Number</th>
                                 <th>Service Types</th>
@@ -85,7 +113,7 @@ const CompanyCreatn = () => {
                             {items.map((item, index) => (
                                 <tr key={item.id}>
                                     <td>{index + 1}</td>
-                                    <td>{item.company}</td>
+                                    {/* <td>{item.companyName}</td> */}
                                     <td>
                                         <div className="whitespace-nowrap">{item.driverName}</div>
                                     </td>
@@ -116,7 +144,7 @@ const CompanyCreatn = () => {
                                             </li>
                                             <li>
                                                 <Tippy content="Delete">
-                                                    <button type="button" onClick={() => handleDelete(item.id)}>
+                                                    <button type="button" onClick={() => openDeleteModal(item)}>
                                                         <IconTrashLines className="text-danger" />
                                                     </button>
                                                 </Tippy>
@@ -136,6 +164,7 @@ const CompanyCreatn = () => {
                     </table>
                 </div>
             </div>
+            <ConfirmationModal isVisible={isModalVisible} onConfirm={() => itemToDelete && handleDelete(itemToDelete.id)} onCancel={closeModal} />
         </div>
     );
 };

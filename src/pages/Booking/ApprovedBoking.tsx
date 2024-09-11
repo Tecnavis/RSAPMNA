@@ -1,50 +1,61 @@
-import React, { useEffect, useState } from 'react';
-import { getFirestore, collection, getDocs } from 'firebase/firestore';
+import React, { useEffect, useState, ChangeEvent } from 'react';
+import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
 
-const ApprovedBooking = () => {
-    const [approvedBookings, setApprovedBookings] = useState([]);
-    const [searchQuery, setSearchQuery] = useState(''); // State for search query
-    const [currentPage, setCurrentPage] = useState(1); // State for current page
-    const [pageSize, setPageSize] = useState(10); // State for page size
-    const PAGE_SIZES = [10, 25, 'All'];
+// Define the shape of a booking record
+interface Booking {
+    id: string;
+    dateTime: string;
+    customerName: string;
+    phoneNumber: string;
+    serviceType: string;
+    vehicleNumber: string;
+    comments: string;
+}
+
+const ApprovedBooking: React.FC = () => {
+    const [approvedBookings, setApprovedBookings] = useState<Booking[]>([]);
+    const [searchQuery, setSearchQuery] = useState<string>(''); // State for search query
+    const [currentPage, setCurrentPage] = useState<number>(1); // State for current page
+    const [pageSize, setPageSize] = useState<number | 'All'>(10); // State for page size
+    const PAGE_SIZES: (number | 'All')[] = [10, 25, 'All']; // Define available page sizes
+    const uid = sessionStorage.getItem('uid');
 
     useEffect(() => {
         const fetchApprovedBookings = async () => {
             try {
                 const db = getFirestore();
-                const approvedBookingsCollection = collection(db, 'approvedbookings');
-                const querySnapshot = await getDocs(approvedBookingsCollection);
-                const approvedBookingsData = querySnapshot.docs.map((doc) => ({
+                // Query to fetch bookings where status is 'Approved'
+                const q = query(collection(db, `user/${uid}/bookings`), where('status', '==', 'Approved'));
+                const querySnapshot = await getDocs(q);
+                const bookingsData = querySnapshot.docs.map((doc) => ({
                     id: doc.id,
                     ...doc.data(),
-                }));
-                setApprovedBookings(approvedBookingsData);
+                })) as Booking[]; // Type assertion
+                setApprovedBookings(bookingsData);
             } catch (error) {
                 console.error('Error fetching approved bookings:', error);
             }
         };
 
         fetchApprovedBookings();
-    }, []);
+    }, [uid]);
 
-    const handleSearchChange = (e) => {
+    const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value);
     };
 
     const filteredBookings = approvedBookings.filter((booking) =>
-        Object.values(booking).some(
-            (value) =>
-                value &&
-                value.toString().toLowerCase().includes(searchQuery.toLowerCase())
+        Object.values(booking).some((value) =>
+            value?.toString().toLowerCase().includes(searchQuery.toLowerCase())
         )
     );
 
     const totalRecords = filteredBookings.length;
-    const totalPages = pageSize === 'All' ? 1 : Math.ceil(totalRecords / pageSize);
+    const totalPages = pageSize === 'All' ? 1 : Math.ceil(totalRecords / (pageSize as number));
 
     const displayedBookings = pageSize === 'All'
         ? filteredBookings
-        : filteredBookings.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+        : filteredBookings.slice((currentPage - 1) * (pageSize as number), currentPage * (pageSize as number));
 
     return (
         <div className="panel mt-6">
@@ -112,7 +123,8 @@ const ApprovedBooking = () => {
                     <select
                         value={pageSize}
                         onChange={(e) => {
-                            setPageSize(e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10));
+                            const newSize = e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10);
+                            setPageSize(newSize);
                             setCurrentPage(1); // Reset to the first page
                         }}
                         className="pagination-size-select"

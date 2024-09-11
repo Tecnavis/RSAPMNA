@@ -44,6 +44,11 @@ import SalaryReport from '../pages/DriverReport/SalaryReport';
 import DriverSalaryInvoice from '../pages/DriverReport/DriverSalaryInvoice';
 import EditSalary from '../pages/DriverReport/EditSalary';
 import CompanyCreationDetails from '../pages/Users/CompanyCreationDetails';
+import DummyAdd from '../pages/Users/DummyAdd';
+import ShowRoomDetails from '../pages/ShowRooms/ShowRoomDetails';
+import AddBook from '../pages/ShowRooms/AddBook';
+import ShowroomReports from '../pages/DriverReport/ShowroomReports';
+import ShowroomCashCollection from '../pages/DriverReport/ShowroomCashCollection';
 
 
 
@@ -496,6 +501,10 @@ const routes = [
         element: <CompanyAdd />,
     },
     {
+        path: '/users/dummy-add',
+        element: <DummyAdd />,
+    },
+    {
         path: '/users/company-add/:id',
         element: <CompanyAdd />,
     },
@@ -578,6 +587,14 @@ const routes = [
         element: <DriverReport />,
     },
     {
+        path: '/showroomreport',
+        element: <ShowroomReports />,
+    },
+    {
+        path: '/showroomreport/showroomcashcollection/:showroomId',
+        element: <ShowroomCashCollection />,
+    },
+    {
         path: '/driverreport/driversalaryreport',
         element: <DriverSalaryReport />,
     },
@@ -646,7 +663,18 @@ const routes = [
     path: 'showrooms/showroom',
     element: <ShowRoom />,
 },
+{
+    path: 'showrooms/showroom/showroomDetails',
+    element: <ShowRoomDetails />,
+    layout: 'blank',
 
+},
+{
+    path: '/addbook',
+    element: <AddBook/>,
+    layout: 'blank',
+
+},
 
 // service
 {

@@ -1,0 +1,78 @@
+.tableContainer {
+    width: 100%;
+    overflow-x: auto; /* Used for larger screens */
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    border-radius: 10px; /* Rounded corners for the table */
+    overflow: hidden; /* Ensure rounded corners are visible */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Add a subtle shadow for depth */
+    background-color: #ffffff; /* Background color of the table */
+}
+
+.table th, .table td {
+    padding: 12px;
+    text-align: left;
+    border: 1px solid #dddddd; /* Light border for a clean look */
+}
+
+.table th {
+    background-color: #f4f4f4; /* Light background for the headers */
+    color: #333333;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em; /* Add spacing between letters for the header */
+    border-bottom: 2px solid #cccccc; /* Slightly darker border for emphasis */
+}
+
+.table td {
+    color: #666666;
+    font-weight: 400;
+    border-bottom: 1px solid #eeeeee; /* Light bottom border for each cell */
+}
+
+.table tr:hover {
+    background-color: #f7f7f7; /* Slight hover effect for rows */
+    transition: background-color 0.3s ease; /* Smooth transition on hover */
+}
+
+@media (max-width: 768px) {
+    .table, .table thead, .table tbody, .table th, .table td, .table tr {
+        display: block;
+    }
+
+    .table thead {
+        display: none; /* Hide the table header */
+    }
+
+    .table tr {
+        margin-bottom: 20px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background-color: #ffffff;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Maintain shadow in mobile view */
+    }
+
+    .table td {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border: none;
+        border-bottom: 1px solid #eeeeee; /* Maintain bottom border for cells */
+        white-space: normal;
+    }
+
+    .table td::before {
+        content: attr(data-label);
+        font-weight: 600; /* Bolder font weight for labels */
+        flex: 0 0 30%;
+        color: #333333;
+    }
+
+    .table td:last-child {
+        margin-top: 10px;
+    }
+}

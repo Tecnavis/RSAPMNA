@@ -1,8 +1,9 @@
 import React from 'react'
+import ComingSoonBoxed from '../../Pages/ComingSoonBoxed'
 
 const ProfitLoss = () => {
   return (
-    <div>ProfitLoss</div>
+    <div><ComingSoonBoxed/></div>
   )
 }
 

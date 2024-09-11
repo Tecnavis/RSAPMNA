@@ -1,10 +1,40 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { addDoc, collection, getFirestore, doc, updateDoc, getDocs } from 'firebase/firestore';
 import IconPlusCircle from '../../components/Icon/IconPlusCircle';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
+import defualtImage from '../../assets/css/images/user-front-side-with-white-background.jpg';
+import styles from './companyAdd.module.css';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+interface Location {
+    id: string;
+    name: string;
+    // Add any other fields that might be in the `doc.data()`
+}
+interface EditData {
+    id: string;
 
+    driverName?: string;
+    idnumber?: string;
+    phone?: string;
+    password?: string;
+    confirmPassword?: string;
+    advancePayment?: string;
+    serviceVehicle?: SalaryDetails;
+    personalphone?: string;
+    salaryPerKm?: SalaryDetails;
+    basicSalaryKm?: SalaryDetails;
+    selectedServices?: string[];
+    companyName?: string;
+    basicSalaries?: SalaryDetails;
+    profileImageUrl?: string;
+    baseLocation?: string;
+    // Add other fields as necessary
+}
+
+interface SalaryDetails {
+    [key: string]: number | string; // You can adjust the type depending on what values you expect
+}
 const CompanyAdd = () => {
     const [driverName, setDriverName] = useState('');
     const [idnumber, setIdnumber] = useState('');
@@ -14,26 +44,34 @@ const CompanyAdd = () => {
     const [companyName, setCompanyName] = useState('');
 
     const [personalphone, setPersonalPhone] = useState('');
-    const [salaryPerKm, setSalaryPerKm] = useState({});
-    const [basicSalaryKm, setBasicSalaryKm] = useState({});
-    const [editData, setEditData] = useState(null);
+    const [salaryPerKm, setSalaryPerKm] = useState<SalaryDetails>({});
+    const [basicSalaryKm, setBasicSalaryKm] = useState<SalaryDetails>({});
+    const [editData, setEditData] = useState<EditData | null>(null);
     const [showTable, setShowTable] = useState(false);
-    const [selectedServices, setSelectedServices] = useState([]);
-    const [basicSalaries, setBasicSalaries] = useState({}); // Ensure basicSalaries is defined here
-    const [profileImage, setProfileImage] = useState(null); // State to store profile image file
+    const [selectedServices, setSelectedServices] = useState<string[]>([]);
+    const [basicSalaries, setBasicSalaries] = useState<SalaryDetails>({});
+    const [profileImage, setProfileImage] = useState<File | null>(null); // Updated type to File or null
     const [showPassword, setShowPassword] = useState(false);
-const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-const [advancePayment, setAdvancePayment] = useState('');
-const [baseLocation, setBaseLocation] = useState('');
-    const [baseLocations, setBaseLocations] = useState([]);
-    const [serviceOptions, setServiceOptions] = useState([]);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [advancePayment, setAdvancePayment] = useState('');
+    const [baseLocation, setBaseLocation] = useState('');
+    const [baseLocations, setBaseLocations] = useState<Location[]>([]);
+    const [serviceOptions, setServiceOptions] = useState<string[]>([]);
+    const [serviceVehicle, setServiceVehicle] = useState<SalaryDetails>({});
+    const [driverNameError, setDriverNameError] = useState('');
+    const [baseLocationError, setBaseLocationError] = useState('');
+    const [phoneError, setPhoneError] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+    const [confirmPasswordError, setConfirmPasswordError] = useState('');
+    const [serviceTypeError, setServiceTypeError] = useState('');
+    const [imagePreview, setImagePreview] = useState('');
 
 
     const storage = getStorage();
     const db = getFirestore();
     const navigate = useNavigate();
     const { state } = useLocation();
-    const uid = sessionStorage.getItem('uid')
+    const uid = sessionStorage.getItem('uid');
 
     useEffect(() => {
         const fetchServiceOptions = async () => {
@@ -41,7 +79,7 @@ const [baseLocation, setBaseLocation] = useState('');
                 const db = getFirestore();
                 const serviceCollection = collection(db, `user/${uid}/service`);
                 const serviceSnapshot = await getDocs(serviceCollection);
-                const servicesList = serviceSnapshot.docs.map(doc => doc.data().name); // Adjust this based on your data structure
+                const servicesList = serviceSnapshot.docs.map((doc) => doc.data().name as string); // Adjust this based on your data structure
                 setServiceOptions(servicesList);
             } catch (error) {
                 console.error('Error fetching services:', error);
@@ -49,76 +87,122 @@ const [baseLocation, setBaseLocation] = useState('');
         };
     
         fetchServiceOptions();
-    }, []);
-    
-    useEffect(() => {
+    }, [uid]);
 
+    useEffect(() => {
         const fetchBaseLocations = async () => {
             try {
                 const querySnapshot = await getDocs(collection(db, `user/${uid}/baselocation`));
-                const locations = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const locations: Location[] = querySnapshot.docs.map((doc) => ({
+                    ...doc.data() as Omit<Location, 'id'>, // Spread other fields first
+                    id: doc.id, // Then assign the id to overwrite any existing id
+                }));
                 setBaseLocations(locations);
             } catch (error) {
-                console.error("Error fetching base locations: ", error);
+                console.error('Error fetching base locations: ', error);
             }
         };
-
+    
         fetchBaseLocations();
-    }, [db]);
-    const handlePasswordChange = (e) => {
+    }, [db, uid]);
+    
+    const handlePasswordChange = (e:any) => {
         setPassword(e.target.value);
     };
 
-    const handleConfirmPasswordChange = (e) => {
+    const handleConfirmPasswordChange = (e:any) => {
         setConfirmPassword(e.target.value);
     };
 
-    const handleBasicSalaryChange = (service, e) => {
+    const handleBasicSalaryChange = (service:any, e:any) => {
         const updatedSalaries = { ...basicSalaries, [service]: e.target.value };
         setBasicSalaries(updatedSalaries);
     };
-    const handleBasicSalaryKmChange = (service, e) => {
+    const handleBasicSalaryKmChange = (service:any, e:any) => {
         const updatedKm = { ...basicSalaryKm, [service]: e.target.value };
         setBasicSalaryKm(updatedKm);
     };
-    const handleSalaryPerKmChange = (service, e) => {
+    const handleSalaryPerKmChange = (service:any, e:any) => {
         const updatedsalaryPerKm = { ...salaryPerKm, [service]: e.target.value };
         setSalaryPerKm(updatedsalaryPerKm);
     };
-   
-    const handleProfileImageChange = (e) => {
-        setProfileImage(e.target.files[0]); // Store the selected file
+    const handleServiceVehicle = (service:any, e:any) => {
+        const updatedServiceVehicle = { ...serviceVehicle, [service]: e.target.value };
+        setServiceVehicle(updatedServiceVehicle);
+    };
+    const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files ? e.target.files[0] : null;
+        if (file) {
+            setProfileImage(file);
+            setImagePreview(URL.createObjectURL(file));
+        }
     };
     
+
     const renderServiceOptions = () => {
         return (
-            <div style={{ columnCount: 3, columnGap: '1rem', fontFamily: 'Arial, sans-serif', fontSize: '16px' }}>
-                {serviceOptions.map((option, index) => (
-                    <label key={index} style={{ display: 'inline-flex', alignItems: 'center', marginBottom: '0.5rem', padding: '0.5rem', borderRadius: '8px', backgroundColor: '#f4f4f4', boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)', transition: 'all 0.3s ease' }}>
-                        <input
-                            type="checkbox"
-                            value={option}
-                            checked={selectedServices.includes(option)}
-                            onChange={(e) => handleCheckboxChange(e.target.value, e.target.checked)}
-                            style={{ marginRight: '0.5rem' }}
-                        />
-                        <span>{option}</span>
-                    </label>
-                ))}
+            <div style={{ fontFamily: 'Arial, sans-serif', fontSize: '16px' }}>
+                <div
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '1rem',
+                    }}
+                >
+                    {serviceOptions.map((option, index) => (
+                        <div
+                            key={index}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '1rem',
+                                borderRadius: '12px',
+                                backgroundColor: '#ffffff',
+                                boxShadow: '0px 6px 12px rgba(0, 0, 0, 0.1)',
+                                transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                                border: '2px solid transparent',
+                                position: 'relative',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'scale(1.05)';
+                                e.currentTarget.style.boxShadow = '0px 12px 24px rgba(0, 0, 0, 0.15)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'scale(1)';
+                                e.currentTarget.style.boxShadow = '0px 6px 12px rgba(0, 0, 0, 0.1)';
+                            }}
+                        >
+                            <input
+                                type="checkbox"
+                                value={option}
+                                checked={selectedServices.includes(option)}
+                                onChange={(e) => handleCheckboxChange(e.target.value, e.target.checked)}
+                                id={`service-option-${index}`}
+                                style={{
+                                    marginRight: '1rem',
+                                    accentColor: '#007bff',
+                                    transform: 'scale(1.2)',
+                                    cursor: 'pointer',
+                                }}
+                            />
+                            <span style={{ fontSize: '18px' }}>{option}</span>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     };
-        
-  
-    const handleCheckboxChange = (value, isChecked) => {
+
+
+    const handleCheckboxChange = (value: string, isChecked: boolean) => {
         if (isChecked) {
             setSelectedServices([...selectedServices, value]);
         } else {
-            setSelectedServices(selectedServices.filter(service => service !== value));
+            setSelectedServices(selectedServices.filter((service) => service !== value));
         }
     };
-   
-   
+    
+
     useEffect(() => {
         if (state && state.editData) {
             setEditData(state.editData);
@@ -126,48 +210,126 @@ const [baseLocation, setBaseLocation] = useState('');
             setIdnumber(state.editData.idnumber || '');
             setPhone(state.editData.phone || '');
             setPassword(state.editData.password || '');
-
             setConfirmPassword(state.editData.confirmPassword || '');
             setAdvancePayment(state.editData.advancePayment || '');
-
-            
+            setServiceVehicle(state.editData.serviceVehicle || {});
             setPersonalPhone(state.editData.personalphone || '');
-            setSalaryPerKm(state.editData.salaryPerKm || '');
-            setBasicSalaryKm(state.editData.basicSalaryKm || '');
-
-            setSelectedServices(state.editData.selectedServices || '');
+            setSalaryPerKm(state.editData.salaryPerKm || {});
+            setBasicSalaryKm(state.editData.basicSalaryKm || {});
+            setSelectedServices(state.editData.selectedServices || []);
             setCompanyName(state.editData.companyName || '');
-
-            setBasicSalaries(state.editData.basicSalaries || '');
-            setProfileImage(state.editData.profileImage || '');
+            setBasicSalaries(state.editData.basicSalaries || {});
+            setImagePreview(state.editData.profileImageUrl || '');
             setBaseLocation(state.editData.baseLocation || '');
-
         }
+        
     }, [state]);
-    const addOrUpdateItem = async () => {
-        try {
-            if (password !== confirmPassword) {
-                console.error('Password and confirm password do not match');
-                return;
-            }
-            
-            let profileImageUrl: string = ''; 
+    const checkPhoneUnique = async (phone:any) => {
+        const db = getFirestore();
+        const uid = sessionStorage.getItem('uid');
+        const driversRef = collection(db, `user/${uid}/driver`);
+        const querySnapshot = await getDocs(driversRef);
+        let isUnique = true;
 
-            if (profileImage) {
-                const storageRef = ref(storage, 'profile_images/' + profileImage.name);
-                const uploadTask = uploadBytesResumable(storageRef, profileImage);
-            
-                await uploadTask;
-                profileImageUrl = await getDownloadURL(storageRef);
+        querySnapshot.forEach((doc) => {
+            if (doc.data().phone === phone) {
+                isUnique = false;
             }
-            
-                        const itemData = {
+        });
+
+        return isUnique;
+    };
+
+    const addOrUpdateItem = async () => {
+        let isValid = true;
+    
+        // Validation checks
+        if (!driverName) {
+            setDriverNameError('Driver name is required');
+            isValid = false;
+        } else {
+            setDriverNameError('');
+        }
+    
+        if (!baseLocation) {
+            setBaseLocationError('Base location is required');
+            isValid = false;
+        } else {
+            setBaseLocationError('');
+        }
+    
+        // Check if the phone number is unique
+        let isPhoneUnique = true;
+        if (!editData || editData.phone !== phone) {
+            try {
+                isPhoneUnique = await checkPhoneUnique(phone);
+            } catch (error) {
+                console.error('Error checking phone uniqueness: ', error);
+                isPhoneUnique = false;
+            }
+        }
+    
+        if (!phone) {
+            setPhoneError('Phone number is required');
+            isValid = false;
+        } else if (!/^[6-9]\d{9}$/.test(phone)) {
+            setPhoneError('Enter a valid phone number');
+            isValid = false;
+        } else if (!isPhoneUnique) {
+            setPhoneError('Phone number already used');
+            isValid = false;
+        } else {
+            setPhoneError('');
+        }
+    
+        if (!password) {
+            setPasswordError('Password is required');
+            isValid = false;
+        } else if (password.length < 4) {
+            setPasswordError('Min 4 characters');
+            isValid = false;
+        } else {
+            setPasswordError('');
+        }
+    
+        if (password !== confirmPassword) {
+            setConfirmPasswordError('Password and confirm password do not match');
+            isValid = false;
+        } else {
+            setConfirmPasswordError('');
+        }
+    
+        if (selectedServices.length === 0) {
+            setServiceTypeError('At least one service type is required');
+            isValid = false;
+        } else {
+            setServiceTypeError('');
+        }
+    
+        if (!isValid) {
+            console.log('Validation failed. Check errors and fix them.');
+            return;
+        }
+    
+        try {
+            let profileImageUrl = '';
+    
+            if (profileImage) {
+                const storageRef = ref(storage, `profile_images/${profileImage.name}`);
+                await uploadBytes(storageRef, profileImage);
+                profileImageUrl = await getDownloadURL(storageRef);
+            } else if (editData && editData.profileImageUrl) { 
+                profileImageUrl = editData.profileImageUrl;
+            }
+    
+            const itemData = {
                 driverName,
                 idnumber,
                 companyName,
                 advancePayment,
                 baseLocation,
                 phone,
+                serviceVehicle,
                 personalphone,
                 salaryPerKm,
                 basicSalaryKm,
@@ -175,24 +337,28 @@ const [baseLocation, setBaseLocation] = useState('');
                 basicSalaries,
                 password,
                 confirmPassword,
-                profileImageUrl
+                profileImageUrl,
             };
-
+    
             if (editData) {
+                console.log('Updating document with ID:', editData.id);
                 const docRef = doc(db, `user/${uid}/driver`, editData.id);
                 await updateDoc(docRef, itemData);
-                console.log('Document updated');
+                console.log('Document updated successfully:', docRef, itemData);
             } else {
+                console.log('Adding new document');
                 const docRef = await addDoc(collection(db, `user/${uid}/driver`), itemData);
                 console.log('Document written with ID: ', docRef.id);
             }
-
+    
             navigate('/users/company');
         } catch (e) {
             console.error('Error adding/updating document: ', e);
         }
     };
     
+    
+
     return (
         <div>
             <ul className="flex space-x-2 rtl:space-x-reverse">
@@ -214,23 +380,17 @@ const [baseLocation, setBaseLocation] = useState('');
                 <div>
                     <form className="border border-[#ebedf2] dark:border-[#191e3a] rounded-md p-4 mb-5 bg-white dark:bg-black">
                         <h6 className="text-lg font-bold mb-5">General Information</h6>
+
                         <div className="flex flex-col sm:flex-row">
-                        <div className="ltr:sm:mr-4 rtl:sm:ml-4 w-full sm:w-2/12 mb-5">
-                                {profileImage ? (
-                                    <img src={URL.createObjectURL(profileImage)} alt="Profile" className="w-20 h-20 md:w-32 md:h-32 rounded-full object-cover mx-auto" />
-                                ) : (
-                                    <div>
-                                        <label htmlFor="profileImage" className="cursor-pointer">
-                                            Upload Profile Image
-                                        </label>
-                                        <input id="profileImage" type="file" accept="image/*" onChange={handleProfileImageChange} className="hidden" />
-                                    </div>
-                                )}
+                            <div className="ltr:sm:mr-4 rtl:sm:ml-4 w-full sm:w-2/12 mb-5">
+                                <img src={imagePreview || defualtImage} alt="Profile" className="w-20 h-20 md:w-32 md:h-32 rounded-full object-cover mx-auto" />
                             </div>
+
                             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
                                     <label htmlFor="driverName">Driver Name</label>
                                     <input id="driverName" type="text" placeholder="Enter driver Name" className="form-input" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
+                                    {driverNameError && <span className={`${styles.error}`}>{driverNameError}</span>}
                                 </div>
                                 <div>
                                     <label htmlFor="companyName">Company Name</label>
@@ -246,166 +406,169 @@ const [baseLocation, setBaseLocation] = useState('');
                                             </option>
                                         ))}
                                     </select>
+                                    {baseLocationError && <span className={`${styles.error}`}>{baseLocationError}</span>}
                                 </div>
                                 <div>
                                     <label htmlFor="idnumber">ID number</label>
-                                    <input id="idnumber" type="idnumber"  className="form-input" value={idnumber} onChange={(e) => setIdnumber(e.target.value)} />
+                                    <input id="idnumber" type="idnumber" className="form-input" value={idnumber} onChange={(e) => setIdnumber(e.target.value)} />
                                 </div>
                                 <div>
                                     <label htmlFor="advancePayment">Credit Limit Amount</label>
-                                    <input id="advancePayment" type="advancePayment" placeholder="" className="form-input" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} />
+                                    <input
+                                        id="advancePayment"
+                                        type="number"
+                                        placeholder=""
+                                        className={`${styles.formInput} form-input`}
+                                        value={advancePayment}
+                                        onChange={(e) => setAdvancePayment(e.target.value)}
+                                    />
                                 </div>
                                 <div>
                                     <label htmlFor="phone">Phone</label>
-                                    <input id="phone" type="phone" placeholder="" className="form-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                                </div>
-                                                                                                <div>
-                                    <label htmlFor="personalphone">Personal PhoneNumber</label>
-                                    <input id="personalphone" type="personalphone" className="form-input" value={personalphone} onChange={(e) => setPersonalPhone(e.target.value)} />
+                                    <input id="phone" type="number" placeholder="phone number" className={`${styles.formInput} form-input`} value={phone} onChange={(e) => setPhone(e.target.value)} />
+                                    {phoneError && <span className={`${styles.error}`}>{phoneError}</span>}
                                 </div>
                                 <div>
-    <label htmlFor="password">Password</label>
-    {editData ? (
-        <div>{password}</div>
-    ) : (
-        <input
-            id="password"
-            type={showPassword ? "text" : "password"}
-            placeholder="Enter password"
-            className="form-input"
-            value={password}
-            onChange={handlePasswordChange}
-        />
-    )}
-    {!editData && (
-        <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-        >
-            {showPassword ? "Hide" : "Show"} Password
-        </button>
-    )}
-</div>
-<div>
-    <label htmlFor="confirmPassword">Confirm Password</label>
-    {editData ? (
-        <div>{confirmPassword}</div>
-    ) : (
-        <input
-            id="confirmPassword"
-            type={showConfirmPassword ? "text" : "password"}
-            placeholder="Confirm password"
-            className="form-input"
-            value={confirmPassword}
-            onChange={handleConfirmPasswordChange}
-        />
-    )}
-    <br />
-    {!editData && (
-        <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-        >
-            {showConfirmPassword ? "Hide" : "Show"} Confirm Password
-        </button>
-    )}
-                                   <div>
-  
+                                    <label htmlFor="personalphone">Personal PhoneNumber</label>
+                                    <input id="personalphone" type="number" className={`${styles.formInput} form-input`} value={personalphone} onChange={(e) => setPersonalPhone(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label htmlFor="password">Password</label>
+                                    <div className="relative">
+                                        <input
+                                            id="password"
+                                            type={showPassword ? 'text' : 'password'}
+                                            placeholder="Enter password"
+                                            className="form-input"
+                                            value={password}
+                                            onChange={handlePasswordChange}
+                                        />
+                                        <span className="absolute end-3 top-1/2 -translate-y-1/2 cursor-pointer" onClick={() => setShowPassword(!showPassword)}>
+                                            {showPassword ? <FaEyeSlash /> : <FaEye />}
+                                        </span>
+                                    </div>
 
-</div>
-</div>
+                                    {passwordError && <span className={`${styles.error}`}>{passwordError}</span>}
+                                </div>
+                                <div>
+                                    <label htmlFor="confirmPassword">Confirm Password</label>
+                                    <div className="relative">
+                                        <input
+                                            id="confirmPassword"
+                                            type={showConfirmPassword ? 'text' : 'password'}
+                                            placeholder="Confirm password"
+                                            className="form-input"
+                                            value={confirmPassword}
+                                            onChange={handleConfirmPasswordChange}
+                                        />
+                                        <span className="absolute end-3 top-1/2 -translate-y-1/2 cursor-pointer" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                            {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                                        </span>
+                                    </div>
 
-<div>
-        <label style={{ cursor: 'pointer'}} className="flex items-center" onClick={() => setShowTable(true)}>
-            <IconPlusCircle className="me-2"/>
-            Add Service Type
-        </label>
-        {showTable && (
-  <div style={{ 
-    marginTop: '10px', 
-    padding: '10px', 
-    border: '1px solid #ccc', 
-    borderRadius: '5px', 
-    backgroundColor: '#f9f9f9',
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)', // Add box shadow for depth
-    maxWidth: '500px', // Limit maximum width for responsiveness
-    margin: 'auto' // Center the div horizontally
-}}>
-    {renderServiceOptions()}
-    <button 
-        style={{ 
-            marginTop: '10px', 
-            padding: '8px 16px', // Increase padding for button
-            backgroundColor: '#007bff', 
-            color: '#fff', 
-            border: 'none', 
-            borderRadius: '5px', // Increase border radius for button
-            cursor: 'pointer', 
-            display: 'block', // Ensure button takes full width
-            margin: 'auto' // Center the button horizontally
-        }} 
-        onClick={() => setShowTable(false)}
-    >
-        Done
-    </button>
-</div>
+                                    <br />
+                                    <div></div>
+                                    {confirmPasswordError && <span className={`${styles.error}`}>{confirmPasswordError}</span>}
+                                </div>
 
-)}
-</div>
-
- 
-
-                                <div className="sm:col-span-2 mt-3">
-                                {selectedServices.length > 0 && (
-    <table style={{ marginTop: '20px', borderCollapse: 'collapse', width: '100%' }}>
-        <thead>
-            <tr>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Service Type</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Basic Amount</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>KM for Basic Salary</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>SalaryPerKm</th>
-            </tr>
-        </thead>
-        <tbody>
-            {selectedServices.map((service, index) => (
-                <tr key={index}>
-                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>{service}</td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                        <input 
-                            style={{ border: 'none', outline: 'none' }} // Set border and outline to none
-                            type="text"
-                            value={basicSalaries[service] || ""}
-                            placeholder='Enter Basic Amount'
-                            onChange={(e) => handleBasicSalaryChange(service, e)}
-                        />
-                    </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', position: 'relative' }}>
-                        <input
-                            style={{ border: 'none', outline: 'none', width: 'calc(100% - 20px)' }} // Set border and outline to none, adjust width to leave space for "KM"
-                            type="text"
-                            value={basicSalaryKm[service] || ""}
-                            onChange={(e) => handleBasicSalaryKmChange(service, e)}
-                        />
-                        <span style={{ position: 'absolute', right: '5px', top: '50%', transform: 'translateY(-50%)', color: '#555'}}>KM</span>
-                    </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', position: 'relative' }}>
-                        <input
-                            style={{ border: 'none', outline: 'none', width: 'calc(100% - 20px)' }} // Set border and outline to none, adjust width to leave space for "KM"
-                            type="text"
-                            value={salaryPerKm[service] || ""}
-                            onChange={(e) => handleSalaryPerKmChange(service, e)}
-                        />
-                        <span style={{ position: 'absolute', right: '45px', top: '50%', transform: 'translateY(-50%)', color: '#555'}}>/km</span>
-                    </td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
-)}
-            <button type="button" className="btn btn-primary" onClick={addOrUpdateItem}>
-                {editData ? 'Update' : 'Save'}
-            </button>
-        </div>
+                                <div>
+                                    <label style={{ cursor: 'pointer' }} className="flex items-center" onClick={() => setShowTable(true)}>
+                                        <IconPlusCircle className="me-2" />
+                                        Add Service Type
+                                    </label>
+                                    {showTable && (
+                                        <div
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        >
+                                            {renderServiceOptions()}
+                                            <button
+                                                style={{
+                                                    padding: '8px 16px', // Increase padding for button
+                                                    backgroundColor: '#007bff',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    borderRadius: '5px', // Increase border radius for button
+                                                    cursor: 'pointer',
+                                                    display: 'block', // Ensure button takes full width
+                                                    margin: 'auto', // Center the button horizontally
+                                                }}
+                                                className="mt-2"
+                                                onClick={() => setShowTable(false)}
+                                            >
+                                                Done
+                                            </button>
+                                        </div>
+                                    )}{' '}
+                                    {serviceTypeError && <span className={`${styles.error}`}>{serviceTypeError}</span>}
+                                </div>
+                                <div>
+                                    <label htmlFor="profileImage">Profile Image</label>
+                                    <input id="profileImage" type="file" accept=".jpg, .jpeg, .png" onChange={handleProfileImageChange} className="form-input" />
+                                </div>
+                                <div className={`${styles.tableContainer} sm:col-span-2 mt-3`}>
+                                    {selectedServices.length > 0 && (
+                                        <table style={{ marginTop: '20px', borderCollapse: 'collapse', width: '100%' }}>
+                                            <thead>
+                                                <tr>
+                                                    <th className={styles.tableCell}>Service Type</th>
+                                                    <th className={styles.tableCell}>Basic Amount</th>
+                                                    <th className={styles.tableCell}>KM for Basic Salary</th>
+                                                    <th className={styles.tableCell}>SalaryPerKm</th>
+                                                    <th className={styles.tableCell}>Vehicle Number</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {selectedServices.map((service, index) => (
+                                                    <tr key={index}>
+                                                        <td className={styles.tableCell}>{service}</td>
+                                                        <td className={styles.tableCell}>
+                                                            <input
+                                                                className={`${styles.formInput} form-input`}
+                                                                type="number"
+                                                                value={basicSalaries[service] || ''}
+                                                                placeholder="Enter Basic Amount"
+                                                                onChange={(e) => handleBasicSalaryChange(service, e)}
+                                                            />
+                                                        </td>
+                                                        <td className={`${styles.tableCell} ${styles.inputWrapper} relative`}>
+                                                            <input
+                                                                className={`${styles.formInput} form-input`}
+                                                                type="number"
+                                                                value={basicSalaryKm[service] || ''}
+                                                                onChange={(e) => handleBasicSalaryKmChange(service, e)}
+                                                            />
+                                                            <span style={{ position: 'absolute', right: '20px' }}>/km</span>
+                                                        </td>
+                                                        <td className={`${styles.tableCell} ${styles.inputWrapper} relative`}>
+                                                            <input
+                                                                className={`${styles.formInput} form-input`}
+                                                                type="number"
+                                                                value={salaryPerKm[service] || ''}
+                                                                onChange={(e) => handleSalaryPerKmChange(service, e)}
+                                                            />
+                                                            <span style={{ position: 'absolute', right: '20px' }}>/km</span>
+                                                        </td>
+                                                        <td className={styles.tableCell}>
+                                                            <input
+                                                                className={`${styles.formInput} form-input`}
+                                                                type="text"
+                                                                value={serviceVehicle[service] || ''}
+                                                                onChange={(e) => handleServiceVehicle(service, e)}
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </div>
+                                <button type="button" className="btn btn-primary mt-3" onClick={addOrUpdateItem}>
+                                    {editData ? 'Update' : 'Save'}
+                                </button>
                             </div>
                         </div>
                     </form>

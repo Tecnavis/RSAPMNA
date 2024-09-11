@@ -2,8 +2,41 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { addDoc, collection, getFirestore, doc, updateDoc, getDocs } from 'firebase/firestore';
 import IconPlusCircle from '../../components/Icon/IconPlusCircle';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
+import defualtImage from '../../assets/css/images/user-front-side-with-white-background.jpg';
+import styles from './companyAdd.module.css';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+interface ServiceVehicle {
+    [key: string]: any;  // Adjust the type according to your actual data structure
+}
+interface SalaryPerKm {
+    [key: string]: number; // string keys with numeric values
+}
+interface BasicSalaries {
+    [key: string]: any;  // Adjust the type according to your actual data structure
+}
+interface basicSalaryKm {
+    [key: string]: any;  // Adjust the type according to your actual data structure
+}
 
+interface EditData {
+    id: string;
+    driverName: string;
+    idnumber: string;
+    phone: string;
+    password: string;
+    confirmPassword: string;
+    advancePayment: string;
+    serviceVehicle: ServiceVehicle;
+    personalphone: string;
+    salaryPerKm: { [key: string]: any };
+    basicSalaryKm: { [key: string]: any };
+    selectedServices: string[];
+    basicSalaries: BasicSalaries;
+    profileImageUrl: string;
+    company: string;
+}
+type ServiceOption = string; 
 const CompanyCreationAdd = () => {
     const [driverName, setDriverName] = useState('');
     const [idnumber, setIdnumber] = useState('');
@@ -11,23 +44,29 @@ const CompanyCreationAdd = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [phone, setPhone] = useState('');
     const [company, setCompany] = useState('');
-    const [serviceVehicle, setServiceVehicle] = useState({});
+    const [serviceVehicle, setServiceVehicle] = useState<ServiceVehicle>({});
 
     const [companyName, setCompanyName] = useState("Company");
     const [errorMessage, setErrorMessage] = useState('');
 
     const [personalphone, setPersonalPhone] = useState('');
-    const [salaryPerKm, setSalaryPerKm] = useState({});
-    const [basicSalaryKm, setBasicSalaryKm] = useState({});
-    const [editData, setEditData] = useState(null);
+    const [salaryPerKm, setSalaryPerKm] = useState<SalaryPerKm>({});
+    const [basicSalaryKm, setBasicSalaryKm] = useState<basicSalaryKm>({});
+    const [editData, setEditData] = useState<EditData | null>(null);
     const [showTable, setShowTable] = useState(false);
-    const [selectedServices, setSelectedServices] = useState([]);
-    const [basicSalaries, setBasicSalaries] = useState({}); // Ensure basicSalaries is defined here
-    const [profileImage, setProfileImage] = useState(null); // State to store profile image file
+    const [selectedServices, setSelectedServices] = useState<string[]>([]);
+    const [basicSalaries, setBasicSalaries] = useState<BasicSalaries>({});
+    const [profileImage, setProfileImage] = useState<File | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 const [advancePayment, setAdvancePayment] = useState('');
-const [serviceOptions, setServiceOptions] = useState([]);
+const [serviceOptions, setServiceOptions] = useState<ServiceOption[]>([]);
+const [phoneError, setPhoneError] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+    const [confirmPasswordError, setConfirmPasswordError] = useState('');
+    const [serviceTypeError, setServiceTypeError] = useState('');
+    const [imagePreview, setImagePreview] = useState('');
+    const [driverNameError, setDriverNameError] = useState('');
 
     const storage = getStorage();
     const uid = sessionStorage.getItem('uid')
@@ -47,61 +86,102 @@ const [serviceOptions, setServiceOptions] = useState([]);
     
         fetchServiceOptions();
     }, []);
-    const handlePasswordChange = (e) => {
+    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setPassword(e.target.value);
     };
 
-    const handleConfirmPasswordChange = (e) => {
+    const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setConfirmPassword(e.target.value);
     };
 
-    const handleBasicSalaryChange = (service, e) => {
+    const handleBasicSalaryChange = (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedSalaries = { ...basicSalaries, [service]: e.target.value };
         setBasicSalaries(updatedSalaries);
     };
-    const handleBasicSalaryKmChange = (service, e) => {
+    const handleBasicSalaryKmChange =  (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedKm = { ...basicSalaryKm, [service]: e.target.value };
         setBasicSalaryKm(updatedKm);
     };
-    const handleSalaryPerKmChange = (service, e) => {
-        const updatedsalaryPerKm = { ...salaryPerKm, [service]: e.target.value };
-        setSalaryPerKm(updatedsalaryPerKm);
+    const handleSalaryPerKmChange = (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseFloat(e.target.value);
+        if (!isNaN(value)) {
+            const updatedSalaryPerKm: SalaryPerKm = { ...salaryPerKm, [service]: value };
+            setSalaryPerKm(updatedSalaryPerKm);
+        }
     };
-    const handleServiceVehicle = (service, e) => {
+    const handleServiceVehicle =  (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedServiceVehicle= { ...serviceVehicle, [service]: e.target.value };
         setServiceVehicle(updatedServiceVehicle);
     };
-    const handleProfileImageChange = (e) => {
-        setProfileImage(e.target.files[0]); // Store the selected file
+    const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setProfileImage(file);
+            setImagePreview(URL.createObjectURL(file));
+        }
     };
     
     const renderServiceOptions = () => {
         return (
-            <div style={{ columnCount: 3, columnGap: '1rem', fontFamily: 'Arial, sans-serif', fontSize: '16px' }}>
-                {serviceOptions.map((option, index) => (
-                    <label key={index} style={{ display: 'inline-flex', alignItems: 'center', marginBottom: '0.5rem', padding: '0.5rem', borderRadius: '8px', backgroundColor: '#f4f4f4', boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)', transition: 'all 0.3s ease' }}>
-                        <input
-                            type="checkbox"
-                            value={option}
-                            checked={selectedServices.includes(option)}
-                            onChange={(e) => handleCheckboxChange(e.target.value, e.target.checked)}
-                            style={{ marginRight: '0.5rem' }}
-                        />
-                        <span>{option}</span>
-                    </label>
-                ))}
+            <div style={{ fontFamily: 'Arial, sans-serif', fontSize: '16px' }}>
+                <div
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '1rem',
+                    }}
+                >
+                    {serviceOptions.map((option, index) => (
+                        <div
+                            key={index}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '1rem',
+                                borderRadius: '12px',
+                                backgroundColor: '#ffffff',
+                                boxShadow: '0px 6px 12px rgba(0, 0, 0, 0.1)',
+                                transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                                border: '2px solid transparent',
+                                position: 'relative',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'scale(1.05)';
+                                e.currentTarget.style.boxShadow = '0px 12px 24px rgba(0, 0, 0, 0.15)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'scale(1)';
+                                e.currentTarget.style.boxShadow = '0px 6px 12px rgba(0, 0, 0, 0.1)';
+                            }}
+                        >
+                            <input
+                                type="checkbox"
+                                value={option}
+                                checked={selectedServices.includes(option)}
+                                onChange={(e) => handleCheckboxChange(e.target.value, e.target.checked)}
+                                id={`service-option-${index}`}
+                                style={{
+                                    marginRight: '1rem',
+                                    accentColor: '#007bff',
+                                    transform: 'scale(1.2)',
+                                    cursor: 'pointer',
+                                }}
+                            />
+                            <span style={{ fontSize: '18px' }}>{option}</span>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     };
-    
-    const handleCheckboxChange = (value, isChecked) => {
+
+    const handleCheckboxChange = (value: string, isChecked: boolean) => {
         if (isChecked) {
             setSelectedServices([...selectedServices, value]);
         } else {
-            setSelectedServices(selectedServices.filter(service => service !== value));
+            setSelectedServices(selectedServices.filter((service) => service !== value));
         }
     };
-   
     const navigate = useNavigate();
     const db = getFirestore();
     const { state } = useLocation(); // Use the useLocation hook to access location state
@@ -129,28 +209,94 @@ const [serviceOptions, setServiceOptions] = useState([]);
             // setCompanyName(state.editData.companyName || '');
 
             setBasicSalaries(state.editData.basicSalaries || '');
-            setProfileImage(state.editData.profileImage || '');
+            setImagePreview(state.editData.profileImageUrl || '');
 
         }
     }, [state]);
-    const addOrUpdateItem = async () => {
-        try {
-            if (password !== confirmPassword) {
-                setErrorMessage('Password and confirm password do not match');
-                return;
+    const checkPhoneUnique = async (phone: string): Promise<boolean> => {
+        const db = getFirestore();
+        const uid = sessionStorage.getItem('uid');
+        const driversRef = collection(db, `user/${uid}/driver`);
+        const querySnapshot = await getDocs(driversRef);
+        let isUnique = true;
+
+        querySnapshot.forEach((doc) => {
+            if (doc.data().phone === phone) {
+                isUnique = false;
             }
-            setErrorMessage('');
-            let profileImageUrl: string = ''; 
+        });
+
+        return isUnique;
+    };
+
+    const addOrUpdateItem = async () => {
+        let isValid = true;
+        if (!driverName) {
+            setDriverNameError('Driver name is required');
+            isValid = false;
+        } else {
+            setDriverNameError('');
+        }
+
+      
+        let isPhoneUnique = true;
+        if (!editData || editData.phone !== phone) {
+            isPhoneUnique = await checkPhoneUnique(phone);
+        }
+
+        if (!phone) {
+            setPhoneError('Phone number is required');
+            isValid = false;
+        } else if (!/^[6-9]\d{9}$/.test(phone)) {
+            setPhoneError('Enter a valid phone number');
+            isValid = false;
+        } else if (!isPhoneUnique) {
+            setPhoneError('Phone number already used');
+            isValid = false;
+        } else {
+            setPhoneError('');
+        }
+
+        if (!password) {
+            setPasswordError('Password is required');
+            isValid = false;
+        } else if (password.length < 4) {
+            setPasswordError('Min 4 characters');
+            isValid = false;
+        } else {
+            setPasswordError('');
+        }
+
+        if (password !== confirmPassword) {
+            setConfirmPasswordError('Password and confirm password do not match');
+            isValid = false;
+        } else {
+            setConfirmPasswordError('');
+        }
+
+        if (selectedServices.length === 0) {
+            setServiceTypeError('At least one service type is required');
+            isValid = false;
+        } else {
+            setServiceTypeError('');
+        }
+
+        if (!isValid) return;
+
+        try {
+            let profileImageUrl = '';
 
             if (profileImage) {
-                const storageRef = ref(storage, 'profile_images/' + profileImage.name);
-                const uploadTask = uploadBytesResumable(storageRef, profileImage);
-            
-                await uploadTask;
+                const storageRef = ref(storage, `profile_images/${profileImage.name}`);
+                await uploadBytes(storageRef, profileImage);
                 profileImageUrl = await getDownloadURL(storageRef);
+            } else if (editData && editData.profileImageUrl) {  // Use profileImageUrl here
+                profileImageUrl = editData.profileImageUrl;
             }
             
-                        const itemData = {
+
+            
+            const itemData = {
                 driverName,
                 idnumber,
                 companyName,
@@ -158,7 +304,6 @@ const [serviceOptions, setServiceOptions] = useState([]);
                 advancePayment,
                 phone,
                 serviceVehicle,
-
                 personalphone,
                 salaryPerKm,
                 basicSalaryKm,
@@ -166,9 +311,9 @@ const [serviceOptions, setServiceOptions] = useState([]);
                 basicSalaries,
                 password,
                 confirmPassword,
-                profileImageUrl
+                profileImageUrl // Use the corrected variable name
             };
-
+    
             if (editData) {
                 const docRef = doc(db, `user/${uid}/driver`, editData.id);
                 await updateDoc(docRef, itemData);
@@ -177,12 +322,13 @@ const [serviceOptions, setServiceOptions] = useState([]);
                 const docRef = await addDoc(collection(db, `user/${uid}/driver`), itemData);
                 console.log('Document written with ID: ', docRef.id);
             }
-
+    
             navigate('/users/companycreation');
         } catch (e) {
             console.error('Error adding/updating document: ', e);
         }
     };
+    
     
     return (
         <div>
@@ -220,17 +366,19 @@ const [serviceOptions, setServiceOptions] = useState([]);
                             </div>
                             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
-                                    <label htmlFor="driverName">Driver Name</label>
+                                    <label htmlFor="driverName">Company Name</label>
                                     <input id="driverName" type="text" placeholder="Enter driver Name" className="form-input" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
+                                    {driverNameError && <span className={`${styles.error}`}>{driverNameError}</span>}
+
                                 </div>
                                 {/* <div>
                                     <label htmlFor="companyName">Section</label>
                                     <input id="companyName" type="text" placeholder="Enter Company Name" className="form-input" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
                                 </div> */}
-                                <div>
+                                {/* <div>
                                     <label htmlFor="company">Company Name</label>
                                     <input id="company" type="text" placeholder="Enter Company Name" className="form-input" value={company} onChange={(e) => setCompany(e.target.value)} />
-                                </div>
+                                </div> */}
                                 <div>
                                     <label htmlFor="idnumber">ID number</label>
                                     <input id="idnumber" type="idnumber"  className="form-input" value={idnumber} onChange={(e) => setIdnumber(e.target.value)} />
@@ -241,171 +389,152 @@ const [serviceOptions, setServiceOptions] = useState([]);
                                 </div>
                                 <div>
                                     <label htmlFor="phone">Phone</label>
-                                    <input id="phone" type="phone" placeholder="" className="form-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                                    <input id="phone" type="number" placeholder="phone number" className={`${styles.formInput} form-input`} value={phone} onChange={(e) => setPhone(e.target.value)} />
+                                    {phoneError && <span className={`${styles.error}`}>{phoneError}</span>}
                                 </div>
                                 
 
                                 <div>
                                     <label htmlFor="personalphone">Personal PhoneNumber</label>
-                                    <input id="personalphone" type="personalphone" className="form-input" value={personalphone} onChange={(e) => setPersonalPhone(e.target.value)} />
+                                    <input id="personalphone" type="personalphone" className={`${styles.formInput} form-input`} value={personalphone} onChange={(e) => setPersonalPhone(e.target.value)} />
                                 </div>
                                 <div>
-    <label htmlFor="password">Password</label>
-    {editData ? (
-        <div>{password}</div>
-    ) : (
-        <input
-            id="password"
-            type={showPassword ? "text" : "password"}
-            placeholder="Enter password"
-            className="form-input"
-            value={password}
-            onChange={handlePasswordChange}
-        />
-    )}
-    {!editData && (
-        <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-        >
-            {showPassword ? "Hide" : "Show"} Password
-        </button>
-    )}
-</div>
-<div>
-    <label htmlFor="confirmPassword">Confirm Password</label>
-    {editData ? (
-        <div>{confirmPassword}</div>
-    ) : (
-        <input
-            id="confirmPassword"
-            type={showConfirmPassword ? "text" : "password"}
-            placeholder="Confirm password"
-            className="form-input"
-            value={confirmPassword}
-            onChange={handleConfirmPasswordChange}
-        />
-    )}
-            <div>
-            {errorMessage && <div style={{ color: 'red', marginBottom: '10px' }}>{errorMessage}</div>}
-        </div>
+                                    <label htmlFor="password">Password</label>
+                                    <div className="relative">
+                                        <input
+                                            id="password"
+                                            type={showPassword ? 'text' : 'password'}
+                                            placeholder="Enter password"
+                                            className="form-input"
+                                            value={password}
+                                            onChange={handlePasswordChange}
+                                        />
+                                        <span className="absolute end-3 top-1/2 -translate-y-1/2 cursor-pointer" onClick={() => setShowPassword(!showPassword)}>
+                                            {showPassword ? <FaEyeSlash /> : <FaEye />}
+                                        </span>
+                                    </div>
 
-    <br />
-    {!editData && (
-        <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-        >
-            {showConfirmPassword ? "Hide" : "Show"} Confirm Password
-        </button>
-    )}
-                                   <div>
- 
-
-</div>
-</div>
-
-
- 
-
-                                <div className="sm:col-span-2 mt-3">
+                                    {passwordError && <span className={`${styles.error}`}>{passwordError}</span>}
+                                </div>
                                 <div>
-        <label style={{ cursor: 'pointer'}} className="flex items-center" onClick={() => setShowTable(true)}>
-            <IconPlusCircle className="me-2"/>
-            Add Service Type
-        </label>
-        {showTable && (
-  <div style={{ 
-    marginTop: '10px', 
-    padding: '10px', 
-    border: '1px solid #ccc', 
-    borderRadius: '5px', 
-    backgroundColor: '#f9f9f9',
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)', // Add box shadow for depth
-    maxWidth: '500px', // Limit maximum width for responsiveness
-    margin: 'auto' // Center the div horizontally
-}}>
-    {renderServiceOptions()}
-    <button 
-        style={{ 
-            marginTop: '10px', 
-            padding: '8px 16px', // Increase padding for button
-            backgroundColor: '#007bff', 
-            color: '#fff', 
-            border: 'none', 
-            borderRadius: '5px', // Increase border radius for button
-            cursor: 'pointer', 
-            display: 'block', // Ensure button takes full width
-            margin: 'auto' // Center the button horizontally
-        }} 
-        onClick={() => setShowTable(false)}
-    >
-        Done
-    </button>
-</div>
+                                    <label htmlFor="confirmPassword">Confirm Password</label>
+                                    <div className="relative">
+                                        <input
+                                            id="confirmPassword"
+                                            type={showConfirmPassword ? 'text' : 'password'}
+                                            placeholder="Confirm password"
+                                            className="form-input"
+                                            value={confirmPassword}
+                                            onChange={handleConfirmPasswordChange}
+                                        />
+                                        <span className="absolute end-3 top-1/2 -translate-y-1/2 cursor-pointer" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                            {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                                        </span>
+                                    </div>
 
-)}
-</div>
-{selectedServices.length > 0 && (
-    <table style={{ marginTop: '20px', borderCollapse: 'collapse', width: '100%' }}>
-        <thead>
-            <tr>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Service Type</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Basic Salary</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>KM for Basic Salary</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>SalaryPerKm</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Vehicle Number</th>
+                                    <br />
+                                    <div></div>
+                                    {confirmPasswordError && <span className={`${styles.error}`}>{confirmPasswordError}</span>}
+                                </div>
 
-            </tr>
-        </thead>
-        <tbody>
-            {selectedServices.map((service, index) => (
-                <tr key={index}>
-                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>{service}</td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                        <input 
-                            style={{ border: 'none', outline: 'none' }} // Set border and outline to none
-                            type="text"
-                            value={basicSalaries[service] || ""}
-                            placeholder='Enter Basic Salary'
-                            onChange={(e) => handleBasicSalaryChange(service, e)}
-                        />
-                    </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', position: 'relative' }}>
-                        <input
-                            style={{ border: 'none', outline: 'none', width: 'calc(100% - 20px)' }} // Set border and outline to none, adjust width to leave space for "KM"
-                            type="text"
-                            value={basicSalaryKm[service] || ""}
-                            onChange={(e) => handleBasicSalaryKmChange(service, e)}
-                        />
-                        <span style={{ position: 'absolute', right: '5px', top: '50%', transform: 'translateY(-50%)', color: '#555'}}>KM</span>
-                    </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', position: 'relative' }}>
-                        <input
-                            style={{ border: 'none', outline: 'none', width: 'calc(100% - 20px)' }} // Set border and outline to none, adjust width to leave space for "KM"
-                            type="text"
-                            value={salaryPerKm[service] || ""}
-                            onChange={(e) => handleSalaryPerKmChange(service, e)}
-                        />
-                        <span style={{ position: 'absolute', right: '45px', top: '50%', transform: 'translateY(-50%)', color: '#555'}}>/km</span>
-                    </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', position: 'relative' }}>
-                        <input
-                            style={{ border: 'none', outline: 'none' }} // Set border and outline to none, adjust width to leave space for "KM"
-                            type="text"
-                            value={serviceVehicle[service] || ""}
-                            onChange={(e) => handleServiceVehicle(service, e)}
-                        />
-                    </td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
-)}
-            <button type="button" className="btn btn-primary" onClick={addOrUpdateItem}>
-                {editData ? 'Update' : 'Save'}
-            </button>
-        </div>
+                                <div>
+                                    <label style={{ cursor: 'pointer' }} className="flex items-center" onClick={() => setShowTable(true)}>
+                                        <IconPlusCircle className="me-2" />
+                                        Add Service Type
+                                    </label>
+                                    {showTable && (
+                                        <div
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        >
+                                            {renderServiceOptions()}
+                                            <button
+                                                style={{
+                                                    padding: '8px 16px', // Increase padding for button
+                                                    backgroundColor: '#007bff',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    borderRadius: '5px', // Increase border radius for button
+                                                    cursor: 'pointer',
+                                                    display: 'block', // Ensure button takes full width
+                                                    margin: 'auto', // Center the button horizontally
+                                                }}
+                                                className="mt-2"
+                                                onClick={() => setShowTable(false)}
+                                            >
+                                                Done
+                                            </button>
+                                        </div>
+                                    )}{' '}
+                                    {serviceTypeError && <span className={`${styles.error}`}>{serviceTypeError}</span>}
+                                </div>
+                                <div>
+                                    <label htmlFor="profileImage">Profile Image</label>
+                                    <input id="profileImage" type="file" accept=".jpg, .jpeg, .png" onChange={handleProfileImageChange} className="form-input" />
+                                </div>
+                                <div className={`${styles.tableContainer} sm:col-span-2 mt-3`}>
+                                    {selectedServices.length > 0 && (
+                                        <table style={{ marginTop: '20px', borderCollapse: 'collapse', width: '100%' }}>
+                                            <thead>
+                                                <tr>
+                                                    <th className={styles.tableCell}>Service Type</th>
+                                                    <th className={styles.tableCell}>Basic Amount</th>
+                                                    <th className={styles.tableCell}>KM for Basic Salary</th>
+                                                    <th className={styles.tableCell}>SalaryPerKm</th>
+                                                    <th className={styles.tableCell}>Vehicle Number</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {selectedServices.map((service, index) => (
+                                                    <tr key={index}>
+                                                        <td className={styles.tableCell}>{service}</td>
+                                                        <td className={styles.tableCell}>
+                                                            <input
+                                                                className={`${styles.formInput} form-input`}
+                                                                type="number"
+                                                                value={basicSalaries[service] || ''}
+                                                                placeholder="Enter Basic Amount"
+                                                                onChange={(e) => handleBasicSalaryChange(service, e)}
+                                                            />
+                                                        </td>
+                                                        <td className={`${styles.tableCell} ${styles.inputWrapper} relative`}>
+                                                            <input
+                                                                className={`${styles.formInput} form-input`}
+                                                                type="number"
+                                                                value={basicSalaryKm[service] || ''}
+                                                                onChange={(e) => handleBasicSalaryKmChange(service, e)}
+                                                            />
+                                                            <span style={{ position: 'absolute', right: '20px' }}>/km</span>
+                                                        </td>
+                                                        <td className={`${styles.tableCell} ${styles.inputWrapper} relative`}>
+                                                            <input
+                                                                className={`${styles.formInput} form-input`}
+                                                                type="number"
+                                                                value={salaryPerKm[service] || ''}
+                                                                onChange={(e) => handleSalaryPerKmChange(service, e)}
+                                                            />
+                                                            <span style={{ position: 'absolute', right: '20px' }}>/km</span>
+                                                        </td>
+                                                        <td className={styles.tableCell}>
+                                                            <input
+                                                                className={`${styles.formInput} form-input`}
+                                                                type="text"
+                                                                value={serviceVehicle[service] || ''}
+                                                                onChange={(e) => handleServiceVehicle(service, e)}
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </div>
+                                <button type="button" className="btn btn-primary mt-3" onClick={addOrUpdateItem}>
+                                    {editData ? 'Update' : 'Save'}
+                                </button>
                             </div>
                         </div>
                     </form>

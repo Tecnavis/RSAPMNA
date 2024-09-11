@@ -1,24 +1,45 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import IconArrowForward from '../../components/Icon/IconArrowForward';
-import IconArrowLeft from '../../components/Icon/IconArrowLeft';
+import { getFirestore, doc, getDoc, Firestore, DocumentReference } from 'firebase/firestore';
+import IconArrowLeft from '../../components/Icon/IconArrowLeft'; // Adjust the import path if necessary
 
-const CompanyCreationDetails = () => {
-    const { id } = useParams();
-    const [driver, setDriver] = useState(null);
+// Define types for driver data
+interface Driver {
+    driverName: string;
+    idnumber: string;
+    company: string;
+    phone: string;
+    personalphone: string;
+    password: string;
+    advancePayment: number;
+    selectedServices?: string[];
+    basicSalaries?: Record<string, number>;
+    basicSalaryKm?: Record<string, number>;
+    salaryPerKm?: Record<string, number>;
+    serviceVehicle?: Record<string, string>;
+}
+
+const CompanyCreationDetails: React.FC = () => {
+    const { id } = useParams<{ id: string }>(); // Define the type of params
+    const [driver, setDriver] = useState<Driver | null>(null); // Annotate state with type
     const db = getFirestore();
-    
+    const uid = sessionStorage.getItem('uid') as string | null; // Allow null
+
     useEffect(() => {
         const fetchDriver = async () => {
+            if (!uid || !id) {
+                console.error('UID or ID is missing');
+                return;
+            }
+            
             try {
-                const docRef = doc(db, 'driver', id); // Construct reference to the document with the provided ID
-                const docSnap = await getDoc(docRef); // Fetch the document snapshot
+                // Ensure uid is a string
+                const docRef: DocumentReference = doc(db, `user/${uid}/driver`, id);
+                const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
-                    const data = docSnap.data(); // Extract the data from the document snapshot
-                    setDriver(data); // Update the state with the fetched data
+                    const data = docSnap.data() as Driver; // Cast the data to Driver type
+                    setDriver(data);
                 } else {
                     console.log(`Document with ID ${id} does not exist!`);
                 }
@@ -28,7 +49,7 @@ const CompanyCreationDetails = () => {
         };
 
         fetchDriver().catch(console.error);
-    }, [db, id]); // Include dependencies in the dependency array
+    }, [db, id, uid]);
 
     if (!driver) {
         return <div>Loading...</div>;
@@ -49,7 +70,6 @@ const CompanyCreationDetails = () => {
                         <td style={{ fontWeight: 'bold', paddingRight: '10px' }}>ID Number:</td>
                         <td>{driver.idnumber}</td>
                     </tr>
-
                     <tr>
                         <td style={{ fontWeight: 'bold', paddingRight: '10px' }}>Company Name:</td>
                         <td>{driver.company}</td>
@@ -85,14 +105,16 @@ const CompanyCreationDetails = () => {
                         fontSize: '1.5em',
                         transition: 'color 0.3s',
                     }}
-                    onMouseEnter={(e) => (e.target.style.color = '#0056b3')}
-                    onMouseLeave={(e) => (e.target.style.color = '#007bff')}
+                    onMouseEnter={(e) => (e.target as HTMLAnchorElement).style.color = '#0056b3'}
+                    onMouseLeave={(e) => (e.target as HTMLAnchorElement).style.color = '#007bff'}
                 >
                     Click here for more details
-                    <IconArrowLeft style={{ marginLeft: '8px' }} />
+                    <span style={{ marginLeft: '8px' }}>
+                        <IconArrowLeft />
+                    </span>
                 </Link>
             </h2>
-            {driver && driver.selectedServices && (
+            {driver.selectedServices && (
                 <table style={{ width: "100%", borderCollapse: "collapse", borderSpacing: "0" }}>
                     <thead>
                         <tr>

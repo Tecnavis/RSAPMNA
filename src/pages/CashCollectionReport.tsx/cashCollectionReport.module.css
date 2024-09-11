@@ -1,0 +1,26 @@
+
+.tableContainer {
+    width: 100%;
+    overflow-x: auto; /* Add horizontal scroll if needed */
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tableHead {
+    background-color: #f0f0f0; /* or your desired header background color */
+}
+
+.tableCell, .responsiveCell {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+.tableRow {
+    &:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+}
