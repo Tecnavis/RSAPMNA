@@ -19,30 +19,47 @@ const style = {
     boxShadow: 24,
     p: 4,
 };
+interface ServiceType {
+    id: string;
+    name: string;
+    salary: string;
+    basicSalaryKM: string;
+    salaryPerKM: string;
+    expensePerKM: string;  // New field
+}
 
-function ServiceType() {
-    const [serviceTypes, setServiceTypes] = useState([]);
-    const [newServiceType, setNewServiceType] = useState('');
-    const [newSalary, setNewSalary] = useState('');
-    const [newBasicSalaryKM, setNewBasicSalaryKM] = useState('');
-    const [newSalaryPerKM, setNewSalaryPerKM] = useState('');
-    const [currentService, setCurrentService] = useState(null);
-    const [errors, setErrors] = useState({});
-    const [formSubmitted, setFormSubmitted] = useState(false);
-    const [open, setOpen] = useState(false);
-    const [isEditMode, setIsEditMode] = useState(false);
-    const [isModalVisible, setModalVisible] = useState(false);
-    const [itemToDelete, setItemToDelete] = useState(null);
+interface Errors {
+    newServiceType?: string;
+    newSalary?: string;
+    newBasicSalaryKM?: string;
+    newSalaryPerKM?: string;
+    newExpensePerKM?: string;  // New field
+}
+const ServiceType: React.FC = () => {
+    const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
+    const [newServiceType, setNewServiceType] = useState<string>('');
+    const [newSalary, setNewSalary] = useState<string>('');
+    const [newBasicSalaryKM, setNewBasicSalaryKM] = useState<string>('');
+    const [newSalaryPerKM, setNewSalaryPerKM] = useState<string>('');
+    const [newExpensePerKM, setNewExpensePerKM] = useState<string>('');  // New field
+    const [currentService, setCurrentService] = useState<ServiceType | null>(null);
+    const [errors, setErrors] = useState<Errors>({});
+    const [formSubmitted, setFormSubmitted] = useState<boolean>(false);
+    const [open, setOpen] = useState<boolean>(false);
+    const [isEditMode, setIsEditMode] = useState<boolean>(false);
+    const [isModalVisible, setModalVisible] = useState<boolean>(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
     const uid = sessionStorage.getItem('uid');
     const navigate = useNavigate(); // Initialize useNavigate
-
     useEffect(() => {
         const fetchServices = async () => {
+            if (!uid) return; // Ensure UID exists before fetching
+
             const db = getFirestore();
             const serviceRef = collection(db, `user/${uid}/service`);
             try {
                 const snapshot = await getDocs(serviceRef);
-                const services = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+                const services = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as ServiceType[];
                 setServiceTypes(services);
             } catch (error) {
                 console.error('Error fetching service types:', error);
@@ -51,9 +68,9 @@ function ServiceType() {
         fetchServices();
     }, [uid]);
 
-    const validateForm = () => {
+    const validateForm = (): boolean => {
         let isValid = true;
-        const newErrors = {};
+        const newErrors: Errors = {};
 
         if (!newServiceType.trim()) {
             newErrors.newServiceType = 'Service type is required';
@@ -74,12 +91,18 @@ function ServiceType() {
             newErrors.newSalary = 'Salary is required';
             isValid = false;
         }
+        
+        if (!newExpensePerKM.trim()) {  // Validate new field
+            newErrors.newExpensePerKM = 'Expense per KM is required';
+            isValid = false;
+        }
 
         setErrors(newErrors);
         return isValid;
     };
 
-    const handleOpen = (service = null) => {
+
+    const handleOpen = (service: ServiceType | null = null) => {
         if (service) {
             setIsEditMode(true);
             setCurrentService(service);
@@ -87,6 +110,7 @@ function ServiceType() {
             setNewSalary(service.salary);
             setNewBasicSalaryKM(service.basicSalaryKM);
             setNewSalaryPerKM(service.salaryPerKM);
+            setNewExpensePerKM(service.expensePerKM); 
         } else {
             setIsEditMode(false);
             setCurrentService(null);
@@ -94,12 +118,12 @@ function ServiceType() {
             setNewSalary('');
             setNewBasicSalaryKM('');
             setNewSalaryPerKM('');
+            setNewExpensePerKM('');
         }
         setErrors({});
         setFormSubmitted(false);
         setOpen(true);
     };
-
     const handleClose = () => setOpen(false);
 
     const addServiceType = async () => {
@@ -108,21 +132,22 @@ function ServiceType() {
             return;
         }
 
-        const newService = {
-            name: newServiceType.toUpperCase(),
+        const newService: Omit<ServiceType, 'id'> = {
+            name: newServiceType,
             salary: newSalary,
             basicSalaryKM: newBasicSalaryKM,
             salaryPerKM: newSalaryPerKM,
+            expensePerKM: newExpensePerKM,
         };
 
         try {
+            if (!uid) return; // Ensure UID exists before adding
+
             const db = getFirestore();
             const serviceRef = collection(db, `user/${uid}/service`);
             const docRef = await addDoc(serviceRef, newService);
             setServiceTypes([...serviceTypes, { ...newService, id: docRef.id }]);
             handleClose();
-            // navigate('/users/dummy-add'); // Navigate to the dummy driver page
-
         } catch (error) {
             console.error('Error adding service type:', error);
         }
@@ -138,26 +163,30 @@ function ServiceType() {
 
         const { id } = currentService;
         const updatedService = {
-            name: newServiceType.toUpperCase(),
+            name: newServiceType,
             salary: newSalary,
             basicSalaryKM: newBasicSalaryKM,
             salaryPerKM: newSalaryPerKM,
+            expensePerKM: newExpensePerKM,
         };
 
         try {
+            if (!uid) return; // Ensure UID exists before updating
+
             const db = getFirestore();
             const serviceRef = doc(db, `user/${uid}/service`, id);
             await updateDoc(serviceRef, updatedService);
             setServiceTypes(serviceTypes.map((service) => (service.id === id ? { ...service, ...updatedService } : service)));
             handleClose();
-            // navigate('/users/dummy-add'); 
         } catch (error) {
             console.error('Error updating service type:', error);
         }
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (id: string) => {
         try {
+            if (!uid) return; // Ensure UID exists before deleting
+
             const db = getFirestore();
             const serviceRef = doc(db, `user/${uid}/service`, id);
             await deleteDoc(serviceRef);
@@ -169,7 +198,7 @@ function ServiceType() {
         }
     };
 
-    const openDeleteModal = (item) => {
+    const openDeleteModal = (item: string) => {
         setItemToDelete(item);
         setModalVisible(true);
     };
@@ -197,6 +226,8 @@ function ServiceType() {
                         <th className={styles.tableHeader}>First Kilometers</th>
                         <th className={styles.tableHeader}>Additional Amount Per Km</th>
                         <th className={styles.tableHeader}>First Kilometers Amount</th>
+                        <th className={styles.tableHeader}>Expense per KM</th>  {/* New column */}
+
                         <th className={styles.tableHeader}>Actions</th>
                     </tr>
                 </thead>
@@ -214,6 +245,9 @@ function ServiceType() {
                             </td>
                             <td className={styles.tableCell} data-label="First Kilometers Amount">
                                 <span>{service.salary}</span>
+                            </td>
+                            <td className={styles.tableCell} data-label="Expense per KM">
+                                <span>{service.expensePerKM}</span>  {/* New data display */}
                             </td>
                             <td className={styles.tableActions} data-label="Actions">
                                 <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '50%', justifyContent: 'center' }}>
@@ -251,6 +285,16 @@ function ServiceType() {
                         <input id="salary" type="number" value={newSalary} onChange={(e) => setNewSalary(e.target.value)} className={`${styles.formInput} form-input`} />
                         {formSubmitted && errors.newSalary && <span style={{ color: 'red' }}>{errors.newSalary}</span>}
                     </div>
+                     <div style={{ marginBottom: '16px' }}>
+                            <label className={styles.label}>Expense per KM</label> {/* New input field */}
+                            <input
+                                type="text"
+                                value={newExpensePerKM}
+                                onChange={(e) => setNewExpensePerKM(e.target.value)}
+                                className={styles.inputField}
+                            />
+                            {formSubmitted && errors.newExpensePerKM && <span className={styles.error}>{errors.newExpensePerKM}</span>}
+                        </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '25px' }}>
                         <Button variant="outlined" color="error" onClick={handleClose}>
                             Close
@@ -262,10 +306,15 @@ function ServiceType() {
                 </Box>
             </Modal>
             <ConfirmationModal
-                isVisible={isModalVisible}
-                onConfirm={() => handleDelete(itemToDelete)}
-                onCancel={closeModal}
-            />
+    isVisible={isModalVisible}
+    onConfirm={() => {
+        if (itemToDelete) {
+            handleDelete(itemToDelete);
+        }
+    }}
+    onCancel={closeModal}
+/>
+
         </div>
     );
 }

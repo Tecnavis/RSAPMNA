@@ -6,6 +6,35 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL, uploadBytes } fr
 import defualtImage from '../../assets/css/images/user-front-side-with-white-background.jpg';
 import styles from './companyAdd.module.css';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+interface Location {
+    id: string;
+    name: string;
+    // Add any other fields that might be in the `doc.data()`
+}
+interface EditData {
+    id: string;
+
+    driverName?: string;
+    idnumber?: string;
+    phone?: string;
+    password?: string;
+    confirmPassword?: string;
+    advancePayment?: string;
+    serviceVehicle?: SalaryDetails;
+    personalphone?: string;
+    salaryPerKm?: SalaryDetails;
+    basicSalaryKm?: SalaryDetails;
+    selectedServices?: string[];
+    companyName?: string;
+    basicSalaries?: SalaryDetails;
+    profileImageUrl?: string;
+    baseLocation?: string;
+    // Add other fields as necessary
+}
+
+interface SalaryDetails {
+    [key: string]: number | string; // You can adjust the type depending on what values you expect
+}
 const CompanyAdd = () => {
     const [driverName, setDriverName] = useState('');
     const [idnumber, setIdnumber] = useState('');
@@ -15,20 +44,20 @@ const CompanyAdd = () => {
     const [companyName, setCompanyName] = useState('');
 
     const [personalphone, setPersonalPhone] = useState('');
-    const [salaryPerKm, setSalaryPerKm] = useState({});
-    const [basicSalaryKm, setBasicSalaryKm] = useState({});
-    const [editData, setEditData] = useState(null);
+    const [salaryPerKm, setSalaryPerKm] = useState<SalaryDetails>({});
+    const [basicSalaryKm, setBasicSalaryKm] = useState<SalaryDetails>({});
+    const [editData, setEditData] = useState<EditData | null>(null);
     const [showTable, setShowTable] = useState(false);
-    const [selectedServices, setSelectedServices] = useState([]);
-    const [basicSalaries, setBasicSalaries] = useState({}); // Ensure basicSalaries is defined here
-    const [profileImage, setProfileImage] = useState(''); // State to store profile image file
+    const [selectedServices, setSelectedServices] = useState<string[]>([]);
+    const [basicSalaries, setBasicSalaries] = useState<SalaryDetails>({});
+    const [profileImage, setProfileImage] = useState<File | null>(null); // Updated type to File or null
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [advancePayment, setAdvancePayment] = useState('');
     const [baseLocation, setBaseLocation] = useState('');
-    const [baseLocations, setBaseLocations] = useState([]);
-    const [serviceOptions, setServiceOptions] = useState([]);
-    const [serviceVehicle, setServiceVehicle] = useState({});
+    const [baseLocations, setBaseLocations] = useState<Location[]>([]);
+    const [serviceOptions, setServiceOptions] = useState<string[]>([]);
+    const [serviceVehicle, setServiceVehicle] = useState<SalaryDetails>({});
     const [driverNameError, setDriverNameError] = useState('');
     const [baseLocationError, setBaseLocationError] = useState('');
     const [phoneError, setPhoneError] = useState('');
@@ -37,13 +66,6 @@ const CompanyAdd = () => {
     const [serviceTypeError, setServiceTypeError] = useState('');
     const [imagePreview, setImagePreview] = useState('');
 
-    const togglePasswordVisibility = () => {
-        setShowPassword(!showPassword);
-    };
-
-    const toggleConfirmPasswordVisibility = () => {
-        setShowConfirmPassword(!showConfirmPassword);
-    };
 
     const storage = getStorage();
     const db = getFirestore();
@@ -57,60 +79,65 @@ const CompanyAdd = () => {
                 const db = getFirestore();
                 const serviceCollection = collection(db, `user/${uid}/service`);
                 const serviceSnapshot = await getDocs(serviceCollection);
-                const servicesList = serviceSnapshot.docs.map((doc) => doc.data().name); // Adjust this based on your data structure
+                const servicesList = serviceSnapshot.docs.map((doc) => doc.data().name as string); // Adjust this based on your data structure
                 setServiceOptions(servicesList);
             } catch (error) {
                 console.error('Error fetching services:', error);
             }
         };
-
+    
         fetchServiceOptions();
-    }, []);
+    }, [uid]);
 
     useEffect(() => {
         const fetchBaseLocations = async () => {
             try {
                 const querySnapshot = await getDocs(collection(db, `user/${uid}/baselocation`));
-                const locations = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+                const locations: Location[] = querySnapshot.docs.map((doc) => ({
+                    ...doc.data() as Omit<Location, 'id'>, // Spread other fields first
+                    id: doc.id, // Then assign the id to overwrite any existing id
+                }));
                 setBaseLocations(locations);
             } catch (error) {
                 console.error('Error fetching base locations: ', error);
             }
         };
-
+    
         fetchBaseLocations();
-    }, [db]);
-    const handlePasswordChange = (e) => {
+    }, [db, uid]);
+    
+    const handlePasswordChange = (e:any) => {
         setPassword(e.target.value);
     };
 
-    const handleConfirmPasswordChange = (e) => {
+    const handleConfirmPasswordChange = (e:any) => {
         setConfirmPassword(e.target.value);
     };
 
-    const handleBasicSalaryChange = (service, e) => {
+    const handleBasicSalaryChange = (service:any, e:any) => {
         const updatedSalaries = { ...basicSalaries, [service]: e.target.value };
         setBasicSalaries(updatedSalaries);
     };
-    const handleBasicSalaryKmChange = (service, e) => {
+    const handleBasicSalaryKmChange = (service:any, e:any) => {
         const updatedKm = { ...basicSalaryKm, [service]: e.target.value };
         setBasicSalaryKm(updatedKm);
     };
-    const handleSalaryPerKmChange = (service, e) => {
+    const handleSalaryPerKmChange = (service:any, e:any) => {
         const updatedsalaryPerKm = { ...salaryPerKm, [service]: e.target.value };
         setSalaryPerKm(updatedsalaryPerKm);
     };
-    const handleServiceVehicle = (service, e) => {
+    const handleServiceVehicle = (service:any, e:any) => {
         const updatedServiceVehicle = { ...serviceVehicle, [service]: e.target.value };
         setServiceVehicle(updatedServiceVehicle);
     };
-    const handleProfileImageChange = (e) => {
-        const file = e.target.files[0];
+    const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files ? e.target.files[0] : null;
         if (file) {
             setProfileImage(file);
             setImagePreview(URL.createObjectURL(file));
         }
     };
+    
 
     const renderServiceOptions = () => {
         return (
@@ -166,13 +193,15 @@ const CompanyAdd = () => {
         );
     };
 
-    const handleCheckboxChange = (value, isChecked) => {
+
+    const handleCheckboxChange = (value: string, isChecked: boolean) => {
         if (isChecked) {
             setSelectedServices([...selectedServices, value]);
         } else {
             setSelectedServices(selectedServices.filter((service) => service !== value));
         }
     };
+    
 
     useEffect(() => {
         if (state && state.editData) {
@@ -181,25 +210,21 @@ const CompanyAdd = () => {
             setIdnumber(state.editData.idnumber || '');
             setPhone(state.editData.phone || '');
             setPassword(state.editData.password || '');
-
             setConfirmPassword(state.editData.confirmPassword || '');
             setAdvancePayment(state.editData.advancePayment || '');
-
-            setServiceVehicle(state.editData.serviceVehicle || '');
-
+            setServiceVehicle(state.editData.serviceVehicle || {});
             setPersonalPhone(state.editData.personalphone || '');
-            setSalaryPerKm(state.editData.salaryPerKm || '');
-            setBasicSalaryKm(state.editData.basicSalaryKm || '');
-
-            setSelectedServices(state.editData.selectedServices || '');
+            setSalaryPerKm(state.editData.salaryPerKm || {});
+            setBasicSalaryKm(state.editData.basicSalaryKm || {});
+            setSelectedServices(state.editData.selectedServices || []);
             setCompanyName(state.editData.companyName || '');
-
-            setBasicSalaries(state.editData.basicSalaries || '');
+            setBasicSalaries(state.editData.basicSalaries || {});
             setImagePreview(state.editData.profileImageUrl || '');
             setBaseLocation(state.editData.baseLocation || '');
         }
+        
     }, [state]);
-    const checkPhoneUnique = async (phone) => {
+    const checkPhoneUnique = async (phone:any) => {
         const db = getFirestore();
         const uid = sessionStorage.getItem('uid');
         const driversRef = collection(db, `user/${uid}/driver`);
@@ -217,7 +242,7 @@ const CompanyAdd = () => {
 
     const addOrUpdateItem = async () => {
         let isValid = true;
-
+    
         // Validation checks
         if (!driverName) {
             setDriverNameError('Driver name is required');
@@ -225,20 +250,25 @@ const CompanyAdd = () => {
         } else {
             setDriverNameError('');
         }
-
+    
         if (!baseLocation) {
             setBaseLocationError('Base location is required');
             isValid = false;
         } else {
             setBaseLocationError('');
         }
-
+    
         // Check if the phone number is unique
         let isPhoneUnique = true;
         if (!editData || editData.phone !== phone) {
-            isPhoneUnique = await checkPhoneUnique(phone);
+            try {
+                isPhoneUnique = await checkPhoneUnique(phone);
+            } catch (error) {
+                console.error('Error checking phone uniqueness: ', error);
+                isPhoneUnique = false;
+            }
         }
-
+    
         if (!phone) {
             setPhoneError('Phone number is required');
             isValid = false;
@@ -251,7 +281,7 @@ const CompanyAdd = () => {
         } else {
             setPhoneError('');
         }
-
+    
         if (!password) {
             setPasswordError('Password is required');
             isValid = false;
@@ -261,36 +291,39 @@ const CompanyAdd = () => {
         } else {
             setPasswordError('');
         }
-
+    
         if (password !== confirmPassword) {
             setConfirmPasswordError('Password and confirm password do not match');
             isValid = false;
         } else {
             setConfirmPasswordError('');
         }
-
+    
         if (selectedServices.length === 0) {
             setServiceTypeError('At least one service type is required');
             isValid = false;
         } else {
             setServiceTypeError('');
         }
-
-        if (!isValid) return;
-
+    
+        if (!isValid) {
+            console.log('Validation failed. Check errors and fix them.');
+            return;
+        }
+    
         try {
             let profileImageUrl = '';
-
+    
             if (profileImage) {
                 const storageRef = ref(storage, `profile_images/${profileImage.name}`);
                 await uploadBytes(storageRef, profileImage);
                 profileImageUrl = await getDownloadURL(storageRef);
-            } else if (editData && editData.profileImage) {
-                profileImageUrl = editData.profileImage;
+            } else if (editData && editData.profileImageUrl) { 
+                profileImageUrl = editData.profileImageUrl;
             }
-
+    
             const itemData = {
-                driverName: driverName.toUpperCase(),
+                driverName,
                 idnumber,
                 companyName,
                 advancePayment,
@@ -306,21 +339,25 @@ const CompanyAdd = () => {
                 confirmPassword,
                 profileImageUrl,
             };
-
+    
             if (editData) {
+                console.log('Updating document with ID:', editData.id);
                 const docRef = doc(db, `user/${uid}/driver`, editData.id);
                 await updateDoc(docRef, itemData);
-                console.log('Document updated', docRef, itemData);
+                console.log('Document updated successfully:', docRef, itemData);
             } else {
+                console.log('Adding new document');
                 const docRef = await addDoc(collection(db, `user/${uid}/driver`), itemData);
                 console.log('Document written with ID: ', docRef.id);
             }
-
+    
             navigate('/users/company');
         } catch (e) {
             console.error('Error adding/updating document: ', e);
         }
     };
+    
+    
 
     return (
         <div>

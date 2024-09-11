@@ -1,19 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
 
-const CancelledBooking = () => {
-    const [completedBookings, setCompletedBookings] = useState([]);
-    const uid = sessionStorage.getItem('uid')
+// Define the shape of a booking record
+interface Booking {
+    id: string;
+    dateTime: string;
+    customerName: string;
+    phoneNumber: string;
+    serviceType: string;
+    vehicleNumber: string;
+    comments: string;
+    status: string; // Include status if you need it
+}
+
+const CancelledBooking: React.FC = () => {
+    const [completedBookings, setCompletedBookings] = useState<Booking[]>([]);
+    const uid = sessionStorage.getItem('uid');
+
     useEffect(() => {
         const fetchCompletedBookings = async () => {
+            if (!uid) {
+                console.error('UID is not available');
+                return;
+            }
+
             try {
                 const db = getFirestore();
-                const q = query(collection(db, `user/${uid}/bookings`), where('status', '==', 'Rejected'));
+                const q = query(collection(db, `user/${uid}/bookings`), where('status', '==', 'Cancelled'));
                 const querySnapshot = await getDocs(q);
                 const bookingsData = querySnapshot.docs.map((doc) => ({
                     id: doc.id,
                     ...doc.data(),
-                }));
+                })) as Booking[];
                 setCompletedBookings(bookingsData);
             } catch (error) {
                 console.error('Error fetching completed bookings:', error);
@@ -21,7 +39,7 @@ const CancelledBooking = () => {
         };
 
         fetchCompletedBookings();
-    }, []);
+    }, [uid]); // Include `uid` in the dependency array
 
     return (
         <div className="panel mt-6">
@@ -30,7 +48,7 @@ const CancelledBooking = () => {
             </h5>
             <div className="datatables">
                 {completedBookings.length === 0 ? (
-                    <p>No completed bookings found.</p>
+                    <p>No canceled bookings found.</p>
                 ) : (
                     <table className="table-hover">
                         <thead>

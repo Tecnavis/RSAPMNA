@@ -93,8 +93,15 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
             console.error('Error adding document:', error);
         }
     };
-    
-   
+
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, `user/${uid}/showroom`), (snapshot) => {
+            const showroomsList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+            setShowrooms(showroomsList);
+        });
+
+        return () => unsubscribe();
+    }, [db, uid]);
 
     const openGoogleMaps = () => {
         const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName)}`;

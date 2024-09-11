@@ -338,8 +338,10 @@ const CashCollectionReport = () => {
             <tr>
                 <th className={styles.tableCell}>Select</th>
                 <th className={styles.tableCell}>Date</th>
-                <th className={styles.tableCell}>Amount</th>
-                <th className={styles.tableCell}>Received Amount</th>
+                <th className={styles.tableCell}>PayableAmount By Customer</th>
+
+                <th className={styles.tableCell}>Amount Received From The Customer</th>
+                <th className={styles.tableCell}>Received Amount From Driver</th>
                 <th className={styles.tableCell}>Balance</th>
                 <th className={styles.tableCell}>Actions</th>
             </tr>
@@ -353,6 +355,8 @@ const CashCollectionReport = () => {
                     <td className={styles.responsiveCell}>
                         {format(parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date()), 'dd/MM/yyyy, h:mm:ss a')}
                     </td>
+                    <td className={styles.responsiveCell}>{booking.updatedTotalSalary}</td>
+
                     <td className={styles.responsiveCell}>{booking.amount}</td>
                     <td className={styles.responsiveCell}>
                         <input

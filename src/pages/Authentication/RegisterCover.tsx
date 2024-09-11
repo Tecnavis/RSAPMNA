@@ -30,7 +30,7 @@ const RegisterCover = () => {
             });
     };
 
-    const handleSubmit = (event) => {
+    const handleSubmit = (event:any) => {
         event.preventDefault();
         signUpWithEmailAndPassword();
     };

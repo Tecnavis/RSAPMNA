@@ -1,25 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { addDoc, collection, getFirestore, doc, updateDoc, getDocs } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 import defaultImage from '../../assets/css/images/user-front-side-with-white-background.jpg';
 import styles from './useradd.module.css'
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-
-const UserAdd = () => {
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [address, setAddress] = useState('');
-    const [phone_number, setPhone] = useState('');
-    const [userName, setUserName] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [errors, setErrors] = useState({});
-    const [editData, setEditData] = useState(null);
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [profileImage, setProfileImage] = useState(null);
-    const [imagePreview, setImagePreview] = useState('');
+interface EditData {
+    id?: string;
+    name?: string;
+    email?: string;
+    address?: string;
+    phone_number?: string;
+    userName?: string;
+    password?: string;
+    confirmPassword?: string;
+    profileImage?: string;
+}
+interface LocationState {
+    editData?: EditData;
+}
+const UserAdd: React.FC = () => {
+    const [name, setName] = useState<string>('');
+    const [email, setEmail] = useState<string>('');
+    const [address, setAddress] = useState<string>('');
+    const [phone_number, setPhone] = useState<string>('');
+    const [userName, setUserName] = useState<string>('');
+    const [password, setPassword] = useState<string>('');
+    const [confirmPassword, setConfirmPassword] = useState<string>('');
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [editData, setEditData] = useState<EditData | null>(null);
+    const [showPassword, setShowPassword] = useState<boolean>(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+    const [profileImage, setProfileImage] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string>('');
     const navigate = useNavigate();
     const { state } = useLocation(); // Use the useLocation hook to access location state
 
@@ -41,9 +54,7 @@ const UserAdd = () => {
         }
     }, [state]);
           
-    const checkPhoneUnique = async (phone_number) => {
-        const db = getFirestore();
-        const uid = sessionStorage.getItem('uid');
+    const checkPhoneUnique = async (phone_number: string): Promise<boolean> => {
         const usersRef = collection(db, `user/${uid}/users`);
         const querySnapshot = await getDocs(usersRef);
         let isUnique = true;
@@ -57,12 +68,12 @@ const UserAdd = () => {
         return isUnique;
     };
     
-    const handleConfirmPasswordChange = (e) => {
+    const handleConfirmPasswordChange =(e: ChangeEvent<HTMLInputElement>)  => {
         setConfirmPassword(e.target.value);
     };
 
-    const validate = () => {
-        let formErrors = {};
+    const validate = (): boolean => {
+        let formErrors: Record<string, string> = {};
 
         if (!name.trim()) {
             formErrors.name = 'Name is required';
@@ -97,31 +108,27 @@ const UserAdd = () => {
         return Object.keys(formErrors).length === 0;
     };
 
-    const handleImageChange = (e) => {
-        const file = e.target.files[0];
+    const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (file) {
             setProfileImage(file);
             setImagePreview(URL.createObjectURL(file));
         }
     };
-
     const addOrUpdateItem = async () => {
         if (!validate()) return;
 
         if (uid) {
             try {
-              // Assume you have an 'editData' object containing the original data, including the phone number
-if (!editData || editData.phone_number !== phone_number) {
-    // Check if the phone number is unique
-    const isPhoneUnique = await checkPhoneUnique(phone_number);
-    if (!isPhoneUnique) {
-        console.error('Phone number already exists');
-        alert('Phone number already exists. Please enter a different phone number.');
-        return;
-    }
-}
-
-// Continue with the rest of the code (e.g., saving the data)
+                if (!editData || editData.phone_number !== phone_number) {
+                    // Check if the phone number is unique
+                    const isPhoneUnique = await checkPhoneUnique(phone_number);
+                    if (!isPhoneUnique) {
+                        console.error('Phone number already exists');
+                        alert('Phone number already exists. Please enter a different phone number.');
+                        return;
+                    }
+                }
 
                 let profileImageUrl = '';
 
@@ -129,12 +136,12 @@ if (!editData || editData.phone_number !== phone_number) {
                     const imageRef = ref(storage, `profileImages/${profileImage.name}`);
                     await uploadBytes(imageRef, profileImage);
                     profileImageUrl = await getDownloadURL(imageRef);
-                } else if (editData && editData.profileImage) {
+                } else if (editData?.profileImage) {
                     profileImageUrl = editData.profileImage;
                 }
 
                 const itemData = {
-                    name: name.toUpperCase(),
+                    name,
                     email,
                     address,
                     phone_number,
@@ -146,7 +153,7 @@ if (!editData || editData.phone_number !== phone_number) {
                     profileImage: profileImageUrl,
                 };
 
-                if (editData) {
+                if (editData?.id) {
                     const docRef = doc(db, `user/${uid}/users`, editData.id);
                     await updateDoc(docRef, itemData);
                     console.log('Document updated');

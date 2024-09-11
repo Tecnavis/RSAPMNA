@@ -9,35 +9,50 @@ import { getFirestore, collection, getDocs, doc, deleteDoc } from 'firebase/fire
 import ConfirmationModal from './ConfirmationModal/ConfirmationModal'; // Import the modal component
 import defaultImage from '../../assets/css/images/user-front-side-with-white-background.jpg';
 
-const Staff = () => {
-    const [items, setItems] = useState([]);
-    const [editData, setEditData] = useState(null);
-    const [isModalVisible, setModalVisible] = useState(false);
-    const [itemToDelete, setItemToDelete] = useState(null);
+interface User {
+    id: string;
+    name: string;
+    email: string;
+    address: string;
+    phone_number: string;
+    userName: string;
+    password: string;
+    profileImage?: string;
+}
+
+const Staff: React.FC = () => {
+    const [items, setItems] = useState<User[]>([]);
+    const [editData, setEditData] = useState<User | null>(null);
+    const [isModalVisible, setModalVisible] = useState<boolean>(false);
+    const [itemToDelete, setItemToDelete] = useState<User | null>(null);
     const db = getFirestore();
     const navigate = useNavigate();
     const uid = sessionStorage.getItem('uid');
 
     useEffect(() => {
         const fetchData = async () => {
-            const querySnapshot = await getDocs(collection(db, `user/${uid}/users`));
-            setItems(querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+            if (uid) {
+                const querySnapshot = await getDocs(collection(db, `user/${uid}/users`));
+                setItems(querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User)));
+            }
         };
         fetchData().catch(console.error);
-    }, []);
+    }, [uid, db]);
 
-    const handleDelete = async (userId) => {
+    const handleDelete = async (userId: string) => {
         try {
-            const userRef = doc(db, `user/${uid}/users`, userId);
-            await deleteDoc(userRef);
-            setItems((prevItems) => prevItems.filter((item) => item.id !== userId));
+            if (uid) {
+                const userRef = doc(db, `user/${uid}/users`, userId);
+                await deleteDoc(userRef);
+                setItems((prevItems) => prevItems.filter((item) => item.id !== userId));
+            }
         } catch (error) {
             console.error('Error deleting document: ', error);
         }
         setModalVisible(false);
     };
 
-    const openDeleteModal = (item) => {
+    const openDeleteModal = (item: User) => {
         setItemToDelete(item);
         setModalVisible(true);
     };
@@ -59,7 +74,7 @@ const Staff = () => {
                         </span>
                     </Link>
                 </div>
-                <div className="table-responsive mb-5 ">
+                <div className="table-responsive mb-5">
                     <table>
                         <thead>
                             <tr>
@@ -74,14 +89,13 @@ const Staff = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {items.map((item, index) => (
+                            {items.map((item) => (
                                 <tr key={item.id}>
                                     <td>
                                         <div className="w-14 h-14 rounded-full overflow-hidden">
                                             <img src={item.profileImage || defaultImage} className="w-full h-full object-cover" alt="Profile" />
                                         </div>
                                     </td>
-
                                     <td>
                                         <div className="whitespace-nowrap">{item.name}</div>
                                     </td>
@@ -115,7 +129,7 @@ const Staff = () => {
                 </div>
             </div>
 
-            <ConfirmationModal isVisible={isModalVisible} onConfirm={() => handleDelete(itemToDelete?.id)} onCancel={closeModal} />
+            <ConfirmationModal isVisible={isModalVisible} onConfirm={() => handleDelete(itemToDelete?.id || '')} onCancel={closeModal} />
         </div>
     );
 };
