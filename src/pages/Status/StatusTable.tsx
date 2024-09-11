@@ -7,7 +7,7 @@ import styled from 'styled-components';
 import IconArrowLeft from '../../components/Icon/IconArrowLeft';
 
 // Define TypeScript interfaces
-interface Record {
+interface BookingRecord {
     id: string;
     dateTime: string;
     driver: string;
@@ -20,6 +20,7 @@ interface Record {
     status: 'Rejected' | 'Order Completed' | 'pending' | string;
     bookingStatus?: string;
     selectedDriver?: string;
+    cancelReason?: string;
 }
 
 interface Driver {
@@ -157,7 +158,7 @@ const OrderDetailsButton = styled.button`
 const StatusTable: React.FC = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const [recordsData, setRecordsData] = useState<Record[]>([]);
+    const [recordsData, setRecordsData] = useState<BookingRecord[]>([]);
     const [drivers, setDrivers] = useState<Record<string, Driver>>({});
     const [searchQuery, setSearchQuery] = useState<string>('');
     const db = getFirestore();
@@ -165,20 +166,25 @@ const StatusTable: React.FC = () => {
 
     useEffect(() => {
         dispatch(setPageTitle('Status'));
-
+    
         const fetchBookings = async () => {
             const q = query(collection(db, `user/${uid}/bookings`), orderBy('createdAt', 'desc'));
             const querySnapshot = await getDocs(q);
-            const updatedBookingsData = querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...(doc.data() as Record<string, any>),
-            })) as Record[];
+            const updatedBookingsData = querySnapshot.docs
+                .map(doc => {
+                    const data = doc.data() as BookingRecord;
+                    return {
+                        ...data, // Spread all other fields except id
+                        id: doc.id, // Add the id explicitly here
+                    };
+                })
+                .filter((record) => record.status !== 'Approved');
             setRecordsData(updatedBookingsData);
-
+    
             const driverData: Record<string, Driver> = {};
             for (const record of updatedBookingsData) {
                 const driverId = record.selectedDriver;
-
+    
                 if (driverId && !driverData[driverId]) {
                     const driverDoc = await getDoc(doc(db, `user/${uid}/driver`, driverId));
                     if (driverDoc.exists()) {
@@ -188,15 +194,16 @@ const StatusTable: React.FC = () => {
             }
             setDrivers(driverData);
         };
-
+    
         const unsubscribe = onSnapshot(collection(db, `user/${uid}/bookings`), () => {
             fetchBookings();
         });
-
+    
         return () => unsubscribe();
     }, [db, dispatch, uid]);
+    
 
-    const handleReassignClick = (record: Record) => {
+    const handleReassignClick = (record: BookingRecord) => {
         navigate(`/bookings/booking/${record.id}`, { state: { editData: record } });
     };
 
@@ -204,7 +211,7 @@ const StatusTable: React.FC = () => {
         setSearchQuery(e.target.value);
     };
 
-    const handleOrderDetails = (record: Record) => {
+    const handleOrderDetails = (record: BookingRecord) => {
         navigate(`/bookings/newbooking/viewmore/${record.id}`);
     };
 
@@ -340,13 +347,14 @@ const StatusTable: React.FC = () => {
                         <Value>{record.phoneNumber} / {record.mobileNumber}</Value>
                     </DataItem>
                     <DataItem>
-                        <Label>Pickup Location:</Label>
-                        <Value>{record.pickupLocation.name}</Value>
-                    </DataItem>
-                    <DataItem>
-                        <Label>DropOff Location:</Label>
-                        <Value>{record.dropoffLocation.name}</Value>
-                    </DataItem>
+    <Label>Pickup Location:</Label>
+    <Value>{record.pickupLocation ? record.pickupLocation.name : 'N/A'}</Value>
+</DataItem>
+<DataItem>
+    <Label>DropOff Location:</Label>
+    <Value>{record.dropoffLocation ? record.dropoffLocation.name : 'N/A'}</Value>
+</DataItem>
+
                     <DataItem>
                         <Label>Status:</Label>
                         <Value>

@@ -248,7 +248,7 @@ console.log("role",role)
                                 <button type="button" className={`${currentMenu === 'driverreport' ? 'active' : ''} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('driverreport')}>
                                     <div className="flex items-center">
                                         <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark"> &nbsp;  Driver Reports &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark"> &nbsp;  Reports &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
                                     </div>
 
                                     <div className={currentMenu !== 'driverreport' ? 'rtl:rotate-90 -rotate-90' : ''}>
@@ -261,7 +261,9 @@ console.log("role",role)
                                         <li>
                                             <NavLink to="/driverreport">Driver Reports</NavLink>
                                         </li>
-                                      
+                                        <li>
+                                            <NavLink to="/showroomreport">ShowRoom Reports</NavLink>
+                                        </li>
                                     </ul>
                                 </AnimateHeight>
                             </li>

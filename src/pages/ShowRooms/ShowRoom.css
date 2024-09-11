@@ -147,16 +147,18 @@
         width: 48%;
     }
 }
-/* ShowRoomDetails.css */
-
 .showroom-details-container {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
     background-color: #fff;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     font-family: 'Arial', sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
 }
 
 .showroom-header {
@@ -173,25 +175,27 @@
 
 .showroom-details {
     display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.showroom-details img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    flex: 1;
+}
+
+.showroom-details-content {
+    flex: 1;
+    width: 50%;
+    display: flex;
     flex-direction: column;
     gap: 15px;
     font-size: 1.1em;
     color: #555;
-}
-
-.showroom-details img {
-    width: 100%;
-    height: auto;
-    border-radius: 10px;
-    margin-bottom: 20px;
-}
-
-.showroom-details p {
-    margin: 0;
-}
-
-.showroom-details p strong {
-    color: #333;
 }
 
 .showroom-details-item {
@@ -210,4 +214,55 @@
     margin-top: 20px;
     color: #888;
     font-size: 0.9em;
+}
+
+/* Hover form styles */
+.hover-form {
+    flex: 1;
+    width: 50%;
+    background-color: rgba(209, 206, 206, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.hover-form h2 {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 1.5em;
+    color: #333;
+}
+
+.hover-form label {
+    display: block;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.hover-form input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1em;
+}
+
+.hover-form button {
+    width: 100%;
+    padding: 10px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1em;
+    cursor: pointer;
+}
+
+.hover-form button:hover {
+    background-color: #0056b3;
 }

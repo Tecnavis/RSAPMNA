@@ -1,15 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent, MouseEvent } from 'react';
 import { getFirestore, collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import IconEdit from '../../components/Icon/IconEdit';
 import { Link } from 'react-router-dom';
 import IconMultipleForwardRight from '../../components/Icon/IconMultipleForwardRight';
 
-const DriverSalaryReport = () => {
-    const [drivers, setDrivers] = useState([]);
+// Define the shape of a driver record
+interface Driver {
+    id: string;
+    driverName: string;
+    idnumber: string;
+    advancePayment: string;
+}
 
-    const [editDriverId, setEditDriverId] = useState(null);
-    const [editDriverData, setEditDriverData] = useState({ driverName: '', idnumber: '', advancePayment: '' });
-    const [searchQuery, setSearchQuery] = useState('');
+// Define the shape of the edit driver form data
+interface EditDriverData {
+    driverName: string;
+    idnumber: string;
+    advancePayment: string;
+}
+
+const DriverSalaryReport: React.FC = () => {
+    const [drivers, setDrivers] = useState<Driver[]>([]);
+    const [editDriverId, setEditDriverId] = useState<string | null>(null);
+    const [editDriverData, setEditDriverData] = useState<EditDriverData>({
+        driverName: '',
+        idnumber: '',
+        advancePayment: ''
+    });
+    const [searchQuery, setSearchQuery] = useState<string>('');
 
     const db = getFirestore();
 
@@ -17,7 +35,7 @@ const DriverSalaryReport = () => {
         const fetchDrivers = async () => {
             try {
                 const querySnapshot = await getDocs(collection(db, 'driver'));
-                const driverList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const driverList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Driver[];
                 setDrivers(driverList);
             } catch (error) {
                 console.error('Error fetching drivers: ', error);
@@ -27,55 +45,61 @@ const DriverSalaryReport = () => {
         fetchDrivers();
     }, [db]);
 
-    const handleEditDriverClick = (driver) => {
+    const handleEditDriverClick = (driver: Driver) => {
         setEditDriverId(driver.id);
-        setEditDriverData({ driverName: driver.driverName, idnumber: driver.idnumber, advancePayment: driver.advancePayment });
+        setEditDriverData({
+            driverName: driver.driverName,
+            idnumber: driver.idnumber,
+            advancePayment: driver.advancePayment
+        });
     };
 
-
-
-    const handleDriverInputChange = (e) => {
+    const handleDriverInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setEditDriverData((prevData) => ({ ...prevData, [name]: value }));
+        setEditDriverData(prevData => ({ ...prevData, [name]: value }));
     };
-
-  
 
     const handleSaveDriverClick = async () => {
-        try {
-            const driverDocRef = doc(db, 'driver', editDriverId);
-            await updateDoc(driverDocRef, editDriverData);
-            setDrivers((prevDrivers) =>
-                prevDrivers.map((driver) =>
-                    driver.id === editDriverId ? { ...driver, ...editDriverData } : driver
-                )
-            );
-            setEditDriverId(null);
-        } catch (error) {
-            console.error('Error updating driver: ', error);
-        }
+    if (!editDriverId) return;
+
+    try {
+        const driverDocRef = doc(db, 'driver', editDriverId);
+        // Type assertion to satisfy the expected type
+        await updateDoc(driverDocRef, editDriverData as { [key: string]: any });
+        setDrivers(prevDrivers =>
+            prevDrivers.map(driver =>
+                driver.id === editDriverId ? { ...driver, ...editDriverData } : driver
+            )
+        );
+        setEditDriverId(null);
+    } catch (error) {
+        console.error('Error updating driver: ', error);
+    }
+};
+
+
+    const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value);
     };
 
-const handleSearchChange=(e)=>{
-setSearchQuery(e.target.value)
-}
-const filteredDrivers = drivers.filter((driver) =>
-    driver.driverName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    driver.idnumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    driver.advancePayment.toString().includes(searchQuery)
-);
+    const filteredDrivers = drivers.filter(driver =>
+        driver.driverName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        driver.idnumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        driver.advancePayment.toString().includes(searchQuery)
+    );
+
     return (
         <div className="container mx-auto px-4">
-        <h2 className="text-2xl font-semibold mb-4">Driver Cash Collection Report</h2>
-        <div className="mb-4 w-full">
-            <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={handleSearchChange}
-                className="p-2 border border-gray-300 rounded w-full outline-none"
-            />
-        </div>
+            <h2 className="text-2xl font-semibold mb-4">Driver Cash Collection Report</h2>
+            <div className="mb-4 w-full">
+                <input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    className="p-2 border border-gray-300 rounded w-full outline-none"
+                />
+            </div>
             <table className="min-w-full bg-white">
                 <thead>
                     <tr className="bg-gray-100">
@@ -146,12 +170,8 @@ const filteredDrivers = drivers.filter((driver) =>
                     ))}
                 </tbody>
             </table>
-            
         </div>
     );
 };
-
-
-
 
 export default DriverSalaryReport;

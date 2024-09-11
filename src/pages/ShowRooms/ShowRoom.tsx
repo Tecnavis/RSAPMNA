@@ -15,10 +15,7 @@ import ConfirmationModal from '../../pages/Users/ConfirmationModal/ConfirmationM
 import QRCode from 'qrcode.react';
 import IconMapPin from '../../components/Icon/IconMapPin';
 
-interface LocationLatLng {
-    lat: string; // Ensure this matches your data type
-    lng: string; // Ensure this matches your data type
-}
+
 
 interface ShowRoomType {
     
@@ -114,6 +111,7 @@ const ShowRoom: React.FC = () => {
     const [manualLat, setManualLat] = useState<string>('');
     const [manualLng, setManualLng] = useState<string>('');
     const [generatedLink, setGeneratedLink] = useState<string>('');
+    const qrRef = useRef<HTMLDivElement>(null); // Change the type to HTMLDivElement
 
     const uid = sessionStorage.getItem('uid');
     useEffect(() => {
@@ -203,19 +201,28 @@ const ShowRoom: React.FC = () => {
 
         setShowRoom({ ...showRoom, img: downloadURL });
     };
+// ------------------------------------------------------------------------------
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const db = getFirestore();
         const timestamp = serverTimestamp();
 
+        let qrCodeBase64 = '';
+        if (qrRef.current) {
+            const canvas = qrRef.current.querySelector('canvas');
+            if (canvas) {
+                qrCodeBase64 = canvas.toDataURL('image/png'); // Convert canvas to Base64
+            }
+        }
+
         const newShowRoom: ShowRoomType = {
             ...showRoom,
             createdAt: timestamp,
             status: 'admin added showroom',
             showroomLink: generatedLink || '',
-            qrCode: generatedLink ? `QR code for: ${generatedLink}` : '',
-            Location: `${showRoom.Location}, ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`,
+ qrCode: qrCodeBase64,
+             Location: `${showRoom.Location}, ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`,
         };
 
         try {
@@ -414,7 +421,10 @@ const ShowRoom: React.FC = () => {
     const handleClose = () => setOpen(false);
 
     const generateShowRoomLink = () => {
-        const baseUrl = 'http:rsapmna-de966/showrooms/showroom/showroomDetails'; // Your actual base URL
+        const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`; // Your actual base URL
+        // const baseUrl = `http://localhost:5175/showrooms/showroom/showroomDetails`; // Your actual base URL
+        const uid = sessionStorage.getItem('uid') || '';
+
         const queryParams = new URLSearchParams({
             id: showRoom.showroomId,
             name: showRoom.ShowRoom,
@@ -424,6 +434,7 @@ const ShowRoom: React.FC = () => {
             phoneNumber: showRoom.phoneNumber,
             state: showRoom.state,
             district: showRoom.district,
+            uid: uid,
         }).toString();
 
         const link = `${baseUrl}?${queryParams}`;
@@ -502,7 +513,6 @@ const ShowRoom: React.FC = () => {
                             <th className="tableCell">State</th>
                             <th className="tableCell">District</th>
                             <th className="tableCell">QR</th>
-                            <th className="tableCell">Link</th>
 
                             <th className="tableCell">Available Services</th>
                             <th className="tableCell">
@@ -561,9 +571,9 @@ const ShowRoom: React.FC = () => {
                                 <td className="tableCell" data-label="District">
                                     {room.district}
                                 </td>
-                                <td className="tableCell" data-label="generatedLink">
+                                {/* <td className="tableCell" data-label="generatedLink">
                                     {room.showroomLink}
-                                </td>
+                                </td> */}
                                 <td className="tableCell" data-label="QR">
                                 {room.showroomLink ? (
                             <QRCode value={room.showroomLink} size={64} />
@@ -964,12 +974,12 @@ const ShowRoom: React.FC = () => {
 
                        
                       {/* Display the generated link */}
-               {generatedLink && (
-                <>
+                      {generatedLink && (
+                <div ref={qrRef}>
                     <p>Scan the QR code below to view the showroom details:</p>
                     <QRCode value={generatedLink} size={256} />
                     <p>{generatedLink}</p>
-                </>
+                </div>
             )}
                     <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
                     <Button
