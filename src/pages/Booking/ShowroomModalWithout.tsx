@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './ShowroomModal.css';
+// import './ShowroomModal.css';
 import { collection, addDoc, getFirestore, onSnapshot } from 'firebase/firestore';
 import { TextField, Typography, IconButton, Button } from '@mui/material';
 import IconMapPin from '../../components/Icon/IconMapPin';
@@ -27,8 +27,18 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
 
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, `user/${uid}/showroom`), (snapshot) => {
+            const showroomsList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+            setShowrooms(showroomsList);
+        });
+
+        return () => unsubscribe();
+    }, [db]);
+
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        e.preventDefault();  // Prevent the default form submission behavior
+        console.log('Form submit intercepted, no page reload should happen');
         const location = `${locationName}, ${locationCoords.lat}, ${locationCoords.lng}`;
         try {
             await addDoc(collection(db, `user/${uid}/showroom`), {
@@ -56,7 +66,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
             console.log('Showroom added successfully');
             console.log('Updating showroom location to:', location);
             updateShowroomLocation(location);
-
+    
             // Reset form fields
             setLocationName('');
             setShowRoom('');
@@ -76,22 +86,15 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
             setHasInsuranceBody('');
             setInsuranceAmountBody('');
             setImg('');
-
+    
             // Close the modal
             onClose();
         } catch (error) {
             console.error('Error adding document:', error);
         }
     };
-
-    useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, `user/${uid}/showroom`), (snapshot) => {
-            const showroomsList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-            setShowrooms(showroomsList);
-        });
-
-        return () => unsubscribe();
-    }, [db]);
+    
+   
 
     const openGoogleMaps = () => {
         const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName)}`;
@@ -100,7 +103,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
 
     return (
         <div className="showroom-modal">
-            <form onSubmit={handleSubmit} className="showroom-form">
+            <div  className="showroom-form">
                 <div className="form-group">
                     <label htmlFor="showRoom">Showroom Name:</label>
                     <TextField
@@ -159,10 +162,10 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
                 </div>
                 {/* Add other form fields here */}
                 <div className="modal-actions">
-                    <Button type="submit" variant="contained" color="primary">Save Showroom</Button>
+                    <Button onClick={handleSubmit} variant="contained" color="primary">Save Showroom</Button>
                     <Button onClick={onClose} variant="outlined" color="secondary">Close</Button>
                 </div>
-            </form>
+            </div>
         </div>
     );
 };

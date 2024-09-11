@@ -41,7 +41,7 @@ export const generateToken = async () => {
       const token = await getToken(messaging, {
         vapidKey: "BKPoKIWRkx6sdBatbMyNn_rw0aT7kw52-FNKZIlfYV6QD2knwxCSEUBU_CDMJSjJnYflUix08tmsJ2-ddbnrzoQ"
       });
-
+      
       if (token) {
         console.log('FCM Token:', token);
         // You can send the token to your server here
@@ -53,3 +53,5 @@ export const generateToken = async () => {
     console.error('Error generating FCM token:', error);
   }
 };
+
+// firebase.firestore.setLogLevel('error');
