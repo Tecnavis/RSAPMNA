@@ -280,15 +280,15 @@
 }
 
 .client-card.driver {
-  background-color: #e3f2fd;
+  background-color: #9ec5e2;
 }
 
 .client-card.staff {
-  background-color: #fce4ec;
+  background-color: #a3a0a1;
 }
 
 .client-card.user {
-  background-color: #fff3e0;
+  background-color: #c7b69b;
 }
 
 /* Rewards List */
