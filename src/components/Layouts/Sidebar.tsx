@@ -268,6 +268,30 @@ console.log("role",role)
                                 </AnimateHeight>
                             </li>
 
+                            <li className="menu nav-item ">
+                                <button type="button" className={`${currentMenu } nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('driverreport')}>
+                                    <div className="flex items-center">
+                                        <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark"> &nbsp;  Rewards &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+                                    </div>
+
+                                    <div className={currentMenu !== 'driverreport' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                        <IconCaretDown />
+                                    </div>
+                                </button>
+
+                                <AnimateHeight duration={300} height={currentMenu === 'driverreport' ? 'auto' : 0}>
+                                    <ul className="sub-menu text-gray-500">
+                                        <li>
+                                            <NavLink to="/rewarditem">Reward Items</NavLink>
+                                        </li>
+                                        <li>
+                                            <NavLink to="/rewards">Rewards</NavLink>
+                                        </li>
+                                    </ul>
+                                </AnimateHeight>
+                            </li>
+
  {/* <li className="menu nav-item ">
                                 <button type="button" className={`${currentMenu === 'location' ? 'active' : ''} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('location')}>
                                     <div className="flex items-center">
