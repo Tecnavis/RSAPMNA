@@ -10,12 +10,14 @@ const Index = () => {
     const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
     const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass === 'rtl');
     const db = getFirestore();
-    const uid = sessionStorage.getItem('uid')
-const role =sessionStorage.getItem('role');
-const userName =sessionStorage.getItem('username');
+    const uid = sessionStorage.getItem('uid');
+    const role = sessionStorage.getItem('role');
+    const userName = sessionStorage.getItem('username');
 
-console.log("role",userName)
+    console.log("role", userName);
+
     const [loading, setLoading] = useState(true);
+    const [blink, setBlink] = useState(false); // New state for blinking
     const [salesByCategory, setSalesByCategory] = useState({
         series: [0, 0, 0, 0],
         options: { /* Initial chart options */ }
@@ -39,6 +41,9 @@ console.log("role",userName)
                     'Vehicle Dropped'
                 ].includes(booking.status)).length;
                 const completedBookings = bookings.filter(booking => booking.status === 'Order Completed').length;
+
+                // Update the blinking state based on the ShowRoom bookings count
+                setBlink(newBookingsShowRoom > 0);
 
                 setSalesByCategory({
                     series: [newBookingsShowRoom, newBookingsOther, pendingBookings, completedBookings],
@@ -147,9 +152,11 @@ console.log("role",userName)
             <div className="pt-5">
                 <div className="grid xl:grid-cols-1 gap-6 mb-6">
                     <div className="grid xl:grid-cols-4 gap-6 mb-6">
-                        <div className={`panel bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg p-6 ${salesByCategory.series[0] > 0 ? 'blink' : ''}`} >
-                            <h5 className="font-semibold text-lg mb-3">ShowRoom Booking</h5>
-                            <p className="text-2xl">{salesByCategory.series[0]}</p>
+                        <div className={`panel bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg p-6 ${blink ? 'blink' : ''}`}>
+                            <Link to="/bookings/newbooking" className="block">
+                                <h5 className="font-semibold text-lg mb-3">ShowRoom Booking</h5>
+                                <p className="text-2xl">{salesByCategory.series[0]}</p>
+                            </Link>
                         </div>
                         <div className="panel bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-lg shadow-lg p-6">
                             <h5 className="font-semibold text-lg mb-3">New Bookings</h5>

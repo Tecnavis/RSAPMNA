@@ -6,6 +6,37 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL, uploadBytes } fr
 import defualtImage from '../../assets/css/images/user-front-side-with-white-background.jpg';
 import styles from './companyAdd.module.css';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+interface ServiceVehicle {
+    [key: string]: any;  // Adjust the type according to your actual data structure
+}
+interface SalaryPerKm {
+    [key: string]: number; // string keys with numeric values
+}
+interface BasicSalaries {
+    [key: string]: any;  // Adjust the type according to your actual data structure
+}
+interface basicSalaryKm {
+    [key: string]: any;  // Adjust the type according to your actual data structure
+}
+
+interface EditData {
+    id: string;
+    driverName: string;
+    idnumber: string;
+    phone: string;
+    password: string;
+    confirmPassword: string;
+    advancePayment: string;
+    serviceVehicle: ServiceVehicle;
+    personalphone: string;
+    salaryPerKm: { [key: string]: any };
+    basicSalaryKm: { [key: string]: any };
+    selectedServices: string[];
+    basicSalaries: BasicSalaries;
+    profileImageUrl: string;
+    company: string;
+}
+type ServiceOption = string; 
 const CompanyCreationAdd = () => {
     const [driverName, setDriverName] = useState('');
     const [idnumber, setIdnumber] = useState('');
@@ -13,23 +44,23 @@ const CompanyCreationAdd = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [phone, setPhone] = useState('');
     const [company, setCompany] = useState('');
-    const [serviceVehicle, setServiceVehicle] = useState({});
+    const [serviceVehicle, setServiceVehicle] = useState<ServiceVehicle>({});
 
     const [companyName, setCompanyName] = useState("Company");
     const [errorMessage, setErrorMessage] = useState('');
 
     const [personalphone, setPersonalPhone] = useState('');
-    const [salaryPerKm, setSalaryPerKm] = useState({});
-    const [basicSalaryKm, setBasicSalaryKm] = useState({});
-    const [editData, setEditData] = useState(null);
+    const [salaryPerKm, setSalaryPerKm] = useState<SalaryPerKm>({});
+    const [basicSalaryKm, setBasicSalaryKm] = useState<basicSalaryKm>({});
+    const [editData, setEditData] = useState<EditData | null>(null);
     const [showTable, setShowTable] = useState(false);
-    const [selectedServices, setSelectedServices] = useState([]);
-    const [basicSalaries, setBasicSalaries] = useState({}); // Ensure basicSalaries is defined here
-    const [profileImage, setProfileImage] = useState(null); // State to store profile image file
+    const [selectedServices, setSelectedServices] = useState<string[]>([]);
+    const [basicSalaries, setBasicSalaries] = useState<BasicSalaries>({});
+    const [profileImage, setProfileImage] = useState<File | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 const [advancePayment, setAdvancePayment] = useState('');
-const [serviceOptions, setServiceOptions] = useState([]);
+const [serviceOptions, setServiceOptions] = useState<ServiceOption[]>([]);
 const [phoneError, setPhoneError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [confirmPasswordError, setConfirmPasswordError] = useState('');
@@ -55,32 +86,35 @@ const [phoneError, setPhoneError] = useState('');
     
         fetchServiceOptions();
     }, []);
-    const handlePasswordChange = (e) => {
+    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setPassword(e.target.value);
     };
 
-    const handleConfirmPasswordChange = (e) => {
+    const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setConfirmPassword(e.target.value);
     };
 
-    const handleBasicSalaryChange = (service, e) => {
+    const handleBasicSalaryChange = (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedSalaries = { ...basicSalaries, [service]: e.target.value };
         setBasicSalaries(updatedSalaries);
     };
-    const handleBasicSalaryKmChange = (service, e) => {
+    const handleBasicSalaryKmChange =  (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedKm = { ...basicSalaryKm, [service]: e.target.value };
         setBasicSalaryKm(updatedKm);
     };
-    const handleSalaryPerKmChange = (service, e) => {
-        const updatedsalaryPerKm = { ...salaryPerKm, [service]: e.target.value };
-        setSalaryPerKm(updatedsalaryPerKm);
+    const handleSalaryPerKmChange = (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseFloat(e.target.value);
+        if (!isNaN(value)) {
+            const updatedSalaryPerKm: SalaryPerKm = { ...salaryPerKm, [service]: value };
+            setSalaryPerKm(updatedSalaryPerKm);
+        }
     };
-    const handleServiceVehicle = (service, e) => {
+    const handleServiceVehicle =  (service: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedServiceVehicle= { ...serviceVehicle, [service]: e.target.value };
         setServiceVehicle(updatedServiceVehicle);
     };
-    const handleProfileImageChange = (e) => {
-        const file = e.target.files[0];
+    const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (file) {
             setProfileImage(file);
             setImagePreview(URL.createObjectURL(file));
@@ -141,7 +175,7 @@ const [phoneError, setPhoneError] = useState('');
         );
     };
 
-    const handleCheckboxChange = (value, isChecked) => {
+    const handleCheckboxChange = (value: string, isChecked: boolean) => {
         if (isChecked) {
             setSelectedServices([...selectedServices, value]);
         } else {
@@ -179,7 +213,7 @@ const [phoneError, setPhoneError] = useState('');
 
         }
     }, [state]);
-    const checkPhoneUnique = async (phone) => {
+    const checkPhoneUnique = async (phone: string): Promise<boolean> => {
         const db = getFirestore();
         const uid = sessionStorage.getItem('uid');
         const driversRef = collection(db, `user/${uid}/driver`);
@@ -256,9 +290,10 @@ const [phoneError, setPhoneError] = useState('');
                 const storageRef = ref(storage, `profile_images/${profileImage.name}`);
                 await uploadBytes(storageRef, profileImage);
                 profileImageUrl = await getDownloadURL(storageRef);
-            } else if (editData && editData.profileImage) {
-                profileImageUrl = editData.profileImage;
+            } else if (editData && editData.profileImageUrl) {  // Use profileImageUrl here
+                profileImageUrl = editData.profileImageUrl;
             }
+            
 
             
             const itemData = {
@@ -331,7 +366,7 @@ const [phoneError, setPhoneError] = useState('');
                             </div>
                             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
-                                    <label htmlFor="driverName">Driver Name</label>
+                                    <label htmlFor="driverName">Company Name</label>
                                     <input id="driverName" type="text" placeholder="Enter driver Name" className="form-input" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
                                     {driverNameError && <span className={`${styles.error}`}>{driverNameError}</span>}
 
@@ -340,10 +375,10 @@ const [phoneError, setPhoneError] = useState('');
                                     <label htmlFor="companyName">Section</label>
                                     <input id="companyName" type="text" placeholder="Enter Company Name" className="form-input" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
                                 </div> */}
-                                <div>
+                                {/* <div>
                                     <label htmlFor="company">Company Name</label>
                                     <input id="company" type="text" placeholder="Enter Company Name" className="form-input" value={company} onChange={(e) => setCompany(e.target.value)} />
-                                </div>
+                                </div> */}
                                 <div>
                                     <label htmlFor="idnumber">ID number</label>
                                     <input id="idnumber" type="idnumber"  className="form-input" value={idnumber} onChange={(e) => setIdnumber(e.target.value)} />

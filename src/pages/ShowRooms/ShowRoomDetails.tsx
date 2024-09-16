@@ -1,10 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import './ShowRoom.css'; // Import the CSS file
+import { useLocation, useNavigate } from 'react-router-dom';
+import { doc, getFirestore, updateDoc, arrayUnion, query, where, getDocs, collection } from 'firebase/firestore';
+import './ShowRoom.css';
 
-const ShowRoomDetails = () => {
+interface ShowRoomDetailsType {
+    id: string;
+    name: string;
+    location: string;
+    img: string;
+    tollfree: string;
+    phoneNumber: string;
+    state: string;
+    district: string;
+    uid: string;
+}
+
+const ShowRoomDetails: React.FC = () => {
     const location = useLocation();
-    const [showRoomDetails, setShowRoomDetails] = useState({
+    const navigate = useNavigate();
+    const db = getFirestore();
+
+    const [showRoomDetails, setShowRoomDetails] = useState<ShowRoomDetailsType>({
         id: '',
         name: '',
         location: '',
@@ -13,23 +29,60 @@ const ShowRoomDetails = () => {
         phoneNumber: '',
         state: '',
         district: '',
+        uid: '',
     });
+    const [formData, setFormData] = useState({ name: '', phoneNumber: '' });
 
     useEffect(() => {
-        // Extract the query parameters from the URL
         const queryParams = new URLSearchParams(location.search);
-        const id = queryParams.get('id');
-        const name = queryParams.get('name');
-        const showroomLocation = queryParams.get('location');
-        const img = queryParams.get('img');
-        const tollfree = queryParams.get('tollfree');
-        const phoneNumber = queryParams.get('phoneNumber');
-        const state = queryParams.get('state');
-        const district = queryParams.get('district');
-
-        // Set the showroom details state
-        setShowRoomDetails({ id, name, location: showroomLocation, img, tollfree, phoneNumber, state, district });
+        setShowRoomDetails({
+            id: queryParams.get('id') || '',
+            name: queryParams.get('name') || '',
+            location: queryParams.get('location') || '',
+            img: queryParams.get('img') || '',
+            tollfree: queryParams.get('tollfree') || '',
+            phoneNumber: queryParams.get('phoneNumber') || '',
+            state: queryParams.get('state') || '',
+            district: queryParams.get('district') || '',
+            uid: queryParams.get('uid') || '',
+        });
     }, [location.search]);
+
+    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData({
+            ...formData,
+            [e.target.name]: e.target.value,
+        });
+    };
+
+    const handleNavigation = () => {
+        navigate('/addbook', { state: { uid: showRoomDetails?.uid, showroomId: showRoomDetails?.id } });
+    };
+
+    const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+
+        if (!showRoomDetails.id || !showRoomDetails.uid) return;
+
+        try {
+            const showroomCollectionRef = collection(db, `user/${showRoomDetails.uid}/showroom`);
+            const q = query(showroomCollectionRef, where('showroomId', '==', showRoomDetails.id));
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) return;
+
+            const documentRef = doc(db, `user/${showRoomDetails.uid}/showroom/${querySnapshot.docs[0].id}`);
+
+            await updateDoc(documentRef, {
+                staff: arrayUnion(formData)
+            });
+
+            handleNavigation();
+
+        } catch (error) {
+            console.error('Error adding document:', error);
+        }
+    };
 
     return (
         <div className="showroom-details-container">
@@ -37,30 +90,47 @@ const ShowRoomDetails = () => {
                 <h1>{showRoomDetails.name}</h1>
             </div>
             <div className="showroom-details">
-                {showRoomDetails.img && <img src={showRoomDetails.img} alt={showRoomDetails.name} />}
-                <div className="showroom-details-item">
-                    <p><strong>ID:</strong></p>
-                    <p>{showRoomDetails.id}</p>
+                <img src={showRoomDetails.img} alt={showRoomDetails.name} />
+                <div className="showroom-details-content">
+                    <div className="showroom-details-item">
+                        <p><strong>Location:</strong> {showRoomDetails.location}</p>
+                    </div>
+                    <div className="showroom-details-item">
+                        <p><strong>Toll-Free:</strong> {showRoomDetails.tollfree}</p>
+                    </div>
+                    <div className="showroom-details-item">
+                        <p><strong>Phone Number:</strong> {showRoomDetails.phoneNumber}</p>
+                    </div>
+                    <div className="showroom-details-item">
+                        <p><strong>State:</strong> {showRoomDetails.state}</p>
+                    </div>
+                    <div className="showroom-details-item">
+                        <p><strong>District:</strong> {showRoomDetails.district}</p>
+                    </div>
                 </div>
-                <div className="showroom-details-item">
-                    <p><strong>Location:</strong></p>
-                    <p>{showRoomDetails.location}</p>
-                </div>
-                <div className="showroom-details-item">
-                    <p><strong>Toll-Free:</strong></p>
-                    <p>{showRoomDetails.tollfree}</p>
-                </div>
-                <div className="showroom-details-item">
-                    <p><strong>Phone Number:</strong></p>
-                    <p>{showRoomDetails.phoneNumber}</p>
-                </div>
-                <div className="showroom-details-item">
-                    <p><strong>State:</strong></p>
-                    <p>{showRoomDetails.state}</p>
-                </div>
-                <div className="showroom-details-item">
-                    <p><strong>District:</strong></p>
-                    <p>{showRoomDetails.district}</p>
+                <div className="hover-form">
+                    <h2>Register Here</h2>
+                    <form onSubmit={handleFormSubmit}>
+                        <label htmlFor="name">Name:</label>
+                        <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleFormChange}
+                            required
+                        />
+                        <label htmlFor="phoneNumber">Phone Number:</label>
+                        <input
+                            type="text"
+                            id="phoneNumber"
+                            name="phoneNumber"
+                            value={formData.phoneNumber}
+                            onChange={handleFormChange}
+                            required
+                        />
+                        <button type="submit">Submit</button>
+                    </form>
                 </div>
             </div>
             <div className="showroom-footer">

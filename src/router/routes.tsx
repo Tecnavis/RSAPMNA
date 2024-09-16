@@ -46,6 +46,9 @@ import EditSalary from '../pages/DriverReport/EditSalary';
 import CompanyCreationDetails from '../pages/Users/CompanyCreationDetails';
 import DummyAdd from '../pages/Users/DummyAdd';
 import ShowRoomDetails from '../pages/ShowRooms/ShowRoomDetails';
+import AddBook from '../pages/ShowRooms/AddBook';
+import ShowroomReports from '../pages/DriverReport/ShowroomReports';
+import ShowroomCashCollection from '../pages/DriverReport/ShowroomCashCollection';
 
 
 
@@ -155,6 +158,9 @@ const QuillEditor = lazy(() => import('../pages/Forms/QuillEditor'));
 const MarkDownEditor = lazy(() => import('../pages/Forms/MarkDownEditor'));
 const DateRangePicker = lazy(() => import('../pages/Forms/DateRangePicker'));
 const Clipboard = lazy(() => import('../pages/Forms/Clipboard'));
+
+const RewarItem = lazy(() => import('../pages/Rewards/rewarditem'));
+const Reward = lazy(() => import('../pages/Rewards/rewards'));
 // const isAuthenticated = () => {
 //     // Implement your authentication check here
 //     return false; // This is a placeholder, return actual auth status
@@ -182,6 +188,8 @@ const routes = [
         path: '/index',
         element: <Index />,
     },
+    {path :"/rewarditem",element:<RewarItem/>},
+    {path :"/rewards",element:<Reward/>},
     // {
     //     path: '/bookings/booking/driversalary',
     //     element: <DriverSalary />,
@@ -584,6 +592,14 @@ const routes = [
         element: <DriverReport />,
     },
     {
+        path: '/showroomreport',
+        element: <ShowroomReports />,
+    },
+    {
+        path: '/showroomreport/showroomcashcollection/:showroomId',
+        element: <ShowroomCashCollection />,
+    },
+    {
         path: '/driverreport/driversalaryreport',
         element: <DriverSalaryReport />,
     },
@@ -655,6 +671,14 @@ const routes = [
 {
     path: 'showrooms/showroom/showroomDetails',
     element: <ShowRoomDetails />,
+    layout: 'blank',
+
+},
+{
+    path: '/addbook',
+    element: <AddBook/>,
+    layout: 'blank',
+
 },
 
 // service

@@ -81,7 +81,7 @@ const LoginCover = () => {
 
                 sessionStorage.setItem('role', role);
                 sessionStorage.setItem('username', username); // Store username
-                sessionStorage.setItem('uid', 'V9e4v0UtSzUrPVgxtJzOTkq71do2');
+                sessionStorage.setItem('uid', 'VITE_REACT_APP_UID');
 
                 console.log("Staff user signed in successfully with UID:", userId);
                 navigate('/index');
@@ -95,7 +95,7 @@ const LoginCover = () => {
         }
     };
     
-    const handleRoleChange = (e) => {
+    const handleRoleChange = (e:any) => {
         setRole(e.target.value);
         // Clear email/username and password when role changes
         setEmail("");
@@ -104,7 +104,7 @@ const LoginCover = () => {
         setErrorMessage(""); // Clear any previous error message
     };
 
-    const handleSubmit = (event) => {
+    const handleSubmit = (event:any) => {
         event.preventDefault();
         setErrorMessage(""); // Clear any previous error message before attempting sign-in
         signIn();

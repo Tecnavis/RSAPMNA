@@ -7,48 +7,79 @@ import Tippy from '@tippyjs/react';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import { useNavigate } from 'react-router-dom';
+import IconMapPin from '../../components/Icon/IconMapPin';
 
-const BaseLocation = () => {
-    const [baseLocation, setBaseLocation] = useState(null);
-    const [baseOptions, setBaseOptions] = useState([]);
-    const [lat, setLat] = useState('');
-    const [lng, setLng] = useState('');
-    const [baseLocationName, setBaseLocationName] = useState('');
-    const [savedBaseLocation, setSavedBaseLocation] = useState(null);
-    const [items, setItems] = useState([]);
-    const [editing, setEditing] = useState(false);
-    const [currentItemId, setCurrentItemId] = useState(null);
+interface BaseLocationItem {
+    id: string;
+    name: string;
+    lat: string;
+    lng: string;
+    [key: string]: any; // Allow additional properties
+}
+
+
+interface AutocompleteOption {
+    label: string;
+    lat: string;
+    lng: string;
+}
+const BaseLocation: React.FC = () => {
+    const [baseLocation, setBaseLocation] = useState<AutocompleteOption | null>(null); // Updated state type
+    const [baseOptions, setBaseOptions] = useState<AutocompleteOption[]>([]);
+    const [lat, setLat] = useState<string>('');
+    const [lng, setLng] = useState<string>('');
+    const [baseLocationName, setBaseLocationName] = useState<string>('');
+    const [savedBaseLocation, setSavedBaseLocation] = useState<BaseLocationItem | null>(null);
+    const [items, setItems] = useState<BaseLocationItem[]>([]);
+    const [editing, setEditing] = useState<boolean>(false);
+    const [currentItemId, setCurrentItemId] = useState<string | null>(null);
     const db = getFirestore();
-    const uid = sessionStorage.getItem('uid')
+    const uid = sessionStorage.getItem('uid') || '';
     const navigate = useNavigate();
 
-    const handleMapClick = (location) => {
-        setLat(location.lat);
-        setLng(location.lng);
-    };
+    // const handleMapClick = (location) => {
+    //     setLat(location.lat);
+    //     setLng(location.lng);
+    // };
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const querySnapshot = await getDocs(collection(db, `user/${uid}/baselocation`));
-                const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+                const data: BaseLocationItem[] = querySnapshot.docs.map((doc) => {
+                    const docData = doc.data() as Partial<BaseLocationItem>; // Use Partial to handle missing fields
+                    return {
+                        id: doc.id,
+                        name: docData.name || '', // Provide default values if fields are missing
+                        lat: docData.lat || '',
+                        lng: docData.lng || ''
+                    };
+                });
                 setItems(data);
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
         };
-
+    
         fetchData();
-    }, [db]);
+    }, [db, uid]);
+    
 
-    const handleFormSubmit = async (e) => {
+    const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const baseLocationDetails = { name: baseLocationName, lat, lng };
-
-        if (editing) {
+        const baseLocationDetails: BaseLocationItem = {
+            id: '', // If adding a new location, id will be assigned later
+            name: baseLocationName,
+            lat,
+            lng,
+        };
+    
+        if (editing && currentItemId) {
             try {
                 await updateDoc(doc(db, `user/${uid}/baselocation`, currentItemId), baseLocationDetails);
-                setItems((prevItems) => prevItems.map((item) => (item.id === currentItemId ? { ...item, ...baseLocationDetails } : item)));
+                setItems((prevItems) => prevItems.map((item) =>
+                    item.id === currentItemId ? { ...item, ...baseLocationDetails } : item
+                ));
                 setEditing(false);
                 setCurrentItemId(null);
             } catch (error) {
@@ -62,14 +93,14 @@ const BaseLocation = () => {
                 console.error('Error adding base location: ', error);
             }
         }
-
+    
         setSavedBaseLocation(baseLocationDetails);
         setBaseLocationName('');
         setLat('');
         setLng('');
     };
-
-    const handleDelete = async (id) => {
+    
+    const handleDelete = async (id: string) => {
         const confirmDelete = window.confirm('Are you sure you want to delete this base location?');
         if (confirmDelete) {
             const password = window.prompt('Please enter the password to confirm deletion:');
@@ -85,8 +116,7 @@ const BaseLocation = () => {
             }
         }
     };
-
-    const handleEdit = (item) => {
+    const handleEdit = (item: BaseLocationItem) => {
         const password = window.prompt('Please enter the password to edit this base location:');
         if (password === 'BASELOCATION') {
             setEditing(true);
@@ -99,7 +129,8 @@ const BaseLocation = () => {
         }
     };
 
-    const getAutocompleteResults = async (inputText, setOptions) => {
+
+    const getAutocompleteResults = async (inputText: string, setOptions: React.Dispatch<React.SetStateAction<AutocompleteOption[]>>) => {
         const keralaCenterLat = 10.8505;
         const keralaCenterLng = 76.2711;
         const radius = 200000;
@@ -116,7 +147,7 @@ const BaseLocation = () => {
 
             if (response.data && Array.isArray(response.data.predictions)) {
                 const predictionsWithCoords = await Promise.all(
-                    response.data.predictions.map(async (prediction) => {
+                    response.data.predictions.map(async (prediction: any) => {
                         const placeDetails = await getPlaceDetails(prediction.place_id);
                         const locationName = prediction.description.split(',')[0];
                         return {
@@ -137,7 +168,7 @@ const BaseLocation = () => {
         }
     };
 
-    const getPlaceDetails = async (placeId) => {
+    const getPlaceDetails = async (placeId: string) => {
         try {
             const response = await axios.get(`https://api.olamaps.io/places/v1/details?place_id=${placeId}&api_key=${import.meta.env.VITE_REACT_APP_API_KEY}`);
             return response.data.result;
@@ -147,7 +178,7 @@ const BaseLocation = () => {
         }
     };
 
-    const handleBaseChange = (event, newValue) => {
+    const handleBaseChange = (event: React.SyntheticEvent, newValue: AutocompleteOption | null) => {
         if (newValue) {
             setBaseLocation(newValue);
             setBaseLocationName(newValue.label);
@@ -158,7 +189,22 @@ const BaseLocation = () => {
         }
         setBaseOptions([]);
     };
+    // const handleMapIconClick = () => {
+    //     if (baseLocation && baseLocation.lat && baseLocation.lng) {
+    //         const { lat, lng } = baseLocation;
+    //         console.log(`Opening map at: ${lat}, ${lng}`); // Log coordinates
 
+    //         window.open(`https://www.google.com/maps/search/?api=1&query=${newValue.lat},${newValue.lng}`, '_blank');
+    //     } else {
+    //         alert('Please select a base location first.');
+    //     }
+    // };
+    
+
+    
+    
+    
+    
     return (
         <div className="base-location-form-container">
             <form onSubmit={handleFormSubmit} className="base-location-form">
@@ -192,6 +238,14 @@ const BaseLocation = () => {
                         value={baseLocationName}
                         onChange={(e) => setBaseLocationName(e.target.value)}
                     />
+            <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(baseLocationName)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            <IconMapPin />
+        </a>
+
                 </div>
 
                 <div className="form-group">

@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-
-const ConfirmationModal = ({ isVisible, onConfirm, onCancel }) => {
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const role =sessionStorage.getItem('role');
+interface ConfirmationModalProps {
+    isVisible: boolean;
+    onConfirm: () => void;
+    onCancel: () => void;
+}
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isVisible, onConfirm, onCancel }) => {
+    const [password, setPassword] = useState<string>('');
+    const [error, setError] = useState<string>('');
+    const [showPassword, setShowPassword] = useState<boolean>(false);
+    const role = sessionStorage.getItem('role');
     const confirmPassword = import.meta.env.VITE_REACT_APP_CONFIRM_PASSWORD;
-    
+
     const handleTogglePassword = () => {
         setShowPassword(!showPassword);
     };
