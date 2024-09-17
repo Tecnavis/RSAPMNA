@@ -79,7 +79,7 @@ const ClientRewards: React.FC = () => {
 
   return (
     <div className="client-rewards-container">
-      <h1>Client Rewards</h1>
+      <h1>CLIENT REWARDS </h1><br/>
       <div className="cards-container">
         {clientsData.map((client, index) => (
           <div key={index} className={`client-card ${client.category.toLowerCase()}`}>
@@ -99,9 +99,11 @@ const ClientRewards: React.FC = () => {
             <h3>{category} Rewards</h3>
             <ul>
               {rewards.map((client, index) => (
-                <li key={index} className="reward-item">
-                  <strong>{client.name}</strong>: {client.rewardPoints} points
-                </li>
+               <li key={index} className="reward-item">
+               <span className="reward-name">{client.name}</span>
+               <span className="reward-points">{client.rewardPoints} points</span>
+             </li>
+             
               ))}
             </ul>
           </div>
