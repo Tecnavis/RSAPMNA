@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './style.css';
 import { collection, addDoc, getDocs, getFirestore, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface RewardItem {
     _id: string;
@@ -13,11 +14,25 @@ interface RewardItem {
 
 const CardLayout = () => {
     const db = getFirestore();
+    const storage = getStorage();
     const uid = sessionStorage.getItem('uid');
     const [rewards, setRewards] = useState<RewardItem[]>([]);
+    console.log(rewards, 'the rewards');
     const [isPopupVisible, setIsPopupVisible] = useState(false);
     const [isPopupEdit, setIsPopupEdit] = useState(false);
     const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
+    const handleOn = ()=> setIsPopupVisible(true)
+    const handleOff = ()=> {
+        setIsPopupVisible(false)
+        setFormData({
+            name: '',
+            description: '',
+            price: '',
+            image: '',
+        })
+    }
+
+  
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -25,7 +40,16 @@ const CardLayout = () => {
         image: '',
     });
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
+    
+    const handleEditOff = ()=>{
+        setFormData({
+            name: '',
+            description: '',
+            price: '',
+            image: '',
+        })
+        setIsPopupEdit(false)
+    }
     // Handle the Edit button click
     const handleEdit = (rewardId: string) => {
         const reward = rewards.find((r) => r._id === rewardId);
@@ -40,7 +64,8 @@ const CardLayout = () => {
             setIsPopupEdit(true);
         }
     };
-    //delete rewards
+
+    // Delete reward
     const handleDelete = async (rewardId: string) => {
         if (!uid) {
             Swal.fire({
@@ -68,8 +93,23 @@ const CardLayout = () => {
 
     // Create new reward item
     const handleNewReward = async () => {
+         
         try {
-            const docRef = await addDoc(collection(db, `user/${uid}/rewarditems`), formData);
+            let imageUrl = '';
+            if (selectedFile) {
+                const storageRef = ref(storage, `reward_images/${selectedFile.name}`);
+                await uploadBytes(storageRef, selectedFile);
+                // Get the download URL after upload
+                imageUrl = await getDownloadURL(storageRef);
+            }
+
+            const docRef = await addDoc(collection(db, `user/${uid}/rewarditems`), {
+                name: formData.name,
+                description: formData.description,
+                price: formData.price,
+                image: imageUrl,
+            });
+
             Swal.fire({
                 title: 'Success',
                 text: 'Reward added successfully!',
@@ -95,12 +135,26 @@ const CardLayout = () => {
         }
     };
 
+    // Update reward item
     const handleUpdateReward = async () => {
         if (!selectedRewardId) return;
 
         try {
+            let imageUrl = formData.image; // Use the existing image URL if no new file is selected
+            if (selectedFile) {
+                const storageRef = ref(storage, `reward_images/${selectedFile.name}`);
+                await uploadBytes(storageRef, selectedFile);
+                imageUrl = await getDownloadURL(storageRef); // Update with the new image URL
+            }
+
             const rewardRef = doc(db, `user/${uid}/rewarditems`, selectedRewardId);
-            await updateDoc(rewardRef, formData);
+            await updateDoc(rewardRef, {
+                name: formData.name,
+                description: formData.description,
+                price: formData.price,
+                image: imageUrl,
+            });
+
             Swal.fire({
                 title: 'Success',
                 text: 'Reward updated successfully!',
@@ -153,7 +207,7 @@ const CardLayout = () => {
 
     return (
         <div className="card-layout">
-            <button className="new-reward-btn" onClick={() => setIsPopupVisible(true)}>
+            <button className="new-reward-btn" onClick={handleOn}>
                 New Reward
             </button>
 
@@ -171,7 +225,7 @@ const CardLayout = () => {
                         <input type="text" name="price" value={formData.price} onChange={handleChange} required placeholder="Price" />
                         <input type="file" name="image" onChange={handleFileChange} />
                         <button type="submit">Add Reward</button>
-                        <button type="button" onClick={() => setIsPopupVisible(false)}>
+                        <button type="button" onClick={handleOff}>
                             Cancel
                         </button>
                     </form>
@@ -192,7 +246,7 @@ const CardLayout = () => {
                         <input type="text" name="price" value={formData.price} onChange={handleChange} required placeholder="Price" />
                         <input type="file" name="image" onChange={handleFileChange} />
                         <button type="submit">Update Reward</button>
-                        <button type="button" onClick={() => setIsPopupEdit(false)}>
+                        <button type="button" onClick={handleEditOff}>
                             Cancel
                         </button>
                     </form>
@@ -202,7 +256,7 @@ const CardLayout = () => {
             <div className="card-container">
                 {rewards.map((reward) => (
                     <div key={reward._id} className="card">
-                        <img src={reward.image} alt={reward.name} className="card-image" />
+                        {reward.image && <img src={reward.image} alt={reward.name} className="card-image" />}
                         <div className="card-content">
                             <h3 className="card-title">{reward.name}</h3>
                             <p className="card-description">{reward.description}</p>
