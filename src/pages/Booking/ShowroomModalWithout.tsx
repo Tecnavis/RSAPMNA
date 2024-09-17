@@ -27,8 +27,18 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
 
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, `user/${uid}/showroom`), (snapshot) => {
+            const showroomsList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+            setShowrooms(showroomsList);
+        });
+
+        return () => unsubscribe();
+    }, [db]);
+
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        e.preventDefault();  // Prevent the default form submission behavior
+        console.log('Form submit intercepted, no page reload should happen');
         const location = `${locationName}, ${locationCoords.lat}, ${locationCoords.lng}`;
         try {
             await addDoc(collection(db, `user/${uid}/showroom`), {
@@ -56,7 +66,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
             console.log('Showroom added successfully');
             console.log('Updating showroom location to:', location);
             updateShowroomLocation(location);
-
+    
             // Reset form fields
             setLocationName('');
             setShowRoom('');
@@ -76,7 +86,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
             setHasInsuranceBody('');
             setInsuranceAmountBody('');
             setImg('');
-
+    
             // Close the modal
             onClose();
         } catch (error) {
