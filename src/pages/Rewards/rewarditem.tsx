@@ -7,6 +7,7 @@ interface RewardItem {
     _id: string;
     name: string;
     description: string;
+    points: string;
     price: string;
     category: string;
     image?: string;
@@ -25,11 +26,12 @@ const CardLayout = () => {
         price: '',
         image: '',
         category:'',
+        points:"",
     });
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
     // Handle the Edit button click
-    const handleEdit = (rewardId: string) => {
+    const handleEdit = (rewardId: any) => {
         const reward = rewards.find((r) => r._id === rewardId);
         if (reward) {
             setFormData({
@@ -37,6 +39,7 @@ const CardLayout = () => {
                 description: reward.description,
                 price: reward.price,
                 category: reward.category,
+                points: reward.points,
                 image: reward.image || '',
             });
             setSelectedRewardId(rewardId);
@@ -83,6 +86,7 @@ const CardLayout = () => {
             setFormData({
                 name: '',
                 description: '',
+                points: '',
                 price: '',
                 category: '',
                 image: '',
@@ -174,6 +178,7 @@ const CardLayout = () => {
                         <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="Reward Name" />
                         <textarea name="description" value={formData.description} onChange={handleChange} required placeholder="Description" />
                         <input type="text" name="price" value={formData.price} onChange={handleChange} required placeholder="Price" />
+                        <input type="text" name="points" value={formData.points} onChange={handleChange} required placeholder="Points" />
                         <div >
                         <select className='select' name="category" value={formData.category} onChange={handleChange}>
                             <option value="">Select Category</option>
@@ -204,6 +209,7 @@ const CardLayout = () => {
                         <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="Reward Name" />
                         <textarea name="description" value={formData.description} onChange={handleChange} required placeholder="Description" />
                         <input type="text" name="price" value={formData.price} onChange={handleChange} required placeholder="Price" />
+                        <input type="text" name="points" value={formData.points} onChange={handleChange} required placeholder="Points" />
                         <select className='select' name="category" value={formData.category} onChange={handleChange} >
                             <option value="">Select Category</option>
                             <option value="Showroom">Showroom</option>
@@ -227,9 +233,9 @@ const CardLayout = () => {
                         <div className="card-content">
                             <h3 className="card-title">{reward.name}</h3>
                             <p className="card-description">{reward.description}</p>
-                            <p className="card-description">{reward.category}</p>
+                            <p className="card-description">{reward.points}</p>
                             <div className="card-footer">
-                                <span className="card-price">{reward.price}</span>
+                                <span className="card-price">{reward.price} </span>
                                 <div className="card-actions">
                                     <button className="edit-btn" onClick={() => handleEdit(reward._id)}>
                                         Edit
