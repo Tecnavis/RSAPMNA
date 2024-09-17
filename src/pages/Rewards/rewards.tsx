@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import './style.css'; // Add custom styles here
+import { Button } from '@mui/material';
+import IconEye from '../../components/Icon/IconEye';
 
 // Define a type for client categories
-type ClientCategory = 'Driver' | 'Staff' | 'User';
+type ClientCategory = 'Driver' | 'Staff' | 'Customer'| 'Showroom';
 
 // Interface for client reward props
 interface ClientRewardProps {
@@ -20,11 +22,17 @@ interface ClientRewardDetails {
 const clientsData: ClientRewardProps[] = [
   { category: 'Driver', rewardPoints: 150 },
   { category: 'Staff', rewardPoints: 200 },
-  { category: 'User', rewardPoints: 100 }
+  { category: 'Customer', rewardPoints: 100 },
+  { category: 'Showroom', rewardPoints: 120 },
 ];
 
 // Example data for Driver, Staff, and User rewards
 const driverRewards: ClientRewardDetails[] = [
+  { name: 'John Doe', rewardPoints: 150 },
+  { name: 'Jane Smith', rewardPoints: 120 },
+  { name: 'Alex Johnson', rewardPoints: 180 }
+];
+const showroomRewards: ClientRewardDetails[] = [
   { name: 'John Doe', rewardPoints: 150 },
   { name: 'Jane Smith', rewardPoints: 120 },
   { name: 'Alex Johnson', rewardPoints: 180 }
@@ -36,7 +44,7 @@ const staffRewards: ClientRewardDetails[] = [
   { name: 'Noah Wilson', rewardPoints: 200 }
 ];
 
-const userRewards: ClientRewardDetails[] = [
+const customerRewards: ClientRewardDetails[] = [
   { name: 'Liam Miller', rewardPoints: 80 },
   { name: 'Sophia Garcia', rewardPoints: 100 },
   { name: 'Mason Martinez', rewardPoints: 90 }
@@ -56,7 +64,8 @@ const ClientRewards: React.FC = () => {
       return [
         { category: 'Driver', rewards: driverRewards },
         { category: 'Staff', rewards: staffRewards },
-        { category: 'User', rewards: userRewards }
+        { category: 'Customer', rewards: customerRewards },
+        { category: 'Showroom', rewards: showroomRewards }
       ];
     } else {
       return [{ category: visibleCategory, rewards: getCategoryRewards(visibleCategory) }];
@@ -70,13 +79,18 @@ const ClientRewards: React.FC = () => {
         return driverRewards;
       case 'Staff':
         return staffRewards;
-      case 'User':
-        return userRewards;
+      case 'Customer':
+        return staffRewards;
+      case 'Showroom':
+        return showroomRewards;
       default:
         return [];
     }
   };
-
+//handleview
+const handleView = () => {
+    window.location.href = '/rewarddetails';
+}
   return (
     <div className="client-rewards-container">
       <h1>CLIENT REWARDS </h1><br/>
@@ -101,7 +115,7 @@ const ClientRewards: React.FC = () => {
               {rewards.map((client, index) => (
                <li key={index} className="reward-item">
                <span className="reward-name">{client.name}</span>
-               <span className="reward-points">{client.rewardPoints} points</span>
+               <span className="reward-points">{client.rewardPoints} points <Button onClick={handleView}><IconEye /></Button></span>
              </li>
              
               ))}

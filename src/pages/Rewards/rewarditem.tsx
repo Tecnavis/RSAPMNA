@@ -8,6 +8,7 @@ interface RewardItem {
     name: string;
     description: string;
     price: string;
+    category: string;
     image?: string;
 }
 
@@ -23,6 +24,7 @@ const CardLayout = () => {
         description: '',
         price: '',
         image: '',
+        category:'',
     });
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -34,6 +36,7 @@ const CardLayout = () => {
                 name: reward.name,
                 description: reward.description,
                 price: reward.price,
+                category: reward.category,
                 image: reward.image || '',
             });
             setSelectedRewardId(rewardId);
@@ -81,6 +84,7 @@ const CardLayout = () => {
                 name: '',
                 description: '',
                 price: '',
+                category: '',
                 image: '',
             });
             fetchData();
@@ -120,13 +124,14 @@ const CardLayout = () => {
         }
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData((prevState) => ({
             ...prevState,
             [name]: value,
         }));
     };
+    
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
@@ -169,6 +174,15 @@ const CardLayout = () => {
                         <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="Reward Name" />
                         <textarea name="description" value={formData.description} onChange={handleChange} required placeholder="Description" />
                         <input type="text" name="price" value={formData.price} onChange={handleChange} required placeholder="Price" />
+                        <div >
+                        <select className='select' name="category" value={formData.category} onChange={handleChange}>
+                            <option value="">Select Category</option>
+                            <option value="Showroom">Showroom</option>
+                            <option value="Driver">Driver</option>
+                            <option value="Staff">Staff</option>
+                            <option value="Customer">Customer</option>
+                        </select>
+                        </div>
                         <input type="file" name="image" onChange={handleFileChange} />
                         <button type="submit">Add Reward</button>
                         <button type="button" onClick={() => setIsPopupVisible(false)}>
@@ -190,6 +204,13 @@ const CardLayout = () => {
                         <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="Reward Name" />
                         <textarea name="description" value={formData.description} onChange={handleChange} required placeholder="Description" />
                         <input type="text" name="price" value={formData.price} onChange={handleChange} required placeholder="Price" />
+                        <select className='select' name="category" value={formData.category} onChange={handleChange} >
+                            <option value="">Select Category</option>
+                            <option value="Showroom">Showroom</option>
+                            <option value="Driver">Driver</option>
+                            <option value="Staff">Staff</option>
+                            <option value="Customer">Customer</option>
+                        </select>
                         <input type="file" name="image" onChange={handleFileChange} />
                         <button type="submit">Update Reward</button>
                         <button type="button" onClick={() => setIsPopupEdit(false)}>
@@ -206,6 +227,7 @@ const CardLayout = () => {
                         <div className="card-content">
                             <h3 className="card-title">{reward.name}</h3>
                             <p className="card-description">{reward.description}</p>
+                            <p className="card-description">{reward.category}</p>
                             <div className="card-footer">
                                 <span className="card-price">{reward.price}</span>
                                 <div className="card-actions">
