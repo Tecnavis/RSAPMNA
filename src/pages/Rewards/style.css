@@ -280,15 +280,15 @@
 }
 
 .client-card.driver {
-  background-color: #e3f2fd;
+  background-color: #9ec5e200;
 }
 
 .client-card.staff {
-  background-color: #fce4ec;
+  background-color: #a3a0a1;
 }
 
 .client-card.user {
-  background-color: #fff3e0;
+  background-color: #c7b69b;
 }
 
 /* Rewards List */
@@ -306,15 +306,26 @@
   padding: 0;
 }
 
+
+/* Flexbox styling for reward-item */
 .reward-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 10px;
   margin-bottom: 8px;
   background-color: #f1f1f1;
   border-radius: 5px;
 }
 
-.reward-item strong {
+.reward-name {
+  font-weight: bold;
   color: #ae7e47e6;
+}
+
+.reward-points {
+  font-weight: normal;
+  color: #333;
 }
 
 /* Responsive */
