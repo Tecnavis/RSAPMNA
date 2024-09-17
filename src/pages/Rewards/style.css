@@ -1,0 +1,336 @@
+/* Container for the entire card layout */
+.card-layout {
+    padding: 20px;
+    text-align: center;
+  }
+  
+  /* New Reward button styling */
+  .new-reward-btn {
+    padding: 10px 20px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+  }
+  
+  .new-reward-btn:hover {
+    background-color: #45a049;
+  }
+  
+  /* Container for the cards */
+  .card-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    /* justify-content: space-between; */
+    padding: 20px;
+  }
+  
+  .card {
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    width: calc(33% - 20px);
+    box-sizing: border-box;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  }
+  
+  .card-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-bottom: 2px solid #eaeaea;
+  }
+  
+  .card-content {
+    padding: 20px;
+    text-align: center;
+  }
+  
+  .card-title {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    color: #333;
+  }
+  
+  .card-description {
+    font-size: 1em;
+    color: #777;
+    margin-bottom: 20px;
+  }
+  
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+  }
+  
+  .card-price {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #ae7e47;
+  }
+  
+  .card-actions {
+    display: flex;
+    gap: 10px;
+  }
+  
+  /* Edit button styling */
+  .edit-btn, .delete-btn {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+  }
+  
+  .edit-btn {
+    background-color: #2196f3;
+    color: white;
+  }
+  
+  .edit-btn:hover {
+    background-color: #0b7dda;
+  }
+  
+  /* Delete button styling */
+  .delete-btn {
+    background-color: #f44336;
+    color: white;
+  }
+  
+  .delete-btn:hover {
+    background-color: #da190b;
+  }
+  
+  @media (max-width: 768px) {
+    .card {
+      width: calc(50% - 20px);
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .card {
+      width: 100%;
+    }
+  }
+  
+
+  /* Style for the entire card layout */
+.card-layout {
+    position: relative;
+}
+
+/* Style for the "New Reward" button */
+.new-reward-btn {
+    padding: 10px 20px;
+    font-size: 16px;
+    color: #fff;
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.new-reward-btn:hover {
+    background-color: #0056b3;
+}
+
+/* Style for the popup form */
+.popup-form {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 500px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    z-index: 1000;
+    overflow-y: auto;
+}
+
+/* Style for popup form heading */
+.popup-form h2 {
+    margin-top: 0;
+    font-size: 24px;
+    color: #333;
+}
+
+/* Style for form labels */
+.popup-form label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #555;
+}
+
+/* Style for form inputs */
+.popup-form input[type="text"],
+.popup-form input[type="file"],
+.popup-form textarea {
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+/* Style for form buttons */
+.popup-form button {
+    padding: 10px 15px;
+    font-size: 16px;
+    color: #fff;
+    background-color: #007bff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+.popup-form button:hover {
+    background-color: #0056b3;
+}
+
+/* Style for cancel button */
+.popup-form button[type="button"] {
+    background-color: #dc3545;
+}
+
+.popup-form button[type="button"]:hover {
+    background-color: #c82333;
+}
+
+/* Style for overlay */
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+
+
+/* //rewards */
+
+.client-rewards-container {
+  text-align: center;
+  padding: 20px;
+}
+
+.cards-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+}
+
+.client-card {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 20px;
+  width: 250px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease-in-out;
+}
+
+.client-card:hover {
+  transform: scale(1.05);
+}
+
+.client-card h2 {
+  margin-bottom: 10px;
+  color: #143506e6;
+}
+
+.client-card p {
+  font-size: 18px;
+  margin-bottom: 15px;
+}
+
+.reward-btn {
+  background-color: #ae7e47e6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+
+.reward-btn:hover {
+  background-color: #8c5f34;
+}
+
+.client-card.driver {
+  background-color: #9ec5e200;
+}
+
+.client-card.staff {
+  background-color: #a3a0a1;
+}
+
+.client-card.user {
+  background-color: #c7b69b;
+}
+
+/* Rewards List */
+.rewards-list {
+  margin-top: 20px;
+}
+
+.rewards-list h3 {
+  margin-bottom: 10px;
+  color: #143506e6;
+}
+
+.rewards-list ul {
+  list-style: none;
+  padding: 0;
+}
+
+
+/* Flexbox styling for reward-item */
+.reward-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  margin-bottom: 8px;
+  background-color: #f1f1f1;
+  border-radius: 5px;
+}
+
+.reward-name {
+  font-weight: bold;
+  color: #ae7e47e6;
+}
+
+.reward-points {
+  font-weight: normal;
+  color: #333;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .client-card {
+    width: 100%;
+  }
+}
