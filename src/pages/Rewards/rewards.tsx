@@ -4,7 +4,7 @@ import { Button } from '@mui/material';
 import IconEye from '../../components/Icon/IconEye';
 
 // Define a type for client categories
-type ClientCategory = 'Driver' | 'Staff' | 'Customer'| 'Showroom';
+type ClientCategory = 'Driver' | 'Staff' | 'Provider'| 'Showroom';
 
 // Interface for client reward props
 interface ClientRewardProps {
@@ -22,7 +22,7 @@ interface ClientRewardDetails {
 const clientsData: ClientRewardProps[] = [
   { category: 'Driver', rewardPoints: 150 },
   { category: 'Staff', rewardPoints: 200 },
-  { category: 'Customer', rewardPoints: 100 },
+  { category: 'Provider', rewardPoints: 100 },
   { category: 'Showroom', rewardPoints: 120 },
 ];
 
@@ -44,7 +44,7 @@ const staffRewards: ClientRewardDetails[] = [
   { name: 'Noah Wilson', rewardPoints: 200 }
 ];
 
-const customerRewards: ClientRewardDetails[] = [
+const providerRewards: ClientRewardDetails[] = [
   { name: 'Liam Miller', rewardPoints: 80 },
   { name: 'Sophia Garcia', rewardPoints: 100 },
   { name: 'Mason Martinez', rewardPoints: 90 }
@@ -64,7 +64,7 @@ const ClientRewards: React.FC = () => {
       return [
         { category: 'Driver', rewards: driverRewards },
         { category: 'Staff', rewards: staffRewards },
-        { category: 'Customer', rewards: customerRewards },
+        { category: 'Provider', rewards: providerRewards },
         { category: 'Showroom', rewards: showroomRewards }
       ];
     } else {
@@ -79,7 +79,7 @@ const ClientRewards: React.FC = () => {
         return driverRewards;
       case 'Staff':
         return staffRewards;
-      case 'Customer':
+      case 'Provider':
         return staffRewards;
       case 'Showroom':
         return showroomRewards;

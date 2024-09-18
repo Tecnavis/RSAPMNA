@@ -11,6 +11,8 @@ interface RewardItem {
     points: string;
     price: string;
     category: string;
+    percentage: string;
+    stock: string;
     image?: string;
 }
 
@@ -29,7 +31,11 @@ const CardLayout = () => {
         setFormData({
             name: '',
             description: '',
+            points: '',
+            category: '',
             price: '',
+            percentage: '',
+            stock: '',
             image: '',
         })
     }
@@ -41,6 +47,8 @@ const CardLayout = () => {
         price: '',
         image: '',
         category:'',
+        percentage:'',
+        stock:'',
         points:"",
     });
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -50,6 +58,10 @@ const CardLayout = () => {
             name: '',
             description: '',
             price: '',
+            category: '',
+            percentage: '',
+            stock: '',
+            points: '',
             image: '',
         })
         setIsPopupEdit(false)
@@ -63,6 +75,8 @@ const CardLayout = () => {
                 description: reward.description,
                 price: reward.price,
                 category: reward.category,
+                percentage: reward.percentage,
+                stock: reward.stock,
                 points: reward.points,
                 image: reward.image || '',
             });
@@ -113,6 +127,10 @@ const CardLayout = () => {
                 name: formData.name,
                 description: formData.description,
                 price: formData.price,
+                category: formData.category,
+                percentage: formData.percentage,
+                stock: formData.stock,
+                points: formData.points,
                 image: imageUrl,
             });
 
@@ -127,6 +145,8 @@ const CardLayout = () => {
                 name: '',
                 description: '',
                 points: '',
+                percentage: '',
+                stock: '',
                 price: '',
                 category: '',
                 image: '',
@@ -161,6 +181,10 @@ const CardLayout = () => {
                 description: formData.description,
                 price: formData.price,
                 image: imageUrl,
+                category: formData.category,
+                percentage: formData.percentage,
+                stock: formData.stock,
+                points: formData.points,
             });
 
             Swal.fire({
@@ -233,6 +257,8 @@ const CardLayout = () => {
                         <textarea name="description" value={formData.description} onChange={handleChange} required placeholder="Description" />
                         <input type="text" name="price" value={formData.price} onChange={handleChange} required placeholder="Price" />
                         <input type="text" name="points" value={formData.points} onChange={handleChange} required placeholder="Points" />
+                        <input type='text' name='percentage' value={formData.percentage} onChange={handleChange} required placeholder='%'/>
+                        <input type='text' name="stock" value={formData.stock} onChange={handleChange} required placeholder="Stock"/>
                         <div >
                         <select className='select' name="category" value={formData.category} onChange={handleChange}>
                             <option value="">Select Category</option>
@@ -240,6 +266,7 @@ const CardLayout = () => {
                             <option value="Driver">Driver</option>
                             <option value="Staff">Staff</option>
                             <option value="Customer">Customer</option>
+                            <option value="Provider">Provider</option>
                         </select>
                         </div>
                         <input type="file" name="image" onChange={handleFileChange} />
@@ -264,12 +291,16 @@ const CardLayout = () => {
                         <textarea name="description" value={formData.description} onChange={handleChange} required placeholder="Description" />
                         <input type="text" name="price" value={formData.price} onChange={handleChange} required placeholder="Price" />
                         <input type="text" name="points" value={formData.points} onChange={handleChange} required placeholder="Points" />
-                        <select className='select' name="category" value={formData.category} onChange={handleChange} >
+                        <input type='text' name='percentage' value={formData.percentage} onChange={handleChange} required placeholder='%'/>
+                        <input type='text' name="stock" value={formData.stock} onChange={handleChange} required placeholder="Stock"/>
+                       
+                        <select className='select' name="category" value={formData.category} onChange={handleChange}>
                             <option value="">Select Category</option>
                             <option value="Showroom">Showroom</option>
                             <option value="Driver">Driver</option>
                             <option value="Staff">Staff</option>
                             <option value="Customer">Customer</option>
+                            <option value="Provider">Provider</option>
                         </select>
                         <input type="file" name="image" onChange={handleFileChange} />
                         <button type="submit">Update Reward</button>
