@@ -193,10 +193,14 @@ const [selectedCompanyData, setSelectedCompanyData] = useState(null);
             setCurrentDateTime(formattedDateTime);
         };
 
+
+        // Update date and time immediately on mount
         updateDateTime();
 
+        // Set up interval to update every second
         const intervalId = setInterval(updateDateTime, 1000);
 
+        // Clean up interval on unmount
         return () => clearInterval(intervalId);
     }, []);
 
@@ -254,6 +258,7 @@ const [selectedCompanyData, setSelectedCompanyData] = useState(null);
             fetchDrivers();
         }
     }, [company, db, uid]);
+
 
     const handleUpdateTotalSalary = (newTotaSalary: any) => {
         setUpdatedTotalSalary(newTotaSalary);
@@ -415,7 +420,7 @@ const [selectedCompanyData, setSelectedCompanyData] = useState(null);
             case 'serviceVehicle':
                 setServiceVehicle(value);
                 break;
-// ------------------------------
+//---------------------
 case 'selectedDriver':
     setSelectedDriver(value || '');
 
@@ -427,6 +432,7 @@ case 'selectedDriver':
         const salary = isRSA && selectedCompanyData 
             ? selectedCompanyData.basicSalaries[selectedCompanyData.selectedServices[0]] 
             : (!isRSA ? selectedDriverData.basicSalaries[selectedDriverData.selectedServices[0]] : serviceDetails.salary);
+
 
         const basicSalaryKM = isRSA && selectedCompanyData 
             ? selectedCompanyData.basicSalaryKm[selectedCompanyData.selectedServices[0]] 
@@ -759,13 +765,15 @@ useEffect(() => {
     }
 }, [drivers, serviceDetails, distance, selectedCompanyData, calculateTotalSalary]);
 
+
     // --------------------------------------------------------------------------------
 
     const calculateTotalDriverSalary = (totalDriverDistance, basicSalaryKM, salaryPerKM, salary) => {
         totalDriverDistance = parseFloat(totalDriverDistance);
         basicSalaryKM = parseFloat(basicSalaryKM);
         salaryPerKM = parseFloat(salaryPerKM);
-        salary = parseFloat(salary);
+        salary = parseFloat(salary)
+        console.log('totalDriverDistance', totalDriverDistance);
 
         if (totalDriverDistance > basicSalaryKM) {
             return salary + (totalDriverDistance - basicSalaryKM) * salaryPerKM;
@@ -977,6 +985,8 @@ useEffect(() => {
                 } else {
                     const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
                     console.log('Document written with ID: ', docRef.id);
+
+                    console.log('Document added');
                 }
                 // Check if the dummy driver is selected
                 if (selectedDriver === 'dummy') {
@@ -1157,6 +1167,7 @@ useEffect(() => {
                     
                      
                        
+
                         )}
                         <button onClick={handleButtonClick} className={styles.addButton}>
                             <IconPlus />
@@ -1193,7 +1204,7 @@ useEffect(() => {
                 </div>
 
                 <div>
-                 
+
                     <div className={styles.formGroup}>
                         <label htmlFor="dis1" className={styles.label}>
                             Distance 1 (Base to Pickup)

@@ -159,6 +159,10 @@ const QuillEditor = lazy(() => import('../pages/Forms/QuillEditor'));
 const MarkDownEditor = lazy(() => import('../pages/Forms/MarkDownEditor'));
 const DateRangePicker = lazy(() => import('../pages/Forms/DateRangePicker'));
 const Clipboard = lazy(() => import('../pages/Forms/Clipboard'));
+
+const RewarItem = lazy(() => import('../pages/Rewards/rewarditem'));
+const Reward = lazy(() => import('../pages/Rewards/rewards'));
+const RewardDetails = lazy(() => import('../pages/Rewards/rewarddetails'));
 // const isAuthenticated = () => {
 //     // Implement your authentication check here
 //     return false; // This is a placeholder, return actual auth status
@@ -186,6 +190,9 @@ const routes = [
         path: '/index',
         element: <Index />,
     },
+    {path :"/rewarditem",element:<RewarItem/>},
+    {path :"/rewards",element:<Reward/>},
+    {path: "/rewarddetails",element:<RewardDetails/>},
     // {
     //     path: '/bookings/booking/driversalary',
     //     element: <DriverSalary />,
