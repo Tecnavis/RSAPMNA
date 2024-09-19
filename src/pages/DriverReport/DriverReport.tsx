@@ -215,7 +215,7 @@ interface Driver {
     id: string;
     driverName: string;
     idnumber: string;
-    advancePayment: string;
+    // advancePayment: string;
     companyName: string; // Assuming you have this field to filter drivers
 }
 
@@ -223,7 +223,7 @@ interface Driver {
 interface EditDriverData {
     driverName: string;
     idnumber: string;
-    advancePayment: string;
+    // advancePayment: string;
 }
 
 const DriverReport: React.FC = () => {
@@ -232,7 +232,7 @@ const DriverReport: React.FC = () => {
     const [editDriverData, setEditDriverData] = useState<EditDriverData>({
         driverName: '',
         idnumber: '',
-        advancePayment: ''
+        // advancePayment: ''
     });
     const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -266,7 +266,7 @@ const DriverReport: React.FC = () => {
         setEditDriverData({
             driverName: driver.driverName,
             idnumber: driver.idnumber,
-            advancePayment: driver.advancePayment
+            // advancePayment: driver.advancePayment
         });
     };
 
@@ -298,8 +298,8 @@ const DriverReport: React.FC = () => {
 
     const filteredDrivers = drivers.filter(driver =>
         driver.driverName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        driver.idnumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        driver.advancePayment.toString().includes(searchQuery)
+        driver.idnumber.toLowerCase().includes(searchQuery.toLowerCase()) 
+        // driver.advancePayment.toString().includes(searchQuery)
     );
 
     const companyDrivers = filteredDrivers.filter(driver => driver.companyName === 'Company');
@@ -320,7 +320,7 @@ const DriverReport: React.FC = () => {
                         <tr className="bg-gray-100">
                             <th className="py-2 px-4">{header}</th>
                             <th className="py-2 px-4">Driver ID</th>
-                            <th className="py-2 px-4">Advance Payment</th>
+                            {/* <th className="py-2 px-4">Advance Payment</th> */}
                             <th className="py-2 px-4">Actions</th>
                         </tr>
                     </thead>
@@ -354,7 +354,7 @@ const DriverReport: React.FC = () => {
                                         driver.idnumber
                                     )}
                                 </td>
-                                <td className="border px-4 py-2">
+                                {/* <td className="border px-4 py-2">
                                     {editDriverId === driver.id ? (
                                         <input
                                             type="text"
@@ -366,7 +366,7 @@ const DriverReport: React.FC = () => {
                                     ) : (
                                         driver.advancePayment
                                     )}
-                                </td>
+                                </td> */}
                                 <td className="border px-4 py-2 flex gap-2 items-center">
                                     {editDriverId === driver.id ? (
                                         <button onClick={handleSaveDriverClick} className="text-green-500 hover:text-green-700">

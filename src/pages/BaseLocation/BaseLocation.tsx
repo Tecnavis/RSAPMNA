@@ -67,6 +67,10 @@ const BaseLocation: React.FC = () => {
 
     const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        if (!baseLocationName || !lat || !lng) {
+            alert('Please fill in all fields.');
+            return;
+        }
         const baseLocationDetails: BaseLocationItem = {
             id: '', // If adding a new location, id will be assigned later
             name: baseLocationName,

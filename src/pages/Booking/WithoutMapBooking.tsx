@@ -97,6 +97,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [dropoffLocation, setDropoffLocation] = useState<{ lat: string; lng: string; name: string } | null>(null);
     // const [baseLocation, setBaseLocation] = useState(null);
     const [baseLocation, setBaseLocation] = useState<{ lat: string; lng: string; name: string } | null>(null);
+const [selectedCompanyData, setSelectedCompanyData] = useState(null);
 
     const [trappedLocation, setTrappedLocation] = useState<string>('');
     const [totalSalary, setTotalSalary] = useState<number>(0);
@@ -192,6 +193,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             setCurrentDateTime(formattedDateTime);
         };
 
+
         // Update date and time immediately on mount
         updateDateTime();
 
@@ -203,7 +205,6 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     }, []);
 
     useEffect(() => {
-        // Set the manual input field with the pickup location's name when the location changes
         setManualInput(pickupLocation.name || '');
     }, [pickupLocation]);
     useEffect(() => {
@@ -258,9 +259,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         }
     }, [company, db, uid]);
 
-    // const handleUpdatedTotalSalary = (newTotalSalary) => {
-    //     setUpdatedTotalSalary(newTotalSalary);
-    // };
+
     const handleUpdateTotalSalary = (newTotaSalary: any) => {
         setUpdatedTotalSalary(newTotaSalary);
     };
@@ -291,19 +290,30 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             }
         }
     }, [selectedDriver, serviceType, drivers]);
+    useEffect(() => {
+        if (selectedCompany) {
+            const selectedCompanyData = drivers.find((driver) => driver.id === selectedCompany);
+            setSelectedCompanyData(selectedCompanyData || null);
+        } else {
+            setSelectedCompanyData(null);
+        }
+    }, [selectedCompany, drivers]);
+    
+    
+    
 
-    const handleInputChange = (field, value) => {
+    const handleInputChange = (field:any, value:any) => {
         switch (field) {
             case 'showroomLocation':
-                setShowroomLocation(value);
+            setShowroomLocation(value);
 
-                // Find the selected showroom based on the selected value
-                const selectedShowroom = showrooms.find((show) => show.value === value);
+            const selectedShowroom = showrooms.find((show) => show.value === value);
 
-                if (selectedShowroom) {
-                    setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
+            if (selectedShowroom) {
+                setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
 
-                    // Ensure lat and lng are stored as strings
+                // Check if selectedShowroom has locationLatLng before accessing lat and lng
+                if (selectedShowroom.locationLatLng && selectedShowroom.locationLatLng.lat && selectedShowroom.locationLatLng.lng) {
                     const latString = selectedShowroom.locationLatLng.lat.toString();
                     const lngString = selectedShowroom.locationLatLng.lng.toString();
 
@@ -313,18 +323,25 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         lng: lngString,
                     });
                 } else {
-                    setInsuranceAmountBody('');
+                    console.error('Location data is missing for the selected showroom.');
+                    // You may choose to set a default or empty location here
                     setDropoffLocation({
-                        name: '',
+                        name: selectedShowroom.value,
                         lat: '',
                         lng: '',
                     });
                 }
-                break;
+            } else {
+                setInsuranceAmountBody('');
+                setDropoffLocation({
+                    name: '',
+                    lat: '',
+                    lng: '',
+                });
+            }
+            break;
             case 'totalSalary':
                 setTotalSalary(value || 0);
-                // const newCalculatedSalary = value - parseFloat(insuranceAmountBody);
-                // handleUpdatedTotalSalary(newCalculatedSalary);
                 break;
             case 'serviceCategory':
                 setServiceCategory(value || 0);
@@ -364,11 +381,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             case 'fileNumber':
                 setFileNumber(value || '');
                 break;
-            // case 'selectedCompany':
-            //     console.log("companies",value)
-
-            //     setSelectedCompany(value || '');
-            //     break;
+           
 
             case 'companies':
                 setCompanies(value || '');
@@ -407,67 +420,49 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             case 'serviceVehicle':
                 setServiceVehicle(value);
                 break;
+//---------------------
+case 'selectedDriver':
+    setSelectedDriver(value || '');
 
-            case 'selectedDriver':
-                console.log('Selected Driver ID:', value);
+    const selectedDriverData = drivers.find((driver) => driver.id === value);
 
-                setSelectedDriver(value || '');
+    if (selectedDriverData) {
+        const isRSA = selectedDriverData.companyName === 'RSA';
 
-                const selectedDriverData = drivers.find((driver) => driver.id === value);
-                console.log('Selected Driver Data:', selectedDriverData);
+        const salary = isRSA && selectedCompanyData 
+            ? selectedCompanyData.basicSalaries[selectedCompanyData.selectedServices[0]] 
+            : (!isRSA ? selectedDriverData.basicSalaries[selectedDriverData.selectedServices[0]] : serviceDetails.salary);
 
-                if (selectedDriverData) {
-                    const isRSA = selectedDriverData.companyName === 'RSA';
-                    const salary = isRSA ? serviceDetails.salary : selectedDriverData.basicSalaries[selectedDriverData.selectedServices[0]];
-                    const basicSalaryKM = isRSA ? serviceDetails.basicSalaryKM : selectedDriverData.basicSalaryKm[selectedDriverData.selectedServices[0]];
-                    const salaryPerKM = isRSA ? serviceDetails.salaryPerKM : selectedDriverData.salaryPerKm[selectedDriverData.selectedServices[0]];
 
-                    const calculatedSalary = calculateTotalSalary(salary, distance, basicSalaryKM, salaryPerKM, isRSA);
+        const basicSalaryKM = isRSA && selectedCompanyData 
+            ? selectedCompanyData.basicSalaryKm[selectedCompanyData.selectedServices[0]] 
+            : (!isRSA ? selectedDriverData.basicSalaryKm[selectedDriverData.selectedServices[0]] : serviceDetails.basicSalaryKM);
 
-                    const formattedSalary = parseFloat(calculatedSalary.toFixed(2));
-                    console.log('Calculated Salary for Selected Driver:', formattedSalary);
+        const salaryPerKM = isRSA && selectedCompanyData 
+            ? selectedCompanyData.salaryPerKm[selectedCompanyData.selectedServices[0]] 
+            : (!isRSA ? selectedDriverData.salaryPerKm[selectedDriverData.selectedServices[0]] : serviceDetails.salaryPerKM);
 
-                    setTotalSalary(formattedSalary);
-                } else {
-                    console.log('No driver data found for the selected driver.');
-                    setTotalSalary(0); // Clear the total salary if no driver is selected
-                }
-                break;
-            case 'company':
-                setCompany(value);
-                if (value === 'rsa') {
-                    setSelectedDriver('');
-                }
-                break;
-            case 'selectedCompany':
-                console.log('Selected Company ID:', value);
-                setSelectedCompany(value);
-                const isRSA = selectedDriverData.companyName === 'RSA';
+        const calculatedSalary = calculateTotalSalary(salary, distance, basicSalaryKM, salaryPerKM, isRSA);
 
-                console.log('Selected Company Data:', selectedCompanyData);
+        setTotalSalary(parseFloat(calculatedSalary.toFixed(2)));
+    } else {
+        setTotalSalary(0);
+        console.log('No driver data found. Total Salary set to 0');
+    }
+    break;
 
-                if (selectedCompanyData) {
-                    const salary = selectedCompanyData.basicSalaries[selectedCompanyData.selectedServices[0]];
-                    const basicSalaryKM = selectedCompanyData.basicSalaryKm[selectedCompanyData.selectedServices[0]];
-                    const salaryPerKM = selectedCompanyData.salaryPerKm[selectedCompanyData.selectedServices[0]];
+case 'company':
+    setCompany(value);
+    if (value === 'rsa') {
+        setSelectedDriver('');
+    }
+    break;
 
-                    const calculatedSalary = calculateTotalSalary(
-                        salary,
-                        distance,
-                        basicSalaryKM,
-                        salaryPerKM,
-                        true // since it's RSA work
-                    );
-
-                    const formattedSalary = parseFloat(calculatedSalary.toFixed(2));
-                    console.log('Calculated Salary for Selected Company:', formattedSalary);
-                    setTotalSalary(formattedSalary);
-                } else {
-                    console.log('No company data found for the selected company.');
-                    setTotalSalary(0); // Clear the total salary if no company is selected
-                }
-                break;
-
+case 'selectedCompany':
+    setSelectedCompany(value);
+ 
+    break;
+    
             case 'dropoffLocation':
                 if (typeof value === 'string') {
                     setDropoffLocation({ ...dropoffLocation, name: value });
@@ -524,6 +519,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         }
     };
     const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
+  
+    
     const openModal = () => {
         setIsModalOpen(true);
     };
@@ -701,28 +698,73 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             }
         }
     };
+// --------------------------------------------------------------------------------
+useEffect(() => {
+    if (drivers.length > 0) {
+       
+        // Calculate total salaries for each driver
+        const totalSalaries = drivers.map((driver) => {
+            const isRSA = driver.companyName === 'RSA';
 
-    useEffect(() => {
-        if (drivers.length > 0) {
-            console.log('Drivers List:', drivers);
-            console.log('Distance:', distance);
-            console.log('Service Details:', serviceDetails);
 
-            // Calculate total salaries for each driver
-            const totalSalaries = drivers.map((driver) => {
-                const isRSA = driver.companyName === 'RSA';
+            // Declare variables
+            let salary: number;
+            let basicSalaryKM: number;
+            let salaryPerKM: number;
 
-                // Use driver values if companyName is not 'RSA'
-                const salary = !isRSA ? driver.basicSalaries[driver.selectedServices[0]] : serviceDetails.salary;
-                const basicSalaryKM = !isRSA ? driver.basicSalaryKm[driver.selectedServices[0]] : serviceDetails.basicSalaryKM;
-                const salaryPerKM = !isRSA ? driver.salaryPerKm[driver.selectedServices[0]] : serviceDetails.salaryPerKM;
+            if (isRSA && selectedCompanyData) {
 
-                const calculatedSalary = calculateTotalSalary(salary, distance, basicSalaryKM, salaryPerKM, isRSA);
-                console.log(`Salary for driver ${driver.id}:`, calculatedSalary);
+                // Ensure the necessary properties exist
+                if (
+                    selectedCompanyData.basicSalaries &&
+                    selectedCompanyData.selectedServices &&
+                    selectedCompanyData.basicSalaryKm &&
+                    selectedCompanyData.salaryPerKm
+                ) {
+                    salary = selectedCompanyData.basicSalaries[selectedCompanyData.selectedServices[0]];
+                    basicSalaryKM = selectedCompanyData.basicSalaryKm[selectedCompanyData.selectedServices[0]];
+                    salaryPerKM = selectedCompanyData.salaryPerKm[selectedCompanyData.selectedServices[0]];
+
+                } else {
+                    console.error('Missing properties in selectedCompanyData for RSA');
+                }
+            } else {
+                // Fallback for non-RSA or when selectedCompanyData is not available
+                salary = !isRSA ? driver.basicSalaries[driver.selectedServices[0]] : serviceDetails.salary;
+                basicSalaryKM = !isRSA ? driver.basicSalaryKm[driver.selectedServices[0]] : serviceDetails.basicSalaryKM;
+                salaryPerKM = !isRSA ? driver.salaryPerKm[driver.selectedServices[0]] : serviceDetails.salaryPerKM;
+
+            }
+
+            // Check if calculateTotalSalary is available and log its inputs
+            if (calculateTotalSalary) {
+                console.log(`Calculating total salary for driver ${driver.id} with values:`, {
+                    salary,
+                    distance,
+                    basicSalaryKM,
+                    salaryPerKM,
+                    isRSA
+                });
+
+                const calculatedSalary = calculateTotalSalary(
+                    salary,
+                    distance,
+                    basicSalaryKM,
+                    salaryPerKM,
+                    isRSA
+                );
+
+                console.log(`Driver ${driver.id} - Calculated Salary: ${calculatedSalary}`);
                 return calculatedSalary;
-            });
-        }
-    }, [drivers, serviceDetails, distance]);
+            } else {
+                console.error('calculateTotalSalary function is not available');
+                return 0;
+            }
+        });
+
+    }
+}, [drivers, serviceDetails, distance, selectedCompanyData, calculateTotalSalary]);
+
 
     // --------------------------------------------------------------------------------
 
@@ -730,7 +772,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         totalDriverDistance = parseFloat(totalDriverDistance);
         basicSalaryKM = parseFloat(basicSalaryKM);
         salaryPerKM = parseFloat(salaryPerKM);
-        salary = parseFloat(salary);
+        salary = parseFloat(salary)
         console.log('totalDriverDistance', totalDriverDistance);
 
         if (totalDriverDistance > basicSalaryKM) {
@@ -943,6 +985,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 } else {
                     const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
                     console.log('Document written with ID: ', docRef.id);
+
                     console.log('Document added');
                 }
                 // Check if the dummy driver is selected
@@ -1097,16 +1140,34 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     </label>
                     <div className={styles.inputContainer}>
                         {showrooms.length > 0 && (
-                            <ReactSelect
-                                id="showrooms"
-                                name="showrooms"
-                                className="w-full"
-                                value={showrooms.find((option) => option.value === showroomLocation) || null}
-                                options={showrooms}
-                                placeholder="Select showroom"
-                                onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
-                                isSearchable={true}
-                            />
+                        <ReactSelect
+                        id="showrooms"
+                        name="showrooms"
+                        className="w-full"
+                        value={showrooms.find((option) => option.value === showroomLocation) || null}
+                        options={[{ value: 'lifting', label: 'Lifting' }, ...showrooms]}
+                        placeholder="Select showroom"
+                        onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
+                        isSearchable={true}
+                        getOptionLabel={(option) =>
+                            option.value === 'lifting' ? (
+                                <span style={{ color: 'red', fontSize: '20px', fontWeight: 'bold' }}>{option.label}</span>
+                            ) : (
+                                option.label
+                            )
+                        }
+                        styles={{
+                            option: (provided, state) => ({
+                                ...provided,
+                                color: state.data.value === 'lifting' ? 'red' : provided.color,
+                                fontSize: state.data.value === 'lifting' ? '20px' : provided.fontSize,
+                            }),
+                        }}
+                    />
+                    
+                     
+                       
+
                         )}
                         <button onClick={handleButtonClick} className={styles.addButton}>
                             <IconPlus />
@@ -1138,32 +1199,12 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                             value={dropoffLocation && dropoffLocation.lng ? dropoffLocation.lng : ''}
                         />
 
-                        {/* <a
-                            href={`https://www.google.co.in/maps/@${dropoffLocation?.lat || '11.0527369'},${dropoffLocation?.lng || '76.0747136'},15z?entry=ttu`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.mapButton}
-                        >
-                            <IconMapPin />
-                        </a> */}
+                     
                     </div>
                 </div>
 
                 <div>
-                    {/* <div className={styles.formGroup}>
-            <label htmlFor="dis1" className={styles.label}>
-                Distance 1 (KM)
-            </label>
-            <input
-                id="dis1"
-                type="number"
-                name="dis1"
-                placeholder="Distance 1"
-                onChange={(e) => handleInputChange('dis1', e.target.value)}
-                value={dis1}
-                className={styles.formControl}
-            />
-        </div> */}
+
                     <div className={styles.formGroup}>
                         <label htmlFor="dis1" className={styles.label}>
                             Distance 1 (Base to Pickup)
@@ -1382,26 +1423,22 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                 {/* Actual drivers */}
 
                                 {drivers
-                                    .filter((driver) => driver.companyName !== 'Company') // Filter out drivers from the specified company
-                                    .sort((a, b) => {
-                                        if (a.companyName === 'RSA' && b.companyName !== 'RSA') return -1;
-                                        if (a.companyName !== 'RSA' && b.companyName === 'RSA') return 1;
-                                        return 0;
-                                    })
-                                    .map((driver) => {
-                                        const isRSA = driver.companyName === 'RSA';
-
-                                        // Calculate salary using company-specific logic
-                                        const calculatedSalary = calculateTotalSalary(
-                                            isRSA ? serviceDetails.salary : driver.basicSalaries[driver.selectedServices[0]],
-                                            distance,
-                                            isRSA ? serviceDetails.basicSalaryKM : driver.basicSalaryKm[driver.selectedServices[0]],
-                                            isRSA ? serviceDetails.salaryPerKM : driver.salaryPerKm[driver.selectedServices[0]],
-                                            isRSA
-                                        );
-                                        const expensePerKM = serviceDetails.expensePerKM || 0;
-                                        const profit = calculatedSalary - distance * expensePerKM;
-
+                    .filter((driver) => driver.companyName !== 'Company') // Filter out drivers from the specified company
+                    .sort((a, b) => {
+                        if (a.companyName === 'RSA' && b.companyName !== 'RSA') return -1;
+                        if (a.companyName !== 'RSA' && b.companyName === 'RSA') return 1;
+                        return 0;
+                    })
+                    .map((driver) => {
+                        const isRSA = driver.companyName === 'RSA';
+                        const salary = isRSA && selectedCompanyData ? selectedCompanyData.basicSalaries[selectedCompanyData.selectedServices[0]] : (!isRSA ? driver.basicSalaries[driver.selectedServices[0]] : serviceDetails.salary);
+                        const basicSalaryKM = isRSA && selectedCompanyData ? selectedCompanyData.basicSalaryKm[selectedCompanyData.selectedServices[0]] : (!isRSA ? driver.basicSalaryKm[driver.selectedServices[0]] : serviceDetails.basicSalaryKM);
+                        const salaryPerKM = isRSA && selectedCompanyData ? selectedCompanyData.salaryPerKm[selectedCompanyData.selectedServices[0]] : (!isRSA ? driver.salaryPerKm[driver.selectedServices[0]] : serviceDetails.salaryPerKM);
+                
+                        const calculatedSalary = calculateTotalSalary(salary, distance, basicSalaryKM, salaryPerKM, isRSA);
+                        const expensePerKM = serviceDetails.expensePerKM || 0;
+                        const profit = calculatedSalary - distance * expensePerKM;
+                
                                         return (
                                             <div key={driver.id} className="border border-gray-300 p-4 rounded-lg shadow-sm bg-white">
                                                 <table className="w-full table-auto">

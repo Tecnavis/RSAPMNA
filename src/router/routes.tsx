@@ -49,6 +49,7 @@ import ShowRoomDetails from '../pages/ShowRooms/ShowRoomDetails';
 import AddBook from '../pages/ShowRooms/AddBook';
 import ShowroomReports from '../pages/DriverReport/ShowroomReports';
 import ShowroomCashCollection from '../pages/DriverReport/ShowroomCashCollection';
+import SelectiveShowroomInvoice from '../pages/DriverReport/SelectiveShowroomInvoice';
 
 
 
@@ -253,6 +254,11 @@ const routes = [
         path: '/general/sales/preview/:id',
         element: <PreviewExpense />,
     },
+    {
+        path: '/showroomcashcollection/selectiveInvoice',
+        element: <SelectiveShowroomInvoice />,
+    },
+    
     {
         path: '/apps/invoice/add',
         element: <Add />,
