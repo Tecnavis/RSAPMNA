@@ -141,7 +141,7 @@ const CashCollectionReport = () => {
             return acc + parseFloat(balance);
         }, 0);
 
-        return (parseFloat(driver.advancePayment || 0) + totalBalance).toFixed(2);
+        return (parseFloat(driver.advance || 0) + totalBalance).toFixed(2);
     };
 
     const updateTotalBalance = async () => {
@@ -254,7 +254,7 @@ const CashCollectionReport = () => {
     <div className="w-full md:w-1/2 mb-4 md:mb-0">
       <h2 className="text-2xl font-semibold text-gray-700">Driver: {driver.driverName}</h2>
       <p className="text-gray-600">Phone: {driver.personalphone}</p>
-      <p className="text-gray-600">Advance Payment: {driver.advancePayment}</p>
+      <p className="text-gray-600">Advance Payment: {driver.advance}</p>
     </div>
     <div className="w-full md:w-1/2 flex justify-center md:justify-end">
       <h2 className="text-2xl font-semibold text-gray-700">Net Total Amount in Hand: {calculateNetTotalAmountInHand()}</h2>

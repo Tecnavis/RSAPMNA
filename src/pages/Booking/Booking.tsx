@@ -64,11 +64,11 @@
 
 // export default Booking;
 import React, { useState, useEffect } from 'react';
-import MapBooking from './MapBooking';
 import WithoutMapBooking from './WithoutMapBooking';
 import { useLocation } from 'react-router-dom';
-import { FaMapMarkedAlt, FaMapPin } from 'react-icons/fa';
+import { FaMapPin } from 'react-icons/fa';
 import styles from './booking.module.css';
+import classNames from 'classnames';
 
 const Booking = () => {
     const [activeForm, setActiveForm] = useState('withoutMap');
@@ -78,14 +78,12 @@ const Booking = () => {
 
     useEffect(() => {
         if (editData) {
-            setIsEditing(true); // Set to true if editing data is present
+            setIsEditing(true);
             if (editData.statusEdit === 'withoutmapbooking') {
                 setActiveForm('withoutMap');
-            } else if (editData.statusEdit === 'mapbooking') {
-                setActiveForm('map');
             }
         } else {
-            setIsEditing(false); // Set to false if no editing data
+            setIsEditing(false);
         }
     }, [editData]);
 
@@ -94,13 +92,12 @@ const Booking = () => {
     };
 
     return (
-        <div style={{ backgroundColor: '#e6f7ff', borderRadius: '10px', boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ marginBottom: '1rem' }}>
+        <div className={classNames(styles.container, 'flex flex-col items-center')}>
+            <div className="mb-4">
                 <div className={styles.buttonContainer}>
                     <button 
                         onClick={handleWithoutMapClick} 
-                        className={styles.button}
-                        style={{ backgroundColor: '#f44336' }} 
+                        className={classNames(styles.button, 'bg-red-500')}
                         disabled={isEditing && activeForm !== 'withoutMap'}
                     >
                         <FaMapPin className={styles.icon} />
@@ -114,3 +111,4 @@ const Booking = () => {
 };
 
 export default Booking;
+

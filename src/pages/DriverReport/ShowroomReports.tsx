@@ -8,6 +8,7 @@ interface Showroom {
     location: string;
     manager: string;
     contactNumber: string;
+    
 }
 
 const ShowroomReports: React.FC = () => {
@@ -64,12 +65,17 @@ const ShowroomReports: React.FC = () => {
                     {filteredShowrooms.map(showroom => (
                         <tr key={showroom.id} className="hover:bg-gray-50">
                             <td className="border px-4 py-2">{showroom.ShowRoom}</td> {/* Updated field */}
-                            <td className="border px-4 py-2">  <Link
-                                    to={`/showroomreport/showroomcashcollection/${showroom.id}`}
-                                    className="text-blue-500 hover:text-blue-700 bg-blue-100 px-2 py-1 rounded-md shadow-md"
-                                >
-                                    View Cash Collection Report
-                                </Link></td>
+                            <td className="border px-4 py-2">
+    <Link
+        to={`/showroomreport/showroomcashcollection/${showroom.id}`}
+        state={{ showroomName: showroom.ShowRoom }}  // Pass the state separately
+        className="text-blue-500 hover:text-blue-700 bg-blue-100 px-2 py-1 rounded-md shadow-md"
+    >
+        View Cash Collection Report
+    </Link>
+</td>
+
+
                         </tr>
                     ))}
                 </tbody>

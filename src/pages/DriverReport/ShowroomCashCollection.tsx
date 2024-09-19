@@ -1,212 +1,46 @@
-// import React, { useState, useEffect } from 'react';
-// import { useParams } from 'react-router-dom';
-// import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
-
-// interface Booking {
-//     id: string;
-//     showroomId: string;
-//     dateTime: string; // Ensure this matches the Firestore date field
-//     amount: number;
-//     receivedAmount?: number;
-//     updatedTotalSalary?: number;
-//     approved?: boolean;
-//     status: string;
-// }
-
-// const ShowroomCashCollection: React.FC = () => {
-//     const { showroomId } = useParams<{ showroomId: string }>();
-//     const [bookings, setBookings] = useState<Booking[]>([]);
-//     const [selectedBookings, setSelectedBookings] = useState<string[]>([]);
-//     const [loading, setLoading] = useState(true);
-//     const [error, setError] = useState<string | null>(null);
-//     const db = getFirestore();
-//     const uid = sessionStorage.getItem('uid') || '';
-
-//     useEffect(() => {
-//         const fetchBookings = async () => {
-//             try {
-//                 const q = query(collection(db, `user/${uid}/bookings`), where('showroomId', '==', showroomId));
-//                 const querySnapshot = await getDocs(q);
-//                 const bookingList = querySnapshot.docs.map((doc) => ({
-//                     id: doc.id,
-//                     ...doc.data(),
-//                 })) as Booking[];
-//                 console.log("bookingList", bookingList);
-//                 setBookings(bookingList);
-//             } catch (error) {
-//                 console.error('Error fetching bookings: ', error);
-//                 setError('Failed to load booking data.');
-//             } finally {
-//                 setLoading(false);
-//             }
-//         };
-
-//         if (showroomId) {
-//             fetchBookings();
-//         }
-//     }, [db, showroomId, uid]);
-
-//     const handleCheckboxChange = (id: string) => {
-//         setSelectedBookings((prev) =>
-//             prev.includes(id) ? prev.filter((bookingId) => bookingId !== id) : [...prev, id]
-//         );
-//     };
-
-//     const handleAmountReceivedChange = (id: string, value: string) => {
-//         const updatedBookings = bookings.map((booking) =>
-//             booking.id === id ? { ...booking, receivedAmount: Number(value) } : booking
-//         );
-//         setBookings(updatedBookings);
-//     };
-
-//     const calculateBalance = (amount: number, receivedAmount: number) => {
-//         return Number(amount - receivedAmount).toFixed(2);
-//     };
-
-//     const handleEditClick = (booking: Booking) => {
-//         // Handle edit click logic
-//     };
-
-//     const handleInvoiceClick = (booking: Booking) => {
-//         // Handle invoice click logic
-//     };
-
-//     const handleApproveClick = (booking: Booking) => {
-//         // Handle approve logic, e.g., mark as approved in the database
-//         const updatedBookings = bookings.map((b) =>
-//             b.id === booking.id ? { ...b, approved: true } : b
-//         );
-//         setBookings(updatedBookings);
-//     };
-
-//     if (loading) {
-//         return <div>Loading...</div>;
-//     }
-
-//     if (error) {
-//         return <div>Error: {error}</div>;
-//     }
-
-//     return (
-//         <div className="container mx-auto px-4 py-6">
-//             <h2 className="text-2xl font-semibold mb-6">Cash Collection Report <span>{bookings.ShowRoom}</span></h2>
-//             {bookings.length > 0 ? (
-//                 <table className="min-w-full bg-white border border-gray-300">
-//                     <thead>
-//                         <tr className="bg-gray-100">
-//                             <th className="py-2 px-4 border">Select</th>
-//                             <th className="py-2 px-4 border">Date</th>
-//                             <th className="py-2 px-4 border">Payable Amount By Customer</th>
-//                             <th className="py-2 px-4 border">Amount Received From The Customer</th>
-//                             <th className="py-2 px-4 border">Received Amount From Driver</th>
-//                             <th className="py-2 px-4 border">Balance</th>
-//                             <th className="py-2 px-4 border">Actions</th>
-//                         </tr>
-//                     </thead>
-//                     <tbody>
-//                         {bookings.map((booking) => (
-//                             <tr key={booking.id} className="hover:bg-gray-50">
-//                                 <td className="text-center">
-//                                     <input
-//                                         type="checkbox"
-//                                         checked={selectedBookings.includes(booking.id)}
-//                                         onChange={() => handleCheckboxChange(booking.id)}
-//                                         disabled={booking.approved}
-//                                     />
-//                                 </td>
-//                                 <td className="border px-4 py-2">
-//                                     {new Date(booking.dateTime).toLocaleDateString()}
-//                                 </td>
-//                                 <td className="border px-4 py-2">
-//                                     ₹ {Number(booking.updatedTotalSalary).toFixed(2)}
-//                                 </td>
-//                                 <td className="border px-4 py-2">
-//                                     ₹ {booking.amount}
-//                                 </td>                                <td className="border px-4 py-2">
-//                                     <input
-//                                         type="number"
-//                                         value={booking.receivedAmount || ''}
-//                                         onChange={(e) => handleAmountReceivedChange(booking.id, e.target.value)}
-//                                         style={{
-//                                             border: '1px solid #d1d5db',
-//                                             borderRadius: '0.25rem',
-//                                             padding: '0.25rem 0.5rem',
-//                                         }}
-//                                         disabled={booking.approved}
-//                                     />
-//                                 </td>
-                               
-//                                 <td className="border px-4 py-2">
-//                                     ₹ {calculateBalance(booking.amount, booking.receivedAmount || 0)}
-//                                 </td>
-//                                 <td className="border px-4 py-2">
-//                                     <button
-//                                         onClick={() => handleEditClick(booking)}
-//                                         className={`text-blue-500 hover:text-blue-700 ${booking.approved ? 'cursor-not-allowed opacity-50' : ''}`}
-//                                         disabled={booking.approved}
-//                                     >
-//                                         Edit
-//                                     </button>
-//                                     <button
-//                                         onClick={() => handleInvoiceClick(booking)}
-//                                         className={`text-green-500 hover:text-green-700 ${booking.approved ? 'cursor-not-allowed opacity-50' : ''}`}
-//                                         disabled={booking.approved}
-//                                     >
-//                                         Invoice
-//                                     </button>
-//                                     <button
-//                                         onClick={() => handleApproveClick(booking)}
-//                                         className={`text-${booking.approved ? 'green-500' : 'red-500'} hover:text-${booking.approved ? 'green-700' : 'red-700'} ${booking.approved ? 'cursor-not-allowed' : ''}`}
-//                                         disabled={booking.approved}
-//                                     >
-//                                         {booking.approved ? 'Approved' : 'Approve'}
-//                                     </button>
-//                                 </td>
-//                             </tr>
-//                         ))}
-//                     </tbody>
-//                 </table>
-//             ) : (
-//                 <div className="text-center mt-4">No bookings found for this showroom.</div>
-//             )}
-//         </div>
-//     );
-// };
-
-// export default ShowroomCashCollection;
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
-import { parse } from 'date-fns';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { getFirestore, collection, query, where, getDocs, updateDoc, doc, Timestamp } from 'firebase/firestore';
 
 interface Booking {
     id: string;
     showroomId: string;
-    dateTime: string; // Ensure this matches the Firestore date field
+    dateTime: string;
     amount: number;
     receivedAmount?: number;
-    updatedTotalSalary?: number;
+    showroomAmount?: number;
+    insuranceAmountBody: string;
     approved?: boolean;
+    approveStatus?: string; // Add this line
     status: string;
+    createdAt: Timestamp;
+    fileNumber: string;
 }
 
 const ShowroomCashCollection: React.FC = () => {
     const { showroomId } = useParams<{ showroomId: string }>();
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
-    const [selectedBookings, setSelectedBookings] = useState<string[]>([]);
-    const [monthlyTotals, setMonthlyTotals] = useState({ totalAmount: '0', totalReceived: '0', totalBalance: '0' });
-    const [selectedMonth, setSelectedMonth] = useState('');
-    const [selectedYear, setSelectedYear] = useState('');
+    const [selectedMonth, setSelectedMonth] = useState<number | 'All'>('All');
+    const [selectedYear, setSelectedYear] = useState<number | 'All'>('All');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [totalSelectedBalance, setTotalSelectedBalance] = useState('0');
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid') || '';
     const navigate = useNavigate();
-    const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
-    const [editingAmount, setEditingAmount] = useState<string>('');
+    const [notification, setNotification] = useState<string | null>(null);
+    const [selectedBookings, setSelectedBookings] = useState<Set<string>>(new Set());
+    const location = useLocation();
+    const { showroomName } = location.state || {};  // Destructure showroomName from state
 
+    // Log the showroomName to the console
+    useEffect(() => {
+        if (showroomName) {
+            console.log('Showroom Name:', showroomName);
+        } else {
+            console.log('No showroom name found in state');
+        }
+    }, [showroomName]);
     useEffect(() => {
         const fetchBookings = async () => {
             try {
@@ -217,6 +51,7 @@ const ShowroomCashCollection: React.FC = () => {
                     ...doc.data(),
                 })) as Booking[];
                 setBookings(bookingList);
+                setFilteredBookings(bookingList); // Set filteredBookings initially to all bookings
             } catch (error) {
                 console.error('Error fetching bookings: ', error);
                 setError('Failed to load booking data.');
@@ -230,130 +65,162 @@ const ShowroomCashCollection: React.FC = () => {
         }
     }, [db, showroomId, uid]);
 
-    useEffect(() => {
-        filterBookingsByMonthAndYear();
-    }, [selectedMonth, selectedYear, bookings]);
+   // Calculate total: Amount From Showroom + Insurance Amount
+const calculateTotal = (showroomAmount: number | undefined, insuranceAmountBody: string): number => {
+    const insuranceAmount = parseFloat(insuranceAmountBody) || 0; // Convert to number, fallback to 0
+    return (showroomAmount || 0) + insuranceAmount;
+};
 
-    useEffect(() => {
-        calculateMonthlyTotals();
-    }, [filteredBookings]);
 
-    const filterBookingsByMonthAndYear = () => {
-        let filtered = bookings;
+    // Calculate balance: Total - Received Amount
+    const calculateBalance = (total: number, receivedAmount: number | undefined): number => {
+        return total - (receivedAmount || 0);
+    };
 
-        if (selectedMonth) {
-            const monthNumber = parseInt(selectedMonth, 10);
-            if (!isNaN(monthNumber)) {
-                filtered = filtered.filter((booking) => {
-                    const bookingDate = parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date());
-                    const bookingMonth = bookingDate.getMonth() + 1;
-                    return bookingMonth === monthNumber;
-                });
-            }
+    // Update Firestore when showroomAmount, receivedAmount, or balanceshowroom is changed
+    const updateBookingInDB = async (id: string, updatedFields: Partial<Booking>) => {
+        try {
+            const bookingRef = doc(db, `user/${uid}/bookings`, id);
+            await updateDoc(bookingRef, updatedFields);
+        } catch (error) {
+            console.error('Error updating document: ', error);
+            setError('Failed to update booking.');
         }
+    };
 
-        if (selectedYear) {
-            const yearNumber = parseInt(selectedYear, 10);
-            if (!isNaN(yearNumber)) {
-                filtered = filtered.filter((booking) => {
-                    const bookingDate = parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date());
-                    const bookingYear = bookingDate.getFullYear();
-                    return bookingYear === yearNumber;
-                });
-            }
+    const handleAmountChange = (id: string, field: string, value: string) => {
+        const updatedBookings = bookings.map((booking) =>
+            booking.id === id
+                ? {
+                      ...booking,
+                      [field]: parseFloat(value),
+                  }
+                : booking
+        );
+        setBookings(updatedBookings);
+
+        // Calculate the updated fields to save in Firestore
+        const updatedBooking = updatedBookings.find((booking) => booking.id === id);
+        if (updatedBooking) {
+            const total = calculateTotal(updatedBooking.showroomAmount, parseFloat(updatedBooking.insuranceAmountBody));
+            const balanceshowroom = calculateBalance(total, updatedBooking.receivedAmount);
+
+            // Update Firestore with new values
+            updateBookingInDB(id, {
+                [field]: parseFloat(value),
+                balanceshowroom,
+            });
         }
+    };
+
+    const handleApproveClick = async (booking: Booking) => {
+        const total = calculateTotal(booking.showroomAmount, parseFloat(booking.insuranceAmountBody));
+        const balanceshowroom = calculateBalance(total, booking.receivedAmount);
+    
+        if (balanceshowroom === 0) {
+            // Prompt for password input
+            const password = prompt('Please enter the password to approve the booking:');
+    
+            // Check if password matches "RSA@123"
+            if (password === 'RSA@123') {
+                const updatedBookings = bookings.map((b) =>
+                    b.id === booking.id ? { ...b, approved: true, approveStatus: 'Approved' } : b
+                );
+                setBookings(updatedBookings);
+    
+                // Update Firestore for approval
+                await updateBookingInDB(booking.id, { approved: true, approveStatus: 'Approved' });
+                setNotification(null); // Clear notification
+            } else {
+                setNotification('Incorrect password. Approval denied.');
+            }
+        } else {
+            setNotification('Cannot approve booking: Balance is not zero');
+        }
+    };
+    
+    const handleGenerateInvoices = () => {
+        // Collect selected bookings
+        const selected = bookings.filter((booking) => selectedBookings.has(booking.id));
+
+        // Navigate to the invoice generation page or handle the invoice generation here
+        if (selected.length > 0) {
+            navigate('/showroomcashcollection/selectiveInvoice', { state: { bookings: selected } });
+        } else {
+            setNotification('No bookings selected.');
+        }
+    };
+
+    const formatDateTime = (dateTime: string | Timestamp | null) => {
+        if (!dateTime) return 'N/A';
+        if (dateTime instanceof Timestamp) {
+            return dateTime.toDate().toLocaleString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true,
+            });
+        }
+        const parsedDate = new Date(dateTime);
+        if (isNaN(parsedDate.getTime())) {
+            return 'Invalid Date';
+        }
+        return parsedDate.toLocaleString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true,
+        });
+    };
+
+    // Handle month and year filtering
+    useEffect(() => {
+        const filtered = bookings.filter((booking) => {
+            const date = booking.createdAt.toDate();
+            const bookingMonth = date.getMonth() + 1; // Months are 0-based in JS
+            const bookingYear = date.getFullYear();
+
+            const monthMatch = selectedMonth === 'All' || bookingMonth === selectedMonth;
+            const yearMatch = selectedYear === 'All' || bookingYear === selectedYear;
+
+            return monthMatch && yearMatch;
+        });
 
         setFilteredBookings(filtered);
-    };
-
+    }, [selectedMonth, selectedYear, bookings]);
     const calculateMonthlyTotals = () => {
-        // Ensure amounts are numbers
-        const totalAmount = filteredBookings.reduce((acc, booking) => {
-            const amount = Number(booking.amount) || 0;
-            return acc + amount;
-        }, 0);
-    
-        const totalReceived = filteredBookings.reduce((acc, booking) => {
-            const receivedAmount = Number(booking.receivedAmount) || 0;
-            return acc + receivedAmount;
-        }, 0);
-    
-        const totalBalance = filteredBookings.reduce((acc, booking) => {
-            const amount = Number(booking.amount) || 0;
-            const receivedAmount = Number(booking.receivedAmount) || 0;
-            return acc + (amount - receivedAmount);
-        }, 0);
-    
-        // Debug logs
-        console.log('Total Amount:', totalAmount);
-        console.log('Total Received:', totalReceived);
-        console.log('Total Balance:', totalBalance);
-    
-        setMonthlyTotals({
-            totalAmount: totalAmount.toFixed(2),
-            totalReceived: totalReceived.toFixed(2),
-            totalBalance: totalBalance.toFixed(2),
+        let monthlyTotal = 0;
+        let monthlyBalance = 0;
+        filteredBookings.forEach((booking) => {
+            const total = calculateTotal(booking.showroomAmount, booking.insuranceAmountBody);
+            const balance = calculateBalance(total, booking.receivedAmount);
+            monthlyTotal += total;
+            monthlyBalance += balance;
         });
+        return { monthlyTotal, monthlyBalance };
     };
     
-    
-
-    const calculateBalance = (amount: number, receivedAmount: number) => {
-        return Number(amount - receivedAmount).toFixed(2);
-    };
-
-    const handleEditClick = (booking: Booking) => {
-        setEditingBooking(booking);
-        setEditingAmount(booking.amount.toString());
-    };
-
-    const handleSaveClick = async () => {
-        try {
-            // Update booking amount logic
-            setEditingBooking(null);
-        } catch (error) {
-            console.error('Error saving booking:', error);
-        }
-    };
-
-    const handleInvoiceClick = (booking: Booking) => {
-        const balance = calculateBalance(booking.amount, booking.receivedAmount || 0);
-        navigate(`/users/driver/driverdetails/cashcollection/driverInvoice/${booking.id}`, {
-            state: {
-                amount: booking.amount,
-                receivedAmount: booking.receivedAmount || 0,
-                balance,
-            },
+    const calculateWholeTotals = () => {
+        let wholeTotal = 0;
+        let wholeBalance = 0;
+        bookings.forEach((booking) => {
+            const total = calculateTotal(booking.showroomAmount, booking.insuranceAmountBody);
+            const balance = calculateBalance(total, booking.receivedAmount);
+            wholeTotal += total;
+            wholeBalance += balance;
         });
+        return { wholeTotal, wholeBalance };
     };
+    
 
-    const handleCheckboxChange = (id: string) => {
-        setSelectedBookings((prev) =>
-            prev.includes(id) ? prev.filter((bookingId) => bookingId !== id) : [...prev, id]
-        );
-    };
-
-    const handleAmountReceivedChange = (id: string, value: string) => {
-        const updatedBookings = bookings.map((booking) =>
-            booking.id === id ? { ...booking, receivedAmount: Number(value) } : booking
-        );
-        setBookings(updatedBookings);
-    };
-
-    const calculateTotalSelectedBalance = () => {
-        const totalBalance = selectedBookings.reduce((acc, bookingId) => {
-            const booking = bookings.find((b) => b.id === bookingId);
-            return booking ? acc + parseFloat(calculateBalance(booking.amount, booking.receivedAmount || 0)) : acc;
-        }, 0);
-        setTotalSelectedBalance(totalBalance.toFixed(2));
-    };
-
-    const handleApproveClick = (booking: Booking) => {
-        const updatedBookings = bookings.map((b) =>
-            b.id === booking.id ? { ...b, approved: true } : b
-        );
-        setBookings(updatedBookings);
-    };
+    const { monthlyTotal, monthlyBalance } = calculateMonthlyTotals();
+    const { wholeTotal, wholeBalance } = calculateWholeTotals();
 
     if (loading) {
         return <div>Loading...</div>;
@@ -362,141 +229,204 @@ const ShowroomCashCollection: React.FC = () => {
     if (error) {
         return <div>Error: {error}</div>;
     }
-
+    const sortedBookingsData = filteredBookings.slice().sort((a, b) => {
+        const dateA = a.createdAt.toDate();
+        const dateB = b.createdAt.toDate();
+        return dateB.getTime() - dateA.getTime();
+    });
+    const handleCheckboxChange = (id: string) => {
+        setSelectedBookings((prevSelected) => {
+            const newSelected = new Set(prevSelected);
+            if (newSelected.has(id)) {
+                newSelected.delete(id);
+            } else {
+                newSelected.add(id);
+            }
+            return newSelected;
+        });
+    };
+    const handleSelectAll = () => {
+        if (selectedBookings.size === bookings.length) {
+            // Deselect all
+            setSelectedBookings(new Set());
+        } else {
+            // Select all
+            const allIds = new Set(bookings.map((booking) => booking.id));
+            setSelectedBookings(allIds);
+        }
+    };
     return (
-        <div className="container mx-auto px-4 py-6">
-            <h2 className="text-2xl font-semibold mb-6">Cash Collection Report</h2>
+<div className="w-full px-6 py-8 bg-gray-80 rounded-lg shadow-lg">
+<h2 className="text-3xl font-bold text-gray-800 mb-6">
+    Cash Collection Report of <span className="text-red-500">{showroomName}</span>
+</h2>
 
-            <div className="w-full md:w-1/2 flex justify-center md:justify-end">
-                <h2 className="text-2xl font-semibold text-gray-700">Net Total Amount in Hand: {monthlyTotals.totalAmount}</h2>
+            {notification && <div className="mb-4 p-4 text-white bg-red-600 rounded-lg shadow-md">{notification}</div>}
+            <div className="mb-6">
+                <button className="px-6 py-3 bg-teal-500 text-white font-semibold rounded-lg shadow-md hover:bg-teal-600 transition duration-300" onClick={handleGenerateInvoices}>
+                    Generate Invoices
+                </button>
             </div>
 
-            <div className="container-fluid mb-5">
-                <div className="flex flex-wrap justify-between items-center text-center md:text-left">
-                    <div className="w-full md:w-auto mb-4 md:mb-0">
-                        <h3 className="text-xl font-semibold text-gray-700">
-                            Total Balance of Selected Bookings: {totalSelectedBalance}
-                        </h3>
-                    </div>
-                    <div className="w-full md:w-auto flex flex-col md:flex-row items-center md:justify-end">
-                        <div className="space-x-2 mb-4 md:mb-0">
-                            <label htmlFor="month" className="text-gray-700 font-semibold">Filter by Month:</label>
-                            <select
-                                id="month"
-                                value={selectedMonth}
-                                onChange={(e) => setSelectedMonth(e.target.value)}
-                                className="border border-gray-300 rounded px-2 py-1"
-                            >
-                                <option value="">All Months</option>
-                                {Array.from({ length: 12 }, (_, index) => (
-                                    <option key={index} value={(index + 1).toString()}>
-                                        {new Date(0, index).toLocaleString('default', { month: 'long' })}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="space-x-2">
-                            <label htmlFor="year" className="text-gray-700 font-semibold">Filter by Year:</label>
-                            <select
-                                id="year"
-                                value={selectedYear}
-                                onChange={(e) => setSelectedYear(e.target.value)}
-                                className="border border-gray-300 rounded px-2 py-1"
-                            >
-                                <option value="">All Years</option>
-                                {Array.from({ length: 5 }, (_, index) => {
-                                    const year = new Date().getFullYear() - index;
-                                    return <option key={year} value={year.toString()}>{year}</option>;
-                                })}
-                            </select>
-                        </div>
-                    </div>
+            {/* Month and Year Filter */}
+            <div className="flex flex-col sm:flex-row sm:items-center mb-6 space-y-4 sm:space-y-0 sm:space-x-4">
+                <div className="flex items-center">
+                    <label className="text-gray-700 font-medium mr-2">Month:</label>
+                    <select
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(e.target.value === 'All' ? 'All' : parseInt(e.target.value))}
+                        className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                        <option value="All">All</option>
+                        {[...Array(12).keys()].map((month) => (
+                            <option key={month + 1} value={month + 1}>
+                                {new Date(0, month).toLocaleString('en-US', { month: 'long' })}
+                            </option>
+                        ))}
+                    </select>
                 </div>
-            </div>
 
-           
-                     <div className="container mx-auto px-4 py-6">
-             {filteredBookings.length > 0 ? (
-                <table className="min-w-full bg-white border border-gray-300">
-                    <thead>
-                        <tr className="bg-gray-100">
-                            <th className="py-2 px-4 border">Select</th>
-                            <th className="py-2 px-4 border">Date</th>
-                            <th className="py-2 px-4 border">Payable Amount By Customer</th>
-                            <th className="py-2 px-4 border">Amount Received From The Customer</th>
-                            <th className="py-2 px-4 border">Received Amount From Driver</th>
-                            <th className="py-2 px-4 border">Balance</th>
-                            <th className="py-2 px-4 border">Actions</th>
+                <div className="flex items-center">
+                    <label className="text-gray-700 font-medium mr-2">Year:</label>
+                    <select
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(e.target.value === 'All' ? 'All' : parseInt(e.target.value))}
+                        className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                        <option value="All">All</option>
+                        {[...Array(10).keys()].map((year) => (
+                            <option key={year + 2024} value={year + 2024}>
+                                {year + 2024}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                
+            </div>
+         {/* Conditionally render monthly totals only when a specific month is selected */}
+         {selectedMonth !== 'All' && (
+  <div className="mb-6 p-4 bg-white shadow-lg rounded-lg border border-gray-200">
+    <h3 className="text-2xl font-bold text-blue-600 mb-2">Monthly Totals</h3>
+    <div className="text-gray-700">
+      <p className="text-lg">
+        <span className="font-semibold">Monthly Total:</span> {monthlyTotal.toLocaleString()}
+      </p>
+      <p className="text-lg">
+        <span className="font-semibold">Balance Total:</span> {monthlyBalance.toLocaleString()}
+      </p>
+    </div>
+  </div>
+)}
+
+<div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-blue-100 shadow-lg rounded-lg border border-blue-200">
+  <h3 className="text-2xl font-bold text-blue-600 mb-2">Whole Totals</h3>
+  <div className="text-gray-700">
+    <p className="text-lg">
+      <span className="font-semibold">Total Amount From {showroomName}:</span> {wholeTotal.toLocaleString()}
+    </p>
+    <p className="text-lg">
+      <span className="font-semibold">Balance Amount:</span> {wholeBalance.toLocaleString()}
+    </p>
+  </div>
+</div>
+
+
+       
+               {filteredBookings.length > 0 ? (
+                <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-100">
+                    <button
+    onClick={handleSelectAll}
+    className={`px-4 py-2 font-semibold text-white rounded-lg shadow-md transition-colors duration-300 ease-in-out
+               ${selectedBookings.size === bookings.length
+                   ? 'bg-red-500 hover:bg-red-600'
+                   : 'bg-blue-500 hover:bg-blue-600'
+               }`}
+>
+    {selectedBookings.size === bookings.length ? 'Deselect All' : 'Select All'}
+</button>
+
+
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Select</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FileNumber</th>
+
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payable Amount From Showroom</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payable Insurance From Showroom</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total (Payable Amount + Payable Insurance)</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Received Amount(from showroom)</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance(from showroom)</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {bookings.map((booking) => (
-                            <tr key={booking.id} className="hover:bg-gray-50">
-                                <td className="text-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedBookings.includes(booking.id)}
-                                        onChange={() => handleCheckboxChange(booking.id)}
-                                        disabled={booking.approved}
-                                    />
-                                </td>
-                                <td className="border px-4 py-2">
-                                    {new Date(booking.dateTime).toLocaleDateString()}
-                                </td>
-                                <td className="border px-4 py-2">
-                                    ₹ {Number(booking.updatedTotalSalary).toFixed(2)}
-                                </td>
-                                <td className="border px-4 py-2">
-                                    ₹ {booking.amount}
-                                </td>                                <td className="border px-4 py-2">
-                                    <input
-                                        type="number"
-                                        value={booking.receivedAmount || ''}
-                                        onChange={(e) => handleAmountReceivedChange(booking.id, e.target.value)}
-                                        style={{
-                                            border: '1px solid #d1d5db',
-                                            borderRadius: '0.25rem',
-                                            padding: '0.25rem 0.5rem',
-                                        }}
-                                        disabled={booking.approved}
-                                    />
-                                </td>
-                               
-                                <td className="border px-4 py-2">
-                                    ₹ {calculateBalance(booking.amount, booking.receivedAmount || 0)}
-                                </td>
-                                <td className="border px-4 py-2">
-                                    <button
-                                        onClick={() => handleEditClick(booking)}
-                                        className={`text-blue-500 hover:text-blue-700 ${booking.approved ? 'cursor-not-allowed opacity-50' : ''}`}
-                                        disabled={booking.approved}
-                                    >
-                                        Edit
-                                    </button>
-                                    <button
-                                        onClick={() => handleInvoiceClick(booking)}
-                                        className={`text-green-500 hover:text-green-700 ${booking.approved ? 'cursor-not-allowed opacity-50' : ''}`}
-                                        disabled={booking.approved}
-                                    >
-                                        Invoice
-                                    </button>
-                                    <button
-                                        onClick={() => handleApproveClick(booking)}
-                                        className={`text-${booking.approved ? 'green-500' : 'red-500'} hover:text-${booking.approved ? 'green-700' : 'red-700'} ${booking.approved ? 'cursor-not-allowed' : ''}`}
-                                        disabled={booking.approved}
-                                    >
-                                        {booking.approved ? 'Approved' : 'Approve'}
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
+                    <tbody className="bg-white divide-y divide-gray-200">
+                        {sortedBookingsData.map((booking) => {
+                            const total = calculateTotal(booking.showroomAmount, parseFloat(booking.insuranceAmountBody));
+                            const balanceshowroom = calculateBalance(total, booking.receivedAmount);
+
+                            return (
+                                <tr key={booking.id}>
+                                   <td>
+                                <input
+                                    type="checkbox"
+                                    checked={selectedBookings.has(booking.id)}
+                                    onChange={() => {
+                                        const updatedSelection = new Set(selectedBookings);
+                                        if (updatedSelection.has(booking.id)) {
+                                            updatedSelection.delete(booking.id);
+                                        } else {
+                                            updatedSelection.add(booking.id);
+                                        }
+                                        setSelectedBookings(updatedSelection);
+                                    }}
+                                />
+                            </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDateTime(booking.createdAt)}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.fileNumber}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <input
+                                            type="number"
+                                            value={booking.showroomAmount || ''}
+                                            onChange={(e) => handleAmountChange(booking.id, 'showroomAmount', e.target.value)}
+                                            className="border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                            disabled={booking.approved}
+                                        />
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.insuranceAmountBody}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{total}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <input
+                                            type="number"
+                                            value={booking.receivedAmount || ''}
+                                            onChange={(e) => handleAmountChange(booking.id, 'receivedAmount', e.target.value)}
+                                            className="border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                            disabled={booking.approved}
+                                        />
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{balanceshowroom}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.approveStatus || 'Not Approved'}</td> {/* Update here */}
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <button
+                                            className={`px-2 py-1 rounded-md text-white ${booking.approved ? 'bg-green-500' : 'bg-red-500'}`}
+                                            onClick={() => handleApproveClick(booking)}
+                                            disabled={booking.approved}
+                                        >
+                                            {booking.approved ? 'Approved' : 'Approve'}
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
+                    
                 </table>
+                
             ) : (
-                <div className="text-center mt-4">No bookings found for this showroom.</div>
+                <div>No bookings found.</div>
             )}
-        </div>
+            
         </div>
     );
 };
