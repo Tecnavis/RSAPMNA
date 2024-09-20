@@ -135,6 +135,7 @@ const AddBook: React.FC = () => {
                 statusEdit:'withoutmapbooking',
                 bookingId: bookingId,
                 company: 'rsa',
+                createdBy:'showroomStaff',
             });
             console.log('Document added successfully with ID:', docRef.id);
 
