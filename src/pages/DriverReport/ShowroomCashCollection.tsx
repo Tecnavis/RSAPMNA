@@ -15,6 +15,7 @@ interface Booking {
     status: string;
     createdAt: Timestamp;
     fileNumber: string;
+    balanceshowroom: number;
 }
 
 const ShowroomCashCollection: React.FC = () => {
@@ -31,7 +32,7 @@ const ShowroomCashCollection: React.FC = () => {
     const [notification, setNotification] = useState<string | null>(null);
     const [selectedBookings, setSelectedBookings] = useState<Set<string>>(new Set());
     const location = useLocation();
-    const { showroomName } = location.state || {};  // Destructure showroomName from state
+    const { showroomName } = location.state || {}; // Destructure showroomName from state
 
     // Log the showroomName to the console
     useEffect(() => {
@@ -65,12 +66,11 @@ const ShowroomCashCollection: React.FC = () => {
         }
     }, [db, showroomId, uid]);
 
-   // Calculate total: Amount From Showroom + Insurance Amount
-const calculateTotal = (showroomAmount: number | undefined, insuranceAmountBody: string): number => {
-    const insuranceAmount = parseFloat(insuranceAmountBody) || 0; // Convert to number, fallback to 0
-    return (showroomAmount || 0) + insuranceAmount;
-};
-
+    // Calculate total: Amount From Showroom + Insurance Amount
+    const calculateTotal = (showroomAmount: number | undefined, insuranceAmountBody: string): number => {
+        const insuranceAmount = parseFloat(insuranceAmountBody) || 0; // Convert to number, fallback to 0
+        return (showroomAmount || 0) + insuranceAmount;
+    };
 
     // Calculate balance: Total - Received Amount
     const calculateBalance = (total: number, receivedAmount: number | undefined): number => {
@@ -102,7 +102,7 @@ const calculateTotal = (showroomAmount: number | undefined, insuranceAmountBody:
         // Calculate the updated fields to save in Firestore
         const updatedBooking = updatedBookings.find((booking) => booking.id === id);
         if (updatedBooking) {
-            const total = calculateTotal(updatedBooking.showroomAmount, parseFloat(updatedBooking.insuranceAmountBody));
+            const total = calculateTotal(updatedBooking.showroomAmount, updatedBooking.insuranceAmountBody);
             const balanceshowroom = calculateBalance(total, updatedBooking.receivedAmount);
 
             // Update Firestore with new values
@@ -112,22 +112,29 @@ const calculateTotal = (showroomAmount: number | undefined, insuranceAmountBody:
             });
         }
     };
-
-    const handleApproveClick = async (booking: Booking) => {
-        const total = calculateTotal(booking.showroomAmount, parseFloat(booking.insuranceAmountBody));
-        const balanceshowroom = calculateBalance(total, booking.receivedAmount);
+    const updateShowroomWholeBalance = async (wholeBalance: number) => {
+        try {
+            const showroomRef = doc(db, `user/${uid}/showroom`, showroomId);
+            await updateDoc(showroomRef, { wholeBalance });
+            console.log('Successfully updated wholeBalance:', wholeBalance);
+        } catch (error) {
+            console.error('Error updating showroom wholeBalance: ', error);
+        }
+    };
     
+    const handleApproveClick = async (booking: Booking) => {
+        const total = calculateTotal(booking.showroomAmount, booking.insuranceAmountBody);
+        const balanceshowroom = calculateBalance(total, booking.receivedAmount);
+
         if (balanceshowroom === 0) {
             // Prompt for password input
             const password = prompt('Please enter the password to approve the booking:');
-    
+
             // Check if password matches "RSA@123"
             if (password === 'RSA@123') {
-                const updatedBookings = bookings.map((b) =>
-                    b.id === booking.id ? { ...b, approved: true, approveStatus: 'Approved' } : b
-                );
+                const updatedBookings = bookings.map((b) => (b.id === booking.id ? { ...b, approved: true, approveStatus: 'Approved' } : b));
                 setBookings(updatedBookings);
-    
+
                 // Update Firestore for approval
                 await updateBookingInDB(booking.id, { approved: true, approveStatus: 'Approved' });
                 setNotification(null); // Clear notification
@@ -138,7 +145,7 @@ const calculateTotal = (showroomAmount: number | undefined, insuranceAmountBody:
             setNotification('Cannot approve booking: Balance is not zero');
         }
     };
-    
+
     const handleGenerateInvoices = () => {
         // Collect selected bookings
         const selected = bookings.filter((booking) => selectedBookings.has(booking.id));
@@ -205,7 +212,7 @@ const calculateTotal = (showroomAmount: number | undefined, insuranceAmountBody:
         });
         return { monthlyTotal, monthlyBalance };
     };
-    
+
     const calculateWholeTotals = () => {
         let wholeTotal = 0;
         let wholeBalance = 0;
@@ -215,9 +222,10 @@ const calculateTotal = (showroomAmount: number | undefined, insuranceAmountBody:
             wholeTotal += total;
             wholeBalance += balance;
         });
+        updateShowroomWholeBalance(wholeBalance);
+
         return { wholeTotal, wholeBalance };
     };
-    
 
     const { monthlyTotal, monthlyBalance } = calculateMonthlyTotals();
     const { wholeTotal, wholeBalance } = calculateWholeTotals();
@@ -256,10 +264,10 @@ const calculateTotal = (showroomAmount: number | undefined, insuranceAmountBody:
         }
     };
     return (
-<div className="w-full px-6 py-8 bg-gray-80 rounded-lg shadow-lg">
-<h2 className="text-3xl font-bold text-gray-800 mb-6">
-    Cash Collection Report of <span className="text-red-500">{showroomName}</span>
-</h2>
+        <div className="w-full px-6 py-8 bg-gray-80 rounded-lg shadow-lg">
+            <h2 className="text-3xl font-bold text-gray-800 mb-6">
+                 Report of <span className="text-red-500">{showroomName}</span>
+            </h2>
 
             {notification && <div className="mb-4 p-4 text-white bg-red-600 rounded-lg shadow-md">{notification}</div>}
             <div className="mb-6">
@@ -301,51 +309,44 @@ const calculateTotal = (showroomAmount: number | undefined, insuranceAmountBody:
                         ))}
                     </select>
                 </div>
-                
             </div>
-         {/* Conditionally render monthly totals only when a specific month is selected */}
-         {selectedMonth !== 'All' && (
-  <div className="mb-6 p-4 bg-white shadow-lg rounded-lg border border-gray-200">
-    <h3 className="text-2xl font-bold text-blue-600 mb-2">Monthly Totals</h3>
-    <div className="text-gray-700">
-      <p className="text-lg">
-        <span className="font-semibold">Monthly Total:</span> {monthlyTotal.toLocaleString()}
-      </p>
-      <p className="text-lg">
-        <span className="font-semibold">Balance Total:</span> {monthlyBalance.toLocaleString()}
-      </p>
-    </div>
-  </div>
-)}
+            {/* Conditionally render monthly totals only when a specific month is selected */}
+            {selectedMonth !== 'All' && (
+                <div className="mb-6 p-4 bg-white shadow-lg rounded-lg border border-gray-200">
+                    <h3 className="text-2xl font-bold text-blue-600 mb-2">Monthly Totals</h3>
+                    <div className="text-gray-700">
+                        <p className="text-lg">
+                            <span className="font-semibold">Monthly Total:</span> {monthlyTotal.toLocaleString()}
+                        </p>
+                        <p className="text-lg">
+                            <span className="font-semibold">Balance Total:</span> {monthlyBalance.toLocaleString()}
+                        </p>
+                    </div>
+                </div>
+            )}
 
-<div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-blue-100 shadow-lg rounded-lg border border-blue-200">
-  <h3 className="text-2xl font-bold text-blue-600 mb-2">Whole Totals</h3>
-  <div className="text-gray-700">
-    <p className="text-lg">
-      <span className="font-semibold">Total Amount From {showroomName}:</span> {wholeTotal.toLocaleString()}
-    </p>
-    <p className="text-lg">
-      <span className="font-semibold">Balance Amount:</span> {wholeBalance.toLocaleString()}
-    </p>
-  </div>
-</div>
+            <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-blue-100 shadow-lg rounded-lg border border-blue-200">
+                <h3 className="text-2xl font-bold text-blue-600 mb-2">Whole Totals</h3>
+                <div className="text-gray-700">
+                    <p className="text-lg">
+                        <span className="font-semibold">Total Amount From {showroomName}:</span> {wholeTotal.toLocaleString()}
+                    </p>
+                    <p className="text-lg">
+                        <span className="font-semibold">Balance Amount:</span> {wholeBalance.toLocaleString()}
+                    </p>
+                </div>
+            </div>
 
-
-       
-               {filteredBookings.length > 0 ? (
+            {filteredBookings.length > 0 ? (
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-100">
-                    <button
-    onClick={handleSelectAll}
-    className={`px-4 py-2 font-semibold text-white rounded-lg shadow-md transition-colors duration-300 ease-in-out
-               ${selectedBookings.size === bookings.length
-                   ? 'bg-red-500 hover:bg-red-600'
-                   : 'bg-blue-500 hover:bg-blue-600'
-               }`}
->
-    {selectedBookings.size === bookings.length ? 'Deselect All' : 'Select All'}
-</button>
-
+                        <button
+                            onClick={handleSelectAll}
+                            className={`px-4 py-2 font-semibold text-white rounded-lg shadow-md transition-colors duration-300 ease-in-out
+               ${selectedBookings.size === bookings.length ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}
+                        >
+                            {selectedBookings.size === bookings.length ? 'Deselect All' : 'Select All'}
+                        </button>
 
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Select</th>
@@ -363,26 +364,26 @@ const calculateTotal = (showroomAmount: number | undefined, insuranceAmountBody:
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {sortedBookingsData.map((booking) => {
-                            const total = calculateTotal(booking.showroomAmount, parseFloat(booking.insuranceAmountBody));
+                            const total = calculateTotal(booking.showroomAmount, booking.insuranceAmountBody);
                             const balanceshowroom = calculateBalance(total, booking.receivedAmount);
 
                             return (
                                 <tr key={booking.id}>
-                                   <td>
-                                <input
-                                    type="checkbox"
-                                    checked={selectedBookings.has(booking.id)}
-                                    onChange={() => {
-                                        const updatedSelection = new Set(selectedBookings);
-                                        if (updatedSelection.has(booking.id)) {
-                                            updatedSelection.delete(booking.id);
-                                        } else {
-                                            updatedSelection.add(booking.id);
-                                        }
-                                        setSelectedBookings(updatedSelection);
-                                    }}
-                                />
-                            </td>
+                                    <td>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedBookings.has(booking.id)}
+                                            onChange={() => {
+                                                const updatedSelection = new Set(selectedBookings);
+                                                if (updatedSelection.has(booking.id)) {
+                                                    updatedSelection.delete(booking.id);
+                                                } else {
+                                                    updatedSelection.add(booking.id);
+                                                }
+                                                setSelectedBookings(updatedSelection);
+                                            }}
+                                        />
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDateTime(booking.createdAt)}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.fileNumber}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -420,13 +421,10 @@ const calculateTotal = (showroomAmount: number | undefined, insuranceAmountBody:
                             );
                         })}
                     </tbody>
-                    
                 </table>
-                
             ) : (
                 <div>No bookings found.</div>
             )}
-            
         </div>
     );
 };
