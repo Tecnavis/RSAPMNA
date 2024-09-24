@@ -108,9 +108,12 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [pickupLocation, setPickupLocation] = useState<{ lat: string; lng: string; name: string }>({ lat: '', lng: '', name: '' });
     const [availableServices, setAvailableServices] = useState<string>('');
     const [dropoffLocation, setDropoffLocation] = useState<{ lat: string; lng: string; name: string } | null>(null);
-    // const [baseLocation, setBaseLocation] = useState(null);
+// -------------------------------------------------------
+const [deliveryDateTime, setDeliveryDateTime] = useState<string>('');
+
     const [baseLocation, setBaseLocation] = useState<{ lat: string; lng: string; name: string } | null>(null);
     const [selectedCompanyData, setSelectedCompanyData] = useState<any>(null);
+
 
     const [trappedLocation, setTrappedLocation] = useState<string>('');
     const [totalSalary, setTotalSalary] = useState<number>(0);
@@ -335,13 +338,15 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         // You may choose to set a default or empty location here
                         setDropoffLocation({
                             name: selectedShowroom.value || '',
+
                             lat: '',
                             lng: '',
                         });
                     }
                 } else {
-                    // setInsuranceAmountBody('');
+
                     setInsuranceAmountBody('' || 0);
+
                     setDropoffLocation({
                         name: '',
                         lat: '',
@@ -467,6 +472,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 }
                 break;
 
+
             case 'company':
                 setCompany(value);
                 if (value === 'rsa') {
@@ -550,6 +556,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
 
     const openModal = (distance: any) => {
+
         setIsModalOpen(true);
     };
     const closeModal = () => {
@@ -640,45 +647,131 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
 
         return () => unsubscribe();
     }, []);
+
     useEffect(() => {
         const fetchDrivers = async () => {
-            if (!serviceType || !serviceDetails) {
-                setDrivers([]);
-                return;
-            }
-
-            try {
-                const driversCollection = collection(db, `user/${uid}/driver`);
-                const snapshot = await getDocs(driversCollection);
-
-                const filteredDrivers = snapshot.docs
-                    .map((doc) => {
-                        const driverData = doc.data();
-                        // Check if selectedServices is defined and if it includes the serviceType
-                        if (!driverData.selectedServices || !driverData.selectedServices.includes(serviceType) || driverData.status === 'deleted from UI') {
-                            return null;
-                        }
-
-                        return {
-                            id: doc.id,
-                            ...driverData,
-                        };
-                    })
-                    .filter(Boolean); // Remove null entries
-
-                setDrivers(filteredDrivers);
-            } catch (error) {
-                console.error('Error fetching drivers:', error);
-            }
-        };
-
-        if (serviceType && serviceDetails) {
-            fetchDrivers().catch(console.error);
-        } else {
+          if (!serviceType || !serviceDetails || !pickupLocation) {
+            console.log("Missing criteria: serviceType, serviceDetails, or pickupLocation");
             setDrivers([]);
-        }
-    }, [db, uid, serviceType, serviceDetails]);
+            return;
+          }
+      
+          try {
+            console.log("Fetching drivers...");
+            const driversCollection = collection(db, `user/${uid}/driver`);
+            const snapshot = await getDocs(driversCollection);
+      
+            console.log("Snapshot received:", snapshot.docs.length, "documents found");
+      
+            const filteredDrivers = await Promise.all(
+              snapshot.docs.map(async (doc) => {
+                const driverData = doc.data();
+                const { currentLocation, selectedServices, status } = driverData;
+      
+                // Log current driver data
+                console.log(`Processing driver ${doc.id}`, driverData);
+      
+                // Filter out drivers that don't match the criteria
+                if (!selectedServices || !selectedServices.includes(serviceType) || status === 'deleted from UI') {
+                  console.log(`Driver ${doc.id} filtered out: No matching service or deleted`);
+                  return null;
+                }
+      
+                const currentLat = currentLocation?.latitude ?? null;
+                const currentLng = currentLocation?.longitude ?? null;
+      
+                // Log the current driver's location
+                console.log(`Driver ${doc.id} location:`, { currentLat, currentLng });
+      
+                if (typeof currentLat === 'number' && typeof currentLng === 'number' &&
+                    pickupLocation.lat && pickupLocation.lng) {
+                  console.log(`Valid location data for driver ${doc.id}. Proceeding with distance calculation.`);
+                } else {
+                  console.error(`Invalid location data for driver ${doc.id}:`, { currentLat, currentLng });
+                  return null; // Skip this driver
+                }
+      
+                try {
+                  // Log the API request details
+                  console.log(`Requesting distance for driver ${doc.id}`, {
+                    origin: `${currentLat},${currentLng}`,
+                    destination: `${pickupLocation.lat},${pickupLocation.lng}`,
+                    apiKey: import.meta.env.VITE_REACT_APP_API_KEY,
+                  });
+      
+                  const response = await axios.post(
+                    'https://api.olamaps.io/routing/v1/directions',
+                    null,
+                    {
+                      params: {
+                        origin: `${currentLat},${currentLng}`,
+                        destination: `${pickupLocation.lat},${pickupLocation.lng}`,
+                        api_key: import.meta.env.VITE_REACT_APP_API_KEY,
+                      },
+                      headers: {
+                        'X-Request-Id': `${doc.id}-${Date.now()}`,
+                      },
+                    }
+                  );
+      
+                 // Log the API response to inspect the structure
+console.log(`API Response for driver ${doc.id}:`, response.data);
 
+const routes = response.data.routes;
+let distance = 'Distance not available';
+
+if (routes?.length > 0) {
+    console.log(`Routes for driver ${doc.id}:`, routes); // Log routes to inspect its structure
+  
+    if (routes[0]?.legs?.length > 0 && routes[0].legs[0]?.readable_distance) {
+      distance = routes[0].legs[0].readable_distance; // Use readable_distance
+      console.log(`Driver ${doc.id} pickup distance: ${distance}`);
+    } else {
+      console.error(`No valid leg data found in the response for driver ${doc.id}`);
+    }
+  } else {
+    console.error(`No valid routes found in the response for driver ${doc.id}`);
+  }
+  
+
+
+      
+                  return {
+                    id: doc.id,
+                    ...driverData,
+                    currentLocation: { lat: currentLat, lng: currentLng },
+                    pickupDistance: distance, // Store the calculated distance
+                  };
+                } catch (error) {
+                  // Handle any errors in fetching the distance
+                  console.error(`Error fetching distance for driver ${doc.id}:`, error);
+                  return {
+                    id: doc.id,
+                    ...driverData,
+                    currentLocation: { lat: currentLat, lng: currentLng },
+                    pickupDistance: 'Error fetching distance',
+                  };
+                }
+              })
+            );
+      
+            console.log("Filtered drivers list:", filteredDrivers);
+            setDrivers(filteredDrivers.filter(Boolean)); // Remove null entries
+          } catch (error) {
+            // Log any errors that occur while fetching drivers
+            console.error('Error fetching drivers:', error);
+          }
+        };
+      
+        if (serviceType && serviceDetails && pickupLocation) {
+          console.log("Criteria met: Fetching drivers");
+          fetchDrivers().catch(console.error); // Initiate fetching drivers if all criteria are met
+        } else {
+          console.log("Criteria not met: Resetting drivers list");
+          setDrivers([]); // Reset the drivers list if necessary criteria are missing
+        }
+      }, [db, uid, serviceType, serviceDetails, pickupLocation]);
+      
     useEffect(() => {
         const fetchServiceDetails = async () => {
             if (!serviceType) {
@@ -775,6 +868,55 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             });
         }
     }, [drivers, serviceDetails, distance, selectedCompanyData, calculateTotalSalary]);
+
+    // useEffect(() => {
+    //     if (drivers.length > 0) {
+    //         // Calculate total salaries for each driver
+    //         const totalSalaries = drivers.map((driver) => {
+    //             const isRSA = driver.companyName === 'RSA';
+
+    //             // Declare variables
+    //             let salary: number;
+    //             let basicSalaryKM: number;
+    //             let salaryPerKM: number;
+
+    //             if (isRSA && selectedCompanyData) {
+    //                 // Ensure the necessary properties exist
+    //                 if (selectedCompanyData.basicSalaries && selectedCompanyData.selectedServices && selectedCompanyData.basicSalaryKm && selectedCompanyData.salaryPerKm) {
+    //                     salary = selectedCompanyData.basicSalaries[selectedCompanyData.selectedServices[0]];
+    //                     basicSalaryKM = selectedCompanyData.basicSalaryKm[selectedCompanyData.selectedServices[0]];
+    //                     salaryPerKM = selectedCompanyData.salaryPerKm[selectedCompanyData.selectedServices[0]];
+    //                 } else {
+    //                     console.error('Missing properties in selectedCompanyData for RSA');
+    //                 }
+    //             } else {
+    //                 // Fallback for non-RSA or when selectedCompanyData is not available
+    //                 salary = !isRSA ? driver.basicSalaries[driver.selectedServices[0]] : serviceDetails.salary;
+    //                 basicSalaryKM = !isRSA ? driver.basicSalaryKm[driver.selectedServices[0]] : serviceDetails.basicSalaryKM;
+    //                 salaryPerKM = !isRSA ? driver.salaryPerKm[driver.selectedServices[0]] : serviceDetails.salaryPerKM;
+    //             }
+
+    //             // Check if calculateTotalSalary is available and log its inputs
+    //             if (calculateTotalSalary) {
+    //                 console.log(`Calculating total salary for driver ${driver.id} with values:`, {
+    //                     salary,
+    //                     distance,
+    //                     basicSalaryKM,
+    //                     salaryPerKM,
+    //                     isRSA,
+    //                 });
+
+    //                 const calculatedSalary = calculateTotalSalary(salary, distance, basicSalaryKM, salaryPerKM, isRSA);
+
+    //                 console.log(`Driver ${driver.id} - Calculated Salary: ${calculatedSalary}`);
+    //                 return calculatedSalary;
+    //             } else {
+    //                 console.error('calculateTotalSalary function is not available');
+    //                 return 0;
+    //             }
+    //         });
+    //     }
+    // }, [drivers, serviceDetails, distance, selectedCompanyData, calculateTotalSalary]);
 
     // --------------------------------------------------------------------------------
 
@@ -1015,12 +1157,14 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     //         }
     //     }
     // };
+// ----------------------------------
     const addOrUpdateItem = async (): Promise<void> => {
         if (validateForm()) {
             try {
                 const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
                 const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
                 const fcmToken = selectedDriverData ? selectedDriverData.fcmToken : null;
+                const pickupDistance = selectedDriverData ? selectedDriverData.pickupDistance || 0 : 0;
 
                 const currentDate = new Date();
                 const dateTime = formatDate(currentDate);
@@ -1032,6 +1176,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 } else if (company === 'rsa') {
                     finalFileNumber = fileNumber;
                 }
+
+                
                 const formattedPickupLocation = {
                     name: pickupLocation?.name || '',
                     lat: pickupLocation?.lat?.toString() || '',
@@ -1045,9 +1191,13 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     pickupLocation: formattedPickupLocation,
                     dropoffLocation: dropoffLocation || {},
                     status: 'booking added',
+
                     dateTime: dateTime,
                     bookingId: `${bookingId}`,
                     createdAt: serverTimestamp(),
+
+                    deliveryDateTime: deliveryDateTime || null,              
+
                     comments: comments || '',
                     distance: distance || '',
                     baseLocation: baseLocation || '',
@@ -1078,40 +1228,55 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     updatedTotalSalary: updatedTotalSalary || 0,
                     insuranceAmountBody: insuranceAmountBody || '',
                     paymentStatus: 'Not Paid',
+                    pickupDistance: pickupDistance,
                 };
 
-                if (editData) {
-                    if (role === 'admin') {
-                        bookingData.newStatus = `Edited by ${role}`;
-                    } else if (role === 'staff') {
-                        bookingData.newStatus = `Edited by ${role} ${userName}`;
-                    }
-                    bookingData.editedTime = formatDate(new Date());
+                   if (editData) {
+                if (role === 'admin') {
+                    bookingData.newStatus = `Edited by ${role}`;
+                } else if (role === 'staff') {
+                    bookingData.newStatus = `Edited by ${role} ${userName}`;
                 }
-
-                console.log('Data to be added/updated:', bookingData);
-
-                if (editData) {
-                    const docRef = doc(db, `user/${uid}/bookings`, editData.id);
-                    await updateDoc(docRef, bookingData);
-                    console.log('Document updated');
-                } else {
-                    const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
-                    console.log('Document written with ID: ', docRef.id);
-                }
-
-                if (selectedDriver === 'dummy') {
-                    await sendNotificationsToAllDrivers();
-                } else if (fcmToken) {
-                    await sendPushNotification(fcmToken, 'Booking Notification', 'Your booking has been updated', 'alert_notification');
-                }
-                navigate('/bookings/newbooking');
-            } catch (error) {
-                console.error('Error adding/updating item:', error);
+                bookingData.editedTime = formatDate(new Date());
             }
+            console.log('Data to be added/updated:', bookingData);
+
+            if (editData) {
+                const docRef = doc(db, `user/${uid}/bookings`, editData.id);
+                await updateDoc(docRef, bookingData);
+                console.log('Document updated');
+            } else {
+                const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
+                console.log('Document written with ID: ', docRef.id);
+            }
+
+            // Check if the dummy driver is selected
+            if (selectedDriver === 'dummy') {
+                await sendNotificationsToAllDrivers();
+            } else if (fcmToken) {
+                await sendPushNotification(fcmToken, 'Booking Notification', 'Your booking has been updated', 'alert_notification');
+            }
+
+            // Schedule notification only if deliveryDateTime is provided
+            if (deliveryDateTime) {
+                const deliveryDate = new Date(deliveryDateTime);
+                const timeToNotify = deliveryDate.getTime() - currentDate.getTime();
+
+                if (timeToNotify > 0) {
+                    // Schedule the notification
+                    setTimeout(async () => {
+                        await sendPushNotification(fcmToken, 'Delivery Reminder', `Your booking is scheduled for delivery on ${formatDate(deliveryDate)}`, 'alert_notification');
+                    }, timeToNotify);
+                }
+            }
+
+            navigate('/bookings/newbooking');
+        } catch (error) {
+            console.error('Error adding/updating item:', error);
         }
     };
     const handleButtonClick = (event: any) => {
+
         event.preventDefault();
         setShowShowroomModal(true);
     };
@@ -1121,6 +1286,17 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             <div className={styles.dateTime}>{currentDateTime}</div>
             <h2 className={styles.formHeading}>BOOK WITHOUT MAP</h2>
             <form className={styles.bookingForm}>
+            <div className="mb-4">
+        <label htmlFor="deliveryDateTime" className={`${styles.label} block mb-2`}>
+        Delivery Date & Time <span className="text-gray-400">(optional)</span>
+        </label>
+        <input
+            type="datetime-local"
+            value={deliveryDateTime}
+            onChange={(e) => setDeliveryDateTime(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+    </div>
                 <div className={styles.formGroup}>
                     <label htmlFor="company" className={styles.label}>
                         Company
@@ -1263,6 +1439,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                 getOptionLabel={(option) => (option.value === 'lifting' ? <span style={{ color: 'red', fontSize: '20px', fontWeight: 'bold' }}>{option.label}</span> : option.label)}
                                 styles={{
                                     option: (provided: any, state: any) => ({
+
                                         ...provided,
                                         color: state.data.value === 'lifting' ? 'red' : provided.color,
                                         fontSize: state.data.value === 'lifting' ? '20px' : provided.fontSize,
@@ -1491,6 +1668,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                         <thead>
                                             <tr>
                                                 <th className="py-2 px-4 text-left">Driver Name</th>
+                                                <th className="py-2 px-4 text-left">Pickup Distance</th>
+
                                                 <th className="py-2 px-4 text-left">Payable Amount</th>
                                                 <th className="py-2 px-4 text-left font-bold text-red-600">Profit after Deducting Expenses</th>
                                                 <th className="py-2 px-4 text-left">Select</th>
@@ -1502,6 +1681,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                                     DummyDriver
                                                 </td>
                                                 <td className="py-2 px-4">0.00</td>
+                                                <td className="py-2 px-4">0.00</td>
+
                                                 <td className="py-2 px-4 text-red-600">0.00</td>
                                                 <td className="py-2 px-4">
                                                     <input
@@ -1557,6 +1738,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                                     <thead>
                                                         <tr>
                                                             <th className="py-2 px-4 text-left">Driver Name</th>
+                                                            <th className="py-2 px-4 text-left">Pickup Distance</th>
+
                                                             <th className="py-2 px-4 text-left">Payable Amount</th>
                                                             <th className="py-2 px-4 text-left font-bold text-red-600">Profit after Deducting Expenses</th>
                                                             <th className="py-2 px-4 text-left">Select</th>
@@ -1567,7 +1750,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                                             <td className="py-2 px-4 font-semibold" style={{ color: isRSA ? 'green' : 'red', fontSize: '18px' }}>
                                                                 {driver.driverName || 'Unknown Driver'}
                                                             </td>
-
+                                                            <td className="py-2 px-4">{driver.pickupDistance}</td> {/* Display the pickup distance here */}
                                                             <td className="py-2 px-4">{calculatedSalary.toFixed(2)}</td>
                                                             <td className="py-2 px-4 text-red-600 font-semibold" style={{ backgroundColor: '#ffe6e6' }}>
                                                                 {profit.toFixed(2)}
