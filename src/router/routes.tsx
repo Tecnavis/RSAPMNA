@@ -50,6 +50,7 @@ import AddBook from '../pages/ShowRooms/AddBook';
 import ShowroomReports from '../pages/DriverReport/ShowroomReports';
 import ShowroomCashCollection from '../pages/DriverReport/ShowroomCashCollection';
 import SelectiveShowroomInvoice from '../pages/DriverReport/SelectiveShowroomInvoice';
+import SelectiveReportInvoice from '../pages/DriverReport/SelectiveReportInvoice';
 
 
 
@@ -599,6 +600,11 @@ const routes = [
         path: '/driverreport',
         element: <DriverReport />,
     },
+    {
+        path: '/users/driver/driverdetails/cashcollection/selectiveReportInvoice',
+        element: <SelectiveReportInvoice />,
+    },
+    
     {
         path: '/showroomreport',
         element: <ShowroomReports />,
