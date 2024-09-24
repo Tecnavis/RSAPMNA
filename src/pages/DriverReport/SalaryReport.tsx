@@ -14,7 +14,7 @@ interface Booking {
     transferedSalary?: number;
     balanceSalary: number;
     selectedDriver?: string;
-    advancePayment?: number; // New property
+    advance?: number; // New property
     advancePaymentDate?: string; 
 }
 
@@ -44,7 +44,7 @@ const SalaryReport: React.FC = () => {
         totalDriverSalary: 0,
         transferedSalary: 0,
         balanceSalary: 0,
-        advancePayment: 0, // New field
+        advance: 0, // New field
     advancePaymentDate: '',
     });
     const db = getFirestore();
@@ -155,7 +155,7 @@ const SalaryReport: React.FC = () => {
                 totalDriverSalary: bookingToEdit.totalDriverSalary,
                 transferedSalary: bookingToEdit.transferedSalary || 0,
                 balanceSalary: bookingToEdit.balanceSalary,
-                advancePayment: bookingToEdit.advancePayment || 0, // Ensure it's initialized
+                advance: bookingToEdit.advance || 0, // Ensure it's initialized
                 advancePaymentDate: bookingToEdit.advancePaymentDate || '', // Ensure it's initialized
             });
         }
@@ -247,14 +247,14 @@ const SalaryReport: React.FC = () => {
             totalDriverSalary: 0,
             transferedSalary: 0,
             balanceSalary: 0,
-            advancePayment: 0,  // Reset to 0
+            advance: 0,  // Reset to 0
             advancePaymentDate: '', 
         });
     };
 
     const handleSaveEdit = async () => {
         try {
-            const { fileNumber, dateTime, serviceType, serviceVehicle, totalDriverSalary, transferedSalary, advancePayment, advancePaymentDate } = editFormData;
+            const { fileNumber, dateTime, serviceType, serviceVehicle, totalDriverSalary, transferedSalary, advance, advancePaymentDate } = editFormData;
             const bookingRef = doc(db, `user/${uid}/bookings`, editingBookingId);
    
             await updateDoc(bookingRef, {
@@ -265,7 +265,7 @@ const SalaryReport: React.FC = () => {
                 totalDriverSalary,
                 transferedSalary,
                 balanceSalary: totalDriverSalary - transferedSalary,
-                advancePayment, // Update advance payment
+                advance, // Update advance payment
                 advancePaymentDate, // Update advance payment date
             });
    
@@ -273,7 +273,7 @@ const SalaryReport: React.FC = () => {
             setBookings((prevBookings) =>
                 prevBookings.map((booking) =>
                     booking.id === editingBookingId
-                        ? { ...booking, fileNumber, dateTime, serviceType, serviceVehicle, totalDriverSalary, transferedSalary, balanceSalary: totalDriverSalary - transferedSalary, advancePayment, advancePaymentDate }
+                        ? { ...booking, fileNumber, dateTime, serviceType, serviceVehicle, totalDriverSalary, transferedSalary, balanceSalary: totalDriverSalary - transferedSalary, advance, advancePaymentDate }
                         : booking
                 )
             );
@@ -287,7 +287,7 @@ const SalaryReport: React.FC = () => {
                 totalDriverSalary: 0,
                 transferedSalary: 0,
                 balanceSalary: 0,
-                advancePayment: 0,
+                advance: 0,
                 advancePaymentDate: '',
             });
         } catch (error) {
@@ -295,12 +295,12 @@ const SalaryReport: React.FC = () => {
         }
     };
     const handleAdjustWithSalary = async () => {
-        if (!driver || editFormData.advancePayment <= 0) {
+        if (!driver || editFormData.advance <= 0) {
             alert("No advance payment available to adjust.");
             return;
         }
     
-        let remainingAdvance = editFormData.advancePayment; // Start with the total advance payment
+        let remainingAdvance = editFormData.advance; // Start with the total advance payment
     
         // Clone the bookings and sort by earliest date (assuming `dateTime` is a string representing a date)
         const sortedBookings = [...filteredBookings]
@@ -343,16 +343,16 @@ const SalaryReport: React.FC = () => {
         }
     
         // Update the driver document with the remaining advance
-        if (remainingAdvance !== editFormData.advancePayment) {
+        if (remainingAdvance !== editFormData.advance) {
             const driverRef = doc(db, `user/${uid}/driver`, id);
             await updateDoc(driverRef, {
-                advancePayment: remainingAdvance,
+                advance: remainingAdvance,
             });
     
             // Update driver state locally
             setDriver((prevDriver) => ({
                 ...prevDriver,
-                advancePayment: remainingAdvance,
+                advance: remainingAdvance,
             }));
         }
     
@@ -394,8 +394,8 @@ const SalaryReport: React.FC = () => {
     <label style={{ marginRight: '10px', fontWeight: 'bold', width: '150px' }}>Advance Payment:</label>
     <input
         type="number"
-        value={editFormData.advancePayment}
-        onChange={(e) => setEditFormData({ ...editFormData, advancePayment: Number(e.target.value) })}
+        value={editFormData.advance}
+        onChange={(e) => setEditFormData({ ...editFormData, advance: Number(e.target.value) })}
         style={{ padding: '5px', borderRadius: '4px', border: '1px solid #ccc', width: '200px' }}
     />
 </div>
@@ -426,9 +426,9 @@ const SalaryReport: React.FC = () => {
  {showAdvanceDetails && (
                 <div className="mb-4 p-4 bg-gray-100 rounded-md">
                     <h2 className="text-xl font-bold mb-2">Advance Payment Details</h2>
-                    {bookings.filter((booking) => booking.advancePayment > 0).map((booking) => (
+                    {bookings.filter((booking) => booking.advance > 0).map((booking) => (
                         <div key={booking.id} className="mb-2">
-                            <p>Advance Payment: {advancePayment}</p>
+                            <p>Advance Payment: {advance}</p>
                             <p>Advance Payment Date: {booking.advancePaymentDate}</p>
                         </div>
                     ))}
