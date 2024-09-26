@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { addDoc, collection, getFirestore, getDocs, doc, updateDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import './ShowRoom.css';
-import  { ChangeEvent, FormEvent } from 'react';
+import { ChangeEvent, FormEvent } from 'react';
 
 import IconPrinter from '../../components/Icon/IconPrinter';
 import 'react-toastify/dist/ReactToastify.css';
@@ -15,10 +15,7 @@ import ConfirmationModal from '../../pages/Users/ConfirmationModal/ConfirmationM
 import QRCode from 'qrcode.react';
 import IconMapPin from '../../components/Icon/IconMapPin';
 
-
-
 interface ShowRoomType {
-    
     img: string;
     ShowRoom: string;
     description: string;
@@ -67,9 +64,20 @@ const style = {
 };
 
 const keralaDistricts = [
-    'Alappuzha', 'Ernakulam', 'Idukki', 'Kannur', 'Kasaragod', 'Kollam', 'Kottayam', 
-    'Kozhikode', 'Malappuram', 'Palakkad', 'Pathanamthitta', 'Thiruvananthapuram', 
-    'Thrissur', 'Wayanad',
+    'Alappuzha',
+    'Ernakulam',
+    'Idukki',
+    'Kannur',
+    'Kasaragod',
+    'Kollam',
+    'Kottayam',
+    'Kozhikode',
+    'Malappuram',
+    'Palakkad',
+    'Pathanamthitta',
+    'Thiruvananthapuram',
+    'Thrissur',
+    'Wayanad',
 ];
 
 const ShowRoom: React.FC = () => {
@@ -119,7 +127,7 @@ const ShowRoom: React.FC = () => {
         const filtered = existingShowRooms.filter((record) => {
             // Helper function to safely convert values to lower case
             const toLower = (value: string | undefined) => (value || '').toLowerCase();
-    
+
             return (
                 toLower(record.availableServices?.join(', '))?.includes(term) ||
                 toLower(record.hasInsurance)?.includes(term) ||
@@ -141,23 +149,22 @@ const ShowRoom: React.FC = () => {
         });
         setFilteredRecords(filtered);
     }, [searchTerm, existingShowRooms]);
-    
 
     const handleChange = (e: React.ChangeEvent<any>) => {
         const { name, value } = e.target;
         setShowRoom({ ...showRoom, [name]: value });
     };
-    
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setShowRoom({ ...showRoom, [name]: value });
     };
-    
+
     const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setShowRoom({ ...showRoom, [name]: value });
     };
-    
+
     const handleBodyChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setShowRoom({ ...showRoom, [name]: value });
@@ -201,7 +208,7 @@ const ShowRoom: React.FC = () => {
 
         setShowRoom({ ...showRoom, img: downloadURL });
     };
-// ------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -221,8 +228,8 @@ const ShowRoom: React.FC = () => {
             createdAt: timestamp,
             status: 'admin added showroom',
             showroomLink: generatedLink || '',
- qrCode: qrCodeBase64,
-             Location: `${showRoom.Location}, ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`,
+            qrCode: qrCodeBase64,
+            Location: `${showRoom.Location}, ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`,
         };
 
         try {
@@ -272,10 +279,10 @@ const ShowRoom: React.FC = () => {
             querySnapshot.forEach((doc) => {
                 showRoomsData.push({
                     id: doc.id,
-                    ...doc.data() as ShowRoomType, // Ensure 'id' is included
+                    ...(doc.data() as ShowRoomType), // Ensure 'id' is included
                 });
             });
-            
+
             setExistingShowRooms(showRoomsData);
         } catch (error) {
             console.error('Error fetching showrooms:', error);
@@ -302,9 +309,7 @@ const ShowRoom: React.FC = () => {
             setEditRoomId(currentRoomId);
             formRef.current?.scrollIntoView({ behavior: 'smooth' });
         } else {
-            setExistingShowRooms((prevShowRooms) =>
-                prevShowRooms.filter((room) => room.id !== currentRoomId)
-            );
+            setExistingShowRooms((prevShowRooms) => prevShowRooms.filter((room) => room.id !== currentRoomId));
             toast.success('Showroom removed successfully!', { autoClose: 3000 });
         }
         setIsModalVisible(false);
@@ -391,11 +396,11 @@ const ShowRoom: React.FC = () => {
         }
         setBaseOptions([]);
     };
-    
+
     const handleManualInputChange = (event: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = event.target;
         const numericValue = parseFloat(value); // Convert string to number
-    
+
         if (name === 'manualLocationName') {
             setManualLocationName(value);
             setShowRoom((prevShowRoom) => ({
@@ -416,13 +421,13 @@ const ShowRoom: React.FC = () => {
             }));
         }
     };
-    
+
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
 
     const generateShowRoomLink = () => {
-        const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`; // Your actual base URL
-        // const baseUrl = `http://localhost:5175/showrooms/showroom/showroomDetails`; // Your actual base URL
+        // const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`; // Your actual base URL
+        const baseUrl = `http://localhost:5175/showrooms/showroom/showroomDetails`; // Your actual base URL
         const uid = sessionStorage.getItem('uid') || '';
 
         const queryParams = new URLSearchParams({
@@ -440,7 +445,6 @@ const ShowRoom: React.FC = () => {
         const link = `${baseUrl}?${queryParams}`;
         setGeneratedLink(link);
     };
-
 
     return (
         <div className="mb-5">
@@ -545,7 +549,7 @@ const ShowRoom: React.FC = () => {
                                     {room.ShowRoom.toUpperCase()}
                                 </td>
                                 <td className="tableCell" data-label="Showroom Id">
-                                {room.showroomId}
+                                    {room.showroomId}
                                 </td>
                                 <td className="tableCell" data-label="Location">
                                     {room.Location}
@@ -575,13 +579,9 @@ const ShowRoom: React.FC = () => {
                                     {room.showroomLink}
                                 </td> */}
                                 <td className="tableCell" data-label="QR">
-                                {room.showroomLink ? (
-                            <QRCode value={room.showroomLink} size={64} />
-                        ) : (
-                            <p>No QR Available</p>
-                        )}
-</td>                      
-                                
+                                    {room.showroomLink ? <QRCode value={room.showroomLink} size={64} /> : <p>No QR Available</p>}
+                                </td>
+
                                 <td className="tableCell" data-label="Available Services">
                                     {room.availableServices}
                                 </td>
@@ -616,7 +616,7 @@ const ShowRoom: React.FC = () => {
                 </table>
             </div>
 
-            <Modal open={open} onClose={handleClose}  aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
+            <Modal open={open} onClose={handleClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
                 <Box sx={style}>
                     <form onSubmit={handleSubmit} ref={formRef} style={{ maxWidth: '400px', margin: '0 auto', padding: '20px', borderRadius: '5px' }}>
                         <div className="mb-2" style={{ alignItems: 'center', border: '1px solid #ccc', padding: '10px', borderRadius: '5px', backgroundColor: '#f9f9f9' }}>
@@ -782,73 +782,47 @@ const ShowRoom: React.FC = () => {
                                 Description
                             </label>
                             <textarea
-    name="description"
-    value={showRoom.description}
-    onChange={handleTextareaChange}
-    className="form-textarea w-full"
-    required
-    style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em', minHeight: '100px' }}
-/>
-
+                                name="description"
+                                value={showRoom.description}
+                                onChange={handleTextareaChange}
+                                className="form-textarea w-full"
+                                required
+                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em', minHeight: '100px' }}
+                            />
                         </div>
                         <div className="mb-4" style={{ marginBottom: '16px' }}>
-            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                Location
-            </label>
-            <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" width="100%" sx={{ gap: 2 }}>
-                <Autocomplete
-                    style={{ width: '100%', backgroundColor: 'white' }}
-                    value={baseLocation}
-                    onInputChange={(event, newInputValue) => {
-                        if (newInputValue) {
-                            getAutocompleteResults(newInputValue, setBaseOptions);
-                        } else {
-                            setBaseOptions([]);
-                        }
-                    }}
-                    onChange={handleLocationChange}
-                    sx={{ width: 300 }}
-                    options={baseOptions}
-                    getOptionLabel={(option) => option.label}
-                    isOptionEqualToValue={(option, value) => option.label === value.label}
-                    renderInput={(params) => <TextField {...params} label="Location" variant="outlined" />}
-                />
-                <TextField
-                    label="Manual Location Name"
-                    name="manualLocationName"
-                    value={manualLocationName}
-                    onChange={handleManualInputChange}
-                    fullWidth
-                    variant="outlined"
-                />
-                   <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(manualLocationName)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-        >
-            <IconMapPin />
-        </a>
-                <TextField
-                    label="Latitude"
-                    name="manualLat"
-                    value={manualLat}
-                    onChange={handleManualInputChange}
-                    fullWidth
-                    variant="outlined"
-                />
-                <TextField
-                    label="Longitude"
-                    name="manualLng"
-                    value={manualLng}
-                    onChange={handleManualInputChange}
-                    fullWidth
-                    variant="outlined"
-                />
-                {showRoom.locationLatLng.lat && showRoom.locationLatLng.lng && (
-                    <Typography>{`Location Lat/Lng: ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`}</Typography>
-                )}
-            </Box>
-        </div>
+                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+                                Location
+                            </label>
+                            <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" width="100%" sx={{ gap: 2 }}>
+                                <Autocomplete
+                                    style={{ width: '100%', backgroundColor: 'white' }}
+                                    value={baseLocation}
+                                    onInputChange={(event, newInputValue) => {
+                                        if (newInputValue) {
+                                            getAutocompleteResults(newInputValue, setBaseOptions);
+                                        } else {
+                                            setBaseOptions([]);
+                                        }
+                                    }}
+                                    onChange={handleLocationChange}
+                                    sx={{ width: 300 }}
+                                    options={baseOptions}
+                                    getOptionLabel={(option) => option.label}
+                                    isOptionEqualToValue={(option, value) => option.label === value.label}
+                                    renderInput={(params) => <TextField {...params} label="Location" variant="outlined" />}
+                                />
+                                <TextField label="Manual Location Name" name="manualLocationName" value={manualLocationName} onChange={handleManualInputChange} fullWidth variant="outlined" />
+                                <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(manualLocationName)}`} target="_blank" rel="noopener noreferrer">
+                                    <IconMapPin />
+                                </a>
+                                <TextField label="Latitude" name="manualLat" value={manualLat} onChange={handleManualInputChange} fullWidth variant="outlined" />
+                                <TextField label="Longitude" name="manualLng" value={manualLng} onChange={handleManualInputChange} fullWidth variant="outlined" />
+                                {showRoom.locationLatLng.lat && showRoom.locationLatLng.lng && (
+                                    <Typography>{`Location Lat/Lng: ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`}</Typography>
+                                )}
+                            </Box>
+                        </div>
 
                         <div className="mb-4" style={{ marginBottom: '16px' }}>
                             <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
@@ -971,34 +945,31 @@ const ShowRoom: React.FC = () => {
                                 style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
                             />
                         </div>
-
-                       
-                      {/* Display the generated link */}
-                      {generatedLink && (
-                <div ref={qrRef}>
-                    <p>Scan the QR code below to view the showroom details:</p>
-                    <QRCode value={generatedLink} size={256} />
-                    <p>{generatedLink}</p>
-                </div>
-            )}
-                    <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
-                    <Button
-                        onClick={generateShowRoomLink}
-                        variant="contained"
-                        color="primary"
-                        style={{
-                            width: '100%',
-                            padding: '12px',
-                            fontSize: '1em',
-                            fontWeight: 'bold',
-                            textTransform: 'uppercase',
-                        }}
-                    >
-                        Generate Showroom Link
-                    </Button>
-                </div>
-                
-                <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
+                        {/* Display the generated link */}
+                        {generatedLink && (
+                            <div ref={qrRef}>
+                                <p>Scan the QR code below to view the showroom details:</p>
+                                <QRCode value={generatedLink} size={256} />
+                                <p>{generatedLink}</p>
+                            </div>
+                        )}
+                        <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
+                            <Button
+                                onClick={generateShowRoomLink}
+                                variant="contained"
+                                color="primary"
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    fontSize: '1em',
+                                    fontWeight: 'bold',
+                                    textTransform: 'uppercase',
+                                }}
+                            >
+                                Generate Showroom Link
+                            </Button>
+                        </div>
+                        <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
                             <button
                                 type="submit"
                                 className="btn btn-primary w-full"
@@ -1021,14 +992,8 @@ const ShowRoom: React.FC = () => {
                     </form>
                 </Box>
             </Modal>
-            {isModalVisible && (
-                <ConfirmationModal
-                    isVisible={isModalVisible}
-                    onConfirm={onConfirmAction}
-                    onCancel={onCancelAction}
-                />
-            )}
-             <ToastContainer />
+            {isModalVisible && <ConfirmationModal isVisible={isModalVisible} onConfirm={onConfirmAction} onCancel={onCancelAction} />}
+            <ToastContainer />
         </div>
     );
 };
