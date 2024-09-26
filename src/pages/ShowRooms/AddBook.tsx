@@ -40,6 +40,15 @@ const AddBook: React.FC = () => {
     const [bookingId, setBookingId] = useState<string>('');
     const [showroomData, setShowroomData] = useState<ShowroomData | null>(null);
     const [showroomDocId, setShowroomDocId] = useState<string | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const handleOpenModal = () => {
+      setIsModalOpen(true);
+    };
+  
+    const handleCloseModal = () => {
+      setIsModalOpen(false);
+    };
 
     useEffect(() => {
         const newBookingId = uuid().substring(0, 5);
@@ -165,6 +174,9 @@ const AddBook: React.FC = () => {
     return (
         <div>
             <div style={styles.container}>
+            <button onClick={handleOpenModal} className="btn btn-primary">
+        Rewards
+      </button>
                 <h1 style={styles.header}>Add Bookings</h1>
                 <div style={styles.formContainer}>
                     {error && <div style={styles.errorMessage}>{error}</div>}
@@ -260,6 +272,17 @@ const AddBook: React.FC = () => {
                     </div>
                 </div>
             </div>
+            {isModalOpen && (
+        <div className="modal">
+          <div className="modal-content">
+            <span className="close" onClick={handleCloseModal}>
+              &times;
+            </span>
+            <h2>Rewards Modal</h2>
+            <p>Here is the content of the rewards modal.</p>
+          </div>
+        </div>
+      )}
         </div>
     );
 };
