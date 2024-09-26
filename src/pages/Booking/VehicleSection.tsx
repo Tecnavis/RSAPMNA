@@ -22,8 +22,7 @@ const VehicleSection = ({
         insurance: bodyShope || '', // Initialize insurance with bodyShope
         insuranceAmountBody: insuranceAmountBody || '', // Allow insurance amount to be an empty string for manual entry
     });
-    // const [updatedTotalSalary, setUpdatedTotalSalary] = useState('');
-    const adjustmentApplied = useRef(false);
+    const role = sessionStorage.getItem('role');     const adjustmentApplied = useRef(false);
     const uid = sessionStorage.getItem('uid');
     //    ------------------------------------------------------------
     const db = getFirestore();
@@ -75,7 +74,7 @@ const VehicleSection = ({
         }
     }, [serviceCategory]);
 
-    const handleServiceChange = (e) => {
+    const handleServiceChange = (e: any) => {
         const { value } = e.target;
         setShowRoom((prevShowRoom) => ({
             ...prevShowRoom,
@@ -88,7 +87,7 @@ const VehicleSection = ({
         }
     };
 
-    const handleBodyInsuranceChange = (e) => {
+    const handleBodyInsuranceChange = (e: any) => {
         const { value } = e.target;
         setShowRoom((prevShowRoom) => ({
             ...prevShowRoom,
@@ -97,7 +96,7 @@ const VehicleSection = ({
         onInsuranceChange(value);
     };
 
-    const handleInsuranceAmountChange = (e) => {
+    const handleInsuranceAmountChange = (e: any) => {
         const { value } = e.target;
         setShowRoom((prevShowRoom) => ({
             ...prevShowRoom,
@@ -106,11 +105,11 @@ const VehicleSection = ({
         onInsuranceAmountBodyChange(value);
     };
 
-    const handleAdjustValueChange = (e) => {
+    const handleAdjustValueChange = (e: any) => {
         const { value } = e.target;
         onAdjustValueChange(value);
     };
-    const applyAdjustment = (event) => {
+    const applyAdjustment = (event: any) => {
         // Prevent default form behavior if applicable
         if (event) event.preventDefault();
     
@@ -125,9 +124,14 @@ const VehicleSection = ({
             const confirmAction = window.confirm('Adjusting salary below the current total. Are you sure?');
             
             if (confirmAction) {
-                const password = prompt('Enter password to apply the adjustment: Password=Adjust');
-                
-                if (password === 'Adjust') {
+                // Only show the password prompt depending on the user's role
+                const password = role === "staff" 
+                    ? prompt('Enter password to apply the adjustment') 
+                    : prompt('Enter password to apply the adjustment: Password=RSA@123');
+    
+                const expectedPassword = role === "staff" ? 'Adjust' : 'RSA@123';
+    
+                if (password === expectedPassword) {
                     // Call the function to update the total salary
                     onUpdateTotalSalary(adjustedSalary);
                     adjustmentApplied.current = true;

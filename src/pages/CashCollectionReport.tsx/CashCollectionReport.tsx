@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, writeBatch } from 'firebase/firestore';
 import Modal from 'react-modal';
 import { parse, format } from 'date-fns';
 import styles from './cashCollectionReport.module.css'
@@ -43,6 +43,7 @@ const CashCollectionReport: React.FC = () => {
     const [selectAll, setSelectAll] = useState<boolean>(false);
     const db = getFirestore();
     const navigate = useNavigate();
+    const [showAmountDiv, setShowAmountDiv] = useState(true); // Add state to show/hide the div
 
     useEffect(() => { 
         const fetchDriver = async () => {
@@ -71,18 +72,23 @@ const CashCollectionReport: React.FC = () => {
         const fetchBookings = async () => {
             try {
                 const bookingsRef = collection(db, `user/${uid}/bookings`);
-                const q = query(bookingsRef, where('selectedDriver', '==', id));
+                const q = query(
+                    bookingsRef,
+                    where('selectedDriver', '==', id),
+                    orderBy('createdAt', 'desc') // Ordering by createdAt in descending order
+                );
                 const querySnapshot = await getDocs(q);
-                const fetchedBookings = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Booking[]; // Type assertion here
+                const fetchedBookings = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Booking[];
                 setBookings(fetchedBookings);
                 setFilteredBookings(fetchedBookings); // Initially set filtered bookings to all fetched bookings
             } catch (error) {
-                console.error('Error fetching data:', error);
+                console.error('Error fetching bookings:', error);
             }
         };
-
+    
         fetchBookings();
     }, [db, id, uid]);
+    
 
     useEffect(() => {
         filterBookingsByMonthAndYear();
@@ -309,7 +315,48 @@ const CashCollectionReport: React.FC = () => {
             modal.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     };
+    const distributeReceivedAmount = (receivedAmount: number, bookings: Booking[]) => {
+        let remainingAmount = receivedAmount;
+        const sortedBookings = [...bookings].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
 
+        const updatedBookings = sortedBookings.map((booking) => {
+            const bookingBalance = parseFloat(booking.amount) - (booking.receivedAmount || 0);
+    
+            if (remainingAmount > 0) {
+                const appliedAmount = Math.min(remainingAmount, bookingBalance);
+                booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
+                remainingAmount -= appliedAmount;
+            }
+    
+            return booking;
+        });
+    
+        return updatedBookings;
+    };
+    const handleAmountReceiveChange = async (receivedAmount: number) => {
+        try {
+            const updatedBookings = distributeReceivedAmount(receivedAmount, bookings);
+            setBookings(updatedBookings); // Update state with new bookings
+    
+            // Now, update the Firestore with the new received amounts
+            const batch = writeBatch(db);
+    
+            updatedBookings.forEach((booking) => {
+                const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
+                batch.update(bookingRef, {
+                    receivedAmount: booking.receivedAmount,
+                    balance: calculateBalance(booking.amount, booking.receivedAmount || 0),
+                });
+            });
+    
+            await batch.commit();
+            updateTotalBalance();
+            setShowAmountDiv(false);
+                } catch (error) {
+            console.error('Error distributing received amount:', error);
+        }
+    };
+    
     return (
         <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg">
             <h1 className="text-3xl font-bold mb-5 text-center text-gray-800">Cash Collection Report</h1>
@@ -332,13 +379,17 @@ const CashCollectionReport: React.FC = () => {
 
 <div className="container-fluid mb-5">
   <div className="flex flex-wrap justify-between items-center text-center md:text-left">
-  {selectedBookings.length > 0 && (
-      <div className="w-full md:w-auto mb-4 md:mb-0">
-        <h3 className="text-xl font-semibold text-gray-700">
-          Total Balance of Selected Bookings: {totalSelectedBalance}
-        </h3>
-      </div>
-    )}
+  {/* {selectedBookings.length > 0 && (
+  <div className="fixed top-40 left-1/2 transform -translate-x-1/2 bg-red-100 border-2 border-gray-300 shadow-lg rounded-lg p-6">
+    <h3 className="text-xl font-semibold text-red-600">
+      Total Balance: {totalSelectedBalance}
+    </h3>
+  </div>
+)} */}
+
+
+
+
     <div className="w-full md:w-auto flex flex-col md:flex-row items-center md:justify-end">
       <div className="space-x-2 mb-4 md:mb-0">
         <label htmlFor="month" className="text-gray-700 font-semibold">
@@ -386,20 +437,82 @@ const CashCollectionReport: React.FC = () => {
   </div>
 </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
-                        <div className="bg-white p-4 shadow rounded">
-                            <h3 className="text-lg font-semibold text-gray-700">Total Amount</h3>
-                            <p className="text-gray-600">{monthlyTotals.totalAmount}</p>
-                        </div>
-                        <div className="bg-white p-4 shadow rounded">
-                            <h3 className="text-lg font-semibold text-gray-700">Total Received</h3>
-                            <p className="text-gray-600">{monthlyTotals.totalReceived}</p>
-                        </div>
-                        <div className="bg-white p-4 shadow rounded">
-                            <h3 className="text-lg font-semibold text-gray-700">Total Balance</h3>
-                            <p className="text-gray-600">{monthlyTotals.totalBalance}</p>
-                        </div>
-                    </div>
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+  <div className="bg-gradient-to-r from-blue-100 to-blue-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
+    <div className="flex items-center space-x-4">
+      <div className="text-4xl text-blue-600">
+        <i className="fas fa-dollar-sign"></i>
+      </div>
+      <div>
+        <h3 className="text-xl font-bold text-gray-800">Overall Total Amount</h3>
+        <p className="text-gray-700 text-lg">{monthlyTotals.totalAmount}</p>
+      </div>
+    </div>
+  </div>
+
+  <div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
+    <div className="flex items-center space-x-4">
+      <div className="text-4xl text-green-600">
+        <i className="fas fa-receipt"></i>
+      </div>
+      <div>
+        <h3 className="text-xl font-bold text-gray-800">Total Amount Received</h3>
+        <p className="text-gray-700 text-lg">{monthlyTotals.totalReceived}</p>
+      </div>
+    </div>
+  </div>
+
+  <div className="bg-gradient-to-r from-red-100 to-red-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
+    <div className="flex items-center space-x-4">
+      <div className="text-4xl text-red-600">
+        <i className="fas fa-hand-holding-usd"></i>
+      </div>
+      <div>
+        <h3 className="text-xl font-bold text-gray-800">Amount to be Paid</h3>
+        <p className="text-gray-700 text-lg">{monthlyTotals.totalBalance}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{/* Total Balance Fixed Card */}
+{selectedBookings.length > 0 && showAmountDiv && (
+  <div className="fixed top-40 left-1/2 transform -translate-x-1/2 bg-yellow-100 border-2 border-gray-300 shadow-lg rounded-lg p-6 z-10">
+    <div className="flex flex-col space-y-4">
+      <div className="flex items-center space-x-4">
+        <div className="text-4xl text-red-600">
+          <i className="fas fa-hand-holding-usd"></i>
+        </div>
+        <div>
+          <h3 className="text-xl font-semibold text-red-600">
+            Total Balance: {totalSelectedBalance}
+          </h3>
+        </div>
+      </div>
+
+      <div className="flex flex-col">
+        <h3 className="text-xl font-semibold text-red-600">
+          Amount Received On {new Date().toLocaleDateString()}:
+        </h3>
+        <input
+          type="number"
+          value={receivedAmount}
+          onChange={(e) => setReceivedAmount(e.target.value)}
+          placeholder="Enter Amount"
+          className="border border-gray-300 rounded-lg p-2 mt-2"
+        />
+        <button
+          onClick={() => handleAmountReceiveChange(parseFloat(receivedAmount))}
+          className="mt-2 bg-blue-500 text-white rounded-lg px-4 py-2"
+        >
+          Apply Amount
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
                     <button 
     onClick={generateInvoice} 
     disabled={selectedBookings.length === 0} 
