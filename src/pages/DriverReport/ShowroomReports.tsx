@@ -58,14 +58,16 @@ const ShowroomReports: React.FC = () => {
                 <thead>
                     <tr className="bg-gray-100">
                         <th className="py-2 px-4">Showroom Name</th>
+                        <th className="py-2 px-4">Remaining Balance To be Paid</th>
                         <th className="py-2 px-4">Details</th>
                     </tr>
                 </thead>
                 <tbody>
                     {filteredShowrooms.map(showroom => (
                         <tr key={showroom.id} className="hover:bg-gray-50">
-                            <td className="border px-4 py-2">{showroom.ShowRoom}</td> {/* Updated field */}
-                            <td className="border px-4 py-2">
+                            <td className="border px-4 py-2">{showroom.ShowRoom}</td> 
+                            <td className="border px-4 py-2">{showroom.wholeBalance}</td>             
+               <td className="border px-4 py-2">
     <Link
         to={`/showroomreport/showroomcashcollection/${showroom.id}`}
         state={{ showroomName: showroom.ShowRoom }}  // Pass the state separately

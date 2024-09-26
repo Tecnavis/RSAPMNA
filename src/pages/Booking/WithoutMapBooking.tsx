@@ -95,9 +95,11 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [pickupLocation, setPickupLocation] = useState<{ lat: string; lng: string; name: string }>({ lat: '', lng: '', name: '' });
     const [availableServices, setAvailableServices] = useState<string>('');
     const [dropoffLocation, setDropoffLocation] = useState<{ lat: string; lng: string; name: string } | null>(null);
-    // const [baseLocation, setBaseLocation] = useState(null);
+// -------------------------------------------------------
+const [deliveryDateTime, setDeliveryDateTime] = useState<string>('');
+
     const [baseLocation, setBaseLocation] = useState<{ lat: string; lng: string; name: string } | null>(null);
-const [selectedCompanyData, setSelectedCompanyData] = useState(null);
+    const [selectedCompanyData, setSelectedCompanyData] = useState(null);
 
     const [trappedLocation, setTrappedLocation] = useState<string>('');
     const [totalSalary, setTotalSalary] = useState<number>(0);
@@ -193,7 +195,6 @@ const [selectedCompanyData, setSelectedCompanyData] = useState(null);
             setCurrentDateTime(formattedDateTime);
         };
 
-
         // Update date and time immediately on mount
         updateDateTime();
 
@@ -259,7 +260,6 @@ const [selectedCompanyData, setSelectedCompanyData] = useState(null);
         }
     }, [company, db, uid]);
 
-
     const handleUpdateTotalSalary = (newTotaSalary: any) => {
         setUpdatedTotalSalary(newTotaSalary);
     };
@@ -298,48 +298,45 @@ const [selectedCompanyData, setSelectedCompanyData] = useState(null);
             setSelectedCompanyData(null);
         }
     }, [selectedCompany, drivers]);
-    
-    
-    
 
-    const handleInputChange = (field:any, value:any) => {
+    const handleInputChange = (field: any, value: any) => {
         switch (field) {
             case 'showroomLocation':
-            setShowroomLocation(value);
+                setShowroomLocation(value);
 
-            const selectedShowroom = showrooms.find((show) => show.value === value);
+                const selectedShowroom = showrooms.find((show) => show.value === value);
 
-            if (selectedShowroom) {
-                setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
+                if (selectedShowroom) {
+                    setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
 
-                // Check if selectedShowroom has locationLatLng before accessing lat and lng
-                if (selectedShowroom.locationLatLng && selectedShowroom.locationLatLng.lat && selectedShowroom.locationLatLng.lng) {
-                    const latString = selectedShowroom.locationLatLng.lat.toString();
-                    const lngString = selectedShowroom.locationLatLng.lng.toString();
+                    // Check if selectedShowroom has locationLatLng before accessing lat and lng
+                    if (selectedShowroom.locationLatLng && selectedShowroom.locationLatLng.lat && selectedShowroom.locationLatLng.lng) {
+                        const latString = selectedShowroom.locationLatLng.lat.toString();
+                        const lngString = selectedShowroom.locationLatLng.lng.toString();
 
-                    setDropoffLocation({
-                        name: selectedShowroom.value,
-                        lat: latString,
-                        lng: lngString,
-                    });
+                        setDropoffLocation({
+                            name: selectedShowroom.value,
+                            lat: latString,
+                            lng: lngString,
+                        });
+                    } else {
+                        console.error('Location data is missing for the selected showroom.');
+                        // You may choose to set a default or empty location here
+                        setDropoffLocation({
+                            name: selectedShowroom.value,
+                            lat: '',
+                            lng: '',
+                        });
+                    }
                 } else {
-                    console.error('Location data is missing for the selected showroom.');
-                    // You may choose to set a default or empty location here
+                    setInsuranceAmountBody('');
                     setDropoffLocation({
-                        name: selectedShowroom.value,
+                        name: '',
                         lat: '',
                         lng: '',
                     });
                 }
-            } else {
-                setInsuranceAmountBody('');
-                setDropoffLocation({
-                    name: '',
-                    lat: '',
-                    lng: '',
-                });
-            }
-            break;
+                break;
             case 'totalSalary':
                 setTotalSalary(value || 0);
                 break;
@@ -381,7 +378,6 @@ const [selectedCompanyData, setSelectedCompanyData] = useState(null);
             case 'fileNumber':
                 setFileNumber(value || '');
                 break;
-           
 
             case 'companies':
                 setCompanies(value || '');
@@ -420,49 +416,57 @@ const [selectedCompanyData, setSelectedCompanyData] = useState(null);
             case 'serviceVehicle':
                 setServiceVehicle(value);
                 break;
-//---------------------
-case 'selectedDriver':
-    setSelectedDriver(value || '');
+            //---------------------
+            case 'selectedDriver':
+                setSelectedDriver(value || '');
 
-    const selectedDriverData = drivers.find((driver) => driver.id === value);
+                const selectedDriverData = drivers.find((driver) => driver.id === value);
 
-    if (selectedDriverData) {
-        const isRSA = selectedDriverData.companyName === 'RSA';
+                if (selectedDriverData) {
+                    const isRSA = selectedDriverData.companyName === 'RSA';
 
-        const salary = isRSA && selectedCompanyData 
-            ? selectedCompanyData.basicSalaries[selectedCompanyData.selectedServices[0]] 
-            : (!isRSA ? selectedDriverData.basicSalaries[selectedDriverData.selectedServices[0]] : serviceDetails.salary);
+                    const salary =
+                        isRSA && selectedCompanyData
+                            ? selectedCompanyData.basicSalaries[selectedCompanyData.selectedServices[0]]
+                            : !isRSA
+                            ? selectedDriverData.basicSalaries[selectedDriverData.selectedServices[0]]
+                            : serviceDetails.salary;
 
+                    const basicSalaryKM =
+                        isRSA && selectedCompanyData
+                            ? selectedCompanyData.basicSalaryKm[selectedCompanyData.selectedServices[0]]
+                            : !isRSA
+                            ? selectedDriverData.basicSalaryKm[selectedDriverData.selectedServices[0]]
+                            : serviceDetails.basicSalaryKM;
 
-        const basicSalaryKM = isRSA && selectedCompanyData 
-            ? selectedCompanyData.basicSalaryKm[selectedCompanyData.selectedServices[0]] 
-            : (!isRSA ? selectedDriverData.basicSalaryKm[selectedDriverData.selectedServices[0]] : serviceDetails.basicSalaryKM);
+                    const salaryPerKM =
+                        isRSA && selectedCompanyData
+                            ? selectedCompanyData.salaryPerKm[selectedCompanyData.selectedServices[0]]
+                            : !isRSA
+                            ? selectedDriverData.salaryPerKm[selectedDriverData.selectedServices[0]]
+                            : serviceDetails.salaryPerKM;
 
-        const salaryPerKM = isRSA && selectedCompanyData 
-            ? selectedCompanyData.salaryPerKm[selectedCompanyData.selectedServices[0]] 
-            : (!isRSA ? selectedDriverData.salaryPerKm[selectedDriverData.selectedServices[0]] : serviceDetails.salaryPerKM);
+                    const calculatedSalary = calculateTotalSalary(salary, distance, basicSalaryKM, salaryPerKM, isRSA);
 
-        const calculatedSalary = calculateTotalSalary(salary, distance, basicSalaryKM, salaryPerKM, isRSA);
+                    setTotalSalary(parseFloat(calculatedSalary.toFixed(2)));
+                } else {
+                    setTotalSalary(0);
+                    console.log('No driver data found. Total Salary set to 0');
+                }
+                break;
 
-        setTotalSalary(parseFloat(calculatedSalary.toFixed(2)));
-    } else {
-        setTotalSalary(0);
-        console.log('No driver data found. Total Salary set to 0');
-    }
-    break;
+            case 'company':
+                setCompany(value);
+                if (value === 'rsa') {
+                    setSelectedDriver('');
+                }
+                break;
 
-case 'company':
-    setCompany(value);
-    if (value === 'rsa') {
-        setSelectedDriver('');
-    }
-    break;
+            case 'selectedCompany':
+                setSelectedCompany(value);
 
-case 'selectedCompany':
-    setSelectedCompany(value);
- 
-    break;
-    
+                break;
+
             case 'dropoffLocation':
                 if (typeof value === 'string') {
                     setDropoffLocation({ ...dropoffLocation, name: value });
@@ -519,8 +523,7 @@ case 'selectedCompany':
         }
     };
     const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-  
-    
+
     const openModal = () => {
         setIsModalOpen(true);
     };
@@ -612,45 +615,131 @@ case 'selectedCompany':
 
         return () => unsubscribe();
     }, []);
+
     useEffect(() => {
         const fetchDrivers = async () => {
-            if (!serviceType || !serviceDetails) {
-                setDrivers([]);
-                return;
-            }
-
-            try {
-                const driversCollection = collection(db, `user/${uid}/driver`);
-                const snapshot = await getDocs(driversCollection);
-
-                const filteredDrivers = snapshot.docs
-                    .map((doc) => {
-                        const driverData = doc.data();
-                        // Check if selectedServices is defined and if it includes the serviceType
-                        if (!driverData.selectedServices || !driverData.selectedServices.includes(serviceType) || driverData.status === 'deleted from UI') {
-                            return null;
-                        }
-
-                        return {
-                            id: doc.id,
-                            ...driverData,
-                        };
-                    })
-                    .filter(Boolean); // Remove null entries
-
-                setDrivers(filteredDrivers);
-            } catch (error) {
-                console.error('Error fetching drivers:', error);
-            }
-        };
-
-        if (serviceType && serviceDetails) {
-            fetchDrivers().catch(console.error);
-        } else {
+          if (!serviceType || !serviceDetails || !pickupLocation) {
+            console.log("Missing criteria: serviceType, serviceDetails, or pickupLocation");
             setDrivers([]);
-        }
-    }, [db, uid, serviceType, serviceDetails]);
+            return;
+          }
+      
+          try {
+            console.log("Fetching drivers...");
+            const driversCollection = collection(db, `user/${uid}/driver`);
+            const snapshot = await getDocs(driversCollection);
+      
+            console.log("Snapshot received:", snapshot.docs.length, "documents found");
+      
+            const filteredDrivers = await Promise.all(
+              snapshot.docs.map(async (doc) => {
+                const driverData = doc.data();
+                const { currentLocation, selectedServices, status } = driverData;
+      
+                // Log current driver data
+                console.log(`Processing driver ${doc.id}`, driverData);
+      
+                // Filter out drivers that don't match the criteria
+                if (!selectedServices || !selectedServices.includes(serviceType) || status === 'deleted from UI') {
+                  console.log(`Driver ${doc.id} filtered out: No matching service or deleted`);
+                  return null;
+                }
+      
+                const currentLat = currentLocation?.latitude ?? null;
+                const currentLng = currentLocation?.longitude ?? null;
+      
+                // Log the current driver's location
+                console.log(`Driver ${doc.id} location:`, { currentLat, currentLng });
+      
+                if (typeof currentLat === 'number' && typeof currentLng === 'number' &&
+                    pickupLocation.lat && pickupLocation.lng) {
+                  console.log(`Valid location data for driver ${doc.id}. Proceeding with distance calculation.`);
+                } else {
+                  console.error(`Invalid location data for driver ${doc.id}:`, { currentLat, currentLng });
+                  return null; // Skip this driver
+                }
+      
+                try {
+                  // Log the API request details
+                  console.log(`Requesting distance for driver ${doc.id}`, {
+                    origin: `${currentLat},${currentLng}`,
+                    destination: `${pickupLocation.lat},${pickupLocation.lng}`,
+                    apiKey: import.meta.env.VITE_REACT_APP_API_KEY,
+                  });
+      
+                  const response = await axios.post(
+                    'https://api.olamaps.io/routing/v1/directions',
+                    null,
+                    {
+                      params: {
+                        origin: `${currentLat},${currentLng}`,
+                        destination: `${pickupLocation.lat},${pickupLocation.lng}`,
+                        api_key: import.meta.env.VITE_REACT_APP_API_KEY,
+                      },
+                      headers: {
+                        'X-Request-Id': `${doc.id}-${Date.now()}`,
+                      },
+                    }
+                  );
+      
+                 // Log the API response to inspect the structure
+console.log(`API Response for driver ${doc.id}:`, response.data);
 
+const routes = response.data.routes;
+let distance = 'Distance not available';
+
+if (routes?.length > 0) {
+    console.log(`Routes for driver ${doc.id}:`, routes); // Log routes to inspect its structure
+  
+    if (routes[0]?.legs?.length > 0 && routes[0].legs[0]?.readable_distance) {
+      distance = routes[0].legs[0].readable_distance; // Use readable_distance
+      console.log(`Driver ${doc.id} pickup distance: ${distance}`);
+    } else {
+      console.error(`No valid leg data found in the response for driver ${doc.id}`);
+    }
+  } else {
+    console.error(`No valid routes found in the response for driver ${doc.id}`);
+  }
+  
+
+
+      
+                  return {
+                    id: doc.id,
+                    ...driverData,
+                    currentLocation: { lat: currentLat, lng: currentLng },
+                    pickupDistance: distance, // Store the calculated distance
+                  };
+                } catch (error) {
+                  // Handle any errors in fetching the distance
+                  console.error(`Error fetching distance for driver ${doc.id}:`, error);
+                  return {
+                    id: doc.id,
+                    ...driverData,
+                    currentLocation: { lat: currentLat, lng: currentLng },
+                    pickupDistance: 'Error fetching distance',
+                  };
+                }
+              })
+            );
+      
+            console.log("Filtered drivers list:", filteredDrivers);
+            setDrivers(filteredDrivers.filter(Boolean)); // Remove null entries
+          } catch (error) {
+            // Log any errors that occur while fetching drivers
+            console.error('Error fetching drivers:', error);
+          }
+        };
+      
+        if (serviceType && serviceDetails && pickupLocation) {
+          console.log("Criteria met: Fetching drivers");
+          fetchDrivers().catch(console.error); // Initiate fetching drivers if all criteria are met
+        } else {
+          console.log("Criteria not met: Resetting drivers list");
+          setDrivers([]); // Reset the drivers list if necessary criteria are missing
+        }
+      }, [db, uid, serviceType, serviceDetails, pickupLocation]);
+      
     useEffect(() => {
         const fetchServiceDetails = async () => {
             if (!serviceType) {
@@ -698,73 +787,55 @@ case 'selectedCompany':
             }
         }
     };
-// --------------------------------------------------------------------------------
-useEffect(() => {
-    if (drivers.length > 0) {
-       
-        // Calculate total salaries for each driver
-        const totalSalaries = drivers.map((driver) => {
-            const isRSA = driver.companyName === 'RSA';
+    // --------------------------------------------------------------------------------
+    // useEffect(() => {
+    //     if (drivers.length > 0) {
+    //         // Calculate total salaries for each driver
+    //         const totalSalaries = drivers.map((driver) => {
+    //             const isRSA = driver.companyName === 'RSA';
 
+    //             // Declare variables
+    //             let salary: number;
+    //             let basicSalaryKM: number;
+    //             let salaryPerKM: number;
 
-            // Declare variables
-            let salary: number;
-            let basicSalaryKM: number;
-            let salaryPerKM: number;
+    //             if (isRSA && selectedCompanyData) {
+    //                 // Ensure the necessary properties exist
+    //                 if (selectedCompanyData.basicSalaries && selectedCompanyData.selectedServices && selectedCompanyData.basicSalaryKm && selectedCompanyData.salaryPerKm) {
+    //                     salary = selectedCompanyData.basicSalaries[selectedCompanyData.selectedServices[0]];
+    //                     basicSalaryKM = selectedCompanyData.basicSalaryKm[selectedCompanyData.selectedServices[0]];
+    //                     salaryPerKM = selectedCompanyData.salaryPerKm[selectedCompanyData.selectedServices[0]];
+    //                 } else {
+    //                     console.error('Missing properties in selectedCompanyData for RSA');
+    //                 }
+    //             } else {
+    //                 // Fallback for non-RSA or when selectedCompanyData is not available
+    //                 salary = !isRSA ? driver.basicSalaries[driver.selectedServices[0]] : serviceDetails.salary;
+    //                 basicSalaryKM = !isRSA ? driver.basicSalaryKm[driver.selectedServices[0]] : serviceDetails.basicSalaryKM;
+    //                 salaryPerKM = !isRSA ? driver.salaryPerKm[driver.selectedServices[0]] : serviceDetails.salaryPerKM;
+    //             }
 
-            if (isRSA && selectedCompanyData) {
+    //             // Check if calculateTotalSalary is available and log its inputs
+    //             if (calculateTotalSalary) {
+    //                 console.log(`Calculating total salary for driver ${driver.id} with values:`, {
+    //                     salary,
+    //                     distance,
+    //                     basicSalaryKM,
+    //                     salaryPerKM,
+    //                     isRSA,
+    //                 });
 
-                // Ensure the necessary properties exist
-                if (
-                    selectedCompanyData.basicSalaries &&
-                    selectedCompanyData.selectedServices &&
-                    selectedCompanyData.basicSalaryKm &&
-                    selectedCompanyData.salaryPerKm
-                ) {
-                    salary = selectedCompanyData.basicSalaries[selectedCompanyData.selectedServices[0]];
-                    basicSalaryKM = selectedCompanyData.basicSalaryKm[selectedCompanyData.selectedServices[0]];
-                    salaryPerKM = selectedCompanyData.salaryPerKm[selectedCompanyData.selectedServices[0]];
+    //                 const calculatedSalary = calculateTotalSalary(salary, distance, basicSalaryKM, salaryPerKM, isRSA);
 
-                } else {
-                    console.error('Missing properties in selectedCompanyData for RSA');
-                }
-            } else {
-                // Fallback for non-RSA or when selectedCompanyData is not available
-                salary = !isRSA ? driver.basicSalaries[driver.selectedServices[0]] : serviceDetails.salary;
-                basicSalaryKM = !isRSA ? driver.basicSalaryKm[driver.selectedServices[0]] : serviceDetails.basicSalaryKM;
-                salaryPerKM = !isRSA ? driver.salaryPerKm[driver.selectedServices[0]] : serviceDetails.salaryPerKM;
-
-            }
-
-            // Check if calculateTotalSalary is available and log its inputs
-            if (calculateTotalSalary) {
-                console.log(`Calculating total salary for driver ${driver.id} with values:`, {
-                    salary,
-                    distance,
-                    basicSalaryKM,
-                    salaryPerKM,
-                    isRSA
-                });
-
-                const calculatedSalary = calculateTotalSalary(
-                    salary,
-                    distance,
-                    basicSalaryKM,
-                    salaryPerKM,
-                    isRSA
-                );
-
-                console.log(`Driver ${driver.id} - Calculated Salary: ${calculatedSalary}`);
-                return calculatedSalary;
-            } else {
-                console.error('calculateTotalSalary function is not available');
-                return 0;
-            }
-        });
-
-    }
-}, [drivers, serviceDetails, distance, selectedCompanyData, calculateTotalSalary]);
-
+    //                 console.log(`Driver ${driver.id} - Calculated Salary: ${calculatedSalary}`);
+    //                 return calculatedSalary;
+    //             } else {
+    //                 console.error('calculateTotalSalary function is not available');
+    //                 return 0;
+    //             }
+    //         });
+    //     }
+    // }, [drivers, serviceDetails, distance, selectedCompanyData, calculateTotalSalary]);
 
     // --------------------------------------------------------------------------------
 
@@ -772,7 +843,7 @@ useEffect(() => {
         totalDriverDistance = parseFloat(totalDriverDistance);
         basicSalaryKM = parseFloat(basicSalaryKM);
         salaryPerKM = parseFloat(salaryPerKM);
-        salary = parseFloat(salary)
+        salary = parseFloat(salary);
         console.log('totalDriverDistance', totalDriverDistance);
 
         if (totalDriverDistance > basicSalaryKM) {
@@ -902,13 +973,14 @@ useEffect(() => {
             console.error('Error sending notifications to all drivers:', error);
         }
     };
-
+// ----------------------------------
     const addOrUpdateItem = async (): Promise<void> => {
         if (validateForm()) {
             try {
                 const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
                 const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
                 const fcmToken = selectedDriverData ? selectedDriverData.fcmToken : null;
+                const pickupDistance = selectedDriverData ? selectedDriverData.pickupDistance || 0 : 0;
 
                 const currentDate = new Date();
                 const dateTime = formatDate(currentDate); // Use the formatted date
@@ -920,6 +992,8 @@ useEffect(() => {
                 } else if (company === 'rsa') {
                     finalFileNumber = fileNumber;
                 }
+
+                
                 const formattedPickupLocation = {
                     name: pickupLocation?.name || '',
                     lat: pickupLocation?.lat?.toString() || '',
@@ -933,9 +1007,8 @@ useEffect(() => {
                     pickupLocation: formattedPickupLocation,
                     dropoffLocation: dropoffLocation || {},
                     status: 'booking added',
-                    dateTime: dateTime, // Use the formatted date
-                    bookingId: `${bookingId}`,
-                    createdAt: serverTimestamp(),
+                    dateTime: dateTime, 
+                    deliveryDateTime: deliveryDateTime || null,                    createdAt: serverTimestamp(),
                     comments: comments || '',
                     // totalDistance: totalDistance,
                     distance: distance || '',
@@ -967,39 +1040,53 @@ useEffect(() => {
                     updatedTotalSalary: updatedTotalSalary || 0,
                     insuranceAmountBody: insuranceAmountBody || '',
                     paymentStatus: 'Not Paid',
+                    pickupDistance: pickupDistance,
                 };
-                if (editData) {
-                    if (role === 'admin') {
-                        bookingData.newStatus = `Edited by ${role}`;
-                    } else if (role === 'staff') {
-                        bookingData.newStatus = `Edited by ${role} ${userName}`;
-                    }
-                    bookingData.editedTime = formatDate(new Date());
+                   if (editData) {
+                if (role === 'admin') {
+                    bookingData.newStatus = `Edited by ${role}`;
+                } else if (role === 'staff') {
+                    bookingData.newStatus = `Edited by ${role} ${userName}`;
                 }
-                console.log('Data to be added/updated:', bookingData); // Log the data before adding or updating
-
-                if (editData) {
-                    const docRef = doc(db, `user/${uid}/bookings`, editData.id);
-                    await updateDoc(docRef, bookingData);
-                    console.log('Document updated');
-                } else {
-                    const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
-                    console.log('Document written with ID: ', docRef.id);
-
-                    console.log('Document added');
-                }
-                // Check if the dummy driver is selected
-                if (selectedDriver === 'dummy') {
-                    await sendNotificationsToAllDrivers();
-                } else if (fcmToken) {
-                    await sendPushNotification(fcmToken, 'Booking Notification', 'Your booking has been updated', 'alert_notification');
-                }
-                navigate('/bookings/newbooking');
-            } catch (error) {
-                console.error('Error adding/updating item:', error);
+                bookingData.editedTime = formatDate(new Date());
             }
+            console.log('Data to be added/updated:', bookingData);
+
+            if (editData) {
+                const docRef = doc(db, `user/${uid}/bookings`, editData.id);
+                await updateDoc(docRef, bookingData);
+                console.log('Document updated');
+            } else {
+                const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
+                console.log('Document written with ID: ', docRef.id);
+            }
+
+            // Check if the dummy driver is selected
+            if (selectedDriver === 'dummy') {
+                await sendNotificationsToAllDrivers();
+            } else if (fcmToken) {
+                await sendPushNotification(fcmToken, 'Booking Notification', 'Your booking has been updated', 'alert_notification');
+            }
+
+            // Schedule notification only if deliveryDateTime is provided
+            if (deliveryDateTime) {
+                const deliveryDate = new Date(deliveryDateTime);
+                const timeToNotify = deliveryDate.getTime() - currentDate.getTime();
+
+                if (timeToNotify > 0) {
+                    // Schedule the notification
+                    setTimeout(async () => {
+                        await sendPushNotification(fcmToken, 'Delivery Reminder', `Your booking is scheduled for delivery on ${formatDate(deliveryDate)}`, 'alert_notification');
+                    }, timeToNotify);
+                }
+            }
+
+            navigate('/bookings/newbooking');
+        } catch (error) {
+            console.error('Error adding/updating item:', error);
         }
-    };
+    }
+};
     const handleButtonClick = (event) => {
         event.preventDefault();
         setShowShowroomModal(true);
@@ -1010,6 +1097,17 @@ useEffect(() => {
             <div className={styles.dateTime}>{currentDateTime}</div>
             <h2 className={styles.formHeading}>BOOK WITHOUT MAP</h2>
             <form className={styles.bookingForm}>
+            <div className="mb-4">
+        <label htmlFor="deliveryDateTime" className={`${styles.label} block mb-2`}>
+        Delivery Date & Time <span className="text-gray-400">(optional)</span>
+        </label>
+        <input
+            type="datetime-local"
+            value={deliveryDateTime}
+            onChange={(e) => setDeliveryDateTime(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+    </div>
                 <div className={styles.formGroup}>
                     <label htmlFor="company" className={styles.label}>
                         Company
@@ -1140,34 +1238,24 @@ useEffect(() => {
                     </label>
                     <div className={styles.inputContainer}>
                         {showrooms.length > 0 && (
-                        <ReactSelect
-                        id="showrooms"
-                        name="showrooms"
-                        className="w-full"
-                        value={showrooms.find((option) => option.value === showroomLocation) || null}
-                        options={[{ value: 'lifting', label: 'Lifting' }, ...showrooms]}
-                        placeholder="Select showroom"
-                        onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
-                        isSearchable={true}
-                        getOptionLabel={(option) =>
-                            option.value === 'lifting' ? (
-                                <span style={{ color: 'red', fontSize: '20px', fontWeight: 'bold' }}>{option.label}</span>
-                            ) : (
-                                option.label
-                            )
-                        }
-                        styles={{
-                            option: (provided, state) => ({
-                                ...provided,
-                                color: state.data.value === 'lifting' ? 'red' : provided.color,
-                                fontSize: state.data.value === 'lifting' ? '20px' : provided.fontSize,
-                            }),
-                        }}
-                    />
-                    
-                     
-                       
-
+                            <ReactSelect
+                                id="showrooms"
+                                name="showrooms"
+                                className="w-full"
+                                value={showrooms.find((option) => option.value === showroomLocation) || null}
+                                options={[{ value: 'lifting', label: 'Lifting' }, ...showrooms]}
+                                placeholder="Select showroom"
+                                onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
+                                isSearchable={true}
+                                getOptionLabel={(option) => (option.value === 'lifting' ? <span style={{ color: 'red', fontSize: '20px', fontWeight: 'bold' }}>{option.label}</span> : option.label)}
+                                styles={{
+                                    option: (provided, state) => ({
+                                        ...provided,
+                                        color: state.data.value === 'lifting' ? 'red' : provided.color,
+                                        fontSize: state.data.value === 'lifting' ? '20px' : provided.fontSize,
+                                    }),
+                                }}
+                            />
                         )}
                         <button onClick={handleButtonClick} className={styles.addButton}>
                             <IconPlus />
@@ -1198,13 +1286,10 @@ useEffect(() => {
                             placeholder="Longitude"
                             value={dropoffLocation && dropoffLocation.lng ? dropoffLocation.lng : ''}
                         />
-
-                     
                     </div>
                 </div>
 
                 <div>
-
                     <div className={styles.formGroup}>
                         <label htmlFor="dis1" className={styles.label}>
                             Distance 1 (Base to Pickup)
@@ -1394,6 +1479,8 @@ useEffect(() => {
                                         <thead>
                                             <tr>
                                                 <th className="py-2 px-4 text-left">Driver Name</th>
+                                                <th className="py-2 px-4 text-left">Pickup Distance</th>
+
                                                 <th className="py-2 px-4 text-left">Payable Amount</th>
                                                 <th className="py-2 px-4 text-left font-bold text-red-600">Profit after Deducting Expenses</th>
                                                 <th className="py-2 px-4 text-left">Select</th>
@@ -1405,6 +1492,8 @@ useEffect(() => {
                                                     DummyDriver
                                                 </td>
                                                 <td className="py-2 px-4">0.00</td>
+                                                <td className="py-2 px-4">0.00</td>
+
                                                 <td className="py-2 px-4 text-red-600">0.00</td>
                                                 <td className="py-2 px-4">
                                                     <input
@@ -1423,28 +1512,45 @@ useEffect(() => {
                                 {/* Actual drivers */}
 
                                 {drivers
-                    .filter((driver) => driver.companyName !== 'Company') // Filter out drivers from the specified company
-                    .sort((a, b) => {
-                        if (a.companyName === 'RSA' && b.companyName !== 'RSA') return -1;
-                        if (a.companyName !== 'RSA' && b.companyName === 'RSA') return 1;
-                        return 0;
-                    })
-                    .map((driver) => {
-                        const isRSA = driver.companyName === 'RSA';
-                        const salary = isRSA && selectedCompanyData ? selectedCompanyData.basicSalaries[selectedCompanyData.selectedServices[0]] : (!isRSA ? driver.basicSalaries[driver.selectedServices[0]] : serviceDetails.salary);
-                        const basicSalaryKM = isRSA && selectedCompanyData ? selectedCompanyData.basicSalaryKm[selectedCompanyData.selectedServices[0]] : (!isRSA ? driver.basicSalaryKm[driver.selectedServices[0]] : serviceDetails.basicSalaryKM);
-                        const salaryPerKM = isRSA && selectedCompanyData ? selectedCompanyData.salaryPerKm[selectedCompanyData.selectedServices[0]] : (!isRSA ? driver.salaryPerKm[driver.selectedServices[0]] : serviceDetails.salaryPerKM);
-                
-                        const calculatedSalary = calculateTotalSalary(salary, distance, basicSalaryKM, salaryPerKM, isRSA);
-                        const expensePerKM = serviceDetails.expensePerKM || 0;
-                        const profit = calculatedSalary - distance * expensePerKM;
-                
+                                    .filter((driver) => driver.companyName !== 'Company') // Filter out drivers from the specified company
+                                    .sort((a, b) => {
+                                        if (a.companyName === 'RSA' && b.companyName !== 'RSA') return -1;
+                                        if (a.companyName !== 'RSA' && b.companyName === 'RSA') return 1;
+                                        return 0;
+                                    })
+                                    .map((driver) => {
+                                        const isRSA = driver.companyName === 'RSA';
+                                        const salary =
+                                            isRSA && selectedCompanyData
+                                                ? selectedCompanyData.basicSalaries[selectedCompanyData.selectedServices[0]]
+                                                : !isRSA
+                                                ? driver.basicSalaries[driver.selectedServices[0]]
+                                                : serviceDetails.salary;
+                                        const basicSalaryKM =
+                                            isRSA && selectedCompanyData
+                                                ? selectedCompanyData.basicSalaryKm[selectedCompanyData.selectedServices[0]]
+                                                : !isRSA
+                                                ? driver.basicSalaryKm[driver.selectedServices[0]]
+                                                : serviceDetails.basicSalaryKM;
+                                        const salaryPerKM =
+                                            isRSA && selectedCompanyData
+                                                ? selectedCompanyData.salaryPerKm[selectedCompanyData.selectedServices[0]]
+                                                : !isRSA
+                                                ? driver.salaryPerKm[driver.selectedServices[0]]
+                                                : serviceDetails.salaryPerKM;
+
+                                        const calculatedSalary = calculateTotalSalary(salary, distance, basicSalaryKM, salaryPerKM, isRSA);
+                                        const expensePerKM = serviceDetails.expensePerKM || 0;
+                                        const profit = calculatedSalary - distance * expensePerKM;
+
                                         return (
                                             <div key={driver.id} className="border border-gray-300 p-4 rounded-lg shadow-sm bg-white">
                                                 <table className="w-full table-auto">
                                                     <thead>
                                                         <tr>
                                                             <th className="py-2 px-4 text-left">Driver Name</th>
+                                                            <th className="py-2 px-4 text-left">Pickup Distance</th>
+
                                                             <th className="py-2 px-4 text-left">Payable Amount</th>
                                                             <th className="py-2 px-4 text-left font-bold text-red-600">Profit after Deducting Expenses</th>
                                                             <th className="py-2 px-4 text-left">Select</th>
@@ -1455,7 +1561,7 @@ useEffect(() => {
                                                             <td className="py-2 px-4 font-semibold" style={{ color: isRSA ? 'green' : 'red', fontSize: '18px' }}>
                                                                 {driver.driverName || 'Unknown Driver'}
                                                             </td>
-
+                                                            <td className="py-2 px-4">{driver.pickupDistance}</td> {/* Display the pickup distance here */}
                                                             <td className="py-2 px-4">{calculatedSalary.toFixed(2)}</td>
                                                             <td className="py-2 px-4 text-red-600 font-semibold" style={{ backgroundColor: '#ffe6e6' }}>
                                                                 {profit.toFixed(2)}
