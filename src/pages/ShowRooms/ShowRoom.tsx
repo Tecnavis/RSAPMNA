@@ -363,7 +363,7 @@ const ShowRoom: React.FC = () => {
     const handleManualInputChange = (event: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = event.target;
         const numericValue = parseFloat(value); // Convert string to number
-    
+
         if (name === 'manualLocationName') {
             setManualLocationName(value);
             setShowRoom((prevShowRoom) => ({
@@ -387,13 +387,13 @@ const ShowRoom: React.FC = () => {
             }));
         }
     };
-    
+
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
 
     const generateShowRoomLink = () => {
-        const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`; // Your actual base URL
-        // const baseUrl = `http://localhost:5175/showrooms/showroom/showroomDetails`; // Your actual base URL
+        // const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`; // Your actual base URL
+        const baseUrl = `http://localhost:5175/showrooms/showroom/showroomDetails`; // Your actual base URL
         const uid = sessionStorage.getItem('uid') || '';
 
         const queryParams = new URLSearchParams({
@@ -894,7 +894,6 @@ const ShowRoom: React.FC = () => {
                             <input type="file" name="img" onChange={handleImageUpload} />
                             {showRoom.img && <img src={showRoom.img} alt="Showroom Image" width="100" />}
                         </div>
-
                         {/* Display the generated link */}
                         {generatedLink && (
                             <div ref={qrRef}>
@@ -919,7 +918,6 @@ const ShowRoom: React.FC = () => {
                                 Generate Showroom Link
                             </Button>
                         </div>
-
                         <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
                             <button
                                 type="submit"
