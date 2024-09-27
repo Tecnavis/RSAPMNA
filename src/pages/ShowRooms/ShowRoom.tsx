@@ -30,8 +30,8 @@ interface ShowRoomType {
     phoneNumber: string;
     availableServices: string[];
     mobileNumber: string;
-    manualLat:number,
-    manualLng:number,
+    manualLat: number;
+    manualLng: number;
     state: string;
     district: string;
     hasInsurance: string;
@@ -100,7 +100,7 @@ const ShowRoom: React.FC = () => {
         mobileNumber: '',
         locationLatLng: { lat: 0, lng: 0 },
         state: '',
-        manualLocationName:'',
+        manualLocationName: '',
         qrCode: '',
         showroomLink: '',
         district: '',
@@ -108,8 +108,8 @@ const ShowRoom: React.FC = () => {
         insuranceAmount: '',
         hasInsuranceBody: '',
         insuranceAmountBody: '',
-        manualLat:0,
-        manualLng:0,
+        manualLat: 0,
+        manualLng: 0,
         lat: '',
         lng: '',
     });
@@ -263,9 +263,9 @@ const ShowRoom: React.FC = () => {
                 phoneNumber: '',
                 availableServices: [],
                 mobileNumber: '',
-                manualLocationName:'',
-                manualLat:0,
-                manualLng:0,
+                manualLocationName: '',
+                manualLat: 0,
+                manualLng: 0,
                 locationLatLng: { lat: 0, lng: 0 },
                 state: '',
                 district: '',
@@ -325,7 +325,7 @@ const ShowRoom: React.FC = () => {
             setManualLocationName(roomToEdit?.manualLocationName || '');
             setManualLat(roomToEdit?.manualLat.toString() || ''); // Convert to string for input
             setManualLng(roomToEdit?.manualLng.toString() || ''); // Convert to string for input
-            
+
             console.log('Set showroom state:', roomToEdit); // Debugging line
             setEditRoomId(currentRoomId);
             formRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -888,7 +888,6 @@ const ShowRoom: React.FC = () => {
                             </select>
                         </div>
 
-                        
                         <div>
                             <label htmlFor="image">Image</label>
                             <input type="file" name="img" onChange={handleImageUpload} />
