@@ -167,4 +167,45 @@
     font-weight: bold;
     color: #4CAF50;
   }
-  
+ /* reward.css */
+
+/* Percentage Section Styling */
+.percentage-section {
+  background-color: #f9f9f9; /* Light background color for contrast */
+  border: 1px solid #e1e1e1; /* Subtle border */
+  border-radius: 8px; /* Rounded corners */
+  padding: 20px; /* Padding around content */
+  margin: 20px 0; /* Margin for spacing */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
+  text-align: center; /* Center align text */
+}
+
+.percentage-section h3 {
+  color: #333; /* Darker text color for headers */
+  font-size: 24px; /* Increased font size */
+  margin-bottom: 15px; /* Margin below header */
+  font-family: 'Arial', sans-serif; /* Font style */
+}
+
+.percentage-section input {
+  width: 100%; /* Full width for input */
+  max-width: 300px; /* Max width for better control */
+  padding: 12px; /* Padding inside input */
+  border: 1px solid #ccc; /* Border around input */
+  border-radius: 5px; /* Rounded corners for input */
+  font-size: 16px; /* Font size for input */
+  transition: border-color 0.3s; /* Smooth border transition */
+}
+
+/* Focus State */
+.percentage-section input:focus {
+  border-color: #007bff; /* Blue border on focus */
+  outline: none; /* Remove default outline */
+}
+
+/* Placeholder Style */
+.percentage-section input::placeholder {
+  color: #999; /* Placeholder text color */
+  font-style: italic; /* Italic for placeholder */
+}
+ 
