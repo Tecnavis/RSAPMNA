@@ -236,6 +236,40 @@
 
 
 /* //rewards */
+/* Container for the dropdown */
+.select-container {
+  position: relative;
+  display: inline-block;
+}
+
+/* Styling the select dropdown */
+.select-container select {
+  padding: 10px 15px;
+  border: 2px solid #007bff; /* Border color */
+  border-radius: 5px; /* Rounded corners */
+  background-color: #ffffff; /* Background color */
+  color: #333; /* Text color */
+  font-size: 16px; /* Font size */
+  transition: border-color 0.3s, box-shadow 0.3s; /* Transition effects */
+  cursor: pointer; /* Pointer on hover */
+}
+
+/* Change border color and box shadow on focus */
+.select-container select:focus {
+  border-color: #0056b3; /* Darker border on focus */
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Light shadow */
+  outline: none; /* Remove default outline */
+}
+
+/* Style for the disabled option */
+.select-container select option[disabled] {
+  color: #999; /* Disabled option color */
+}
+
+/* Add some spacing between the dropdown and other elements */
+.select-container {
+  margin-top: 10px;
+}
 
 .client-rewards-container {
   text-align: center;

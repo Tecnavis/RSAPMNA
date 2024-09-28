@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './reward.css';
+import { collection, query, where, getDocs, getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 
 interface Product {
   id: number;
@@ -16,11 +17,22 @@ interface Redemption {
   status: 'upcoming' | 'completed';
 }
 
+interface Booking {
+  id: string;
+  selectedDriver: string;
+  company: string;
+  updatedTotalSalary: number;
+}
+
 const RewardPage: React.FC = () => {
-  const [user] = useState({
-    name: 'John Doe',
-    rewardPoints: 2000,
-  });
+  const queryParams = new URLSearchParams(window.location.search);
+  const id = queryParams.get('id');
+  const driverName = queryParams.get('name');
+  const [percentage, setPercentage] = useState<number>(0);
+  const [rewardPoints, setRewardPoints] = useState<number>(0);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const db = getFirestore();
+  const uid = sessionStorage.getItem('uid');
 
   const [products] = useState<Product[]>([
     { id: 1, image: 'https://via.placeholder.com/150', name: 'Product 1', description: 'Description of product 1', price: 500 },
@@ -34,20 +46,118 @@ const RewardPage: React.FC = () => {
     { id: 3, product: products[2], redeemedDate: '2023-09-15', status: 'upcoming' },
   ]);
 
+//  --------------------------
+useEffect(() => {
+  const fetchDriverData = async () => {
+    try {
+      // Fetch percentage and rewardPoints from Firestore for the driver
+      const driverRef = doc(db, `user/${uid}/driver`, id || "");
+      const driverDoc = await getDoc(driverRef);
+
+      if (driverDoc.exists()) {
+        const driverData = driverDoc.data();
+        const fetchedPercentage = driverData?.percentage || 0;
+        const fetchedRewardPoints = driverData?.rewardPoints || 0;
+        setPercentage(fetchedPercentage);
+        setRewardPoints(fetchedRewardPoints);
+        console.log(`Fetched percentage: ${fetchedPercentage}, rewardPoints: ${fetchedRewardPoints}`);
+      } else {
+        console.log("No such driver document!");
+      }
+    } catch (error) {
+      console.error("Error fetching driver data: ", error);
+    }
+  };
+
+  const fetchBookings = async () => {
+    try {
+      const bookingsRef = collection(db, `user/${uid}/bookings`);
+      const q = query(bookingsRef, where('selectedDriver', '==', id), where('company', '==', 'self'));
+      const querySnapshot = await getDocs(q);
+      const fetchedBookings: Booking[] = [];
+
+      querySnapshot.forEach((doc) => {
+        fetchedBookings.push({ id: doc.id, ...doc.data() } as Booking);
+      });
+      console.log("fetchedBookings", fetchedBookings);
+      setBookings(fetchedBookings);
+      calculateRewardPoints(fetchedBookings); // Calculate points after bookings are fetched
+    } catch (error) {
+      console.error("Error fetching bookings: ", error);
+    }
+  };
+
+  fetchDriverData(); // Fetch driver data first
+  fetchBookings();   // Then fetch bookings
+}, [id]);
+
+
+const calculateRewardPoints = (fetchedBookings: Booking[]) => {
+  console.log(`Calculating reward points with percentage: ${percentage}`);
+  const totalRewardPoints = fetchedBookings.reduce((total, booking) => {
+    const points = (booking.updatedTotalSalary * (percentage / 100)) || 0;
+    console.log(`Booking ID: ${booking.id}, Updated Total Salary: ${booking.updatedTotalSalary}, Points: ${points}`);
+    return total + points;
+  }, 0);
+
+  console.log(`Total Reward Points Calculated: ${totalRewardPoints}`);
+  setRewardPoints(totalRewardPoints);
+};
+
+
+  useEffect(() => {
+    if (bookings.length > 0) {
+      calculateRewardPoints(bookings);
+    }
+  }, [percentage, bookings]); // Recalculate points when either percentage or bookings change
+
+  const handlePercentageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setPercentage(value);
+    setTimeout(() => calculateRewardPoints(bookings), 0);
+  };
+
   const handleRedeem = (product: Product) => {
-    if (user.rewardPoints >= product.price) {
+    if (rewardPoints >= product.price) {
       alert(`Redeemed ${product.name}!`);
     } else {
       alert('Not enough reward points.');
     }
   };
 
+  const updateDriverRewards = async () => {
+    if (id && percentage >= 0 && rewardPoints >= 0) {
+      const driverRef = doc(db, `user/${uid}/driver`, id);
+
+      try {
+        await setDoc(driverRef, {
+          percentage: percentage,
+          rewardPoints: rewardPoints
+        }, { merge: true });
+        alert('Driver rewards updated successfully!');
+      } catch (error) {
+        console.error("Error updating driver rewards: ", error);
+        alert('Failed to update rewards.');
+      }
+    }
+  };
   return (
     <div className="reward-container">
       <header className="user-info">
-        <h1>Welcome, {user.name}</h1>
-        <h2>Points Available: {user.rewardPoints}</h2>
+        <h1>Welcome, {driverName}</h1>
+        <h2>Points Available: {rewardPoints}</h2>
       </header>
+
+      <section className="percentage-section">
+        <h3>Enter Percentage for Reward Points Calculation</h3>
+        <input
+          type="number"
+          value={percentage}
+          onChange={handlePercentageChange}
+          placeholder="Enter percentage"
+        />
+        <button onClick={updateDriverRewards}>Update Rewards</button> 
+      </section>
 
       <section className="products-section">
         <h3>Redeemable Products</h3>
@@ -62,9 +172,9 @@ const RewardPage: React.FC = () => {
                 <button
                   className="redeem-btn"
                   onClick={() => handleRedeem(product)}
-                  disabled={user.rewardPoints < product.price}
+                  disabled={rewardPoints < product.price}
                 >
-                  {user.rewardPoints >= product.price ? 'Redeem Now' : 'Insufficient Points'}
+                  {rewardPoints >= product.price ? 'Redeem Now' : 'Insufficient Points'}
                 </button>
               </div>
             </div>
@@ -74,7 +184,6 @@ const RewardPage: React.FC = () => {
 
       <section className="history-section">
         <h3>Previous Redemption History</h3>
-        <br/>
         <div className="history-categories">
           <div className="history-category">
             {redemptionHistory.filter((r) => r.status === 'completed').length === 0 ? (
@@ -97,8 +206,6 @@ const RewardPage: React.FC = () => {
               </div>
             )}
           </div>
-
-          
         </div>
       </section>
     </div>
