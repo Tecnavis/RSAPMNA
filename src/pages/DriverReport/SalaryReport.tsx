@@ -94,7 +94,7 @@ const SalaryReport: React.FC = () => {
 
         fetchBookings();
     }, [db, id]);
-
+    
     useEffect(() => {
         if (selectedMonth || selectedYear) {
             const filtered = bookings.filter((booking) => {
@@ -113,11 +113,7 @@ const SalaryReport: React.FC = () => {
         }
     }, [bookings, selectedMonth, selectedYear]);
     
-    useEffect(() => {
-        const total = filteredBookings.reduce((acc, booking) => acc + (booking.balanceSalary || 0), 0);
-        setTotalSalaryAmount(total);
-    }, [filteredBookings]);
-
+   
     useEffect(() => {
         if (selectAll) {
             setSelectedBookings(filteredBookings.map((booking) => booking.id));
@@ -142,7 +138,25 @@ const SalaryReport: React.FC = () => {
             return acc;
         }, 0);
     };
+    useEffect(() => {
+        const total = filteredBookings.reduce((acc, booking) => acc + (booking.balanceSalary || 0), 0);
+        setTotalSalaryAmount(total);
 
+        if (id) {
+            updateTotalSalaryInFirestore(id, total);
+        }
+    }, [filteredBookings]);
+
+    // Function to update total salary in Firestore
+    const updateTotalSalaryInFirestore = async (driverId: string, total: number) => {
+        try {
+            const driverRef = doc(db, `user/${uid}/driver`, driverId);
+            await updateDoc(driverRef, { totalSalaryAmount: total });
+            console.log('Total salary updated in Firestore:', total);
+        } catch (error) {
+            console.error('Error updating total salary in Firestore:', error);
+        }
+    };
     const handleEditBooking = (bookingId: any) => {
         const bookingToEdit = bookings.find((b) => b.id === bookingId);
         if (bookingToEdit) {
@@ -164,7 +178,7 @@ const SalaryReport: React.FC = () => {
 
     const promptForTotalSalaryConfirmation = () => {
         const calculatedTotalSalary = calculateSelectedTotalSalary();
-        const userEnteredTotal = prompt('Enter the calculated total salary:');
+        const userEnteredTotal = prompt('Enter the calculated total salary:',calculatedTotalSalary);
         if (userEnteredTotal !== null) {
             const enteredValue = Number(userEnteredTotal);
             if (enteredValue === calculatedTotalSalary) {

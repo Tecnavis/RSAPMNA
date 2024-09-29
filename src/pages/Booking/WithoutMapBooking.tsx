@@ -963,7 +963,7 @@ if (routes?.length > 0) {
             // Extract all FCM tokens from drivers
             const tokens = drivers.map((driver) => driver.fcmToken).filter((token) => token);
             const notificationTitle = 'Booking Notification';
-            const notificationBody = 'A new booking has been added or updated.';
+            const notificationBody = 'A new booking has been added (Dummy).';
             const sound = 'alert_notification';
 
             for (const token of tokens) {
@@ -973,7 +973,7 @@ if (routes?.length > 0) {
             console.error('Error sending notifications to all drivers:', error);
         }
     };
-// ----------------------------------
+// ----------------
     const addOrUpdateItem = async (): Promise<void> => {
         if (validateForm()) {
             try {
@@ -1002,6 +1002,7 @@ if (routes?.length > 0) {
                 const totalDriverDistanceNumber = parseFloat(totalDriverDistance) || 0;
 
                 const bookingData = {
+
                     driver: driverName,
                     totalSalary: totalSalary,
                     pickupLocation: formattedPickupLocation,
@@ -1010,6 +1011,7 @@ if (routes?.length > 0) {
                     dateTime: dateTime, 
                     deliveryDateTime: deliveryDateTime || null,                    createdAt: serverTimestamp(),
                     comments: comments || '',
+                    bookingId: `${bookingId}`,
                     // totalDistance: totalDistance,
                     distance: distance || '',
                     baseLocation: baseLocation || '',
@@ -1068,7 +1070,6 @@ if (routes?.length > 0) {
                 await sendPushNotification(fcmToken, 'Booking Notification', 'Your booking has been updated', 'alert_notification');
             }
 
-            // Schedule notification only if deliveryDateTime is provided
             if (deliveryDateTime) {
                 const deliveryDate = new Date(deliveryDateTime);
                 const timeToNotify = deliveryDate.getTime() - currentDate.getTime();
@@ -1076,7 +1077,12 @@ if (routes?.length > 0) {
                 if (timeToNotify > 0) {
                     // Schedule the notification
                     setTimeout(async () => {
-                        await sendPushNotification(fcmToken, 'Delivery Reminder', `Your booking is scheduled for delivery on ${formatDate(deliveryDate)}`, 'alert_notification');
+                        await sendPushNotification(
+                            fcmToken, 
+                            'Delivery Reminder', 
+                            `Your booking is scheduled for delivery on ${formatDate(deliveryDate)}`, 
+                            'alert_notification'
+                        );
                     }, timeToNotify);
                 }
             }

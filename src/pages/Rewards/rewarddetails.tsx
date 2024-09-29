@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './reward.css';
-import { collection, query, where, getDocs, getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 interface Product {
   id: number;
@@ -48,38 +48,35 @@ const RewardPage: React.FC = () => {
 
 //  --------------------------
 useEffect(() => {
-  const fetchDriverData = async () => {
-    try {
-      // Fetch percentage and rewardPoints from Firestore for the driver
-      const driverRef = doc(db, `user/${uid}/driver`, id || "");
-      const driverDoc = await getDoc(driverRef);
-
-      if (driverDoc.exists()) {
-        const driverData = driverDoc.data();
-        const fetchedPercentage = driverData?.percentage || 0;
-        const fetchedRewardPoints = driverData?.rewardPoints || 0;
-        setPercentage(fetchedPercentage);
-        setRewardPoints(fetchedRewardPoints);
-        console.log(`Fetched percentage: ${fetchedPercentage}, rewardPoints: ${fetchedRewardPoints}`);
-      } else {
-        console.log("No such driver document!");
-      }
-    } catch (error) {
-      console.error("Error fetching driver data: ", error);
+  const driverRef = doc(db, `user/${uid}/driver`, id || "");
+  
+  const unsubscribe = onSnapshot(driverRef, (docSnapshot) => {
+    if (docSnapshot.exists()) {
+      const driverData = docSnapshot.data();
+      const fetchedPercentage = driverData?.percentage || 0;
+      const fetchedRewardPoints = driverData?.rewardPoints || 0;
+      setPercentage(fetchedPercentage);
+      setRewardPoints(fetchedRewardPoints);
+      console.log(`Updated percentage: ${fetchedPercentage}, rewardPoints: ${fetchedRewardPoints}`);
     }
-  };
+  });
 
+  return () => unsubscribe(); // Clean up the snapshot listener
+}, [id, db, uid]);
+
+// Fetch bookings
+useEffect(() => {
   const fetchBookings = async () => {
     try {
       const bookingsRef = collection(db, `user/${uid}/bookings`);
-      const q = query(bookingsRef, where('selectedDriver', '==', id), where('company', '==', 'self'));
+      const q = query(bookingsRef, where('selectedDriver', '==', id), where('company', '==', 'rsa'));
       const querySnapshot = await getDocs(q);
       const fetchedBookings: Booking[] = [];
 
       querySnapshot.forEach((doc) => {
         fetchedBookings.push({ id: doc.id, ...doc.data() } as Booking);
       });
-      console.log("fetchedBookings", fetchedBookings);
+
       setBookings(fetchedBookings);
       calculateRewardPoints(fetchedBookings); // Calculate points after bookings are fetched
     } catch (error) {
@@ -87,9 +84,8 @@ useEffect(() => {
     }
   };
 
-  fetchDriverData(); // Fetch driver data first
-  fetchBookings();   // Then fetch bookings
-}, [id]);
+  fetchBookings();
+}, [id, db, uid]);
 
 
 const calculateRewardPoints = (fetchedBookings: Booking[]) => {
@@ -101,7 +97,7 @@ const calculateRewardPoints = (fetchedBookings: Booking[]) => {
   }, 0);
 
   console.log(`Total Reward Points Calculated: ${totalRewardPoints}`);
-  setRewardPoints(totalRewardPoints);
+  setRewardPoints(parseFloat(totalRewardPoints.toFixed(2)));
 };
 
 
@@ -130,7 +126,7 @@ const calculateRewardPoints = (fetchedBookings: Booking[]) => {
       const driverRef = doc(db, `user/${uid}/driver`, id);
 
       try {
-        await setDoc(driverRef, {
+        await updateDoc(driverRef, {
           percentage: percentage,
           rewardPoints: rewardPoints
         }, { merge: true });
@@ -145,8 +141,8 @@ const calculateRewardPoints = (fetchedBookings: Booking[]) => {
     <div className="reward-container">
       <header className="user-info">
         <h1>Welcome, {driverName}</h1>
-        <h2>Points Available: {rewardPoints}</h2>
-      </header>
+        <h2>Points Available: {rewardPoints.toFixed(2)}</h2> {/* Display formatted points */}
+        </header>
 
       <section className="percentage-section">
         <h3>Enter Percentage for Reward Points Calculation</h3>
@@ -158,7 +154,7 @@ const calculateRewardPoints = (fetchedBookings: Booking[]) => {
         />
         <button onClick={updateDriverRewards}>Update Rewards</button> 
       </section>
-
+{/* ------------------------------------------------ */}
       <section className="products-section">
         <h3>Redeemable Products</h3>
         <div className="product-list">
@@ -207,6 +203,23 @@ const calculateRewardPoints = (fetchedBookings: Booking[]) => {
             )}
           </div>
         </div>
+      </section>
+       <section className="bookings-section">
+        <h3>Your Bookings</h3>
+        {bookings.length === 0 ? (
+          <p>No bookings found.</p>
+        ) : (
+          <div className="bookings-list">
+            {bookings.map((booking) => (
+              <div key={booking.id} className="booking-card">
+                <h4>Booking ID: {booking.id}</h4>
+                <p>Selected Driver: {booking.selectedDriver}</p>
+                <p>Company: {booking.company}</p>
+                <p>Updated Total Salary: {booking.updatedTotalSalary}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
