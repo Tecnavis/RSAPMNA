@@ -5,7 +5,7 @@ import { collection, getDocs, getFirestore, onSnapshot, doc, getDoc, query, orde
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import IconArrowLeft from '../../components/Icon/IconArrowLeft';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, TextField } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, TextField, CircularProgress } from '@mui/material';
 
 // Define TypeScript interfaces
 interface BookingRecord {
@@ -24,7 +24,7 @@ interface BookingRecord {
     cancelReason?: string;
     company: string;
     companyName: string;
-    formAdded:boolean;
+    formAdded: boolean;
 }
 
 interface Driver {
@@ -177,6 +177,8 @@ const StatusTable: React.FC = () => {
     const [docId, setDocId] = useState<string>('');
     const [isEditing, setIsEditing] = useState<boolean>(false);
     const [fixedPoint, setFixedPoint] = useState<number | null>(null);
+    const [loadingId, setLoadingId] = useState<string | null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid') || '';
     const fetchPoints = async () => {
@@ -260,11 +262,12 @@ const StatusTable: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         let points = 0;
-
+         setLoadingId(bId)
+         setLoading(true)
         // Ensure fixedPoint is a number, and set to 0 if null or NaN
         const validFixedPoint: number = typeof fixedPoint === 'number' ? fixedPoint : typeof fixedPoint === 'string' ? parseFloat(fixedPoint) : 0;
 
-        console.log(validFixedPoint, 'this is the valid ');
+        
 
         // Check each field and add points for "yes" answers
         if (uniform === 'yes') points += validFixedPoint;
@@ -311,6 +314,9 @@ const StatusTable: React.FC = () => {
             }
         } catch (error) {
             console.error('Error updating points:', error);
+        } finally {
+            setLoadingId(null)
+            setLoading(false)
         }
     };
 
@@ -443,7 +449,7 @@ const StatusTable: React.FC = () => {
                 <Title>Order Completed</Title>
             </Header>
             {completedBookings.map((record) => (
-                <Card key={record.id}>
+                <Card key={record.id} style={{ background: 'linear-gradient(179.1deg, rgb(43, 170, 96) 2.3%, rgb(129, 204, 104) 98.3%)',}}>
                     <DataItem
                         style={{
                             margin: '5px 0',
@@ -493,11 +499,18 @@ const StatusTable: React.FC = () => {
                             <StatusBadge status="Order Completed">{record.status}</StatusBadge>
                         </Value>
                     </DataItem>
-                    <DataItem>
-                        <Label>Feedback :</Label>
-                        <Value>
-                            {record.company === 'self' && !record.formAdded && (
-                                <button
+                    {record.company === 'self' && !record.formAdded && (
+                        <DataItem>
+                            <Label>Feedback :</Label>
+                            <Value>
+                                {loadingId === record.id  ?  (
+                                     <button
+                                     className="bg-blue-500 text-white py-2 px-4 rounded"
+                                 >
+                                    <CircularProgress size={24} color="inherit"/>
+                                 </button>    
+                                ) : (
+                                    <button
                                     className="bg-blue-500 text-white py-2 px-4 rounded"
                                     onClick={() => {
                                         onRequestOpen(record.selectedDriver, record.id);
@@ -505,9 +518,11 @@ const StatusTable: React.FC = () => {
                                 >
                                     Open form
                                 </button>
-                            )}
-                        </Value>
-                    </DataItem>
+                                )}
+                               
+                            </Value>
+                        </DataItem>
+                    )}
                     <OrderDetailsButton onClick={() => handleOrderDetails(record)}>
                         Order Details
                         <IconArrowLeft />
@@ -583,12 +598,25 @@ const StatusTable: React.FC = () => {
                             </RadioGroup>
                         </FormControl>
                         <DialogActions>
-                            <Button type="submit" variant="contained" color="primary">
+                          {loading ? (
+                            <Button variant="contained" color="primary">
+                               <CircularProgress size={24} color="inherit"/>
+                            </Button>
+                          ):(
+                            <div>
+ <Button type="submit" variant="contained" color="primary">
                                 Submit
                             </Button>
-                            <Button onClick={onRequestClose} color="secondary">
-                                Close
-                            </Button>
+                              <Button onClick={onRequestClose} color="secondary">
+                              Close
+                          </Button>
+                            </div>
+                           
+                          )}
+ 
+                                
+                           
+                          
                         </DialogActions>
                     </form>
                 </DialogContent>
