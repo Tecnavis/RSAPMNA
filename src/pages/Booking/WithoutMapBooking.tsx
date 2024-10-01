@@ -963,7 +963,7 @@ if (routes?.length > 0) {
             // Extract all FCM tokens from drivers
             const tokens = drivers.map((driver) => driver.fcmToken).filter((token) => token);
             const notificationTitle = 'Booking Notification';
-            const notificationBody = 'A new booking has been added or updated.';
+            const notificationBody = 'A new booking has been added (Dummy).';
             const sound = 'alert_notification';
 
             for (const token of tokens) {

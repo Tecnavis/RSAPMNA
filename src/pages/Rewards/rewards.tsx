@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './style.css'; // Add custom styles here
 import { Button } from '@mui/material';
 import IconEye from '../../components/Icon/IconEye';
-import { collection, getDocs, getFirestore } from 'firebase/firestore';
+import { collection, doc, getDocs, getFirestore, query, setDoc, where } from 'firebase/firestore';
 
 type ClientCategory = 'Driver' | 'Staff' | 'Provider' | 'Showroom' | 'Customer';
 interface ClientRewardDetails {
@@ -21,7 +21,11 @@ const ClientRewards: React.FC = () => {
     const [showroomRewards, setShowroomRewards] = useState<ClientRewardDetails[]>([]);
     const [selectedShowroomStaff, setSelectedShowroomStaff] = useState<{ [showroomName: string]: string }>({});
     const [showroomVisible, setShowroomVisible] = useState<string | null>(null); // Track the clicked showroom
-    const db = getFirestore();
+    const [staffPercentage, setStaffPercentage] = useState<number>(0);
+    const [providerPercentage, setProviderPercentage] = useState<number>(0);
+    const [showroomPercentage, setShowroomPercentage] = useState<number>(0);
+    const [customerPercentage, setCustomerPercentage] = useState<number>(0);
+   const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
 
     const fetchDrivers = async () => {
@@ -93,7 +97,91 @@ const ClientRewards: React.FC = () => {
     const handleViewRewards = (category: ClientCategory) => {
         setVisibleCategory(visibleCategory === category ? null : category);
     };
+    const handlePercentageChange = (category: ClientCategory, value: number) => {
+      switch (category) {
+          case 'Staff':
+              setStaffPercentage(value);
+              break;
+          case 'Provider':
+              setProviderPercentage(value);
+              break;
+          case 'Showroom':
+              setShowroomPercentage(value);
+              break;
+          case 'Customer':
+              setCustomerPercentage(value);
+              break;
+      }
+  };
 
+  const savePercentageToFirestore = async (category: ClientCategory) => {
+    try {
+      let collectionName = '';
+      let percentage = 0;
+  
+      switch (category) {
+        case 'Staff':
+          collectionName = `user/${uid}/users`;
+          percentage = staffPercentage;
+          break;
+  
+        case 'Provider':
+          collectionName = `user/${uid}/driver`;
+          percentage = providerPercentage;
+          break;
+  
+        case 'Showroom':
+          collectionName = `user/${uid}/showroom`;
+          percentage = showroomPercentage;
+          break;
+  
+        case 'Customer':
+          collectionName = `user/${uid}/customer`;
+          percentage = customerPercentage;
+          break;
+  
+        default:
+          throw new Error('Invalid category');
+      }
+  
+      // Get reference to the Firestore collection
+      const collectionRef = collection(db, collectionName);
+  
+      if (category === 'Provider') {
+        // Update percentage for all providers except 'RSA' and 'Company'
+        const querySnapshot = await getDocs(
+          query(collectionRef, where('companyName', 'not-in', ['RSA', 'Company']))
+        );
+        
+        // Update percentage for each matching document
+        querySnapshot.forEach(async (docSnap) => {
+          const docRef = doc(collectionRef, docSnap.id);
+          await setDoc(docRef, { percentage }, { merge: true });
+        });
+      } 
+      else if (category === 'Staff' || category === 'Showroom') {
+        // For Staff and Showroom, update percentage for all documents in their respective collections
+        const querySnapshot = await getDocs(collectionRef);
+  
+        querySnapshot.forEach(async (docSnap) => {
+          const docRef = doc(collectionRef, docSnap.id);
+          await setDoc(docRef, { percentage }, { merge: true });
+        });
+      } 
+      else {
+        // For Customer, update the document of the current user
+        const docRef = doc(collectionRef, `${uid}`);
+        await setDoc(docRef, { percentage }, { merge: true });
+      }
+  
+      console.log(`${category} percentage saved successfully!`);
+    } catch (error) {
+      console.error('Error saving percentage:', error);
+    }
+  };
+  
+  
+  
     const getRewardsList = (): { category: ClientCategory; rewards: ClientRewardDetails[] }[] => {
         if (!visibleCategory) {
             return [
@@ -143,6 +231,7 @@ const ClientRewards: React.FC = () => {
         // Handle staff selection logic here
         console.log(`Selected staff ${selectedStaff} for showroom ${clientName}`);
     };
+    // --------------------
     return (
         <div className="client-rewards-container">
             <h1>CLIENT REWARDS</h1>
@@ -157,7 +246,36 @@ const ClientRewards: React.FC = () => {
                 ].map((client) => (
                     <div key={client.category as ClientCategory} className={`client-card ${client.category.toLowerCase()}`}>
                         <h2>{client.category}</h2>
-                        <p>Reward Points: {client.rewardPoints}</p>
+                        <p>Reward Points: {client.rewardPoints.toFixed(2)}</p>
+                        {client.category !== 'Driver' && (
+   <div className="percentage-container">
+   <label htmlFor={`${client.category}-percentage`}>Set Percentage: </label>
+   <input
+       type="number"
+       id={`${client.category}-percentage`}
+       value={
+           client.category === 'Staff'
+               ? staffPercentage
+               : client.category === 'Provider'
+               ? providerPercentage
+               : client.category === 'Showroom'
+               ? showroomPercentage
+               : customerPercentage
+       }
+       onChange={(e) =>
+           handlePercentageChange(
+               client.category as ClientCategory,
+               Number(e.target.value)
+           )
+       }
+   />
+   <Button onClick={() => savePercentageToFirestore(client.category as ClientCategory)}>
+       Save
+   </Button>
+</div>
+
+)}
+
                         <button onClick={() => handleViewRewards(client.category as ClientCategory)} className="reward-btn">
                             {visibleCategory === client.category ? 'Hide Rewards' : 'View Rewards'}
                         </button>
@@ -195,16 +313,13 @@ const ClientRewards: React.FC = () => {
                                             )}
                                         </>
                                     )}
-                                    <span className="reward-points">
-                                        {client.rewardPoints} points
-                                        <Button
-                                            onClick={() => {
-                                                handleView(client.id, client.name, client.rewardPoints); // Call the handleView function with the id, name, and rewardPoints
-                                            }}
-                                        >
-                                            <IconEye />
-                                        </Button>
-                                    </span>
+                                  <span className="reward-points">
+    {client.rewardPoints.toFixed(2)} points
+    <Button onClick={() => { handleView(client.id, client.name, client.rewardPoints); }}>
+        <IconEye />
+    </Button>
+</span>
+
                                 </li>
                             ))}
                         </ul>
