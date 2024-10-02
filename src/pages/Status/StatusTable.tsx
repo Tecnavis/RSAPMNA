@@ -31,6 +31,7 @@ interface Driver {
     id: string;
     name: string;
     phone: string;
+    companyName:string;
     // Add other relevant driver fields here
 }
 
