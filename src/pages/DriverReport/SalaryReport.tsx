@@ -79,7 +79,7 @@ const SalaryReport: React.FC = () => {
         const fetchBookings = async () => {
             try {
                 const bookingsRef = collection(db, `user/${uid}/bookings`);
-                const q = query(bookingsRef, where('selectedDriver', '==', id),orderBy('createdAt', 'desc') );
+                const q = query(bookingsRef, where('selectedDriver', '==', id), where('status', '==', 'Order Completed'),orderBy('createdAt', 'desc') );
                 const querySnapshot = await getDocs(q);
                 const fetchedBookings = querySnapshot.docs.map((doc) => {
                     const data = doc.data();
@@ -140,6 +140,7 @@ const SalaryReport: React.FC = () => {
     };
     useEffect(() => {
         const total = filteredBookings.reduce((acc, booking) => acc + (booking.balanceSalary || 0), 0);
+        console.log("totaltotal",total)
         setTotalSalaryAmount(total);
 
         if (id) {
