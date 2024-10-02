@@ -165,6 +165,7 @@ const StatusTable: React.FC = () => {
     const navigate = useNavigate();
     const [recordsData, setRecordsData] = useState<BookingRecord[]>([]);
     const [drivers, setDrivers] = useState<Record<string, Driver>>({});
+    const [allDrivers, setALLDrivers] = useState<Driver[]>([]);
     const [uniform, setUniform] = useState<string | null>(null);
     const [behavior, setBehavior] = useState<string | null>(null);
     const [idCard, setIdCard] = useState<string | null>(null);
@@ -342,8 +343,24 @@ const StatusTable: React.FC = () => {
 
     console.log(dId, 'this is the driver id');
 
+    const fetchDrivers = async () => {
+        try {
+            const driversCollection = collection(db, `user/${uid}/driver`);
+            const driverSnapshot = await getDocs(driversCollection);
+            const driverList = driverSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            })) as Driver[]; // Type assertion to indicate the shape of objects is Driver
+            
+            setALLDrivers(driverList); // Store the fetched drivers in state
+            console.log(driverList, 'Fetched Drivers'); // Optional logging
+        } catch (error) {
+            console.error('Error fetching drivers:', error);
+        }
+    };
     useEffect(() => {
         fetchPoints();
+        fetchDrivers();
     }, []);
 
     const handleEditClick = () => {
@@ -499,30 +516,28 @@ const StatusTable: React.FC = () => {
                             <StatusBadge status="Order Completed">{record.status}</StatusBadge>
                         </Value>
                     </DataItem>
-                    {record.company === 'self' && !record.formAdded && (
-                        <DataItem>
-                            <Label>Feedback :</Label>
-                            <Value>
-                                {loadingId === record.id  ?  (
-                                     <button
-                                     className="bg-blue-500 text-white py-2 px-4 rounded"
-                                 >
-                                    <CircularProgress size={24} color="inherit"/>
-                                 </button>    
-                                ) : (
-                                    <button
-                                    className="bg-blue-500 text-white py-2 px-4 rounded"
-                                    onClick={() => {
-                                        onRequestOpen(record.selectedDriver, record.id);
-                                    }}
-                                >
-                                    Open form
-                                </button>
-                                )}
-                               
-                            </Value>
-                        </DataItem>
-                    )}
+                 {record.selectedDriver && !record.formAdded && allDrivers.some(driver => driver.id === record.selectedDriver && driver.companyName === "RSA") && (
+    <DataItem>
+        <Label>Feedback :</Label>
+        <Value>
+            {loadingId === record.id ? (
+                <button className="bg-blue-500 text-white py-2 px-4 rounded">
+                    <CircularProgress size={24} color="inherit" />
+                </button>
+            ) : (
+                <button
+                    className="bg-blue-500 text-white py-2 px-4 rounded"
+                    onClick={() => {
+                        onRequestOpen(record.selectedDriver, record.id);
+                    }}
+                >
+                    Open form
+                </button>
+            )}
+        </Value>
+    </DataItem>
+)}
+
                     <OrderDetailsButton onClick={() => handleOrderDetails(record)}>
                         Order Details
                         <IconArrowLeft />
