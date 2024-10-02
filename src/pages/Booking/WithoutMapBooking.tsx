@@ -95,8 +95,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [pickupLocation, setPickupLocation] = useState<{ lat: string; lng: string; name: string }>({ lat: '', lng: '', name: '' });
     const [availableServices, setAvailableServices] = useState<string>('');
     const [dropoffLocation, setDropoffLocation] = useState<{ lat: string; lng: string; name: string } | null>(null);
-// -------------------------------------------------------
-const [deliveryDateTime, setDeliveryDateTime] = useState<string>('');
+    // -------------------------------------------------------
+    const [deliveryDateTime, setDeliveryDateTime] = useState<string>('');
 
     const [baseLocation, setBaseLocation] = useState<{ lat: string; lng: string; name: string } | null>(null);
     const [selectedCompanyData, setSelectedCompanyData] = useState(null);
@@ -618,128 +618,120 @@ const [deliveryDateTime, setDeliveryDateTime] = useState<string>('');
 
     useEffect(() => {
         const fetchDrivers = async () => {
-          if (!serviceType || !serviceDetails || !pickupLocation) {
-            console.log("Missing criteria: serviceType, serviceDetails, or pickupLocation");
-            setDrivers([]);
-            return;
-          }
-      
-          try {
-            console.log("Fetching drivers...");
-            const driversCollection = collection(db, `user/${uid}/driver`);
-            const snapshot = await getDocs(driversCollection);
-      
-            console.log("Snapshot received:", snapshot.docs.length, "documents found");
-      
-            const filteredDrivers = await Promise.all(
-              snapshot.docs.map(async (doc) => {
-                const driverData = doc.data();
-                const { currentLocation, selectedServices, status } = driverData;
-      
-                // Log current driver data
-                console.log(`Processing driver ${doc.id}`, driverData);
-      
-                // Filter out drivers that don't match the criteria
-                if (!selectedServices || !selectedServices.includes(serviceType) || status === 'deleted from UI') {
-                  console.log(`Driver ${doc.id} filtered out: No matching service or deleted`);
-                  return null;
-                }
-      
-                const currentLat = currentLocation?.latitude ?? null;
-                const currentLng = currentLocation?.longitude ?? null;
-      
-                // Log the current driver's location
-                console.log(`Driver ${doc.id} location:`, { currentLat, currentLng });
-      
-                if (typeof currentLat === 'number' && typeof currentLng === 'number' &&
-                    pickupLocation.lat && pickupLocation.lng) {
-                  console.log(`Valid location data for driver ${doc.id}. Proceeding with distance calculation.`);
-                } else {
-                  console.error(`Invalid location data for driver ${doc.id}:`, { currentLat, currentLng });
-                  return null; // Skip this driver
-                }
-      
-                try {
-                  // Log the API request details
-                  console.log(`Requesting distance for driver ${doc.id}`, {
-                    origin: `${currentLat},${currentLng}`,
-                    destination: `${pickupLocation.lat},${pickupLocation.lng}`,
-                    apiKey: import.meta.env.VITE_REACT_APP_API_KEY,
-                  });
-      
-                  const response = await axios.post(
-                    'https://api.olamaps.io/routing/v1/directions',
-                    null,
-                    {
-                      params: {
-                        origin: `${currentLat},${currentLng}`,
-                        destination: `${pickupLocation.lat},${pickupLocation.lng}`,
-                        api_key: import.meta.env.VITE_REACT_APP_API_KEY,
-                      },
-                      headers: {
-                        'X-Request-Id': `${doc.id}-${Date.now()}`,
-                      },
-                    }
-                  );
-      
-                 // Log the API response to inspect the structure
-console.log(`API Response for driver ${doc.id}:`, response.data);
+            if (!serviceType || !serviceDetails || !pickupLocation) {
+                console.log('Missing criteria: serviceType, serviceDetails, or pickupLocation');
+                setDrivers([]);
+                return;
+            }
 
-const routes = response.data.routes;
-let distance = 'Distance not available';
+            try {
+                console.log('Fetching drivers...');
+                const driversCollection = collection(db, `user/${uid}/driver`);
+                const snapshot = await getDocs(driversCollection);
 
-if (routes?.length > 0) {
-    console.log(`Routes for driver ${doc.id}:`, routes); // Log routes to inspect its structure
-  
-    if (routes[0]?.legs?.length > 0 && routes[0].legs[0]?.readable_distance) {
-      distance = routes[0].legs[0].readable_distance; // Use readable_distance
-      console.log(`Driver ${doc.id} pickup distance: ${distance}`);
-    } else {
-      console.error(`No valid leg data found in the response for driver ${doc.id}`);
-    }
-  } else {
-    console.error(`No valid routes found in the response for driver ${doc.id}`);
-  }
-  
+                console.log('Snapshot received:', snapshot.docs.length, 'documents found');
 
+                const filteredDrivers = await Promise.all(
+                    snapshot.docs.map(async (doc) => {
+                        const driverData = doc.data();
+                        const { currentLocation, selectedServices, status } = driverData;
 
-      
-                  return {
-                    id: doc.id,
-                    ...driverData,
-                    currentLocation: { lat: currentLat, lng: currentLng },
-                    pickupDistance: distance, // Store the calculated distance
-                  };
-                } catch (error) {
-                  // Handle any errors in fetching the distance
-                  console.error(`Error fetching distance for driver ${doc.id}:`, error);
-                  return {
-                    id: doc.id,
-                    ...driverData,
-                    currentLocation: { lat: currentLat, lng: currentLng },
-                    pickupDistance: 'Error fetching distance',
-                  };
-                }
-              })
-            );
-      
-            console.log("Filtered drivers list:", filteredDrivers);
-            setDrivers(filteredDrivers.filter(Boolean)); // Remove null entries
-          } catch (error) {
-            // Log any errors that occur while fetching drivers
-            console.error('Error fetching drivers:', error);
-          }
+                        // Log current driver data
+                        console.log(`Processing driver ${doc.id}`, driverData);
+
+                        // Filter out drivers that don't match the criteria
+                        if (!selectedServices || !selectedServices.includes(serviceType) || status === 'deleted from UI') {
+                            console.log(`Driver ${doc.id} filtered out: No matching service or deleted`);
+                            return null;
+                        }
+
+                        const currentLat = currentLocation?.latitude ?? null;
+                        const currentLng = currentLocation?.longitude ?? null;
+
+                        // Log the current driver's location
+                        console.log(`Driver ${doc.id} location:`, { currentLat, currentLng });
+
+                        if (typeof currentLat === 'number' && typeof currentLng === 'number' && pickupLocation.lat && pickupLocation.lng) {
+                            console.log(`Valid location data for driver ${doc.id}. Proceeding with distance calculation.`);
+                        } else {
+                            console.error(`Invalid location data for driver ${doc.id}:`, { currentLat, currentLng });
+                            return null; // Skip this driver
+                        }
+
+                        try {
+                            // Log the API request details
+                            console.log(`Requesting distance for driver ${doc.id}`, {
+                                origin: `${currentLat},${currentLng}`,
+                                destination: `${pickupLocation.lat},${pickupLocation.lng}`,
+                                apiKey: import.meta.env.VITE_REACT_APP_API_KEY,
+                            });
+
+                            const response = await axios.post('https://api.olamaps.io/routing/v1/directions', null, {
+                                params: {
+                                    origin: `${currentLat},${currentLng}`,
+                                    destination: `${pickupLocation.lat},${pickupLocation.lng}`,
+                                    api_key: import.meta.env.VITE_REACT_APP_API_KEY,
+                                },
+                                headers: {
+                                    'X-Request-Id': `${doc.id}-${Date.now()}`,
+                                },
+                            });
+
+                            // Log the API response to inspect the structure
+                            console.log(`API Response for driver ${doc.id}:`, response.data);
+
+                            const routes = response.data.routes;
+                            let distance = 'Distance not available';
+
+                            if (routes?.length > 0) {
+                                console.log(`Routes for driver ${doc.id}:`, routes); // Log routes to inspect its structure
+
+                                if (routes[0]?.legs?.length > 0 && routes[0].legs[0]?.readable_distance) {
+                                    distance = routes[0].legs[0].readable_distance; // Use readable_distance
+                                    console.log(`Driver ${doc.id} pickup distance: ${distance}`);
+                                } else {
+                                    console.error(`No valid leg data found in the response for driver ${doc.id}`);
+                                }
+                            } else {
+                                console.error(`No valid routes found in the response for driver ${doc.id}`);
+                            }
+
+                            return {
+                                id: doc.id,
+                                ...driverData,
+                                currentLocation: { lat: currentLat, lng: currentLng },
+                                pickupDistance: distance, // Store the calculated distance
+                            };
+                        } catch (error) {
+                            // Handle any errors in fetching the distance
+                            console.error(`Error fetching distance for driver ${doc.id}:`, error);
+                            return {
+                                id: doc.id,
+                                ...driverData,
+                                currentLocation: { lat: currentLat, lng: currentLng },
+                                pickupDistance: 'Error fetching distance',
+                            };
+                        }
+                    })
+                );
+
+                console.log('Filtered drivers list:', filteredDrivers);
+                setDrivers(filteredDrivers.filter(Boolean)); // Remove null entries
+            } catch (error) {
+                // Log any errors that occur while fetching drivers
+                console.error('Error fetching drivers:', error);
+            }
         };
-      
+
         if (serviceType && serviceDetails && pickupLocation) {
-          console.log("Criteria met: Fetching drivers");
-          fetchDrivers().catch(console.error); // Initiate fetching drivers if all criteria are met
+            console.log('Criteria met: Fetching drivers');
+            fetchDrivers().catch(console.error); // Initiate fetching drivers if all criteria are met
         } else {
-          console.log("Criteria not met: Resetting drivers list");
-          setDrivers([]); // Reset the drivers list if necessary criteria are missing
+            console.log('Criteria not met: Resetting drivers list');
+            setDrivers([]); // Reset the drivers list if necessary criteria are missing
         }
-      }, [db, uid, serviceType, serviceDetails, pickupLocation]);
-      
+    }, [db, uid, serviceType, serviceDetails, pickupLocation]);
+
     useEffect(() => {
         const fetchServiceDetails = async () => {
             if (!serviceType) {
@@ -1081,7 +1073,6 @@ const addOrUpdateItem = async (): Promise<void> => {
                     setTimeout(async () => {
                         await sendPushNotification(fcmToken, 'Delivery Reminder', `Your booking is scheduled for delivery on ${formatDate(deliveryDate)}`, 'alert_notification');
                     }, timeToCreateBooking);
-
                 }
             } else {
                 // If no deliveryDateTime, process the booking immediately
@@ -1094,14 +1085,27 @@ const addOrUpdateItem = async (): Promise<void> => {
                     console.log('Document written with ID: ', docRef.id);
                 }
 
+                // Check if the dummy driver is selected
                 if (selectedDriver === 'dummy') {
                     await sendNotificationsToAllDrivers();
                 } else if (fcmToken) {
                     await sendPushNotification(fcmToken, 'Booking Notification', 'Your booking has been updated', 'alert_notification');
                 }
-            }
 
-            navigate('/bookings/newbooking');
+                if (deliveryDateTime) {
+                    const deliveryDate = new Date(deliveryDateTime);
+                    const timeToNotify = deliveryDate.getTime() - currentDate.getTime();
+
+                    if (timeToNotify > 0) {
+                        // Schedule the notification
+                        setTimeout(async () => {
+                            await sendPushNotification(fcmToken, 'Delivery Reminder', `Your booking is scheduled for delivery on ${formatDate(deliveryDate)}`, 'alert_notification');
+                        }, timeToNotify);
+                    }
+                }
+
+                navigate('/bookings/newbooking');
+            }
         } catch (error) {
             console.error('Error adding/updating item:', error);
         }
@@ -1118,17 +1122,17 @@ const addOrUpdateItem = async (): Promise<void> => {
             <div className={styles.dateTime}>{currentDateTime}</div>
             <h2 className={styles.formHeading}>BOOK WITHOUT MAP</h2>
             <form className={styles.bookingForm}>
-            <div className="mb-4">
-        <label htmlFor="deliveryDateTime" className={`${styles.label} block mb-2`}>
-        Delivery Date & Time <span className="text-gray-400">(optional)</span>
-        </label>
-        <input
-            type="datetime-local"
-            value={deliveryDateTime}
-            onChange={(e) => setDeliveryDateTime(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-    </div>
+                <div className="mb-4">
+                    <label htmlFor="deliveryDateTime" className={`${styles.label} block mb-2`}>
+                        Delivery Date & Time <span className="text-gray-400">(optional)</span>
+                    </label>
+                    <input
+                        type="datetime-local"
+                        value={deliveryDateTime}
+                        onChange={(e) => setDeliveryDateTime(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
                 <div className={styles.formGroup}>
                     <label htmlFor="company" className={styles.label}>
                         Company

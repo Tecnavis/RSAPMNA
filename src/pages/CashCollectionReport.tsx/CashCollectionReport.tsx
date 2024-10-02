@@ -415,19 +415,41 @@ const updateTotalBalance = async () => {
     
     return (
         <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg">
-            <h1 className="text-3xl font-bold mb-5 text-center text-gray-800">Cash Collection Report</h1>
+<h1 className="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">
+  Cash Collection Report
+</h1>
+
             {driver ? (
                 <>
               <div className="container-fluid mb-5">
   <div className="flex flex-wrap text-center md:text-left">
-    <div className="w-full md:w-1/2 mb-4 md:mb-0">
-      <h2 className="text-2xl font-semibold text-gray-700">Driver: {driver.driverName}</h2>
-      <p className="text-gray-600">Phone: {driver.personalphone}</p>
-      <p className="text-gray-600">Advance Payment: {driver.advance}</p>
-    </div>
-    <div className="w-full md:w-1/2 flex justify-center md:justify-end">
-      <h2 className="text-2xl font-semibold text-gray-700">Net Total Amount in Hand: {calculateNetTotalAmountInHand()}</h2>
-    </div>
+ <div className="w-full md:w-1/2 mb-4 p-6 bg-white shadow-lg rounded-lg transition-transform duration-300 hover:scale-105">
+  <h2 className="text-2xl font-bold text-gray-800 mb-2 border-b-2 border-gray-200 pb-2">
+    🚗 Driver: <span className="text-indigo-600">{driver.driverName}</span>
+  </h2>
+  <div className="mt-4">
+    <p className="text-lg text-gray-700">
+      📞 <span className="font-medium">Phone:</span> {driver.personalphone}
+    </p>
+    <p className="text-lg text-gray-700 mt-2">
+      💰 <span className="font-medium">Advance Payment:</span> {driver.advance}
+    </p>
+  </div>
+</div>
+
+<div className="w-auto md:w-1/2 flex justify-center md:justify-end p-6 bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl hover:scale-105">
+  <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+    <span className="text-3xl mr-2">💵</span> {/* Larger icon for emphasis */}
+    Net Total Amount in Hand:
+    <span className="text-yellow-300 text-2xl ml-2 font-extrabold">
+      ${calculateNetTotalAmountInHand()}
+    </span>
+  </h2>
+</div>
+
+
+
+
   </div>
 </div>
 
@@ -435,27 +457,17 @@ const updateTotalBalance = async () => {
 
 <div className="container-fluid mb-5">
   <div className="flex flex-wrap justify-between items-center text-center md:text-left">
-  {/* {selectedBookings.length > 0 && (
-  <div className="fixed top-40 left-1/2 transform -translate-x-1/2 bg-red-100 border-2 border-gray-300 shadow-lg rounded-lg p-6">
-    <h3 className="text-xl font-semibold text-red-600">
-      Total Balance: {totalSelectedBalance}
-    </h3>
-  </div>
-)} */}
-
-
-
 
     <div className="w-full md:w-auto flex flex-col md:flex-row items-center md:justify-end">
-      <div className="space-x-2 mb-4 md:mb-0">
-        <label htmlFor="month" className="text-gray-700 font-semibold">
+      <div className="flex items-center mb-4 md:mb-0 space-x-2">
+        <label htmlFor="month" className="text-gray-700 font-semibold text-lg">
           Filter by Month:
         </label>
         <select
           id="month"
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
-          className="border border-gray-300 rounded px-2 py-1"
+          className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200 ease-in-out"
         >
           <option value="">All Months</option>
           {Array.from({ length: 12 }, (_, index) => {
@@ -468,15 +480,16 @@ const updateTotalBalance = async () => {
           })}
         </select>
       </div>
-      <div className="space-x-2">
-        <label htmlFor="year" className="text-gray-700 font-semibold">
+
+      <div className="flex items-center space-x-2">
+        <label htmlFor="year" className="text-gray-700 font-semibold text-lg">
           Filter by Year:
         </label>
         <select
           id="year"
           value={selectedYear}
           onChange={(e) => setSelectedYear(e.target.value)}
-          className="border border-gray-300 rounded px-2 py-1"
+          className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200 ease-in-out"
         >
           <option value="">All Years</option>
           {Array.from({ length: 5 }, (_, index) => {
@@ -492,6 +505,7 @@ const updateTotalBalance = async () => {
     </div>
   </div>
 </div>
+
 
 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
   <div className="bg-gradient-to-r from-blue-100 to-blue-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
@@ -634,24 +648,26 @@ const updateTotalBalance = async () => {
                 marginRight: '0.5rem' // Margin to space out the input from the button
             }}
             disabled={booking.approved}
+            min="0" // Ensure no negative values
         />
         <button
             onClick={() => handleAmountReceivedChange(booking.id, booking.receivedAmount.toString())} // Call the function on button click
             style={{
-                backgroundColor: '#4CAF50', // Green background
+                backgroundColor: booking.receivedAmount > 0 ? '#4CAF50' : '#d1d5db', // Green if valid, gray if invalid
                 color: 'white', // White text
                 border: 'none', // No border
                 borderRadius: '0.25rem', // Rounded corners
                 padding: '0.25rem 0.5rem', // Padding
-                cursor: 'pointer' // Pointer cursor
+                cursor: booking.receivedAmount > 0 ? 'pointer' : 'not-allowed' // Pointer cursor if valid, otherwise not-allowed
             }}
-            disabled={booking.approved} // Disable button if approved
+            disabled={booking.approved || booking.receivedAmount <= 0} // Disable button if approved or amount is invalid
         >
             OK
         </button>
     </div>
 </td>
 
+{/*-------------------- 01-10-2024 *-----------------*/}
 
                     <td className={styles.responsiveCell}>{calculateBalance(booking.amount, booking.receivedAmount || 0)}</td>
                     <td className={styles.responsiveCell}>
