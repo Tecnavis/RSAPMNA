@@ -23,7 +23,11 @@ interface Booking {
   company: string;
   updatedTotalSalary: number;
 }
-
+interface Driver {
+  percentage: number;
+  rewardPoints: number;
+  // other fields if necessary
+}
 const RewardPage: React.FC = () => {
   const queryParams = new URLSearchParams(window.location.search);
   const id = queryParams.get('id');
@@ -69,7 +73,7 @@ useEffect(() => {
   const fetchBookings = async () => {
     try {
       const bookingsRef = collection(db, `user/${uid}/bookings`);
-      const q = query(bookingsRef, where('selectedDriver', '==', id), where('company', '==', 'rsa'));
+      const q = query(bookingsRef, where('selectedDriver', '==', id), where('company', '==', 'rsa'), where('status', '==', 'Order Completed'));
       const querySnapshot = await getDocs(q);
       const fetchedBookings: Booking[] = [];
 
@@ -124,12 +128,12 @@ const calculateRewardPoints = (fetchedBookings: Booking[]) => {
   const updateDriverRewards = async () => {
     if (id && percentage >= 0 && rewardPoints >= 0) {
       const driverRef = doc(db, `user/${uid}/driver`, id);
-
+  
       try {
         await updateDoc(driverRef, {
           percentage: percentage,
           rewardPoints: rewardPoints
-        }, { merge: true });
+        });
         alert('Driver rewards updated successfully!');
       } catch (error) {
         console.error("Error updating driver rewards: ", error);
@@ -137,6 +141,7 @@ const calculateRewardPoints = (fetchedBookings: Booking[]) => {
       }
     }
   };
+  
   return (
     <div className="reward-container">
       <header className="user-info">
@@ -144,17 +149,16 @@ const calculateRewardPoints = (fetchedBookings: Booking[]) => {
         <h2>Points Available: {rewardPoints.toFixed(2)}</h2> {/* Display formatted points */}
         </header>
 
-      <section className="percentage-section">
-        <h3>Enter Percentage for Reward Points Calculation</h3>
-        <input
-          type="number"
-          value={percentage}
-          onChange={handlePercentageChange}
-          placeholder="Enter percentage"
-        />
-        <button onClick={updateDriverRewards}>Update Rewards</button> 
-      </section>
-{/* ------------------------------------------------ */}
+        <section className="percentage-section">
+  <h3>Percentage for Reward Points Calculation</h3>
+  <input
+    type="number"
+    value={percentage}
+    readOnly // Make the input field read-only
+  />
+</section>
+
+      {/* --------------------------------------------------- */}
       <section className="products-section">
         <h3>Redeemable Products</h3>
         <div className="product-list">
