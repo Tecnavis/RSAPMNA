@@ -965,86 +965,117 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             console.error('Error sending notifications to all drivers:', error);
         }
     };
-    // ----------------
-    const addOrUpdateItem = async (): Promise<void> => {
-        if (validateForm()) {
-            try {
-                const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-                const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
-                const fcmToken = selectedDriverData ? selectedDriverData.fcmToken : null;
-                const pickupDistance = selectedDriverData ? selectedDriverData.pickupDistance || 0 : 0;
+// ----------------------------------
+const addOrUpdateItem = async (): Promise<void> => {
+    if (validateForm()) {
+        try {
+            const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
+            const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
+            const fcmToken = selectedDriverData ? selectedDriverData.fcmToken : null;
+            const pickupDistance = selectedDriverData ? selectedDriverData.pickupDistance || 0 : 0;
 
-                const currentDate = new Date();
-                const dateTime = formatDate(currentDate); // Use the formatted date
-                const distance = (parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3)).toString();
-                let finalFileNumber = '';
+            const currentDate = new Date();
+            const dateTime = formatDate(currentDate); // Use the formatted date
+            const distance = (parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3)).toString();
+            let finalFileNumber = '';
 
-                if (company === 'self') {
-                    finalFileNumber = `PMNA${bookingId}`;
-                } else if (company === 'rsa') {
-                    finalFileNumber = fileNumber;
+            if (company === 'self') {
+                finalFileNumber = `PMNA${bookingId}`;
+            } else if (company === 'rsa') {
+                finalFileNumber = fileNumber;
+            }
+
+            const formattedPickupLocation = {
+                name: pickupLocation?.name || '',
+                lat: pickupLocation?.lat?.toString() || '',
+                lng: pickupLocation?.lng?.toString() || '',
+            };
+            const totalDriverDistanceNumber = parseFloat(totalDriverDistance) || 0;
+
+            const bookingData = {
+                driver: driverName,
+                totalSalary: totalSalary,
+                pickupLocation: formattedPickupLocation,
+                dropoffLocation: dropoffLocation || {},
+                status: 'booking added',
+                dateTime: dateTime, 
+                deliveryDateTime: deliveryDateTime || null,
+                createdAt: serverTimestamp(),
+                comments: comments || '',
+                distance: distance || '',
+                baseLocation: baseLocation || '',
+                showroomLocation: showroomLocation,
+                company: company || '',
+                adjustValue: adjustValue || '',
+                customerName: customerName || '',
+                totalDriverDistance: totalDriverDistanceNumber || 0,
+                totalDriverSalary: totalDriverSalary || 0,
+                mobileNumber: mobileNumber || '',
+                dis1: dis1 || 0,
+                dis2: dis2 || 0,
+                dis3: dis3 || 0,
+                phoneNumber: phoneNumber || '',
+                vehicleType: vehicleType || '',
+                bodyShope: bodyShope || '',
+                statusEdit: activeForm === 'withoutMap' ? 'mapbooking' : 'withoutmapbooking',
+                selectedCompany: selectedCompany || '',
+                serviceType: serviceType || '',
+                serviceVehicle: serviceVehicle || '',
+                serviceCategory: serviceCategory || '',
+                vehicleModel: vehicleModel || '',
+                vehicleSection: vehicleSection || '',
+                vehicleNumber: vehicleNumber || '',
+                fileNumber: finalFileNumber,
+                selectedDriver: selectedDriver || '',
+                trappedLocation: trappedLocation || '',
+                updatedTotalSalary: updatedTotalSalary || 0,
+                insuranceAmountBody: insuranceAmountBody || '',
+                paymentStatus: 'Not Paid',
+                pickupDistance: pickupDistance,
+            };
+
+            if (editData) {
+                if (role === 'admin') {
+                    bookingData.newStatus = `Edited by ${role}`;
+                } else if (role === 'staff') {
+                    bookingData.newStatus = `Edited by ${role} ${userName}`;
                 }
+                bookingData.editedTime = formatDate(new Date());
+            }
 
-                const formattedPickupLocation = {
-                    name: pickupLocation?.name || '',
-                    lat: pickupLocation?.lat?.toString() || '',
-                    lng: pickupLocation?.lng?.toString() || '',
-                };
-                const totalDriverDistanceNumber = parseFloat(totalDriverDistance) || 0;
+            console.log('Data to be added/updated:', bookingData);
 
-                const bookingData = {
-                    driver: driverName,
-                    totalSalary: totalSalary,
-                    pickupLocation: formattedPickupLocation,
-                    dropoffLocation: dropoffLocation || {},
-                    status: 'booking added',
-                    dateTime: dateTime,
-                    deliveryDateTime: deliveryDateTime || null,
-                    createdAt: serverTimestamp(),
-                    comments: comments || '',
-                    bookingId: `${bookingId}`,
-                    // totalDistance: totalDistance,
-                    distance: distance || '',
-                    baseLocation: baseLocation || '',
-                    showroomLocation: showroomLocation,
-                    company: company || '',
-                    adjustValue: adjustValue || '',
-                    customerName: customerName || '',
-                    totalDriverDistance: totalDriverDistanceNumber || 0,
-                    totalDriverSalary: totalDriverSalary || 0,
-                    mobileNumber: mobileNumber || '',
-                    dis1: dis1 || 0,
-                    dis2: dis2 || 0,
-                    dis3: dis3 || 0,
-                    phoneNumber: phoneNumber || '',
-                    vehicleType: vehicleType || '',
-                    bodyShope: bodyShope || '',
-                    statusEdit: activeForm === 'withoutMap' ? 'mapbooking' : 'withoutmapbooking',
-                    selectedCompany: selectedCompany || '',
-                    serviceType: serviceType || '',
-                    serviceVehicle: serviceVehicle || '',
-                    serviceCategory: serviceCategory || '',
-                    vehicleModel: vehicleModel || '',
-                    vehicleSection: vehicleSection || '',
-                    vehicleNumber: vehicleNumber || '',
-                    fileNumber: finalFileNumber,
-                    selectedDriver: selectedDriver || '',
-                    trappedLocation: trappedLocation || '',
-                    updatedTotalSalary: updatedTotalSalary || 0,
-                    insuranceAmountBody: insuranceAmountBody || '',
-                    paymentStatus: 'Not Paid',
-                    pickupDistance: pickupDistance,
-                };
-                if (editData) {
-                    if (role === 'admin') {
-                        bookingData.newStatus = `Edited by ${role}`;
-                    } else if (role === 'staff') {
-                        bookingData.newStatus = `Edited by ${role} ${userName}`;
-                    }
-                    bookingData.editedTime = formatDate(new Date());
+            // Schedule the booking at deliveryDateTime if provided
+            if (deliveryDateTime) {
+                const deliveryDate = new Date(deliveryDateTime);
+                const timeToCreateBooking = deliveryDate.getTime() - currentDate.getTime();
+
+                if (timeToCreateBooking > 0) {
+                    setTimeout(async () => {
+                        if (editData) {
+                            const docRef = doc(db, `user/${uid}/bookings`, editData.id);
+                            await updateDoc(docRef, bookingData);
+                            console.log('Document updated at delivery time');
+                        } else {
+                            const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
+                            console.log('Document created at delivery time with ID:', docRef.id);
+                        }
+
+                        if (selectedDriver === 'dummy') {
+                            await sendNotificationsToAllDrivers();
+                        } else if (fcmToken) {
+                            await sendPushNotification(fcmToken, 'Booking Notification', 'Your booking has been updated', 'alert_notification');
+                        }
+
+                    }, timeToCreateBooking);
+
+                    // Schedule the notification as well at the same time
+                    setTimeout(async () => {
+                        await sendPushNotification(fcmToken, 'Delivery Reminder', `Your booking is scheduled for delivery on ${formatDate(deliveryDate)}`, 'alert_notification');
+                    }, timeToCreateBooking);
                 }
-                console.log('Data to be added/updated:', bookingData);
-
+            } else {
+                // If no deliveryDateTime, process the booking immediately
                 if (editData) {
                     const docRef = doc(db, `user/${uid}/bookings`, editData.id);
                     await updateDoc(docRef, bookingData);
@@ -1074,12 +1105,14 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 }
 
                 navigate('/bookings/newbooking');
-            } catch (error) {
-                console.error('Error adding/updating item:', error);
             }
+        } catch (error) {
+            console.error('Error adding/updating item:', error);
         }
-    };
-    const handleButtonClick = (event:any) => {
+    }
+};
+
+    const handleButtonClick = (event) => {
         event.preventDefault();
         setShowShowroomModal(true);
     };
