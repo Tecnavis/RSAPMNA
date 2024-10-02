@@ -1103,9 +1103,9 @@ const addOrUpdateItem = async (): Promise<void> => {
                         }, timeToNotify);
                     }
                 }
-
-                navigate('/bookings/newbooking');
             }
+                navigate('/bookings/newbooking');
+          
         } catch (error) {
             console.error('Error adding/updating item:', error);
         }

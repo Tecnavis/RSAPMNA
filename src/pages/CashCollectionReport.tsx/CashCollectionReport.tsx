@@ -88,6 +88,7 @@ const CashCollectionReport: React.FC = () => {
         };
     
         fetchBookings();
+        updateTotalBalance();
     }, [db, id, uid]);
     
 
@@ -137,7 +138,7 @@ const CashCollectionReport: React.FC = () => {
             },
         });
     };
-// -----------------------------------------------------
+// -------------------------------------------
 const handleAmountReceivedChange = async (bookingId: string, receivedAmount: string) => {
     try {
         // Update the booking's receivedAmount and balance
