@@ -115,6 +115,8 @@ console.log("selectedBookings",selectedBookings)
         { key: 'transferedSalary', label: 'Amount Transferred', class: 'text-center' },
         { key: 'balanceSalary', label: 'Balance', class: 'text-center' },
     ];
+    const totalTransferred = bookings.reduce((total, booking) => total + (booking.transferedSalary || 0), 0);
+    const totalBalance = bookings.reduce((total, booking) => total + (booking.balanceSalary || 0), 0);
 
     return (
         <div>
@@ -135,10 +137,7 @@ console.log("selectedBookings",selectedBookings)
                     Download
                 </button>
 
-                <Link to="/apps/invoice/add" className="btn btn-secondary gap-2">
-                    <IconPlus />
-                    Create
-                </Link>
+             
 
                 {/* <Link to={`/editsalary/${id}`} className="btn btn-warning gap-2">
                     <IconEdit />
@@ -215,6 +214,14 @@ console.log("selectedBookings",selectedBookings)
                     ))}
                         </tbody>
                     </table>
+                </div>
+                <div className="mt-4 flex justify-between">
+                    <div className="font-semibold">Total Amount Transferred: </div>
+                    <div>{totalTransferred}</div>
+                </div>
+                <div className="flex justify-between">
+                    <div className="font-semibold">Total Balance: </div>
+                    <div>{totalBalance}</div>
                 </div>
             </div>
         </div>

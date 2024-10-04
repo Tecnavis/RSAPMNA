@@ -9,6 +9,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
+  category: string;
 }
 
 interface Redemption {
@@ -35,17 +36,19 @@ const RewardPage: React.FC = () => {
   const queryParams = new URLSearchParams(window.location.search);
   const id = queryParams.get('id'); // Driver ID
   const driverName = queryParams.get('name'); // Driver Name
+  const category = queryParams.get('category'); // Driver Name
+console.log("category",category)
   const [percentage, setPercentage] = useState<number>(0);
   const [rewardPoints, setRewardPoints] = useState<number>(0);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const db = getFirestore();
   const uid = sessionStorage.getItem('uid');
-
+  
   // Sample products for redemption
   const [products] = useState<Product[]>([
-    { id: 1, image: 'https://via.placeholder.com/150', name: 'Product 1', description: 'Description of product 1', price: 500 },
-    { id: 2, image: 'https://via.placeholder.com/150', name: 'Product 2', description: 'Description of product 2', price: 1000 },
-    { id: 3, image: 'https://via.placeholder.com/150', name: 'Product 3', description: 'Description of product 3', price: 700 },
+    { id: 1, image: 'https://via.placeholder.com/150', name: 'Product 1', description: 'Description of product 1', price: 500, category: 'Electronics' },
+    { id: 2, image: 'https://via.placeholder.com/150', name: 'Product 2', description: 'Description of product 2', price: 1000, category: 'Home Goods' },
+    { id: 3, image: 'https://via.placeholder.com/150', name: 'Product 3', description: 'Description of product 3', price: 700, category: 'Toys' },
   ]);
 
   // Sample redemption history
@@ -55,9 +58,10 @@ const RewardPage: React.FC = () => {
     { id: 3, product: products[2], redeemedDate: '2023-09-15', status: 'upcoming' },
   ]);
 
+
   // Fetch driver data
   useEffect(() => {
-    const driverRef = doc(db, `user/${uid}/driver`, id || "");
+    const driverRef = doc(db, `user/${uid}/showroom`, id || "");
     
     const unsubscribe = onSnapshot(driverRef, (docSnapshot) => {
       if (docSnapshot.exists()) {
@@ -78,7 +82,7 @@ const RewardPage: React.FC = () => {
     const fetchBookings = async () => {
       try {
         const bookingsRef = collection(db, `user/${uid}/bookings`);
-        const q = query(bookingsRef, where('selectedDriver', '==', id), where('status', '==', 'Order Completed'));
+        const q = query(bookingsRef, where('showroomId', '==', id), where('bookingStatus', '==', 'ShowRoom Booking'), where('status', '==', 'Order Completed'));
         const querySnapshot = await getDocs(q);
         const fetchedBookings: Booking[] = [];
 
@@ -98,6 +102,7 @@ const RewardPage: React.FC = () => {
 
   const calculateRewardPoints = async (fetchedBookings: Booking[]) => {
     console.log(`Calculating reward points with percentage: ${percentage}`);
+    
     const totalRewardPoints = fetchedBookings.reduce((total, booking) => {
       const points = (booking.updatedTotalSalary * (percentage / 100)) || 0;
       console.log(`Booking ID: ${booking.id}, Updated Total Salary: ${booking.updatedTotalSalary}, Points: ${points}`);
@@ -108,16 +113,27 @@ const RewardPage: React.FC = () => {
     const updatedPoints = parseFloat(totalRewardPoints.toFixed(2));
     setRewardPoints(updatedPoints);
 
-    // Update Firestore with new reward points
-    await updateDoc(doc(db, `user/${uid}/driver`, id), { rewardPoints: updatedPoints });
-  };
+    // Ensure both uid and id are valid strings
+    if (!uid || !id) {
+      console.error('UID or Showroom ID is missing.');
+      return; // Early exit if uid or id is null
+    }
 
-  // Recalculate points when either percentage or bookings change
-  useEffect(() => {
+    try {
+      // Update Firestore with new reward points
+      await updateDoc(doc(db, `user/${uid}/showroom`, id), { rewardPoints: updatedPoints });
+      console.log('Reward points updated successfully');
+    } catch (error) {
+      console.error('Error updating reward points:', error);
+    }
+};
+
+// Recalculate points when either percentage or bookings change
+useEffect(() => {
     if (bookings.length > 0) {
       calculateRewardPoints(bookings);
     }
-  }, [percentage, bookings]); 
+}, [percentage, bookings]);
 
   const handleRedeem = (product: Product) => {
     if (rewardPoints >= product.price) {
@@ -134,14 +150,19 @@ const RewardPage: React.FC = () => {
         <h2>Points Available: {rewardPoints.toFixed(2)}</h2> {/* Display formatted points */}
       </header>
 
-      <section className="percentage-section">
-        <h3>Percentage for Reward Points Calculation</h3>
-        <input
-          type="number"
-          value={percentage}
-          readOnly // Make the input field read-only
-        />
-      </section>
+      {
+  category !== 'Driver' && (
+    <section className="percentage-section">
+      <h3>Percentage for Reward Points Calculation</h3>
+      <input
+        type="number"
+        value={percentage}
+        readOnly // Make the input field read-only
+      />
+    </section>
+  )
+}
+
 
       <section className="products-section">
         <h3>Redeemable Products</h3>
@@ -193,23 +214,6 @@ const RewardPage: React.FC = () => {
         </div>
       </section>
 
-      <section className="bookings-section">
-        <h3>Your Bookings</h3>
-        {bookings.length === 0 ? (
-          <p>No bookings found.</p>
-        ) : (
-          <div className="bookings-list">
-            {bookings.map((booking) => (
-              <div key={booking.id} className="booking-card">
-                <h4>Booking ID: {booking.id}</h4>
-                <p>Selected Driver: {booking.selectedDriver}</p>
-                <p>Company: {booking.company}</p>
-                <p>Updated Total Salary: {booking.updatedTotalSalary}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
     </div>
   );
 };

@@ -11,6 +11,7 @@ interface ClientRewardDetails {
     rewardPoints: number;
     companyName?: string;
       percentage?: number;
+      category?: string;
     staff?: { name: string; phoneNumber: string; rewardPoints?: number }[];
 }
 const ClientRewards: React.FC = () => {
@@ -197,9 +198,15 @@ const ClientRewards: React.FC = () => {
         }
     };
 
-    const handleView = (id: string | number, name: string, rewardPoints: number) => {
-      window.location.href = `/rewarddetails?id=${id}&name=${encodeURIComponent(name)}&rewardPoints=${rewardPoints}`;
+    const handleView = (id: string | number, name: string, rewardPoints: number, category: ClientCategory) => {
+        // Log the category to the console
+        console.log('Category:', category);
+        
+        // Redirect to the reward details page
+        window.location.href = `/rewarddetails?id=${id}&name=${encodeURIComponent(name)}&rewardPoints=${rewardPoints}&category=${encodeURIComponent(category)}`;
     };
+    
+    
 
     const handleShowroomStaffSelect = (showroomName: string, staffMember: string) => {
         setSelectedShowroomStaff((prev) => ({
@@ -228,7 +235,7 @@ const ClientRewards: React.FC = () => {
                 ].map((client) => (
                     <div key={client.category as ClientCategory} className={`client-card ${client.category.toLowerCase()}`}>
                         <h2>{client.category}</h2>
-                        <p>Percentage: {client.percentage}</p>
+                        {/* <p>Percentage: {client.percentage}</p> */}
                         {client.category !== 'Driver' && (
                             <div className="percentage-container">
                                 <label htmlFor={`${client.category}-percentage`}>Set Percentage: </label>
@@ -282,7 +289,7 @@ const ClientRewards: React.FC = () => {
                                         {client.rewardPoints} points
                                         <Button
                                             onClick={() => {
-                                                handleView(client.id, client.name, client.rewardPoints); // Call the handleView function with the id, name, and rewardPoints
+                                                handleView(client.id, client.name, client.rewardPoints, category as ClientCategory); // Call the handleView function with the id, name, and rewardPoints
                                             }}
                                         >
                                             <IconEye />
