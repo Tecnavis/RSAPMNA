@@ -103,7 +103,6 @@ const CashCollectionReport: React.FC = () => {
     useEffect(() => {
         calculateTotalSelectedBalance();
     }, [selectedBookings, bookings]); // Update whenever selected bookings change
-    // ---------------------------------------------------------------------------------------------------------
     const updateBookingAmount = async (bookingId: string, newAmount: string) => {
         const parsedAmount = parseFloat(newAmount); // Convert string to number
         if (isNaN(parsedAmount)) {
@@ -134,7 +133,7 @@ const CashCollectionReport: React.FC = () => {
     };
 
     const handleInvoiceClick = (booking: Booking) => {
-        const balance = calculateBalance(booking.amount, booking.receivedAmount || 0);
+        const balance = calculateBalance(booking.amount.toString(), booking.receivedAmount || 0);
         navigate(`/users/driver/driverdetails/cashcollection/driverInvoice/${booking.id}`, {
             state: {
                 amount: booking.amount.toString(), // Convert to string if needed
@@ -144,7 +143,6 @@ const CashCollectionReport: React.FC = () => {
         });
     };
 
-    // -------------------------------------------
     const handleAmountReceivedChange = async (bookingId: string, receivedAmount: string) => {
         try {
             if (!uid) {

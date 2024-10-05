@@ -367,19 +367,21 @@ const SalaryReport: React.FC = () => {
 
             console.log('Current advance:', currentAdvance);
 
-            // Calculate the total salary amount
-            const totalSalaryAmount = filteredBookings.reduce((acc, booking) => acc + (booking.balanceSalary || 0), 0);
-            console.log('Total salary amount:', totalSalaryAmount);
+            const currentAdvanceNumber = typeof currentAdvance === 'number' ? currentAdvance : parseFloat(currentAdvance);
+            const editAdvanceNumber = typeof editFormData.advance === 'number' ? editFormData.advance : parseFloat(editFormData.advance);
+               
+        // Calculate the total salary amount
+        const totalSalaryAmount = filteredBookings.reduce((acc, booking) => acc + (booking.balanceSalary || 0), 0);
 
-            // If totalSalaryAmount is 0, sum the previous and newly entered advance
-            if (totalSalaryAmount === 0) {
-                const newAdvanceTotal = currentAdvance + editFormData.advance;
+        // If totalSalaryAmount is 0, sum the previous and newly entered advance
+        if (totalSalaryAmount === 0) {
+            const newAdvanceTotal = currentAdvanceNumber + editAdvanceNumber;
 
-                // Update the driver document with the new summed advance
-                await updateDoc(driverRef, {
-                    advance: newAdvanceTotal,
-                    advancePaymentDate: editFormData.advancePaymentDate, // Optionally update the payment date
-                });
+            // Update the driver document with the new summed advance
+            await updateDoc(driverRef, {
+                advance: newAdvanceTotal,
+                advancePaymentDate: editFormData.advancePaymentDate, // Optionally update the payment date
+            });
 
                 console.log(`Advance updated to ${newAdvanceTotal}`);
             } else {
@@ -611,7 +613,10 @@ const SalaryReport: React.FC = () => {
                     {showInvoiceModal && (
                         <InvoiceModal
                             selectedBookings={selectedBookings}
-                            bookings={bookings}
+                            bookings={bookings.map(booking => ({
+                                ...booking,
+                                transferedSalary: booking.transferedSalary ?? 0, // Fallback to 0 if undefined
+                            }))}
                             onClose={closeInvoiceModal}
                             onGenerateInvoice={() => {
                                 console.log('Selected Bookings:', selectedBookings); // This will log the selectedBookings array
