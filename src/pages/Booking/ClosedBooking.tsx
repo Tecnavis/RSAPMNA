@@ -72,7 +72,7 @@ const ClosedBooking: React.FC = () => {
     return (
         <div className="panel mt-6">
             <h5 className="font-semibold text-lg dark:text-white-light mb-5">
-                Closed Bookings
+                Completed Bookings
             </h5>
             <div className="mb-5">
                 <input
@@ -106,9 +106,7 @@ const ClosedBooking: React.FC = () => {
                                             <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">
                                                 Vehicle Number
                                             </th>
-                                            <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">
-                                                Comments
-                                            </th>
+                                         
                                             <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">
                                                 Action
                                             </th>
@@ -132,9 +130,7 @@ const ClosedBooking: React.FC = () => {
                                                 <td className="p-2 text-sm block md:table-cell">
                                                     {booking.vehicleNumber}
                                                 </td>
-                                                <td className="p-2 text-sm block md:table-cell">
-                                                    {booking.comments}
-                                                </td>
+                                               
                                                 <td className="p-2 text-sm block md:table-cell">
                                                     <button
                                                         style={{

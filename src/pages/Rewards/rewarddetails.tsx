@@ -76,13 +76,38 @@ console.log("category",category)
 
     return () => unsubscribe(); // Clean up the snapshot listener
   }, [id, db, uid]);
+// Fetch driver data
+useEffect(() => {
+  const userRef = doc(db, `user/${uid}/users`, id || "");
+  
+  const unsubscribe = onSnapshot(userRef, (docSnapshot) => {
+    if (docSnapshot.exists()) {
+      const userData = docSnapshot.data();
+      if (userData) {
+        const fetchedUserPercentage = userData?.percentage || 0;
+        const fetchedRewardPoints = userData?.rewardPoints || 0;
+        setPercentage(fetchedUserPercentage);
+        setRewardPoints(fetchedRewardPoints);
+        console.log(`Fetched percentage: ${fetchedUserPercentage}, rewardPoints: ${fetchedRewardPoints}`);
+      } else {
+        console.error("No user data found");
+      }
+    } else {
+      console.error("Document does not exist");
+    }
+  }, (error) => {
+    console.error("Error fetching user data:", error);
+  });
+
+  return () => unsubscribe(); // Clean up the snapshot listener
+}, [id, db, uid]);
 
   // Fetch bookings
   useEffect(() => {
     const fetchBookings = async () => {
       try {
         const bookingsRef = collection(db, `user/${uid}/bookings`);
-        const q = query(bookingsRef, where('showroomId', '==', id), where('bookingStatus', '==', 'ShowRoom Booking'), where('status', '==', 'Order Completed'));
+        const q = query(bookingsRef, where('showroomId', '==', id), where('bookingStatus', '==', 'ShowRoom Booking'), where('status', '==', 'Order Completed') ||  where('bookingStatus', '==', 'ShowRoom Booking'), where('status', '==', 'Order Completed'));
         const querySnapshot = await getDocs(q);
         const fetchedBookings: Booking[] = [];
 
@@ -101,11 +126,11 @@ console.log("category",category)
   }, [id, db, uid]);
 
   const calculateRewardPoints = async (fetchedBookings: Booking[]) => {
-    console.log(`Calculating reward points with percentage: ${percentage}`);
+    console.log(`Calculating reward points with percentageeee: ${percentage}`);
     
     const totalRewardPoints = fetchedBookings.reduce((total, booking) => {
       const points = (booking.updatedTotalSalary * (percentage / 100)) || 0;
-      console.log(`Booking ID: ${booking.id}, Updated Total Salary: ${booking.updatedTotalSalary}, Points: ${points}`);
+      console.log(`Booking ID: ${booking.id}, Updated Total Salary: ${booking.updatedTotalSalary}, Pointssss: ${points}`);
       return total + points;
     }, 0);
 

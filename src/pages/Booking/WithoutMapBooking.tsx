@@ -1071,10 +1071,14 @@ const addOrUpdateItem = async (): Promise<void> => {
                     bookingData.newStatus = `Edited by ${role} ${userName}`;
                 }
                 bookingData.editedTime = formatDate(new Date());
+            } else {
+                // Handle add operation
+                if (role === 'admin') {
+                    bookingData.newStatus = `Added by ${role}`;
+                } else if (role === 'staff') {
+                    bookingData.newStatus = `Added by ${role} ${userName}`;
+                }
             }
-
-            console.log('Data to be added/updated:', bookingData);
-
             // Schedule the booking at deliveryDateTime if provided
             if (deliveryDateTime) {
                 const deliveryDate = new Date(deliveryDateTime);

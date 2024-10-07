@@ -21,6 +21,7 @@ interface Booking {
     approved?: boolean;
     driver?: string;
     updatedTotalSalary?: number;
+    disabled?: boolean;
 }
 
 const CashCollectionReport: React.FC = () => {
@@ -45,6 +46,7 @@ const CashCollectionReport: React.FC = () => {
     const navigate = useNavigate();
     const [showAmountDiv, setShowAmountDiv] = useState(true); // Add state to show/hide the div
     const [totalBalances, setTotalBalances] = useState(0);
+    const [clickedButtons, setClickedButtons] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         const fetchDriver = async () => {
@@ -133,23 +135,23 @@ const CashCollectionReport: React.FC = () => {
     };
 
     const handleInvoiceClick = (booking: Booking) => {
-        const balance = calculateBalance(booking.amount.toString(), booking.receivedAmount || 0);
+        const balance = calculateBalance((booking.amount ?? 0).toString(), booking.receivedAmount || 0);
         navigate(`/users/driver/driverdetails/cashcollection/driverInvoice/${booking.id}`, {
             state: {
-                amount: booking.amount.toString(), // Convert to string if needed
-                receivedAmount: (booking.receivedAmount || 0).toString(), // Convert to string if needed
-                balance: balance.toString(), // Ensure balance is string
+                amount: (booking.amount ?? 0).toString(),
+                receivedAmount: (booking.receivedAmount ?? 0).toString(),
+                balance: balance.toString(),
             },
         });
     };
 
     const handleAmountReceivedChange = async (bookingId: string, receivedAmount: string) => {
         try {
-            if (!uid) {
-                throw new Error('User ID (uid) is not defined.');
+            if (!uid || typeof uid !== 'string') {
+                throw new Error('User ID (uid) is not defined or is not a string.');
             }
-            if (!bookingId) {
-                throw new Error('Booking ID is not defined.');
+            if (!bookingId || typeof bookingId !== 'string') {
+                throw new Error('Booking ID is not defined or is not a string.');
             }
             const booking = bookings.find((booking) => booking.id === bookingId);
             const amount = booking?.amount || 0; // Fallback to 0 if booking not found
@@ -168,20 +170,27 @@ const CashCollectionReport: React.FC = () => {
             await updateTotalBalance(); // Ensure this function updates the total balance correctly
 
             // Recalculate and update netTotalAmountInHand
-            const netTotal = calculateNetTotalAmountInHand(); // Implement this function as needed
+            const netTotal = calculateNetTotalAmountInHand();
+            if (!id || typeof id !== 'string') {
+                throw new Error('Driver ID (id) is not defined or is not a string.');
+            }
             const driverRef = doc(db, `user/${uid}/driver`, id); // Assuming `id` is the driver's ID
 
             // Update netTotalAmountInHand in the driver's document
             await updateDoc(driverRef, { netTotalAmountInHand: parseFloat(netTotal) });
 
             console.log('Net total amount in hand updated successfully:', netTotal);
+            setClickedButtons((prevState) => ({
+                ...prevState,
+                [bookingId]: true, // Set to true for this booking
+            }));
         } catch (error) {
             console.error('Error updating received amount:', error);
         }
     };
 
-    const calculateBalance = (amount: string, receivedAmount: number | string) => {
-        return (parseFloat(amount) - parseFloat(receivedAmount.toString())).toFixed(2);
+    const calculateBalance = (amount: string | number, receivedAmount: string | number) => {
+        return (parseFloat(amount.toString()) - parseFloat(receivedAmount.toString())).toFixed(2);
     };
 
     const calculateNetTotalAmountInHand = () => {
@@ -212,7 +221,12 @@ const CashCollectionReport: React.FC = () => {
 
     const updateTotalBalance = async () => {
         try {
-            // Calculate total balance
+            if (!uid || typeof uid !== 'string') {
+                throw new Error('User ID (uid) is not defined or is not a string.');
+            }
+            if (!id || typeof id !== 'string') {
+                throw new Error('Driver ID (id) is not defined or is not a string.');
+            }
             const totalBalances = bookings.reduce((acc, booking) => {
                 const amount = parseFloat(booking.amount?.toString() || '0');
                 const receivedAmount = parseFloat(booking.receivedAmount?.toString() || '0');
@@ -280,7 +294,7 @@ const CashCollectionReport: React.FC = () => {
     };
 
     const filterBookingsByMonthAndYear = () => {
-        let filtered = bookings;
+        let filtered: Booking[] = bookings;
 
         if (selectedMonth) {
             const monthNumber = parseInt(selectedMonth, 10);
@@ -306,11 +320,23 @@ const CashCollectionReport: React.FC = () => {
 
         setFilteredBookings(filtered);
     };
-
+    // -----------------------------------------------------------------------------------------------
     const calculateMonthlyTotals = () => {
-        const totalAmount = filteredBookings.reduce((acc, booking) => acc + (parseFloat(booking.amount) || 0), 0);
-        const totalReceived = filteredBookings.reduce((acc, booking) => acc + (parseFloat(booking.receivedAmount) || 0), 0);
-        const totalBalances = filteredBookings.reduce((acc, booking) => acc + (parseFloat(booking.amount) - parseFloat(booking.receivedAmount || 0)), 0);
+        const totalAmount = filteredBookings.reduce((acc, booking) => {
+            const amount = typeof booking.amount === 'number' ? booking.amount : parseFloat(booking.amount || '0');
+            return acc + amount;
+        }, 0);
+
+        const totalReceived = filteredBookings.reduce((acc, booking) => {
+            const receivedAmount = booking.receivedAmount ? (typeof booking.receivedAmount === 'number' ? booking.receivedAmount : parseFloat(booking.receivedAmount)) : 0;
+            return acc + receivedAmount;
+        }, 0);
+
+        const totalBalances = filteredBookings.reduce((acc, booking) => {
+            const amount = typeof booking.amount === 'number' ? booking.amount : parseFloat(booking.amount || '0');
+            const receivedAmount = booking.receivedAmount ? (typeof booking.receivedAmount === 'number' ? booking.receivedAmount : parseFloat(booking.receivedAmount)) : 0;
+            return acc + (amount - receivedAmount);
+        }, 0);
 
         setMonthlyTotals({
             totalAmount: totalAmount.toFixed(2),
@@ -330,18 +356,26 @@ const CashCollectionReport: React.FC = () => {
         setTotalSelectedBalance(totalBalances.toFixed(2));
     };
     const generateInvoice = () => {
-        const selectedBookingDetails = selectedBookings.map((bookingId) => {
-            const booking = bookings.find((b) => b.id === bookingId);
-            return {
-                id: booking.id,
-                amount: booking.amount,
-                receivedAmount: booking.receivedAmount || 0,
-                balance: calculateBalance(booking.amount, booking.receivedAmount || 0),
-                dateTime: booking.dateTime,
-                fileNumber: booking.fileNumber,
-                driver: booking.driver,
-            };
-        });
+        const selectedBookingDetails = selectedBookings
+            .map((bookingId) => {
+                const booking = bookings.find((b) => b.id === bookingId);
+
+                if (!booking) {
+                    // Handle the case where booking is undefined (e.g., skip it or throw an error)
+                    return null; // or handle appropriately
+                }
+
+                return {
+                    id: booking.id,
+                    amount: booking.amount,
+                    receivedAmount: booking.receivedAmount || 0,
+                    balance: calculateBalance(booking.amount, booking.receivedAmount || 0),
+                    dateTime: booking.dateTime,
+                    fileNumber: booking.fileNumber,
+                    driver: booking.driver,
+                };
+            })
+            .filter((booking) => booking !== null); // Filter out any null values
 
         navigate('/users/driver/driverdetails/cashcollection/selectiveReportInvoice', {
             state: {
@@ -351,7 +385,8 @@ const CashCollectionReport: React.FC = () => {
             },
         });
     };
-    const handleCheckboxChange = (bookingId) => {
+
+    const handleCheckboxChange = (bookingId: any) => {
         const booking = bookings.find((b) => b.id === bookingId);
         if (booking && (booking.approved || booking.disabled)) {
             return; // Prevent selection of approved or disabled bookings.
@@ -383,7 +418,7 @@ const CashCollectionReport: React.FC = () => {
         const sortedBookings = [...bookings].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
 
         const updatedBookings = sortedBookings.map((booking) => {
-            const bookingBalance = parseFloat(booking.amount) - (booking.receivedAmount || 0);
+            const bookingBalance = booking.amount - (booking.receivedAmount || 0); // Use booking.amount directly as it's already a number
 
             if (remainingAmount > 0) {
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);
@@ -396,6 +431,7 @@ const CashCollectionReport: React.FC = () => {
 
         return updatedBookings;
     };
+
     const handleAmountReceiveChange = async (receivedAmount: number) => {
         try {
             const updatedBookings = distributeReceivedAmount(receivedAmount, bookings);
@@ -442,7 +478,7 @@ const CashCollectionReport: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="w-auto md:w-1/2 flex justify-center md:justify-end p-6 bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl hover:scale-105">
+                            <div className="w-[560px] h-[165px] ml-6 flex justify-center md:justify-end p-2 bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl hover:scale-105">
                                 <h2 className="text-2xl font-bold text-gray-800 flex items-center">
                                     <span className="text-3xl mr-2">💵</span> {/* Larger icon for emphasis */}
                                     Net Total Amount in Hand:
@@ -614,41 +650,34 @@ const CashCollectionReport: React.FC = () => {
                                         <td className={styles.responsiveCell}>{booking.updatedTotalSalary}</td>
 
                                         <td className={styles.responsiveCell}>{booking.amount}</td>
-                                        <td className={styles.responsiveCell}>
-                                            <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                {' '}
-                                                {/* Flex container */}
-                                                <input
-                                                    type="number"
-                                                    value={booking.receivedAmount || ''}
-                                                    onChange={(e) => handleAmountReceivedChange(booking.id, e.target.value)} // Handle value change
-                                                    style={{
-                                                        border: '1px solid #d1d5db',
-                                                        borderRadius: '0.25rem',
-                                                        padding: '0.25rem 0.5rem',
-                                                        marginRight: '0.5rem', // Margin to space out the input from the button
-                                                    }}
-                                                    disabled={booking.approved}
-                                                    min="0" // Ensure no negative values
-                                                />
-                                                <button
-                                                    onClick={() => handleAmountReceivedChange(booking.id, booking.receivedAmount.toString())} // Call the function on button click
-                                                    style={{
-                                                        backgroundColor: booking.receivedAmount > 0 ? '#4CAF50' : '#d1d5db', // Green if valid, gray if invalid
-                                                        color: 'white', // White text
-                                                        border: 'none', // No border
-                                                        borderRadius: '0.25rem', // Rounded corners
-                                                        padding: '0.25rem 0.5rem', // Padding
-                                                        cursor: booking.receivedAmount > 0 ? 'pointer' : 'not-allowed', // Pointer cursor if valid, otherwise not-allowed
-                                                    }}
-                                                    disabled={booking.approved || booking.receivedAmount <= 0} // Disable button if approved or amount is invalid
-                                                >
-                                                    OK
-                                                </button>
-                                            </div>
-                                        </td>
+                                        {/* <tr key={booking.id}> */}
+                                        <td key={booking.id} className={styles.responsiveCell}>
+    <div style={{ display: 'flex', alignItems: 'center' }}>
+        <input
+            type="number"
+            value={booking.receivedAmount ?? ''}
+            onChange={(e) => handleAmountReceivedChange(booking.id, e.target.value)}
+            disabled={booking.approved}
+            min="0"
+            placeholder="Enter amount" // Placeholder for empty input
+            style={{
+                width: '100px', // Adjust width to fit the content
+                padding: '0.5rem', // Increase padding for better spacing
+                fontSize: '1rem', // Increase font size for readability
+                border: '1px solid #d1d5db', // Subtle border color
+                borderRadius: '0.375rem', // Smooth rounded corners
+                backgroundColor: booking.approved ? '#f3f4f6' : 'white', // Light background when disabled
+                color: booking.approved ? '#9ca3af' : '#111827', // Greyed out text when disabled
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)', // Soft shadow for depth
+                transition: 'background-color 0.3s ease, color 0.3s ease', // Smooth transition when disabled
+                cursor: booking.approved ? 'not-allowed' : 'text', // Change cursor based on approval
+                outline: 'none', // Remove default focus outline
+            }}
+        />
+    </div>
+</td>
 
-                                        {/*-------------------- 01-10-2024 *-----------------*/}
+                                        {/* </tr> */}
 
                                         <td className={styles.responsiveCell}>{calculateBalance(booking.amount, booking.receivedAmount || 0)}</td>
                                         <td className={styles.responsiveCell}>
@@ -772,3 +801,4 @@ const CashCollectionReport: React.FC = () => {
 };
 
 export default CashCollectionReport;
+// ------------------------------------------------------------------------------------------------------------
