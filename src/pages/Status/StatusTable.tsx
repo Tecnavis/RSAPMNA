@@ -556,7 +556,7 @@ const StatusTable: React.FC = () => {
                             <StatusBadge status="Order Completed">{record.status}</StatusBadge>
                         </Value>
                     </DataItem>
-                 {record.selectedDriver && !record.formAdded && allDrivers.some(driver => driver.id === record.selectedDriver && driver.companyName === "RSA") && (
+                 {/* {record.selectedDriver && !record.formAdded && allDrivers.some(driver => driver.id === record.selectedDriver && driver.companyName === "RSA") && (
     <DataItem>
         <Label>Feedback :</Label>
         <Value>
@@ -576,7 +576,7 @@ const StatusTable: React.FC = () => {
             )}
         </Value>
     </DataItem>
-)}
+)} */}
 
                     <OrderDetailsButton onClick={() => handleOrderDetails(record)}>
                         Order Details
