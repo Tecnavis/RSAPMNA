@@ -1,6 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+// interface BookingDetails {
+//     kilometerPick?: {
+//         km: string;
+//         kmImage?: string;
+//     };
+//     kilometerDrop?: {
+//         km: string;
+//         kmImage?: string;
+//     };
+//     kilometerdrop?: string;
+//     photo?: string;
+//     photodrop?: string;
+//     rcBookImageURLs?: string[];
+//     vehicleImageURLs?: string[];
+//     vehicleImgURLs?: string[];
+//     fuelBillImageURLs?: string[];
+// }
+
+// interface FormData {
+//     dropoffTime: string;
+//     driverSalary: string;
+//     companyAmount: string;
+//     amount: string;
+//     distance: string;
+//     remark: string;
+// }
 
 const ViewMore = () => {
     const { id } = useParams();

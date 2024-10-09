@@ -7,8 +7,9 @@ import styled from 'styled-components';
 import IconArrowLeft from '../../components/Icon/IconArrowLeft';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, TextField, CircularProgress } from '@mui/material';
 
-// Define TypeScript interfaces
-interface BookingRecord {
+interface TabButtonProps {
+    isActive: boolean;
+}interface BookingRecord {
     id: string;
     dateTime: string;
     driver: string;
@@ -160,7 +161,25 @@ const OrderDetailsButton = styled.button`
         background-color: #1c598a;
     }
 `;
+const TabHeader = styled.div`
+    display: flex;
+    margin-bottom: 10px;
+`;
 
+const TabButton = styled.button<TabButtonProps>`
+    flex: 1;
+    padding: 10px;
+    background-color: ${(props) => (props.isActive ? '#3498db' : '#ecf0f1')};
+    color: ${(props) => (props.isActive ? '#fff' : '#2c3e50')};
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+
+    &:hover {
+        background-color: #3498db;
+        color: #fff;
+    }
+`;
 const StatusTable: React.FC = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -183,6 +202,7 @@ const StatusTable: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid') || '';
+    const [activeTab, setActiveTab] = useState('ongoing');
     const fetchPoints = async () => {
         try {
             const querySnapshot = await getDocs(collection(db, `user/${uid}/driverPoint`));
@@ -394,6 +414,22 @@ const StatusTable: React.FC = () => {
                 <Title>Driver Status</Title>
                 <SearchInput type="text" value={searchQuery} onChange={handleSearchChange} placeholder="Search..." />
             </Header>
+            <TabHeader>
+                <TabButton
+                    isActive={activeTab === 'ongoing'}
+                    onClick={() => setActiveTab('ongoing')}
+                >
+                    Ongoing Bookings
+                </TabButton>
+                <TabButton
+                    isActive={activeTab === 'completed'}
+                    onClick={() => setActiveTab('completed')}
+                >
+                    Completed Bookings
+                </TabButton>
+            </TabHeader>
+            {activeTab === 'ongoing' && (
+                <div>
             {ongoingBookings.map((record) => (
                 <Card
                     key={record.id}
@@ -462,7 +498,10 @@ const StatusTable: React.FC = () => {
                     </OrderDetailsButton>
                 </Card>
             ))}
-
+   </div>
+            )}
+              {activeTab === 'completed' && (
+                <div>
             <Header>
                 <Title>Order Completed</Title>
             </Header>
@@ -545,6 +584,8 @@ const StatusTable: React.FC = () => {
                     </OrderDetailsButton>
                 </Card>
             ))}
+            </div>
+        )}
             <Dialog
                 open={isModalOpen}
                 onClose={onRequestClose}

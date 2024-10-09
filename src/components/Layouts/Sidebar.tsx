@@ -160,7 +160,7 @@ console.log("role",role)
                                             <NavLink to="/bookings/pendingbookings">Pending Bookings</NavLink>
                                         </li>
                                         <li>
-                                            <NavLink to="/bookings/closedbooking">Closed Bookings</NavLink>
+                                            <NavLink to="/bookings/closedbooking">Completed Bookings</NavLink>
                                         </li>
                                         <li>
                                             <NavLink to="/bookings/approvedbooking">Approved Bookings</NavLink>

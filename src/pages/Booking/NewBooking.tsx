@@ -3,6 +3,8 @@ import { DataTable } from 'mantine-datatable';
 import { Link, useNavigate } from 'react-router-dom';
 import { getFirestore, collection, getDocs, orderBy, query } from 'firebase/firestore';
 import styles from './newbooking.module.css';
+import { Pagination } from '@mantine/core'; // Import Pagination from Mantine
+
 type RecordData = {
     index: number;
     customerName: string;
@@ -39,8 +41,6 @@ const NewBooking = () => {
                     id: doc.id,
                 })) as RecordData[];
 
-                console.log('Sorted data:', data);
-
                 setRecordsData(data);
                 setFilteredRecords(data);
             } catch (error) {
@@ -49,7 +49,7 @@ const NewBooking = () => {
         };
 
         fetchData().catch(console.error);
-    }, [db]);
+    }, [db, uid]);
 
     useEffect(() => {
         const term = searchTerm.toLowerCase();
@@ -63,113 +63,152 @@ const NewBooking = () => {
                 (record.bookingStatus?.toLowerCase().includes(term) ?? false)
         );
         setFilteredRecords(filtered);
+        setPage(1); // Reset to first page when search term changes
     }, [searchTerm, recordsData]);
 
     const handleEdit = (rowData: RecordData) => {
-        console.log(rowData);
         navigate(`/bookings/booking/${rowData.id}`, { state: { editData: rowData } });
     };
 
     const totalPages = Math.ceil(filteredRecords.length / pageSize);
-
-    const displayedRecords = pageSize === 'All' ? filteredRecords : filteredRecords.slice((page - 1) * pageSize, page * pageSize);
+    const displayedRecords = filteredRecords.slice((page - 1) * pageSize, page * pageSize);
 
     return (
-        <div style={{fontFamily: 'Arial, sans-serif', color: '#333' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h5 style={{ fontSize: '24px', fontWeight: '600', color: '#333' }}>New Bookings</h5>
-
-            <Link to="/bookings/booking" style={{ textDecoration: 'none' }}>
-                <button
-                    style={{
-                        padding: '10px 20px',
-                        color: '#fff',
-                        backgroundColor: '#28a745',
-                        border: 'none',
-                        borderRadius: '7px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-                        transition: 'background-color 0.3s',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#218838')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#28a745')}
-                >
-                    Add Booking
-                </button>
-            </Link>
-        </div>
-
-        <div className={styles.tableContainer}>
-        <table className={styles.table}>
-    <thead>
-        <tr>
-            <th>Date & Time</th>
-            <th>Name</th>
-            <th>File Number</th>
-            <th>Phone Number</th>
-            <th>Driver</th>
-            <th>View More</th>
-            <th>Edit</th>
-        </tr>
-    </thead>
-    <tbody>
-        {recordsData.map((rowData) => (
-            <tr
-                key={rowData.id}
-                style={{
-                    backgroundColor: rowData.bookingStatus === "ShowRoom Booking" ? "#f8d7da" : "transparent", 
-                    // Adjust color as needed
-                }}
-            >
-                <td data-label="Date & Time">{rowData.dateTime}</td>
-                <td data-label="Name">{rowData.customerName}</td>
-                <td data-label="File Number">{rowData.fileNumber}</td>
-                <td data-label="Phone Number">{rowData.phoneNumber}</td>
-                <td data-label="Driver">{rowData.driver}</td>
-                <td data-label="View More">
-                    <Link
-                        to={`/bookings/newbooking/viewmore/${rowData.id}`}
-                        style={{
-                            padding: '5px 10px',
-                            color: '#fff',
-                            backgroundColor: '#007bff',
-                            borderRadius: '5px',
-                            textDecoration: 'none',
-                            display: 'inline-block',
-                            transition: 'background-color 0.3s',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0056b3')}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#007bff')}
-                    >
-                        View More
-                    </Link>
-                </td>
-                <td data-label="Edit">
+        <div style={{ fontFamily: 'Arial, sans-serif', color: '#333' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h5 style={{ fontSize: '24px', fontWeight: '600', color: '#333' }}>New Bookings</h5>
+                <Link to="/bookings/booking" style={{ textDecoration: 'none' }}>
                     <button
-                        onClick={() => handleEdit(rowData)}
                         style={{
-                            padding: '5px 10px',
+                            padding: '10px 20px',
                             color: '#fff',
-                            backgroundColor: '#ffc107',
+                            backgroundColor: '#28a745',
                             border: 'none',
-                            borderRadius: '5px',
+                            borderRadius: '7px',
                             cursor: 'pointer',
+                            fontWeight: 'bold',
+                            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
                             transition: 'background-color 0.3s',
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e0a800')}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffc107')}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#218838')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#28a745')}
                     >
-                        Edit
+                        Add Booking
                     </button>
-                </td>
-            </tr>
+                </Link>
+            </div>
+
+            <input
+                type="text"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                    padding: '10px',
+                    borderRadius: '5px',
+                    border: '1px solid #ccc',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    marginBottom: '10px',
+                }}
+            />
+
+            <div className={styles.tableContainer}>
+                <table className={styles.table}>
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Name</th>
+                            <th>File Number</th>
+                            <th>Phone Number</th>
+                            <th>Driver</th>
+                            <th>View More</th>
+                            <th>Edit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {displayedRecords.map((rowData) => (
+                            <tr
+                                key={rowData.id}
+                                style={{
+                                    backgroundColor: rowData.bookingStatus === "ShowRoom Booking" ? "#f8d7da" : "transparent",
+                                }}
+                            >
+                                <td data-label="Date & Time">{rowData.dateTime}</td>
+                                <td data-label="Name">{rowData.customerName}</td>
+                                <td data-label="File Number">{rowData.fileNumber}</td>
+                                <td data-label="Phone Number">{rowData.phoneNumber}</td>
+                                <td data-label="Driver">{rowData.driver}</td>
+                                <td data-label="View More">
+                                    <Link
+                                        to={`/bookings/newbooking/viewmore/${rowData.id}`}
+                                        style={{
+                                            padding: '5px 10px',
+                                            color: '#fff',
+                                            backgroundColor: '#007bff',
+                                            borderRadius: '5px',
+                                            textDecoration: 'none',
+                                            display: 'inline-block',
+                                            transition: 'background-color 0.3s',
+                                        }}
+                                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0056b3')}
+                                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#007bff')}
+                                    >
+                                        View More
+                                    </Link>
+                                </td>
+                                <td data-label="Edit">
+                                    <button
+                                        onClick={() => handleEdit(rowData)}
+                                        style={{
+                                            padding: '5px 10px',
+                                            color: '#fff',
+                                            backgroundColor: '#ffc107',
+                                            border: 'none',
+                                            borderRadius: '5px',
+                                            cursor: 'pointer',
+                                            transition: 'background-color 0.3s',
+                                        }}
+                                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e0a800')}
+                                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffc107')}
+                                    >
+                                        Edit
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+<div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Pagination
+        total={totalPages}
+        page={page}
+        onChange={setPage}
+        // Remove styles prop or adjust it according to Mantine's documentation
+        styles={{ item: { margin: '0 5px' } }} // Update to valid styles based on the Pagination component's expected structure
+    />
+    <select
+        value={pageSize}
+        onChange={(e) => {
+            const value = e.target.value;
+            setPageSize(value === 'All' ? filteredRecords.length : parseInt(value, 10));
+            setPage(1); // Reset to the first page when page size changes
+        }}
+        style={{
+            padding: '5px',
+            borderRadius: '5px',
+            border: '1px solid #ccc',
+        }}
+    >
+        {PAGE_SIZES.map(size => (
+            <option key={size} value={size}>{size}</option>
         ))}
-    </tbody>
-</table>
+    </select>
+</div>
 
         </div>
-    </div>
     );
 };
 

@@ -5,63 +5,70 @@ import { setPageTitle } from '../../store/themeConfigSlice';
 import IconSend from '../../components/Icon/IconSend';
 import IconPrinter from '../../components/Icon/IconPrinter';
 import IconDownload from '../../components/Icon/IconDownload';
-import IconEdit from '../../components/Icon/IconEdit';
-import IconPlus from '../../components/Icon/IconPlus';
 import { getFirestore, doc, getDoc } from 'firebase/firestore'; // Import Firestore methods
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+interface Booking {
+    id: string;
+    serviceType: string;
+    vehicleNumber: string;
+    totalDriverSalary: number;
+    transferedSalary: number;
+    balanceSalary: number;
+    driver: string;
+    fileNumber: string;
+  }
+  
+  interface LocationState {
+    selectedBookings: string[];
+  }
+//   ---------------------------------------------------------
+const DriverSalaryInvoice: React.FC = () => {
+    const { id } = useParams<{ id: string }>();
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const dispatch = useDispatch();
+  const db = getFirestore();
+  const location = useLocation(); // No type argument needed for useLocation
+  const invoiceRef = useRef<HTMLDivElement>(null);
 
-const DriverSalaryInvoice = () => {
-    const { id } = useParams();
-    console.log("idhere",id)
-    const [bookings, setBookings] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const dispatch = useDispatch();
-    const db = getFirestore();
-    const location = useLocation();
-    const invoiceRef = useRef();
+  const uid = sessionStorage.getItem('uid');
+  const { selectedBookings } = location.state || { selectedBookings: [] };
 
-    const uid = sessionStorage.getItem('uid');
-    const { state } = location;
-    const { selectedBookings } = state || { selectedBookings: [] };
-console.log("selectedBookings",selectedBookings)
-    useEffect(() => {
-        const fetchBookings = async () => {
-            setLoading(true);
-            try {
-                const bookingPromises = selectedBookings.map(async (bookingId) => {
-                    console.log('Fetching booking with ID:', bookingId); // Log booking ID
-                    const bookingDocRef = doc(db, `user/${uid}/bookings`, bookingId);
-                    const bookingSnapshot = await getDoc(bookingDocRef);
-                    if (bookingSnapshot.exists()) {
-                        console.log('Booking found:', bookingSnapshot.data()); // Log booking data
-                        return { id: bookingSnapshot.id, ...bookingSnapshot.data() };
-                    } else {
-                        console.log(`No booking found with ID: ${bookingId}`);
-                        return null;
-                    }
-                });
-        
-                const bookingResults = await Promise.all(bookingPromises);
-                const validBookings = bookingResults.filter((booking) => booking !== null);
-                setBookings(validBookings);
-        
-                dispatch(setPageTitle(`Invoice Preview - ${validBookings.length > 0 ? validBookings[0].id : ''}`));
-                setLoading(false);
-            } catch (error) {
-                console.error('Error fetching bookings:', error);
-                setLoading(false);
-            }
-        };
-        
+  useEffect(() => {
+    const fetchBookings = async () => {
+      setLoading(true);
+      try {
+        const bookingPromises = selectedBookings.map(async (bookingId: string) => { // Explicitly type bookingId
+            const bookingDocRef = doc(db, `user/${uid}/bookings`, bookingId);
+          const bookingSnapshot = await getDoc(bookingDocRef);
+          if (bookingSnapshot.exists()) {
+            return { id: bookingSnapshot.id, ...bookingSnapshot.data() } as Booking;
+          } else {
+            console.log(`No booking found with ID: ${bookingId}`);
+            return null;
+          }
+        });
+        const bookingResults = await Promise.all(bookingPromises);
+        const validBookings = bookingResults.filter((booking) => booking !== null) as Booking[];
+        setBookings(validBookings);
 
-        if (selectedBookings.length > 0) {
-            fetchBookings();
-        }
-    }, [db, selectedBookings, dispatch]);
+        dispatch(setPageTitle(`Invoice Preview - ${validBookings.length > 0 ? validBookings[0].id : ''}`));
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching bookings:', error);
+        setLoading(false);
+      }
+    };
+
+    if (selectedBookings.length > 0) {
+      fetchBookings();
+    }
+  }, [db, selectedBookings, dispatch, uid]);
+
 
     // Function to generate automatic invoice number
-    const generateInvoiceNumber = () => {
+    const generateInvoiceNumber = (): string => {
         // Example: Generating a sequential number or based on date/time
         const currentDate = new Date();
         const year = currentDate.getFullYear();
@@ -78,26 +85,30 @@ console.log("selectedBookings",selectedBookings)
     };
 
     const handlePrint = () => {
-        const printContent = invoiceRef.current.innerHTML;
-        const originalContent = document.body.innerHTML;
-
-        document.body.innerHTML = printContent;
-        window.print();
-        document.body.innerHTML = originalContent;
-        window.location.reload();
-    };
-
-    const handleDownload = async () => {
-        const canvas = await html2canvas(invoiceRef.current);
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`invoice-${id}.pdf`);
-    };
+        if (invoiceRef.current) {
+          const printContent = invoiceRef.current.innerHTML;
+          const originalContent = document.body.innerHTML;
+    
+          document.body.innerHTML = printContent;
+          window.print();
+          document.body.innerHTML = originalContent;
+          window.location.reload();
+        }
+      };
+    
+      const handleDownload = async () => {
+        if (invoiceRef.current) {
+          const canvas = await html2canvas(invoiceRef.current);
+          const imgData = canvas.toDataURL('image/png');
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const imgProps = pdf.getImageProperties(imgData);
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+    
+          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+          pdf.save(`invoice-${id}.pdf`);
+        }
+      };
 
     if (loading) {
         return <div>Loading...</div>;
@@ -115,15 +126,15 @@ console.log("selectedBookings",selectedBookings)
         { key: 'transferedSalary', label: 'Amount Transferred', class: 'text-center' },
         { key: 'balanceSalary', label: 'Balance', class: 'text-center' },
     ];
+    // Ensure transferedSalary and balanceSalary are treated as numbers
+const totalTransferred = bookings.reduce((total, booking) => total + Number(booking.transferedSalary || 0), 0);
+const totalBalance = bookings.reduce((total, booking) => total + Number(booking.balanceSalary || 0), 0);
 
     return (
         <div>
             
             <div className="flex items-center lg:justify-end justify-center flex-wrap gap-4 mb-6">
-                <button type="button" className="btn btn-info gap-2">
-                    <IconSend />
-                    Send Invoice
-                </button>
+               
 
                 <button type="button" className="btn btn-primary gap-2" onClick={handlePrint}>
                     <IconPrinter />
@@ -135,10 +146,7 @@ console.log("selectedBookings",selectedBookings)
                     Download
                 </button>
 
-                <Link to="/apps/invoice/add" className="btn btn-secondary gap-2">
-                    <IconPlus />
-                    Create
-                </Link>
+             
 
                 {/* <Link to={`/editsalary/${id}`} className="btn btn-warning gap-2">
                     <IconEdit />
@@ -215,6 +223,14 @@ console.log("selectedBookings",selectedBookings)
                     ))}
                         </tbody>
                     </table>
+                </div>
+                <div className="mt-4 flex justify-between">
+                    <div className="font-semibold">Total Amount Transferred: </div>
+                    <div>{totalTransferred}</div>
+                </div>
+                <div className="flex justify-between">
+                    <div className="font-semibold">Total Balance: </div>
+                    <div>{totalBalance}</div>
                 </div>
             </div>
         </div>

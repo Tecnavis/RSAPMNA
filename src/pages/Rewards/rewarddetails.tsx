@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './reward.css';
-import { collection, query, where, getDocs, getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, increment } from 'firebase/firestore';
 
 // Interfaces
 interface Product {
@@ -9,6 +9,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
+  category: string;
 }
 
 interface Redemption {
@@ -35,17 +36,23 @@ const RewardPage: React.FC = () => {
   const queryParams = new URLSearchParams(window.location.search);
   const id = queryParams.get('id'); // Driver ID
   const driverName = queryParams.get('name'); // Driver Name
+  const category = queryParams.get('category'); // Driver Name
+console.log("category",category)
   const [percentage, setPercentage] = useState<number>(0);
   const [rewardPoints, setRewardPoints] = useState<number>(0);
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [rewardDriverPoints, setRewardDriverPoints] = useState<number>(0);
+  const [rewardStaffPoints, setRewardStaffPoints] = useState<number>(0);
+  const [rewardShowroomPoints, setRewardShowroomPoints] = useState<number>(0);
+  const [rewardShowroomStaffPoints, setRewardShowroomStaffPoints] = useState<number>(0);
+    const [bookings, setBookings] = useState<Booking[]>([]);
   const db = getFirestore();
   const uid = sessionStorage.getItem('uid');
-
+  
   // Sample products for redemption
   const [products] = useState<Product[]>([
-    { id: 1, image: 'https://via.placeholder.com/150', name: 'Product 1', description: 'Description of product 1', price: 500 },
-    { id: 2, image: 'https://via.placeholder.com/150', name: 'Product 2', description: 'Description of product 2', price: 1000 },
-    { id: 3, image: 'https://via.placeholder.com/150', name: 'Product 3', description: 'Description of product 3', price: 700 },
+    { id: 1, image: 'https://via.placeholder.com/150', name: 'Product 1', description: 'Description of product 1', price: 500, category: 'Electronics' },
+    { id: 2, image: 'https://via.placeholder.com/150', name: 'Product 2', description: 'Description of product 2', price: 1000, category: 'Home Goods' },
+    { id: 3, image: 'https://via.placeholder.com/150', name: 'Product 3', description: 'Description of product 3', price: 700, category: 'Toys' },
   ]);
 
   // Sample redemption history
@@ -55,69 +62,262 @@ const RewardPage: React.FC = () => {
     { id: 3, product: products[2], redeemedDate: '2023-09-15', status: 'upcoming' },
   ]);
 
-  // Fetch driver data
+// ---------------ShowRoom---------------------------------------------------------------------
   useEffect(() => {
-    const driverRef = doc(db, `user/${uid}/driver`, id || "");
+    const driverRef = doc(db, `user/${uid}/showroom`, id || "");
     
     const unsubscribe = onSnapshot(driverRef, (docSnapshot) => {
       if (docSnapshot.exists()) {
         const driverData = docSnapshot.data();
-        const fetchedPercentage = driverData?.percentage || 0;
         const fetchedRewardPoints = driverData?.rewardPoints || 0;
-        setPercentage(fetchedPercentage);
-        setRewardPoints(fetchedRewardPoints);
-        console.log(`Updated percentage: ${fetchedPercentage}, rewardPoints: ${fetchedRewardPoints}`);
+        setRewardShowroomPoints(fetchedRewardPoints);
+        console.log(` rewardPoints: ${fetchedRewardPoints}`);
       }
     });
 
     return () => unsubscribe(); // Clean up the snapshot listener
   }, [id, db, uid]);
+   // Fetch bookings
+useEffect(() => {
+  const fetchBookings = async () => {
+    try {
+      const bookingsRef = collection(db, `user/${uid}/bookings`);
+      const q = query(
+        bookingsRef,
+        where('showroomId', '==', id), 
+        where('createdBy', '==', 'showroom'), 
+        where('status', '==', 'Order Completed')
+      );
 
-  // Fetch bookings
-  useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const bookingsRef = collection(db, `user/${uid}/bookings`);
-        const q = query(bookingsRef, where('selectedDriver', '==', id), where('status', '==', 'Order Completed'));
-        const querySnapshot = await getDocs(q);
-        const fetchedBookings: Booking[] = [];
+      const querySnapshot = await getDocs(q);
+      const fetchedBookings: Booking[] = [];
+console.log("fetchedBookings",fetchedBookings)
+      querySnapshot.forEach((doc) => {
+        fetchedBookings.push({ id: doc.id, ...doc.data() } as Booking);
+      });
 
-        querySnapshot.forEach((doc) => {
-          fetchedBookings.push({ id: doc.id, ...doc.data() } as Booking);
-        });
-
-        setBookings(fetchedBookings);
-        calculateRewardPoints(fetchedBookings); // Calculate points after bookings are fetched
-      } catch (error) {
-        console.error("Error fetching bookings: ", error);
+      setBookings(fetchedBookings);
+      if (category === 'Showroom') {
+        await updateRewardPoints(fetchedBookings.length);
       }
-    };
 
-    fetchBookings();
-  }, [id, db, uid]);
-
-  const calculateRewardPoints = async (fetchedBookings: Booking[]) => {
-    console.log(`Calculating reward points with percentage: ${percentage}`);
-    const totalRewardPoints = fetchedBookings.reduce((total, booking) => {
-      const points = (booking.updatedTotalSalary * (percentage / 100)) || 0;
-      console.log(`Booking ID: ${booking.id}, Updated Total Salary: ${booking.updatedTotalSalary}, Points: ${points}`);
-      return total + points;
-    }, 0);
-
-    console.log(`Total Reward Points Calculated: ${totalRewardPoints}`);
-    const updatedPoints = parseFloat(totalRewardPoints.toFixed(2));
-    setRewardPoints(updatedPoints);
-
-    // Update Firestore with new reward points
-    await updateDoc(doc(db, `user/${uid}/driver`, id), { rewardPoints: updatedPoints });
+    } catch (error) {
+      console.error("Error fetching bookings: ", error);
+    }
   };
 
-  // Recalculate points when either percentage or bookings change
-  useEffect(() => {
+  fetchBookings();
+}, [id, db, uid, category]);
+const updateRewardPoints = async (bookingCount: number) => {
+  if (bookingCount > 0) {
+    const additionalPoints = bookingCount * 300; // Calculate total additional points
+    try {
+      const userRef = doc(db, `user/${uid}/showroom`, id || "");
+      await updateDoc(userRef, {
+        rewardPoints: additionalPoints // Use increment to update points
+      });
+      console.log(`Updated reward points by ${additionalPoints}`);
+    } catch (error) {
+      console.error("Error updating reward points in Firestore:", error);
+    }
+  }
+};
+
+// ---------------ShowRoomStaff---------------------------------------------------------------------
+// useEffect(() => {
+//   const driverRef = doc(db, `user/${uid}/showroom`, id || "");
+  
+//   const unsubscribe = onSnapshot(driverRef, (docSnapshot) => {
+//     if (docSnapshot.exists()) {
+//       const driverData = docSnapshot.data();
+//       const fetchedRewardPoints = driverData?.rewardPoints || 0;
+//       setRewardShowroomPoints(fetchedRewardPoints);
+//       console.log(` rewardPoints: ${fetchedRewardPoints}`);
+//     }
+//   });
+
+//   return () => unsubscribe(); // Clean up the snapshot listener
+// }, [id, db, uid]);
+//  // Fetch bookings
+// useEffect(() => {
+// const fetchBookings = async () => {
+//   try {
+//     const bookingsRef = collection(db, `user/${uid}/bookings`);
+//     const q = query(
+//       bookingsRef,
+//       where('showroomId', '==', id), 
+//       where('createdBy', '==', 'showroomStaff'), 
+//       where('status', '==', 'Order Completed')
+//     );
+
+//     const querySnapshot = await getDocs(q);
+//     const fetchedBookings: Booking[] = [];
+// console.log("fetchedBookings",fetchedBookings)
+//     querySnapshot.forEach((doc) => {
+//       fetchedBookings.push({ id: doc.id, ...doc.data() } as Booking);
+//     });
+
+//     setBookings(fetchedBookings);
+//     if (category === 'Showroom') {
+//       await updateRewardPoints(fetchedBookings.length);
+//     }
+
+//   } catch (error) {
+//     console.error("Error fetching bookings: ", error);
+//   }
+// };
+
+// fetchBookings();
+// }, [id, db, uid, category]);
+// const updateRewardPoints = async (bookingCount: number) => {
+// if (bookingCount > 0) {
+//   const additionalPoints = bookingCount * 300; // Calculate total additional points
+//   try {
+//     const userRef = doc(db, `user/${uid}/showroom`, id || "");
+//     await updateDoc(userRef, {
+//       rewardPoints: additionalPoints // Use increment to update points
+//     });
+//     console.log(`Updated reward points by ${additionalPoints}`);
+//   } catch (error) {
+//     console.error("Error updating reward points in Firestore:", error);
+//   }
+// }
+// };
+// ----------------------------------------Staff-------------------------------------------------------
+useEffect(() => {
+  const userRef = doc(db, `user/${uid}/users`, id || "");
+  
+  const unsubscribe = onSnapshot(userRef, (docSnapshot) => {
+    if (docSnapshot.exists()) {
+      const userData = docSnapshot.data();
+      console.log("userData",userData)
+      if (userData) {
+        const fetchedUserPercentage = userData?.percentage || 0;
+        const fetchedRewardPoints = userData?.rewardPoints || 0;
+        setPercentage(fetchedUserPercentage);
+        setRewardStaffPoints(fetchedRewardPoints);
+        console.log(`Fetched percentage: ${fetchedUserPercentage}, rewardPoints: ${fetchedRewardPoints}`);
+      } else {
+        console.error("No user data found");
+      }
+    } else {
+      console.error("Document does not exist");
+    }
+  }, (error) => {
+    console.error("Error fetching user data:", error);
+  });
+
+  return () => unsubscribe(); // Clean up the snapshot listener
+}, [id, db, uid]);
+
+useEffect(() => {
+  const fetchBookings = async () => {
+    try {
+      const bookingsRef = collection(db, `user/${uid}/bookings`);  // Fetch from 'users' collection
+      const q = query(
+        bookingsRef,
+        where('newStatus', '==', 'Added by staff'), // First condition
+        where('status', '==', 'Order Completed')   // Second condition
+      );
+      const querySnapshot = await getDocs(q);
+      const fetchedBookings: Booking[] = [];
+
+      querySnapshot.forEach((doc) => {
+        fetchedBookings.push({ id: doc.id, ...doc.data() } as Booking);
+      });
+
+      setBookings(fetchedBookings);
+      calculateRewardPoints(fetchedBookings); // Calculate points after bookings are fetched
+    } catch (error) {
+      console.error("Error fetching bookings: ", error);
+    }
+  };
+
+  fetchBookings();
+}, [id, db, uid]);
+// --------------------------------Driver-----------------------------------------------------------------
+useEffect(() => {
+  // Fetch driver data based on id
+  const fetchDriverData = async () => {
+    if (!uid || !id) {
+      console.error("Missing UID or driver ID.");
+      return;
+    }
+
+    try {
+      // Get the document reference for the specific driver
+      const driverRef = doc(db, `user/${uid}/driver`, id);
+
+      // Fetch the driver's data
+      const docSnapshot = await getDoc(driverRef);
+
+      if (docSnapshot.exists()) {
+        const driverData = docSnapshot.data();
+        const fetchedRewardPoints = driverData?.rewardPoints || 0;  // Fetch rewardPoints
+        setRewardDriverPoints(fetchedRewardPoints);
+        console.log(`Fetched rewardPoints: ${fetchedRewardPoints}`);
+      } else {
+        console.error("No such document!");
+      }
+    } catch (error) {
+      console.error("Error fetching driver data:", error);
+    }
+  };
+
+  fetchDriverData();
+}, [id, db, uid]);
+
+// ----------------------------------------------------------------------------------------------------------
+
+// Calculate reward points
+  const calculateRewardPoints = async (fetchedBookings: Booking[]) => {
+    console.log("Starting reward points calculation...");
+    console.log(`Number of fetched bookings: ${fetchedBookings.length}`);
+    console.log(`Reward percentage for calculation: ${percentage}`);
+
+    const totalRewardPoints = fetchedBookings.reduce((total, booking, index) => {
+      const points = (booking.updatedTotalSalary * (percentage / 100)) || 0;
+      
+      console.log(`\n[Booking ${index + 1}]`);
+      console.log(`Booking ID: ${booking.id}`);
+      console.log(`Updated Total Salary: ${booking.updatedTotalSalary}`);
+      console.log(`Calculated Points for this booking: ${points}`);
+      
+      return total + points;
+    }, 0);
+    
+    const updatedPoints = parseFloat(totalRewardPoints.toFixed(2));
+    console.log("\nTotal reward points calculated from all bookings:", updatedPoints);
+
+    setRewardPoints(updatedPoints);
+    console.log(`Updated state with new reward points: ${updatedPoints}`);
+
+    // Ensure both uid and id are valid before updating Firestore
+    if (!uid || !id) {
+      console.error('UID or Showroom/Staff ID is missing. Cannot update Firestore.');
+      return;
+    }
+
+    try {
+      console.log('Updating reward points in Firestore...');
+      
+     if (category === 'Staff') {
+        await updateDoc(doc(db, `user/${uid}/users`, id), { rewardPoints: updatedPoints });
+        console.log('Reward points updated successfully for Staff.');
+      } else {
+        console.log('Category is neither Showroom nor Staff, skipping Firestore update.');
+      }
+    } catch (error) {
+      console.error('Error updating reward points in Firestore:', error);
+    }
+  };
+  
+// Recalculate points when either percentage or bookings change
+useEffect(() => {
     if (bookings.length > 0) {
       calculateRewardPoints(bookings);
     }
-  }, [percentage, bookings]); 
+}, [percentage, bookings]);
 
   const handleRedeem = (product: Product) => {
     if (rewardPoints >= product.price) {
@@ -129,19 +329,49 @@ const RewardPage: React.FC = () => {
 
   return (
     <div className="reward-container">
+      
+      {
+  category == 'Showroom' && (
       <header className="user-info">
         <h1>Welcome, {driverName}</h1>
-        <h2>Points Available: {rewardPoints.toFixed(2)}</h2> {/* Display formatted points */}
+        <h2>Points Available: {rewardShowroomPoints}</h2>
       </header>
+      )}
+        {
+  category == 'ShowroomStaff' && (
+      <header className="user-info">
+        <h1>Welcome, {driverName}</h1>
+        <h2>Points Available: {rewardShowroomStaffPoints}</h2>
+      </header>
+      )}
+      
+       {
+  category == 'Driver' && (
+      <header className="user-info">
+        <h1>Welcome, {driverName}</h1>
+        <h2>Points Available: {rewardDriverPoints}</h2>
+      </header>
+      )}
+      {
+  category == 'Staff' && (
+      <header className="user-info">
+        <h1>Welcome, {driverName}</h1>
+        <h2>Points Available: {rewardStaffPoints}</h2>
+      </header>
+  )}
+      {
+  category == 'Staff' && (
+    <section className="percentage-section">
+      <h3>Percentage for Reward Points Calculation</h3>
+      <input
+        type="number"
+        value={percentage}
+        readOnly // Make the input field read-only
+      />
+    </section>
+  )
+}
 
-      <section className="percentage-section">
-        <h3>Percentage for Reward Points Calculation</h3>
-        <input
-          type="number"
-          value={percentage}
-          readOnly // Make the input field read-only
-        />
-      </section>
 
       <section className="products-section">
         <h3>Redeemable Products</h3>
@@ -192,24 +422,7 @@ const RewardPage: React.FC = () => {
           </div>
         </div>
       </section>
-
-      <section className="bookings-section">
-        <h3>Your Bookings</h3>
-        {bookings.length === 0 ? (
-          <p>No bookings found.</p>
-        ) : (
-          <div className="bookings-list">
-            {bookings.map((booking) => (
-              <div key={booking.id} className="booking-card">
-                <h4>Booking ID: {booking.id}</h4>
-                <p>Selected Driver: {booking.selectedDriver}</p>
-                <p>Company: {booking.company}</p>
-                <p>Updated Total Salary: {booking.updatedTotalSalary}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+ 
     </div>
   );
 };

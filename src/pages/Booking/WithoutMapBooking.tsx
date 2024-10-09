@@ -16,6 +16,12 @@ import BaseLocationWithout from '../BaseLocation/BaseLocationWithout';
 interface Showroom {
     id: string;
     name: string;
+    value: string;  // Add this property
+    insuranceAmountBody: number;  // Add this property (use the correct type)
+    locationLatLng: {
+        lat: number;  // Use number type for latitude
+        lng: number;  // Use number type for longitude
+    };
 }
 interface Driver {
     id: string;
@@ -81,6 +87,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [totalDriverSalary, setTotalDriverSalary] = useState<number>(0);
     const [serviceCategory, setServiceCategory] = useState<string>('');
     const [company, setCompany] = useState<string>('');
+    console.log("company",company)
     const [customerName, setCustomerName] = useState<string>('');
     const [mobileNumber, setMobileNumber] = useState<string>('');
     const [serviceVehicle, setServiceVehicle] = useState<string>('');
@@ -100,11 +107,10 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
 
     const [baseLocation, setBaseLocation] = useState<{ lat: string; lng: string; name: string } | null>(null);
     const [selectedCompanyData, setSelectedCompanyData] = useState(null);
-
     const [trappedLocation, setTrappedLocation] = useState<string>('');
     const [totalSalary, setTotalSalary] = useState<number>(0);
     const [showroomLocation, setShowroomLocation] = useState<string>('');
-    const [insuranceAmountBody, setInsuranceAmountBody] = useState<number>(0);
+    const [insuranceAmountBody, setInsuranceAmountBody] = useState<number | string>(''); // Adjust type to allow both number and string
     const [showrooms, setShowrooms] = useState<Showroom[]>([]);
     const [distance, setDistance] = useState<string>('');
     const [drivers, setDrivers] = useState<any[]>([]);
@@ -112,6 +118,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [serviceTypes, setServiceTypes] = useState<any[]>([]);
     const [showRooms, setShowRooms] = useState<any[]>([]);
     const [selectedCompany, setSelectedCompany] = useState<any[]>([]);
+
     const [currentDateTime, setCurrentDateTime] = useState<string>('');
     const [manualInput, setManualInput] = useState<string>('');
     const [manualInput1, setManualInput1] = useState<string>(dropoffLocation ? dropoffLocation.name : '');
@@ -138,6 +145,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             setComments(editData.comments || '');
             setFileNumber(editData.fileNumber || '');
             setCompany(editData.company || '');
+            console.log("editData.company",editData.company)
             setTotalDriverSalary(editData.totalDriverSalary || 0);
             setTotalDriverDistance(editData.totalDriverDistance || 0);
             setCustomerName(editData.customerName || '');
@@ -145,8 +153,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             setVehicleType(editData.vehicleType || '');
             setServiceCategory(editData.serviceCategory || '');
 
-            setSelectedCompany(editData.selectedCompany || '');
-
+           
             setAvailableServices(editData.availableServices || '');
             setMobileNumber(editData.mobileNumber || '');
             setDis1(editData.dis1 || '');
@@ -169,8 +176,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
 
             setTotalSalary(editData.totalSalary || 0);
             setDropoffLocation(editData.dropoffLocation || null);
-            setSelectedCompany(editData.selectedCompany || []);
-
+            setSelectedCompany(editData.selectedCompany || '');
+            console.log("editData.selectedCompan",editData.selectedCompany)
             setDisableFields(false);
         }
     }, [state]);
@@ -922,7 +929,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
 
         return `${day}/${month}/${year}, ${formattedHours}:${minutes}:${seconds} ${ampm}`;
     };
-    // --------------------------------
+// --------------------------------------------------------------------------
     // http://localhost:3000
     // https://rsanotification.onrender.com
     const sendPushNotification = async (token, title, body, sound) => {
@@ -949,17 +956,39 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             console.error('Error sending notification:', error);
         }
     };
+    const sendAlert = async (token, title, body) => {
+        try {
+            const response = await fetch('https://rsanotification.onrender.com/send-notification', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    token: token,
+                    title: title,
+                    body: body,
+                }),
+            });
 
+            if (response.ok) {
+                console.log('Notification sent successfully');
+            } else {
+                console.log('Failed to send notification');
+            }
+        } catch (error) {
+            console.error('Error sending notification:', error);
+        }
+    };
     const sendNotificationsToAllDrivers = async () => {
         try {
             // Extract all FCM tokens from drivers
             const tokens = drivers.map((driver) => driver.fcmToken).filter((token) => token);
             const notificationTitle = 'Booking Notification';
             const notificationBody = 'A new booking has been added (Dummy).';
-            const sound = 'alert_notification';
+            ;
 
             for (const token of tokens) {
-                await sendPushNotification(token, notificationTitle, notificationBody, sound);
+                await sendAlert(token, notificationTitle, notificationBody);
             }
         } catch (error) {
             console.error('Error sending notifications to all drivers:', error);
@@ -1002,6 +1031,7 @@ const addOrUpdateItem = async (): Promise<void> => {
                 deliveryDateTime: deliveryDateTime || null,
                 createdAt: serverTimestamp(),
                 comments: comments || '',
+                bookingId: `${bookingId}`,
                 distance: distance || '',
                 baseLocation: baseLocation || '',
                 showroomLocation: showroomLocation,
@@ -1025,7 +1055,7 @@ const addOrUpdateItem = async (): Promise<void> => {
                 vehicleModel: vehicleModel || '',
                 vehicleSection: vehicleSection || '',
                 vehicleNumber: vehicleNumber || '',
-                fileNumber: finalFileNumber,
+                fileNumber: finalFileNumber || '',
                 selectedDriver: selectedDriver || '',
                 trappedLocation: trappedLocation || '',
                 updatedTotalSalary: updatedTotalSalary || 0,
@@ -1041,10 +1071,10 @@ const addOrUpdateItem = async (): Promise<void> => {
                     bookingData.newStatus = `Edited by ${role} ${userName}`;
                 }
                 bookingData.editedTime = formatDate(new Date());
+            } else {
+                // For new booking, add "Added by" status
+                bookingData.newStatus = `Added by ${role}`;
             }
-
-            console.log('Data to be added/updated:', bookingData);
-
             // Schedule the booking at deliveryDateTime if provided
             if (deliveryDateTime) {
                 const deliveryDate = new Date(deliveryDateTime);
@@ -1064,14 +1094,14 @@ const addOrUpdateItem = async (): Promise<void> => {
                         if (selectedDriver === 'dummy') {
                             await sendNotificationsToAllDrivers();
                         } else if (fcmToken) {
-                            await sendPushNotification(fcmToken, 'Booking Notification', 'Your booking has been updated', 'alert_notification');
+                            await sendAlert(fcmToken, 'Booking Notification', 'Your booking has been updated');
                         }
 
                     }, timeToCreateBooking);
 
                     // Schedule the notification as well at the same time
                     setTimeout(async () => {
-                        await sendPushNotification(fcmToken, 'Delivery Reminder', `Your booking is scheduled for delivery on ${formatDate(deliveryDate)}`, 'alert_notification');
+                        await sendAlert(fcmToken, 'Delivery Reminder', `Your booking is scheduled for delivery on ${formatDate(deliveryDate)}`);
                     }, timeToCreateBooking);
                 }
             } else {
@@ -1112,7 +1142,7 @@ const addOrUpdateItem = async (): Promise<void> => {
     }
 };
 
-    const handleButtonClick = (event) => {
+    const handleButtonClick = (event:any) => {
         event.preventDefault();
         setShowShowroomModal(true);
     };
@@ -1121,6 +1151,7 @@ const addOrUpdateItem = async (): Promise<void> => {
         <div className={styles.bookingFormContainer}>
             <div className={styles.dateTime}>{currentDateTime}</div>
             <h2 className={styles.formHeading}>BOOK WITHOUT MAP</h2>
+            <div className={styles.dateTime}>{ bookingId}</div>
             <form className={styles.bookingForm}>
                 <div className="mb-4">
                     <label htmlFor="deliveryDateTime" className={`${styles.label} block mb-2`}>
