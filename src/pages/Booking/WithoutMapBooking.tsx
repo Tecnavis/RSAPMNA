@@ -11,8 +11,19 @@ import IconMapPin from '../../components/Icon/IconMapPin';
 import ShowroomModalWithout from './ShowroomModalWithout';
 import styles from './withoutMap.module.css';
 import ReactSelect from 'react-select';
-import axios from 'axios';
 import BaseLocationWithout from '../BaseLocation/BaseLocationWithout';
+
+interface Showroom {
+    value: string;
+    label: string;
+}
+
+//   interface Props {
+//     showrooms: Showroom[];
+//     showroomLocation: string;
+//     handleInputChange: (field: string, value: string) => void;
+//   }
+
 interface Showroom {
     id: string;
     name: string;
@@ -97,7 +108,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [showShowroomModal, setShowShowroomModal] = useState<boolean>(false);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [selectedDriver, setSelectedDriver] = useState<string | null>(null);
-    const [serviceDetails, setServiceDetails] = useState<string>('');
+    const [serviceDetails, setServiceDetails] = useState<any>('');
     const [serviceType, setServiceType] = useState<string>('');
     const [pickupLocation, setPickupLocation] = useState<{ lat: string; lng: string; name: string }>({ lat: '', lng: '', name: '' });
     const [availableServices, setAvailableServices] = useState<string>('');
@@ -311,7 +322,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             case 'showroomLocation':
                 setShowroomLocation(value);
 
-                const selectedShowroom = showrooms.find((show) => show.value === value);
+                const selectedShowroom: any = showrooms.find((show: any) => show.value === value);
 
                 if (selectedShowroom) {
                     setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
@@ -330,13 +341,16 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         console.error('Location data is missing for the selected showroom.');
                         // You may choose to set a default or empty location here
                         setDropoffLocation({
-                            name: selectedShowroom.value,
+                            name: selectedShowroom.value || '',
+
                             lat: '',
                             lng: '',
                         });
                     }
                 } else {
-                    setInsuranceAmountBody('');
+
+                    setInsuranceAmountBody('' || 0);
+
                     setDropoffLocation({
                         name: '',
                         lat: '',
@@ -404,17 +418,17 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 break;
             case 'dis1':
                 const parsedDis1 = parseFloat(value) || 0;
-                setDis1(parsedDis1);
+                setDis1(parsedDis1 as any);
                 setDistance(parsedDis1 + dis2 + dis3);
                 break;
             case 'dis2':
                 const parsedDis2 = parseFloat(value) || 0;
-                setDis2(parsedDis2);
+                setDis2(parsedDis2 as any);
                 setDistance(dis1 + parsedDis2 + dis3);
                 break;
             case 'dis3':
                 const parsedDis3 = parseFloat(value) || 0;
-                setDis3(parsedDis3);
+                setDis3(parsedDis3 as any);
                 setDistance(dis1 + dis2 + parsedDis3);
                 break;
             case 'distance':
@@ -462,6 +476,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 }
                 break;
 
+
             case 'company':
                 setCompany(value);
                 if (value === 'rsa') {
@@ -475,10 +490,22 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 break;
 
             case 'dropoffLocation':
-                if (typeof value === 'string') {
-                    setDropoffLocation({ ...dropoffLocation, name: value });
+                if (typeof value === 'number' || typeof value === 'string') {
+                    setDropoffLocation({
+                        ...dropoffLocation,
+                        ...dropoffLocation,
+                        name: String(value), // Ensure name is a string
+                        lat: dropoffLocation?.lat || '', // Ensure lat is a string
+                        lng: dropoffLocation?.lng || '',
+                    });
                 } else {
-                    setDropoffLocation({ ...dropoffLocation, name: value.name });
+                    // setDropoffLocation({ ...dropoffLocation, name: value.name });
+                    setDropoffLocation({
+                        ...dropoffLocation,
+                        name: value.name ? String(value.name) : '', // Ensure it's a string
+                        lat: value.lat ? String(value.lat) : '', // Provide default '' if undefined
+                        lng: value.lng ? String(value.lng) : '', // Provide default '' if undefined
+                    });
                 }
                 break;
             case 'mobileNumber':
@@ -524,14 +551,16 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
 
         if (field === 'serviceType') {
             setServiceType(value || '');
-            openModal();
+            openModal(distance);
         } else if (field === 'selectedDriver') {
             setSelectedDriver(value || '');
         }
     };
+
     const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
 
-    const openModal = () => {
+    const openModal = (distance: any) => {
+
         setIsModalOpen(true);
     };
     const closeModal = () => {
@@ -551,7 +580,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     insuranceAmountBody: doc.data().insuranceAmountBody, // Include this field if needed
                     locationLatLng: doc.data().locationLatLng, // Include this field if needed
                 }));
-                setShowrooms(servicesList);
+                setShowrooms(servicesList as any);
             },
             (error) => {
                 console.error('Error fetching services:', error);
@@ -567,16 +596,16 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         setManualInput1(dropoffLocation ? dropoffLocation.name : '');
     }, [dropoffLocation]);
 
-    const handleManualChange1 = (field, value) => {
-        setDropoffLocation((prev) => ({ ...prev, [field]: value }));
+    const handleManualChange1 = (field: any, value: any) => {
+        setDropoffLocation((prev: any) => ({ ...prev, [field]: value }));
     };
 
-    const handleLocationChange1 = (e) => {
+    const handleLocationChange1 = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setManualInput1(value);
         handleInputChange('dropoffLocation', value);
     };
-    const handleLocationChange = (e) => {
+    const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
 
         setManualInput(value);
@@ -592,10 +621,10 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         }));
     };
 
-    const updateShowroomLocation = (location) => {
+    const updateShowroomLocation = (location: string) => {
         setShowroomLocation(location);
     };
-    const handleManualChange = (field, value) => {
+    const handleManualChange = (field: any, value: any) => {
         setPickupLocation((prev) => ({ ...prev, [field]: value }));
     };
     useEffect(() => {
@@ -742,7 +771,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     useEffect(() => {
         const fetchServiceDetails = async () => {
             if (!serviceType) {
-                setServiceDetails({});
+                setServiceDetails as {};
                 return;
             }
 
@@ -750,21 +779,21 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 const serviceQuery = query(collection(db, `user/${uid}/service`), where('name', '==', serviceType));
                 const snapshot = await getDocs(serviceQuery);
                 if (snapshot.empty) {
-                    setServiceDetails({});
+                    setServiceDetails as {};
                     return;
                 }
                 const details = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))[0];
                 setServiceDetails(details);
             } catch (error) {
                 console.error('Error fetching service details:', error);
-                setServiceDetails({});
+                setServiceDetails as {};
             }
         };
 
         fetchServiceDetails();
     }, [db, serviceType]);
 
-    const calculateTotalSalary = (salary, totalDistance, basicSalaryKM, salaryPerKM, isRSA) => {
+    const calculateTotalSalary = (salary: any, totalDistance: any, basicSalaryKM: any, salaryPerKM: any, isRSA: any) => {
         const numericBasicSalary = Number(salary) || 0;
         const numericTotalDistance = Number(totalDistance) || 0;
         const numericKmValueNumeric = Number(basicSalaryKM) || 0;
@@ -787,6 +816,55 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         }
     };
     // --------------------------------------------------------------------------------
+    useEffect(() => {
+        if (drivers.length > 0) {
+            // Calculate total salaries for each driver
+            const totalSalaries = drivers.map((driver) => {
+                const isRSA = driver.companyName === 'RSA';
+
+                // Declare variables
+                let salary;
+                let basicSalaryKM;
+                let salaryPerKM;
+
+                if (isRSA && selectedCompanyData) {
+                    // Ensure the necessary properties exist
+                    if (selectedCompanyData.basicSalaries && selectedCompanyData.selectedServices && selectedCompanyData.basicSalaryKm && selectedCompanyData.salaryPerKm) {
+                        salary = selectedCompanyData.basicSalaries[selectedCompanyData.selectedServices[0]];
+                        basicSalaryKM = selectedCompanyData.basicSalaryKm[selectedCompanyData.selectedServices[0]];
+                        salaryPerKM = selectedCompanyData.salaryPerKm[selectedCompanyData.selectedServices[0]];
+                    } else {
+                        console.error('Missing properties in selectedCompanyData for RSA');
+                    }
+                } else {
+                    // Fallback for non-RSA or when selectedCompanyData is not available
+                    salary = !isRSA ? driver.basicSalaries[driver.selectedServices[0]] : serviceDetails.salary;
+                    basicSalaryKM = !isRSA ? driver.basicSalaryKm[driver.selectedServices[0]] : serviceDetails.basicSalaryKM;
+                    salaryPerKM = !isRSA ? driver.salaryPerKm[driver.selectedServices[0]] : serviceDetails.salaryPerKM;
+                }
+
+                // Check if calculateTotalSalary is available and log its inputs
+                if (calculateTotalSalary) {
+                    console.log(`Calculating total salary for driver ${driver.id} with values:`, {
+                        salary,
+                        distance,
+                        basicSalaryKM,
+                        salaryPerKM,
+                        isRSA,
+                    });
+
+                    const calculatedSalary = calculateTotalSalary(salary, distance, basicSalaryKM, salaryPerKM, isRSA);
+
+                    console.log(`Driver ${driver.id} - Calculated Salary: ${calculatedSalary}`);
+                    return calculatedSalary;
+                } else {
+                    console.error('calculateTotalSalary function is not available');
+                    return 0;
+                }
+            });
+        }
+    }, [drivers, serviceDetails, distance, selectedCompanyData, calculateTotalSalary]);
+
     // useEffect(() => {
     //     if (drivers.length > 0) {
     //         // Calculate total salaries for each driver
@@ -838,7 +916,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
 
     // --------------------------------------------------------------------------------
 
-    const calculateTotalDriverSalary = (totalDriverDistance, basicSalaryKM, salaryPerKM, salary) => {
+    const calculateTotalDriverSalary = (totalDriverDistance: any, basicSalaryKM: any, salaryPerKM: any, salary: any) => {
         totalDriverDistance = parseFloat(totalDriverDistance);
         basicSalaryKM = parseFloat(basicSalaryKM);
         salaryPerKM = parseFloat(salaryPerKM);
@@ -896,7 +974,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     useEffect(() => {
         let newTotalSalary = totalSalary;
         if (serviceCategory === 'Body Shop' && bodyShope === 'insurance') {
-            newTotalSalary -= parseFloat(insuranceAmountBody || 0);
+            // newTotalSalary -= parseFloat(insuranceAmountBody || 0);
+            newTotalSalary -= parseFloat(typeof insuranceAmountBody === 'string' ? insuranceAmountBody : insuranceAmountBody.toString()) || 0;
         }
         if (editData?.adjustValue) {
             // If editData has adjustValue, prioritize it
@@ -907,7 +986,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         }
     }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope, adjustValue]);
 
-    const renderServiceVehicle = (serviceVehicle, serviceType) => {
+    const renderServiceVehicle = (serviceVehicle: any, serviceType: any) => {
         if (serviceVehicle && serviceVehicle[serviceType]) {
             return serviceVehicle[serviceType];
         } else {
@@ -917,7 +996,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     // ---------------------------------------------------------------------
 
     // -----------------------------------------------------------------------------
-    const formatDate = (date) => {
+    const formatDate = (date: any) => {
         const day = date.getDate().toString().padStart(2, '0');
         const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are zero-based
         const year = date.getFullYear();
@@ -932,7 +1011,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
 // --------------------------------------------------------------------------
     // http://localhost:3000
     // https://rsanotification.onrender.com
-    const sendPushNotification = async (token, title, body, sound) => {
+    const sendPushNotification = async (token: any, title: any, body: any, sound: any) => {
         try {
             const response = await fetch('https://rsanotification.onrender.com/send-notification', {
                 method: 'POST',
@@ -994,6 +1073,108 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             console.error('Error sending notifications to all drivers:', error);
         }
     };
+
+    // const addOrUpdateItem = async (): Promise<void> => {
+    //     if (validateForm()) {
+    //         try {
+    //             const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
+    //             const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
+    //             const fcmToken = selectedDriverData ? selectedDriverData.fcmToken : null;
+
+    //             const currentDate = new Date();
+    //             const dateTime = formatDate(currentDate); // Use the formatted date
+    //             const distance = (parseFloat(dis1) + parseFloat(dis2) + parseFloat(dis3)).toString();
+    //             let finalFileNumber = '';
+
+    //             if (company === 'self') {
+    //                 finalFileNumber = `PMNA${bookingId}`;
+    //             } else if (company === 'rsa') {
+    //                 finalFileNumber = fileNumber;
+    //             }
+    //             const formattedPickupLocation = {
+    //                 name: pickupLocation?.name || '',
+    //                 lat: pickupLocation?.lat?.toString() || '',
+    //                 lng: pickupLocation?.lng?.toString() || '',
+    //             };
+    //             const totalDriverDistanceNumber = parseFloat(totalDriverDistance) || 0;
+
+    //             const bookingData = {
+    //                 driver: driverName,
+    //                 totalSalary: totalSalary,
+    //                 pickupLocation: formattedPickupLocation,
+    //                 dropoffLocation: dropoffLocation || {},
+    //                 status: 'booking added',
+    //                 dateTime: dateTime, // Use the formatted date
+    //                 bookingId: `${bookingId}`,
+    //                 createdAt: serverTimestamp(),
+    //                 comments: comments || '',
+    //                 // totalDistance: totalDistance,
+    //                 distance: distance || '',
+    //                 baseLocation: baseLocation || '',
+    //                 showroomLocation: showroomLocation,
+    //                 company: company || '',
+    //                 adjustValue: adjustValue || '',
+    //                 customerName: customerName || '',
+    //                 totalDriverDistance: totalDriverDistanceNumber || 0,
+    //                 totalDriverSalary: totalDriverSalary || 0,
+    //                 mobileNumber: mobileNumber || '',
+    //                 dis1: dis1 || 0,
+    //                 dis2: dis2 || 0,
+    //                 dis3: dis3 || 0,
+    //                 phoneNumber: phoneNumber || '',
+    //                 vehicleType: vehicleType || '',
+    //                 bodyShope: bodyShope || '',
+    //                 statusEdit: activeForm === 'withoutMap' ? 'mapbooking' : 'withoutmapbooking',
+    //                 selectedCompany: selectedCompany || '',
+    //                 serviceType: serviceType || '',
+    //                 serviceVehicle: serviceVehicle || '',
+    //                 serviceCategory: serviceCategory || '',
+    //                 vehicleModel: vehicleModel || '',
+    //                 vehicleSection: vehicleSection || '',
+    //                 vehicleNumber: vehicleNumber || '',
+    //                 fileNumber: finalFileNumber,
+    //                 selectedDriver: selectedDriver || '',
+    //                 trappedLocation: trappedLocation || '',
+    //                 updatedTotalSalary: updatedTotalSalary || 0,
+    //                 insuranceAmountBody: insuranceAmountBody || '',
+    //                 paymentStatus: 'Not Paid',
+    //                 // Optional property
+    //             };
+
+    //             if (editData ) {
+    //                 if (role === 'admin') {
+    //                     bookingData.String(newStatus) = `Edited by ${role}`;
+    //                 } else if (role === 'staff') {
+    //                     bookingData.newStatus = `Edited by ${role} ${userName}`;
+    //                     // (bookingData as any).newStatus = `Edited by ${role} ${userName}`;
+    //                 }
+    //                 bookingData.editedTime = formatDate(new Date());
+
+    //             }
+    //             console.log('Data to be added/updated:', bookingData); // Log the data before adding or updating
+
+    //             if (editData) {
+    //                 const docRef = doc(db, `user/${uid}/bookings`, editData.id);
+    //                 await updateDoc(docRef, bookingData);
+    //                 console.log('Document updated');
+    //             } else {
+    //                 const docRef = await addDoc(collection(db, `user/${uid}/bookings`), bookingData);
+    //                 console.log('Document written with ID: ', docRef.id);
+
+    //                 console.log('Document added');
+    //             }
+    //             // Check if the dummy driver is selected
+    //             if (selectedDriver === 'dummy') {
+    //                 await sendNotificationsToAllDrivers();
+    //             } else if (fcmToken) {
+    //                 await sendPushNotification(fcmToken, 'Booking Notification', 'Your booking has been updated', 'alert_notification');
+    //             }
+    //             navigate('/bookings/newbooking');
+    //         } catch (error) {
+    //             console.error('Error adding/updating item:', error);
+    //         }
+    //     }
+    // };
 // ----------------------------------
 const addOrUpdateItem = async (): Promise<void> => {
     if (validateForm()) {
@@ -1305,7 +1486,8 @@ const addOrUpdateItem = async (): Promise<void> => {
                                 isSearchable={true}
                                 getOptionLabel={(option) => (option.value === 'lifting' ? <span style={{ color: 'red', fontSize: '20px', fontWeight: 'bold' }}>{option.label}</span> : option.label)}
                                 styles={{
-                                    option: (provided, state) => ({
+                                    option: (provided: any, state: any) => ({
+
                                         ...provided,
                                         color: state.data.value === 'lifting' ? 'red' : provided.color,
                                         fontSize: state.data.value === 'lifting' ? '20px' : provided.fontSize,
@@ -1344,7 +1526,6 @@ const addOrUpdateItem = async (): Promise<void> => {
                         />
                     </div>
                 </div>
-
                 <div>
                     <div className={styles.formGroup}>
                         <label htmlFor="dis1" className={styles.label}>
@@ -1463,7 +1644,7 @@ const addOrUpdateItem = async (): Promise<void> => {
                             type="number"
                             name="updatedTotalSalary"
                             placeholder="Enter Total Salary"
-                            onChange={(e) => setUpdatedTotalSalary(e.target.value)}
+                            onChange={(e) => setUpdatedTotalSalary(Number(e.target.value))}
                             required
                             value={updatedTotalSalary}
                             className={styles.formControl}
