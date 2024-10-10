@@ -290,7 +290,7 @@ const SalaryReport: React.FC = () => {
 
     const handleSaveEdit = async () => {
         try {
-            const { fileNumber, dateTime, serviceType, serviceVehicle, totalDriverSalary, transferedSalary, advance, advancePaymentDate } = editFormData;
+            const { fileNumber, dateTime, serviceType, serviceVehicle, totalDriverSalary, transferedSalary, advance, advancePaymentDate,balanceSalary } = editFormData;
 
             // Check if editingBookingId is null before proceeding
             if (!editingBookingId) {

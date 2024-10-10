@@ -86,7 +86,9 @@ useEffect(() => {
         bookingsRef,
         where('showroomId', '==', id), 
         where('createdBy', '==', 'showroom'), 
-        where('status', '==', 'Order Completed')
+        where('status', '==', 'Order Completed'),
+
+
       );
 
       const querySnapshot = await getDocs(q);
@@ -124,51 +126,60 @@ const updateRewardPoints = async (bookingCount: number) => {
 };
 
 // ---------------ShowRoomStaff---------------------------------------------------------------------
-// useEffect(() => {
-//   const driverRef = doc(db, `user/${uid}/showroom`, id || "");
+useEffect(() => {
+  const driverRef = doc(db, `user/${uid}/showroom`, id || "");
   
-//   const unsubscribe = onSnapshot(driverRef, (docSnapshot) => {
-//     if (docSnapshot.exists()) {
-//       const driverData = docSnapshot.data();
-//       const fetchedRewardPoints = driverData?.rewardPoints || 0;
-//       setRewardShowroomPoints(fetchedRewardPoints);
-//       console.log(` rewardPoints: ${fetchedRewardPoints}`);
-//     }
-//   });
+  const unsubscribe = onSnapshot(driverRef, (docSnapshot) => {
+    if (docSnapshot.exists()) {
+      const driverData = docSnapshot.data();
+      const fetchedRewardPoints = driverData?.rewardPoints || 0;
+      setRewardShowroomPoints(fetchedRewardPoints);
+      console.log(` rewardPoints: ${fetchedRewardPoints}`);
+    }
+  });
 
-//   return () => unsubscribe(); // Clean up the snapshot listener
-// }, [id, db, uid]);
-//  // Fetch bookings
-// useEffect(() => {
-// const fetchBookings = async () => {
-//   try {
-//     const bookingsRef = collection(db, `user/${uid}/bookings`);
-//     const q = query(
-//       bookingsRef,
-//       where('showroomId', '==', id), 
-//       where('createdBy', '==', 'showroomStaff'), 
-//       where('status', '==', 'Order Completed')
-//     );
+  return () => unsubscribe(); // Clean up the snapshot listener
+}, [id, db, uid]);
+ // Fetch bookings
+ useEffect(() => {
+  const fetchShowroomStaffBookings = async () => {
+    try {
+      // Firestore reference to 'bookings'
+      const bookingsRef = collection(db, `user/${uid}/bookings`);
 
-//     const querySnapshot = await getDocs(q);
-//     const fetchedBookings: Booking[] = [];
-// console.log("fetchedBookings",fetchedBookings)
-//     querySnapshot.forEach((doc) => {
-//       fetchedBookings.push({ id: doc.id, ...doc.data() } as Booking);
-//     });
+      // Firestore query for showroom staff bookings with status 'Order Completed'
+      const q = query(
+        bookingsRef,
+        where('showroomId', '==', id), 
+        where('createdBy', '==', 'showroomStaff'), 
+        where('status', '==', 'Order Completed')
+      );
 
-//     setBookings(fetchedBookings);
-//     if (category === 'Showroom') {
-//       await updateRewardPoints(fetchedBookings.length);
-//     }
+      const querySnapshot = await getDocs(q);
+      const fetchedBookings: Booking[] = [];
 
-//   } catch (error) {
-//     console.error("Error fetching bookings: ", error);
-//   }
-// };
+      // Loop through query results and store data in array
+      querySnapshot.forEach((doc) => {
+        fetchedBookings.push({ id: doc.id, ...doc.data() } as Booking);
+      });
 
-// fetchBookings();
-// }, [id, db, uid, category]);
+      // Update state with fetched bookings
+      setBookings(fetchedBookings);
+      
+      // If category is 'Showroom', update reward points based on number of bookings
+      if (category === 'ShowroomStaff') {
+        await updateRewardPoints(fetchedBookings.length);
+      }
+
+    } catch (error) {
+      console.error("Error fetching showroom staff bookings: ", error);
+    }
+  };
+
+  // Trigger fetch when component mounts or relevant state changes
+  fetchShowroomStaffBookings();
+}, [id, db, uid, category]);
+
 // const updateRewardPoints = async (bookingCount: number) => {
 // if (bookingCount > 0) {
 //   const additionalPoints = bookingCount * 300; // Calculate total additional points

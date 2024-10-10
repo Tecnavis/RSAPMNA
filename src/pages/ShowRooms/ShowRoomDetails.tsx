@@ -70,8 +70,19 @@ const ShowRoomDetails: React.FC = () => {
     };
 
     const handleNavigation = () => {
-        navigate('/addbook', { state: { uid: showRoomDetails?.uid, showroomId: showRoomDetails?.id } });
+        console.log("Name:", formData.name);
+        console.log("Phone Number:", formData.phoneNumber);
+    
+        navigate('/addbook', { 
+            state: { 
+                uid: showRoomDetails?.uid, 
+                showroomId: showRoomDetails?.id,
+                name: formData.name, 
+                phoneNumber: formData.phoneNumber 
+            } 
+        });
     };
+    
 
     const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -84,7 +95,6 @@ const ShowRoomDetails: React.FC = () => {
         }
 
         if (!showRoomDetails.id || !showRoomDetails.uid) return;
-
         try {
             const showroomCollectionRef = collection(db, `user/${showRoomDetails.uid}/showroom`);
             const q = query(showroomCollectionRef, where('showroomId', '==', showRoomDetails.id));
@@ -117,6 +127,14 @@ const ShowRoomDetails: React.FC = () => {
                 });
                 setFormData({ name: '', phoneNumber: '' })
                 setIsSignIn(true);
+                navigate('/addbook', { 
+                    state: { 
+                        uid: showRoomDetails?.uid, 
+                        showroomId: showRoomDetails?.id,
+                        name: formData.name, 
+                        phoneNumber: formData.phoneNumber 
+                    } 
+                });
             } else {
                 setErrorMessage('No such document!');
             }
@@ -150,8 +168,14 @@ const ShowRoomDetails: React.FC = () => {
 
                 if (isPhoneExists) {
                     // Redirect to dashboard or desired page
-                    handleNavigation();
-                } else {
+                    navigate('/addbook', { 
+                        state: { 
+                            uid: showRoomDetails?.uid, 
+                            showroomId: showRoomDetails?.id,
+                            phoneNumber: signInData.phoneNumber // Pass the phone number
+                        } 
+                    });
+                                } else {
                     setErrorMessage('Phone number is not registered.');
                 }
             }

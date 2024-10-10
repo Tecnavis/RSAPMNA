@@ -321,6 +321,7 @@ const ClientRewards: React.FC = () => {
                {staffMember.name}
            </span>
            <span> - </span>
+          <span> {staffMember.phoneNumber}</span>
            <span className="ml-2 px-2 py-1 text-sm text-gray-900 bg-yellow-200 rounded-full font-semibold hover:bg-yellow-300">
                ({staffMember.rewardPoints || 0} points)
            </span>

@@ -47,6 +47,9 @@ const CashCollectionReport: React.FC = () => {
     const [showAmountDiv, setShowAmountDiv] = useState(true); // Add state to show/hide the div
     const [totalBalances, setTotalBalances] = useState(0);
     const [clickedButtons, setClickedButtons] = useState<Record<string, boolean>>({});
+// ----------------------------------------------------------------------------------------------------------------------------------
+const [disableFields, setDisableFields] = useState(false); // State to disable/enable fields
+const [disableOkButton, setDisableOkButton] = useState(true); // For OK button initially disabled
 
     useEffect(() => {
         const fetchDriver = async () => {
@@ -144,7 +147,7 @@ const CashCollectionReport: React.FC = () => {
             },
         });
     };
-
+// ---------------------------------------------------------------------------------------
     const handleAmountReceivedChange = async (bookingId: string, receivedAmount: string) => {
         try {
             if (!uid || typeof uid !== 'string') {
@@ -166,23 +169,18 @@ const CashCollectionReport: React.FC = () => {
             // Update local state with the new receivedAmount
             setBookings(bookings.map((booking) => (booking.id === bookingId ? { ...booking, receivedAmount: parseFloat(receivedAmount) } : booking)));
 
-            // Recalculate and update total balance in driver collection
-            await updateTotalBalance(); // Ensure this function updates the total balance correctly
-
-            // Recalculate and update netTotalAmountInHand
-            const netTotal = calculateNetTotalAmountInHand();
+            await updateTotalBalance(); 
+            // -----------------------------------------------------------------
+            // const netTotal = calculateNetTotalAmountInHand();
             if (!id || typeof id !== 'string') {
                 throw new Error('Driver ID (id) is not defined or is not a string.');
             }
-            const driverRef = doc(db, `user/${uid}/driver`, id); // Assuming `id` is the driver's ID
 
             // Update netTotalAmountInHand in the driver's document
-            await updateDoc(driverRef, { netTotalAmountInHand: parseFloat(netTotal) });
 
-            console.log('Net total amount in hand updated successfully:', netTotal);
             setClickedButtons((prevState) => ({
                 ...prevState,
-                [bookingId]: true, // Set to true for this booking
+                [bookingId]: true, 
             }));
         } catch (error) {
             console.error('Error updating received amount:', error);
@@ -217,53 +215,69 @@ const CashCollectionReport: React.FC = () => {
         console.log('Net Total Amount in Hand:', netTotal);
         return netTotal;
     };
-    // -----
+// ---------------------------------------------------------------------------
+const updateTotalBalance = async () => {
+    try {
+        if (!uid || typeof uid !== 'string') {
+            throw new Error('User ID (uid) is not defined or is not a string.');
+        }
+        if (!id || typeof id !== 'string') {
+            throw new Error('Driver ID (id) is not defined or is not a string.');
+        }
 
-    const updateTotalBalance = async () => {
-        try {
-            if (!uid || typeof uid !== 'string') {
-                throw new Error('User ID (uid) is not defined or is not a string.');
-            }
-            if (!id || typeof id !== 'string') {
-                throw new Error('Driver ID (id) is not defined or is not a string.');
-            }
-            const totalBalances = bookings.reduce((acc, booking) => {
-                const amount = parseFloat(booking.amount?.toString() || '0');
-                const receivedAmount = parseFloat(booking.receivedAmount?.toString() || '0');
+        // Ensure that bookings and driver are fully loaded
+        if (!bookings || bookings.length === 0) {
+            console.log('Bookings are not loaded yet.');
+            return; // Exit early if bookings are not loaded
+        }
+        if (!driver) {
+            console.log('Driver data is not loaded yet.');
+            return; // Exit early if driver data is not loaded
+        }
 
-                console.log(`Booking ID: ${booking.id}`);
-                console.log(`Original Amount: ${amount}`);
-                console.log(`Received Amount: ${receivedAmount}`);
-                console.log(`Amount Remaining (Amount - Received Amount): ${amount - receivedAmount}`);
+        const totalBalances = bookings.reduce((acc, booking) => {
+            const amount = parseFloat(booking.amount?.toString() || '0');
+            const receivedAmount = parseFloat(booking.receivedAmount?.toString() || '0');
 
-                const newAcc = acc + (amount - receivedAmount);
+            console.log(`Booking ID: ${booking.id}`);
+            console.log(`Original Amount: ${amount}`);
+            console.log(`Received Amount: ${receivedAmount}`);
+            console.log(`Amount Remaining (Amount - Received Amount): ${amount - receivedAmount}`);
 
-                console.log(`Accumulated Total Balance So Far: ${newAcc}`);
+            const newAcc = acc + (amount - receivedAmount);
 
-                return newAcc;
-            }, 0);
+            console.log(`Accumulated Total Balance So Far: ${newAcc}`);
 
-            console.log('Total Balanceee:', totalBalances);
+            return newAcc;
+        }, 0);
 
-            // Update local state for total balance
-            setTotalBalances(totalBalances);
+        console.log('Total Balanceee:', totalBalances);
 
-            // Calculate net total amount in hand
-            const netTotalAmountInHand = calculateNetTotalAmountInHand();
+        // Update local state for total balance
+        setTotalBalances(totalBalances);
 
-            // Update the driver's total balance and net total in Firestore
-            const driverRef = doc(db, `user/${uid}/driver`, id);
-            console.log('Total Balanceee:', totalBalances);
+        const netTotalAmountInHand = calculateNetTotalAmountInHand();
+
+        // Update the driver's total balance and net total in Firestore
+        const driverRef = doc(db, `user/${uid}/driver`, id);
+        console.log('Total Balanceee:', totalBalances);
+        console.log('Total netTotalAmountInHand:', netTotalAmountInHand);
+
+        // Ensure that netTotalAmountInHand is not '0' before updating Firestore
+        if (parseFloat(netTotalAmountInHand) !== 0) {
             await updateDoc(driverRef, {
                 totalBalances: totalBalances,
                 netTotalAmountInHand: parseFloat(netTotalAmountInHand), // Correctly reference the calculated net total
             });
-
             console.log('Total balance and net total updated successfully:', netTotalAmountInHand);
-        } catch (error) {
-            console.error('Error updating total balance:', error);
+        } else {
+            console.log('Net Total is zero, skipping update.');
         }
-    };
+    } catch (error) {
+        console.error('Error updating total balance:', error);
+    }
+};
+
 
     const handleApproveClick = (booking: Booking) => {
         const balance = calculateBalance(booking.amount.toString(), booking.receivedAmount || 0);
@@ -654,28 +668,35 @@ const CashCollectionReport: React.FC = () => {
                                         <td key={booking.id} className={styles.responsiveCell}>
     <div style={{ display: 'flex', alignItems: 'center' }}>
         <input
-            type="number"
-            value={booking.receivedAmount ?? ''}
+            type="text"
+            value={booking.receivedAmount ?? ''}  // Use `??` to handle undefined
             onChange={(e) => handleAmountReceivedChange(booking.id, e.target.value)}
+            style={{ 
+                border: '1px solid #d1d5db', 
+                borderRadius: '0.25rem', 
+                padding: '0.25rem 0.5rem',
+                marginRight: '0.5rem'
+            }}
             disabled={booking.approved}
             min="0"
-            placeholder="Enter amount" // Placeholder for empty input
-            style={{
-                width: '100px', // Adjust width to fit the content
-                padding: '0.5rem', // Increase padding for better spacing
-                fontSize: '1rem', // Increase font size for readability
-                border: '1px solid #d1d5db', // Subtle border color
-                borderRadius: '0.375rem', // Smooth rounded corners
-                backgroundColor: booking.approved ? '#f3f4f6' : 'white', // Light background when disabled
-                color: booking.approved ? '#9ca3af' : '#111827', // Greyed out text when disabled
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)', // Soft shadow for depth
-                transition: 'background-color 0.3s ease, color 0.3s ease', // Smooth transition when disabled
-                cursor: booking.approved ? 'not-allowed' : 'text', // Change cursor based on approval
-                outline: 'none', // Remove default focus outline
-            }}
         />
+        <button
+            onClick={() => handleAmountReceivedChange(booking.id, (booking.receivedAmount ?? 0).toString())}  // Ensure non-undefined value
+            style={{
+                backgroundColor: booking.receivedAmount && booking.receivedAmount > 0 ? '#4CAF50' : '#d1d5db',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.25rem',
+                padding: '0.25rem 0.5rem',
+                cursor: booking.receivedAmount && booking.receivedAmount > 0 ? 'pointer' : 'not-allowed'
+            }}
+            disabled={booking.approved || (booking.receivedAmount ?? 0) <= 0}  // Use default when checking value
+        >
+            OK
+        </button>
     </div>
 </td>
+
 
                                         {/* </tr> */}
 
