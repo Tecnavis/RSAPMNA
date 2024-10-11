@@ -15,6 +15,7 @@ interface Booking {
     status: string; // Added status to match your current logic
     selectedDriver: string;
     formAdded: string;
+    approved: boolean;
 }
 
 interface Driver {
@@ -42,6 +43,8 @@ const ClosedBooking: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [dId, setDId] = useState<string | null>(null);
     const [bId, setBid] = useState<string | null>(null);
+    const [loadingBookings, setLoadingBookings] = useState<Set<string>>(new Set());
+
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
 
@@ -76,21 +79,31 @@ const ClosedBooking: React.FC = () => {
             console.error('Error fetching drivers:', error);
         }
     };
+
     const fetchCompletedBookings = async () => {
         try {
             const db = getFirestore();
+            // Query for bookings that have status: 'Order Completed'
             const q = query(collection(db, `user/${uid}/bookings`), where('status', '==', 'Order Completed'));
             const querySnapshot = await getDocs(q);
+
+            // Map the fetched documents to extract the data
             const bookingsData = querySnapshot.docs.map((doc) => ({
                 id: doc.id,
                 ...doc.data(),
             })) as Booking[];
-            console.log('bookingsData', bookingsData);
-            setCompletedBookings(bookingsData);
+
+            // Filter out bookings with approved: true
+            const filteredBookings = bookingsData.filter((booking) => booking.approved !== true);
+
+            console.log('Filtered bookingsData', filteredBookings);
+            // Set the state with the filtered bookings
+            setCompletedBookings(filteredBookings);
         } catch (error) {
             console.error('Error fetching completed bookings:', error);
         }
     };
+
     useEffect(() => {
         fetchCompletedBookings();
         fetchDrivers();
@@ -98,22 +111,29 @@ const ClosedBooking: React.FC = () => {
     }, [uid]);
 
     const handleApprove = async (bookingId: string) => {
+        setLoadingBookings((prev) => new Set(prev).add(bookingId)); // Add booking ID to loading set
         try {
             const db = getFirestore();
             const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
-            // Update the 'approve' field to true instead of changing the status to 'Approved'
+    
+            // Update the document to set approved to true
             await updateDoc(bookingRef, {
-                approve: true,
+                approved: true, // Add the approved field
             });
     
-            // Update the state to reflect the change
+            // Update the state to reflect the changes immediately
             setCompletedBookings((prevBookings) =>
-                prevBookings.map((booking) =>
-                    booking.id === bookingId ? { ...booking, approve: true } : booking
-                )
+                prevBookings.map((booking) => (booking.id === bookingId ? { ...booking, approved: true } : booking))
             );
+            fetchCompletedBookings();
         } catch (error) {
-            console.error('Error updating booking approval:', error);
+            console.error('Error updating booking status:', error);
+        } finally {
+            setLoadingBookings((prev) => {
+                const updatedSet = new Set(prev);
+                updatedSet.delete(bookingId); // Remove booking ID from loading set
+                return updatedSet;
+            });
         }
     };
     
@@ -121,6 +141,8 @@ const ClosedBooking: React.FC = () => {
     const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value);
     };
+
+    console.log(completedBookings, 'this is the completed bookings');
 
     const filteredBookings = completedBookings.filter((booking) => Object.values(booking).some((value) => value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())));
 
@@ -259,56 +281,80 @@ const ClosedBooking: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="block md:table-row-group">
-                                        {filteredBookings.map((booking) => (
-                                            <tr key={booking.id} className="bg-white border border-gray-300 block md:table-row">
-                                                <td className="p-2 text-sm block md:table-cell">{booking.dateTime}</td>
-                                                <td className="p-2 text-sm block md:table-cell">{booking.customerName}</td>
-                                                <td className="p-2 text-sm block md:table-cell">{booking.phoneNumber}</td>
-                                                <td className="p-2 text-sm block md:table-cell">{booking.serviceType}</td>
-                                                <td className="p-2 text-sm block md:table-cell">{booking.vehicleNumber}</td>
+                                        {filteredBookings
+                                            .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()) // Sort by dateTime descending
+                                            .map((booking) => (
+                                                <tr key={booking.id} className="bg-white border border-gray-300 block md:table-row">
+                                                    <td className="p-2 text-sm block md:table-cell">{new Date(booking.dateTime).toLocaleString('en-GB')} </td>
+                                                    <td className="p-2 text-sm block md:table-cell">{booking.customerName}</td>
+                                                    <td className="p-2 text-sm block md:table-cell">{booking.phoneNumber}</td>
+                                                    <td className="p-2 text-sm block md:table-cell">{booking.serviceType}</td>
+                                                    <td className="p-2 text-sm block md:table-cell">{booking.vehicleNumber}</td>
 
-                                                <td className="p-2 text-sm block md:table-cell">
-                                                    {booking.selectedDriver &&
-                                                    !booking.formAdded &&
-                                                    allDrivers.some((driver) => driver.id === booking.selectedDriver && driver.companyName === 'RSA') ? (
-                                                        // Check if the booking matches the selected driver and the company name
-                                                        <button
-                                                            style={{
-                                                                backgroundColor: 'green',
-                                                                color: '#fff',
-                                                                border: '1px solid #007bff',
-                                                                padding: '8px 16px',
-                                                                fontSize: '16px',
-                                                                borderRadius: '4px',
-                                                                cursor: 'pointer',
-                                                                transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
-                                                            }}
-                                                            onClick={() => onRequestOpen(booking.selectedDriver, booking.id)}
-                                                        >
-                                                            {booking.status === 'Approved' ? 'Approved' : 'Feedback form'}
-                                                        </button>
-                                                    ) : (
-                                                        // Fallback if the driver doesn’t match or no driver is selected
-                                                        <button
-                                                            style={{
-                                                                backgroundColor: '#007bff',
-                                                                color: '#fff',
-                                                                border: '1px solid #007bff',
-                                                                padding: '8px 16px',
-                                                                fontSize: '16px',
-                                                                borderRadius: '4px',
-                                                                cursor: 'pointer',
-                                                                transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
-                                                            }}
-                                                            onClick={() => handleApprove(booking.id)}
-                                                            disabled={booking.status === 'Approved'}
-                                                        >
-                                                            {booking.status === 'Approved' ? 'Approved' : 'Approve'}
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
+                                                    <td className="p-2 text-sm block md:table-cell">
+                                                        {booking.selectedDriver &&
+                                                        !booking.formAdded &&
+                                                        allDrivers.some((driver) => driver.id === booking.selectedDriver && driver.companyName === 'RSA') ? (
+                                                            // Check if the booking matches the selected driver and the company name
+                                                            <button
+                                                                style={{
+                                                                    backgroundColor: 'green',
+                                                                    color: '#fff',
+                                                                    border: '1px solid #007bff',
+                                                                    padding: '8px 16px',
+                                                                    fontSize: '16px',
+                                                                    borderRadius: '4px',
+                                                                    cursor: 'pointer',
+                                                                    transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
+                                                                }}
+                                                                onClick={() => onRequestOpen(booking.selectedDriver, booking.id)}
+                                                            >
+                                                                {booking.status === 'Approved' ? 'Approved' : 'Open form'}
+                                                            </button>
+                                                        ) : (
+                                                            // Fallback if the driver doesn’t match or no driver is selected
+                                                            <div>
+                                                                {loading ? (
+                                                                    <button
+                                                                    style={{
+                                                                        backgroundColor: '#007bff',
+                                                                        color: '#fff',
+                                                                        border: '1px solid #007bff',
+                                                                        padding: '8px 16px',
+                                                                        fontSize: '16px',
+                                                                        borderRadius: '4px',
+                                                                        cursor: 'pointer',
+                                                                        transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
+                                                                    }}
+                                                                  
+                                                                    disabled={booking.status === 'Approved'}
+                                                                >
+                                                                   <CircularProgress size={24} color="inherit" />
+                                                                </button>
+                                                                ):(
+                                                                    <button
+                                                                    style={{
+                                                                        backgroundColor: '#007bff',
+                                                                        color: '#fff',
+                                                                        border: '1px solid #007bff',
+                                                                        padding: '8px 16px',
+                                                                        fontSize: '16px',
+                                                                        borderRadius: '4px',
+                                                                        cursor: 'pointer',
+                                                                        transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
+                                                                    }}
+                                                                    onClick={() => handleApprove(booking.id)}
+                                                                    disabled={booking.status === 'Approved'}
+                                                                >
+                                                                    {booking.status === 'Approved' ? 'Approved' : 'Approve'}
+                                                                </button>
+                                                                )}
+                                                                
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
                                     </tbody>
                                 </table>
                             </div>
