@@ -22,6 +22,7 @@ interface Booking {
     driver?: string;
     updatedTotalSalary?: number;
     disabled?: boolean;
+    userName?: string;
 }
 
 const CashCollectionReport: React.FC = () => {
@@ -50,7 +51,10 @@ const CashCollectionReport: React.FC = () => {
 // ----------------------------------------------------------------------------------------------------------------------------------
 const [disableFields, setDisableFields] = useState(false); // State to disable/enable fields
 const [disableOkButton, setDisableOkButton] = useState(true); // For OK button initially disabled
+const role = sessionStorage.getItem('role');
+const userName = sessionStorage.getItem('username');
 
+console.log("role",userName)
     useEffect(() => {
         const fetchDriver = async () => {
             if (!uid || !id) {
@@ -445,30 +449,47 @@ const updateTotalBalance = async () => {
 
         return updatedBookings;
     };
-
+// ---------------------------------------------------true-----------------
     const handleAmountReceiveChange = async (receivedAmount: number) => {
         try {
             const updatedBookings = distributeReceivedAmount(receivedAmount, bookings);
             setBookings(updatedBookings); // Update state with new bookings
-
-            // Now, update the Firestore with the new received amounts
+    
+            // Create a Firestore batch for multiple updates
             const batch = writeBatch(db);
-
-            updatedBookings.forEach((booking) => {
+    
+            // Update the bookings and the corresponding user document
+            for (const booking of updatedBookings) {
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
                 batch.update(bookingRef, {
                     receivedAmount: booking.receivedAmount,
                     balance: calculateBalance(booking.amount, booking.receivedAmount || 0),
+                    role: role || 'unknown', // Add role to the update
+                    userName: userName || 'unknown',
                 });
-            });
-
-            await batch.commit();
-            updateTotalBalance();
-            setShowAmountDiv(false);
+    
+                // Now update the corresponding user document based on userName
+                const userQuerySnapshot = await getDocs(
+                    query(collection(db, `user/${uid}/users`), where('userName', '==', booking.userName))
+                );
+    
+                // Loop through users and update the receivedAmount
+                userQuerySnapshot.forEach((userDoc) => {
+                    const userRef = doc(db, `user/${uid}/users`, userDoc.id);
+                    batch.update(userRef, {
+                        receivedAmount: (userDoc.data().receivedAmount || 0) + (booking.receivedAmount || 0), // Increment receivedAmount
+                    });
+                });
+            }
+    
+            await batch.commit(); // Commit the batch update
+            updateTotalBalance(); // Recalculate total balance
+            setShowAmountDiv(false); // Hide amount input div
         } catch (error) {
             console.error('Error distributing received amount:', error);
         }
     };
+    
 
     return (
         <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg">
@@ -583,7 +604,7 @@ const updateTotalBalance = async () => {
                                     <i className="fas fa-hand-holding-usd"></i>
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-bold text-gray-800">Amount to be Paid</h3>
+                                    <h3 className="text-xl font-bold text-gray-800">Balance Amount</h3>
                                     <p className="text-gray-700 text-lg">{monthlyTotals.totalBalances}</p>
                                 </div>
                             </div>

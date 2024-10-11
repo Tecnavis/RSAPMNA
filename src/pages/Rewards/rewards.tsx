@@ -233,7 +233,7 @@ const ClientRewards: React.FC = () => {
                 ...prev,
                 [showroomName]: staffMember,
             }));
-                window.location.href = `/rewarddetails?id=${id}&name=${encodeURIComponent(selectedStaff.name)}&rewardPoints=${selectedStaff.rewardPoints || 0}&category=ShowroomStaff`;
+            window.location.href = `/rewarddetails?id=${id}&name=${encodeURIComponent(selectedStaff.name)}&rewardPoints=${selectedStaff.rewardPoints || 0}&category=ShowroomStaff&phoneNumber=${encodeURIComponent(selectedStaff.phoneNumber || '')}`;
         }
     };
     

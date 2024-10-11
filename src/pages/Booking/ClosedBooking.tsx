@@ -101,16 +101,22 @@ const ClosedBooking: React.FC = () => {
         try {
             const db = getFirestore();
             const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
+            // Update the 'approve' field to true instead of changing the status to 'Approved'
             await updateDoc(bookingRef, {
-                status: 'Approved',
+                approve: true,
             });
-
-            // Update the state to reflect the changes immediately
-            setCompletedBookings((prevBookings) => prevBookings.map((booking) => (booking.id === bookingId ? { ...booking, status: 'Approved' } : booking)));
+    
+            // Update the state to reflect the change
+            setCompletedBookings((prevBookings) =>
+                prevBookings.map((booking) =>
+                    booking.id === bookingId ? { ...booking, approve: true } : booking
+                )
+            );
         } catch (error) {
-            console.error('Error updating booking status:', error);
+            console.error('Error updating booking approval:', error);
         }
     };
+    
 
     const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value);
@@ -279,7 +285,7 @@ const ClosedBooking: React.FC = () => {
                                                             }}
                                                             onClick={() => onRequestOpen(booking.selectedDriver, booking.id)}
                                                         >
-                                                            {booking.status === 'Approved' ? 'Approved' : 'Open form'}
+                                                            {booking.status === 'Approved' ? 'Approved' : 'Feedback form'}
                                                         </button>
                                                     ) : (
                                                         // Fallback if the driver doesn’t match or no driver is selected

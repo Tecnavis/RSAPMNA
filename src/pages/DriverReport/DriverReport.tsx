@@ -412,9 +412,10 @@ const DriverReport: React.FC = () => {
                     className="p-2 border border-gray-300 rounded w-full outline-none"
                 />
             </div>
-            {renderTable(companyDrivers, 'Company Details')}
             {renderTable(rsaDrivers, 'PMNA Drivers')}
             {renderTable(otherDrivers, 'Providers Details')}
+            {renderTable(companyDrivers, 'Company Details')}
+
         </div>
     );
 };

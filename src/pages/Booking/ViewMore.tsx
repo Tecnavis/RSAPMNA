@@ -1,46 +1,51 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-// interface BookingDetails {
-//     kilometerPick?: {
-//         km: string;
-//         kmImage?: string;
-//     };
-//     kilometerDrop?: {
-//         km: string;
-//         kmImage?: string;
-//     };
-//     kilometerdrop?: string;
-//     photo?: string;
-//     photodrop?: string;
-//     rcBookImageURLs?: string[];
-//     vehicleImageURLs?: string[];
-//     vehicleImgURLs?: string[];
-//     fuelBillImageURLs?: string[];
-// }
+interface BookingDetails {
+    dateTime: string;
+    bookingId: string;
+    newStatus: string;
+    editedTime: string;
+    totalSalary: string;
+    updatedTotalSalary: string;
+    company: string;
+    trappedLocation: string;
+    showroomLocation: string;
+    fileNumber: string;
+    customerName: string;
+    driver: string;
+    totalDriverDistance: string;
+    totalDriverSalary: string;
+    vehicleNumber: string;
+    vehicleModel: string;
+    phoneNumber: string;
+    mobileNumber: string;
+    baseLocation: { name: string; lat: number; lng: number } | null;
+    pickupLocation: { name: string; lat: number; lng: number } | null;
+    dropoffLocation: { name: string; lat: number; lng: number } | null;
+    distance: string;
+    serviceType: string;
+    serviceVehicle: string;
+    rcBookImageURLs: string[];
+    vehicleImageURLs: string[];
+    vehicleImgURLs: string[];
+    fuelBillImageURLs: string[];
+      comments:string;
+}
 
-// interface FormData {
-//     dropoffTime: string;
-//     driverSalary: string;
-//     companyAmount: string;
-//     amount: string;
-//     distance: string;
-//     remark: string;
-// }
-
-const ViewMore = () => {
-    const { id } = useParams();
+const ViewMore: React.FC = () => {
+    const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const [bookingDetails, setBookingDetails] = useState(null);
+    const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
     const db = getFirestore();
-    const uid = sessionStorage.getItem('uid')
-    const role =sessionStorage.getItem('role');
+    const uid = sessionStorage.getItem('uid');
+    const role = sessionStorage.getItem('role');
 
     const { search } = useLocation();
     const [showPickupDetails, setShowPickupDetails] = useState(false);
     const [showDropoffDetails, setShowDropoffDetails] = useState(false);
     const queryParams = new URLSearchParams(search);
-    const userName =sessionStorage.getItem('username');
+    const userName = sessionStorage.getItem('username');
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({
         dropoffTime: '',
@@ -52,6 +57,11 @@ const ViewMore = () => {
     });
     useEffect(() => {
         const fetchBookingDetails = async () => {
+            if (!uid || !id) {
+                console.error("UID or ID is undefined.");
+                return;
+            }
+
             try {
                 const docRef = doc(db, `user/${uid}/bookings`, id);
                 const docSnap = await getDoc(docRef);
@@ -59,21 +69,38 @@ const ViewMore = () => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     setBookingDetails({
-                        ...data,
-                        kilometerPick: data.kilometerPick?.km || 'No data',
-                        kilometerPickImage: data.kilometerPick?.kmImage || '',
-                        kilometerDrop: data.kilometerDrop?.km || 'No data',
-                        kilometerDropImage: data.kilometerDrop?.kmImage || '',
-                        kilometerdrop: data.kilometerdrop || 'No data',
-                        photo: data.photo,
-                        photodrop: data.photodrop,
+                        dateTime: data.dateTime || '', // Provide a default value
+                        bookingId: data.bookingId || '',
+                        newStatus: data.newStatus || '',
+                        editedTime: data.editedTime || '',
+                        totalSalary: data.totalSalary || '',
+                        updatedTotalSalary: data.updatedTotalSalary || '',
+                        company: data.company || '',
+                        trappedLocation: data.trappedLocation || '',
+                        showroomLocation: data.showroomLocation || '',
+                        fileNumber: data.fileNumber || '',
+                        customerName: data.customerName || '',
+                        driver: data.driver || '',
+                        totalDriverDistance: data.totalDriverDistance || '',
+                        totalDriverSalary: data.totalDriverSalary || '',
+                        vehicleNumber: data.vehicleNumber || '',
+                        vehicleModel: data.vehicleModel || '',
+                        phoneNumber: data.phoneNumber || '',
+                        mobileNumber: data.mobileNumber || '',
+                        baseLocation: data.baseLocation || null, // Assuming this could be null
+                        pickupLocation: data.pickupLocation || null,
+                        dropoffLocation: data.dropoffLocation || null,
+                        distance: data.distance || '',
+                        serviceType: data.serviceType || '',
+                        serviceVehicle: data.serviceVehicle || '',
                         rcBookImageURLs: data.rcBookImageURLs || [],
                         vehicleImageURLs: data.vehicleImageURLs || [],
                         vehicleImgURLs: data.vehicleImgURLs || [],
                         fuelBillImageURLs: data.fuelBillImageURLs || [],
+                        comments: data.comments || '', // Add any additional fields here
                     });
-                   
-                } else {
+                }
+                 else {
                     console.log(`Document with ID ${id} does not exist!`);
                 }
             } catch (error) {
@@ -95,19 +122,7 @@ const ViewMore = () => {
         setShowPickupDetails(false);
     };
 
-    const handleDeleteBooking = async () => {
-        const confirmDelete = window.confirm('Are you sure you want to delete this booking?');
-        if (confirmDelete) {
-            try {
-                await deleteDoc(doc(db, `user/${uid}/bookings`, id));
-                console.log('Document successfully deleted!');
-                navigate('/bookings/newbooking');
-            } catch (error) {
-                console.error('Error deleting document:', error);
-            }
-        }
-    };
-    const handleFormChange = (e) => {
+    const handleFormChange = (e: any) => {
         const { name, value } = e.target;
         setFormData(prevData => ({
             ...prevData,
@@ -115,8 +130,12 @@ const ViewMore = () => {
         }));
     };
 
-    const handleFormSubmit = async (e) => {
+    const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+    if (!uid || !id) {
+        console.error("UID or ID is undefined.");
+        return; // Exit the function if either is undefined
+    }
         try {
             const docRef = doc(db, `user/${uid}/bookings`, id);
             await updateDoc(docRef, {
@@ -148,28 +167,7 @@ const ViewMore = () => {
 
             {showPickupDetails && (
                  <div>
-                 {bookingDetails.kilometerPick && (
-                     <div className="my-4">
-                         <strong>Pickup Kilometer:</strong> {bookingDetails.kilometerPick}
-                     </div>
-                 )}
-
-
-
-                 {bookingDetails.kilometerPickImage && (
-                    <div>
-
-                    
-                     <h3 className="text-xl font-bold mt-5">Pickup Km Photo:</h3>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                     <div  className="max-w-xs">
-                     <img src={bookingDetails.kilometerPickImage} alt="Pickup Km Photo" className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5" />
-                     </div>
-                     </div>
-                     </div>
-                 )}
-
-                    <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
+                   <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {bookingDetails.rcBookImageURLs.length > 0 ? (
                             bookingDetails.rcBookImageURLs.map((url, index) => (
@@ -199,18 +197,7 @@ const ViewMore = () => {
 
             {showDropoffDetails && (
                 <div>
-                {bookingDetails.kilometerDrop && (
-                    <div className="my-4">
-                        <strong>Dropoff Kilometer:</strong> {bookingDetails.kilometerDrop}
-                    </div>
-                )}
-                {bookingDetails.kilometerDropImage && (
-                    <div className="my-4 flex">
-                        <strong>Dropoff Km Photo:</strong>
-                        <img src={bookingDetails.kilometerDropImage} alt="Dropoff Km Photo" className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5" />
-                    </div>
-                )}
-                    <h3 className="text-xl font-bold mt-5">Fuel Bill Images</h3>
+                     <h3 className="text-xl font-bold mt-5">Fuel Bill Images</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {bookingDetails.fuelBillImageURLs.length > 0 ? (
                             bookingDetails.fuelBillImageURLs.map((url, index) => (
@@ -449,9 +436,7 @@ const ViewMore = () => {
             </form>
         )}
             <div className="flex justify-end mt-5">
-                <button onClick={handleDeleteBooking} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
-                    Delete Booking
-                </button>
+                
                 <button onClick={() => setShowForm(!showForm)} className="ml-4 px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">
                     {showForm ? 'Close Form' : 'Booking Completed'}
                 </button>

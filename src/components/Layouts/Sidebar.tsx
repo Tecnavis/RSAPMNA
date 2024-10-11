@@ -265,6 +265,9 @@ console.log("role",role)
                                         <li>
                                             <NavLink to="/showroomreport">ShowRoom Reports</NavLink>
                                         </li>
+                                        <li>
+                                            <NavLink to="/rsastaffreport">RSA Staff Reports</NavLink>
+                                        </li>
                                     </ul>
                                 </AnimateHeight>
                             </li>

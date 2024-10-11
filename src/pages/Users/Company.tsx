@@ -19,7 +19,16 @@ interface Item {
     profileImageUrl?: string;
     companyName?: string;
     status?: string;
+    personalphone: string;
+    password?: string;
+    confirmPassword?: string;
+    advancePayment?: string;
+    serviceVehicle?: Record<string, any>; // Define actual type instead of 'any'
+    salaryPerKm?: Record<string, any>; // Define actual type instead of 'any'
+    basicSalaryKm?: Record<string, any>; // Define actual type instead of 'any'
+    baseLocation?: string;
 }
+
 
 const Company: React.FC = () => {
     const [items, setItems] = useState<Item[]>([]);
@@ -33,19 +42,19 @@ const Company: React.FC = () => {
     useEffect(() => {
         const fetchData = async () => {
             console.log('Fetching data from Firestore...');
-
+    
             const driverCollection = collection(db, `user/${uid}/driver`);
             console.log('Driver collection reference:', driverCollection);
-
+    
             // Create query to filter out items with companyName as 'RSA'
             const q = query(driverCollection, where('companyName', '!=', 'RSA'));
             console.log('Query created with parameters:', q);
-
+    
             try {
                 console.log('Executing query...');
                 const querySnapshot = await getDocs(q);
                 console.log('Query executed. Snapshot:', querySnapshot);
-
+    
                 // Further filter items client-side
                 const filteredItems = querySnapshot.docs
                     .filter((doc) => {
@@ -55,22 +64,42 @@ const Company: React.FC = () => {
                                (!data.status || data.status === '');
                     })
                     .map((doc) => {
-                        console.log('Document data:', doc.data());
-                        return { id: doc.id, ...doc.data() };
+                        const data = doc.data();
+                        console.log('Document data:', data);
+    
+                        // Ensure all required fields from the Item interface are present
+                        return {
+                            id: doc.id,
+                            driverName: data.driverName || 'Unknown Driver', // Default value if missing
+                            idnumber: data.idnumber || 'N/A',
+                            phone: data.phone || 'N/A',
+                            personalphone: data.personalphone || 'N/A',
+                            password: data.password || '',
+                            confirmPassword: data.confirmPassword || '',
+                            advancePayment: data.advancePayment || '',
+                            serviceVehicle: data.serviceVehicle || '',
+                            salaryPerKm: data.salaryPerKm || '',
+                            basicSalaryKm: data.basicSalaryKm || '',
+                            baseLocation: data.baseLocation || '',
+                            selectedServices: data.selectedServices || {}, // Use empty object as fallback
+                            basicSalaries: data.basicSalaries || {}, // Use empty object as fallback
+                            profileImageUrl: data.profileImageUrl || defaultImage,
+                            companyName: data.companyName || '',
+                            status: data.status || ''
+                        };
                     });
-
-                console.log('Filtered items:', filteredItems);
+    
                 setItems(filteredItems);
                 console.log('State updated with fetched data.');
             } catch (error) {
                 console.error('Error fetching data:', error); // Log errors if any
             }
         };
-
+    
         console.log('useEffect triggered to fetch data.');
         fetchData().catch(console.error); // Correctly call fetchData inside useEffect
-    }, []);
-   
+    }, [uid]); // Add 'uid' as a dependency to refetch data when 'uid' changes
+    
     const handleDelete = async (userId: string) => {
         try {
             const userDoc = doc(db, `user/${uid}/driver`, userId);
@@ -114,7 +143,7 @@ const Company: React.FC = () => {
                         <thead>
                             <tr>
                                 <th>Photo</th>
-                                <th>Driver Name</th>
+                                <th>Provider Name</th>
                                 <th>ID Number</th>
                                 <th>Phone Number</th>
                                 <th>Service Types</th>
@@ -180,7 +209,11 @@ const Company: React.FC = () => {
                     </table>
                 </div>
             </div>
-            <ConfirmationModal isVisible={isModalVisible} onConfirm={() => handleDelete(itemToDelete?.id)} onCancel={closeModal} />
+            <ConfirmationModal 
+  isVisible={isModalVisible} 
+  onConfirm={() => itemToDelete?.id ? handleDelete(itemToDelete.id) : console.error("Item ID is missing")} 
+  onCancel={closeModal} 
+/>
         </div>
     );
 };
