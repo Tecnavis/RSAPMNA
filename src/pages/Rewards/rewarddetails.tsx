@@ -37,7 +37,7 @@ const RewardPage: React.FC = () => {
   const id = queryParams.get('id'); // Driver ID
   const driverName = queryParams.get('name'); // Driver Name
   const category = queryParams.get('category'); // Driver Name
-console.log("category",category)
+  const phoneNumber = queryParams.get('phoneNumber'); // Driver Name
   const [percentage, setPercentage] = useState<number>(0);
   const [rewardPoints, setRewardPoints] = useState<number>(0);
   const [rewardDriverPoints, setRewardDriverPoints] = useState<number>(0);
@@ -47,7 +47,7 @@ console.log("category",category)
     const [bookings, setBookings] = useState<Booking[]>([]);
   const db = getFirestore();
   const uid = sessionStorage.getItem('uid');
-  
+  console.log("phoneNumber",phoneNumber)
   // Sample products for redemption
   const [products] = useState<Product[]>([
     { id: 1, image: 'https://via.placeholder.com/150', name: 'Product 1', description: 'Description of product 1', price: 500, category: 'Electronics' },
@@ -152,24 +152,25 @@ useEffect(() => {
         bookingsRef,
         where('showroomId', '==', id), 
         where('createdBy', '==', 'showroomStaff'), 
+        where('phone', '==', phoneNumber),
         where('status', '==', 'Order Completed')
       );
 
       const querySnapshot = await getDocs(q);
       const fetchedBookings: Booking[] = [];
 
-      // Loop through query results and store data in array
-      querySnapshot.forEach((doc) => {
+console.log("fetchedBookings",fetchedBookings)  
+    querySnapshot.forEach((doc) => {
         fetchedBookings.push({ id: doc.id, ...doc.data() } as Booking);
       });
 
       // Update state with fetched bookings
       setBookings(fetchedBookings);
       
-      // If category is 'Showroom', update reward points based on number of bookings
       if (category === 'ShowroomStaff') {
-        await updateRewardPoints(fetchedBookings.length);
+        await updateShowroomStaffRewardPoints(fetchedBookings.length);
       }
+      
 
     } catch (error) {
       console.error("Error fetching showroom staff bookings: ", error);
@@ -178,22 +179,50 @@ useEffect(() => {
 
   // Trigger fetch when component mounts or relevant state changes
   fetchShowroomStaffBookings();
-}, [id, db, uid, category]);
+}, [id, db, uid, phoneNumber, category]);
 
-// const updateRewardPoints = async (bookingCount: number) => {
-// if (bookingCount > 0) {
-//   const additionalPoints = bookingCount * 300; // Calculate total additional points
-//   try {
-//     const userRef = doc(db, `user/${uid}/showroom`, id || "");
-//     await updateDoc(userRef, {
-//       rewardPoints: additionalPoints // Use increment to update points
-//     });
-//     console.log(`Updated reward points by ${additionalPoints}`);
-//   } catch (error) {
-//     console.error("Error updating reward points in Firestore:", error);
-//   }
-// }
-// };
+
+const updateShowroomStaffRewardPoints = async (bookingCount: number, phoneNumber: string) => {
+  if (bookingCount > 0) {
+    const additionalPoints = bookingCount * 200; // Calculate total additional points
+    try {
+      const userRef = doc(db, `user/${uid}/showroom`, id || "");
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        const staff = data.staff || [];
+
+        // Check if staff is an array
+        if (!Array.isArray(staff)) {
+          console.error("Staff data is not an array");
+          return;
+        }
+
+        // Log the staff array and phone number
+        console.log("Staff array:", staff);
+        console.log("Phone number passed:", phoneNumber);
+
+        // Find the staff member with the matching phone number
+        const staffIndex = staff.findIndex((member: any) => member.phone === phoneNumber);
+        if (staffIndex !== -1) {
+          const currentPoints = staff[staffIndex].rewardPoints || 0;
+          staff[staffIndex].rewardPoints = currentPoints + additionalPoints;
+
+          await updateDoc(userRef, { staff });
+          console.log(`Updated reward points by ${additionalPoints} for staff member with phone number ${phoneNumber}`);
+        } else {
+          console.error("Staff member with the provided phone number not found");
+        }
+      } else {
+        console.error("Showroom document does not exist");
+      }
+    } catch (error) {
+      console.error("Error updating reward points in Firestore:", error);
+    }
+  }
+};
+
 // ----------------------------------------Staff-------------------------------------------------------
 useEffect(() => {
   const userRef = doc(db, `user/${uid}/users`, id || "");

@@ -388,7 +388,7 @@ const CompanyAdd = () => {
 
                             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
-                                    <label htmlFor="driverName">Driver Name</label>
+                                    <label htmlFor="driverName">Provider Name</label>
                                     <input id="driverName" type="text" placeholder="Enter driver Name" className="form-input" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
                                     {driverNameError && <span className={`${styles.error}`}>{driverNameError}</span>}
                                 </div>

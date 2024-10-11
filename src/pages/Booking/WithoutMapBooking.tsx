@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
 import ReactModal from 'react-modal';
 import { v4 as uuid } from 'uuid';
 import { query, where } from 'firebase/firestore';
@@ -1246,6 +1246,13 @@ const addOrUpdateItem = async (): Promise<void> => {
             };
 
             if (editData) {
+                  // Keep the existing status if this is an edit
+                  const existingDocRef = doc(db, `user/${uid}/bookings`, editData.id);
+                  const existingBooking = await getDoc(existingDocRef);
+                  if (existingBooking.exists()) {
+                      const existingData = existingBooking.data();
+                      bookingData.status = existingData.status; // Keep the old status
+                  }
                 if (role === 'admin') {
                     bookingData.newStatus = `Edited by ${role}`;
                 } else if (role === 'staff') {
