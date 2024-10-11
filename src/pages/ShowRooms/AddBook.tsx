@@ -36,11 +36,16 @@ const AddBook: React.FC = () => {
     const showroomId = location.state?.showroomId ?? '';
     const uid = location.state?.uid ?? '';
     console.log("showroomId", showroomId);
+    const name = location.state?.name ?? ''; // Extracted name
+    const phone = location.state?.phoneNumber ?? ''; // Extracted phoneNumber
+    console.log("name", name);
+    console.log("phone", phone);
 
     const [bookingId, setBookingId] = useState<string>('');
     const [showroomData, setShowroomData] = useState<ShowroomData | null>(null);
     const [showroomDocId, setShowroomDocId] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+   
 
     const handleOpenModal = () => {
       setIsModalOpen(true);
@@ -145,6 +150,10 @@ const AddBook: React.FC = () => {
                 bookingId: bookingId,
                 company: 'rsa',
                 createdBy:'showroomStaff',
+                customerName: formData.customerName, // Adding customer name
+                phoneNumber: formData.phoneNumber,   // Adding customer phone
+                name: name,  // Adding name from location state
+                phone: phone,
             });
             console.log('Document added successfully with ID:', docRef.id);
 
@@ -297,13 +306,12 @@ const styles = {
         backgroundColor: '#fff',
     },
     header: {
-        textAlign: 'center' as 'center', // Add type assertion if necessary
+        textAlign: 'center' as const, // Corrected type assertion
         marginBottom: '20px',
-        
     },
     formContainer: {
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'column' as const, // Ensure this matches the expected type
     },
     fieldContainer: {
         marginBottom: '10px',
@@ -342,7 +350,7 @@ const styles = {
         minHeight: '100px',
     },
     buttonContainer: {
-        textAlign: 'center',
+        textAlign: 'center' as const, // Corrected type assertion
     },
     button: {
         backgroundColor: '#007BFF',
@@ -351,7 +359,6 @@ const styles = {
         borderRadius: '4px',
         padding: '10px 20px',
         cursor: 'pointer',
-        fontSize: '16px',
     },
     errorMessage: {
         color: 'red',
@@ -360,7 +367,8 @@ const styles = {
     successMessage: {
         color: 'green',
         marginBottom: '10px',
-    },
+    }
 };
+
 
 export default AddBook;
