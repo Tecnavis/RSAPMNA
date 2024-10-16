@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { storage } from '../../config/config';
 interface BookingDetails {
     dateTime: string;
     bookingId: string;
@@ -14,6 +16,7 @@ interface BookingDetails {
     fileNumber: string;
     customerName: string;
     driver: string;
+    selectedCompany?: string;
     totalDriverDistance: string;
     totalDriverSalary: string;
     vehicleNumber: string;
@@ -30,9 +33,25 @@ interface BookingDetails {
     vehicleImageURLs: string[];
     vehicleImgURLs: string[];
     fuelBillImageURLs: string[];
-      comments:string;
+    comments: string;
+    status: string;
+    pickupTime: string;
+    dropoffTime: string;
+    remark:string;
 }
-
+interface FormData {
+    pickupTime: string;
+    dropoffTime: string;
+    totalDriverSalary: string;
+    companyAmount: string;
+    amount: string;
+    distance: string;
+    remark: string;
+    fuelBillImageURLs: string[];
+    vehicleImageURLs: string[];
+    rcBookImageURLs: string[];
+    vehicleImgURLs: string[];
+}
 const ViewMore: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -40,42 +59,77 @@ const ViewMore: React.FC = () => {
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
     const role = sessionStorage.getItem('role');
-
+    const [selectedCompanyName, setSelectedCompanyName] = useState<string | null>(null);
+    // --------------------------------------------------------------------------
     const { search } = useLocation();
     const [showPickupDetails, setShowPickupDetails] = useState(false);
     const [showDropoffDetails, setShowDropoffDetails] = useState(false);
     const queryParams = new URLSearchParams(search);
     const userName = sessionStorage.getItem('username');
     const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<FormData>({
+        pickupTime: '',
         dropoffTime: '',
-        driverSalary: 'No',
+        totalDriverSalary: 'No',
         companyAmount: 'No',
         amount: '',
         distance: '',
         remark: '',
+        fuelBillImageURLs: [],
+        vehicleImageURLs: [],
+        rcBookImageURLs: [],
+        vehicleImgURLs: [],
     });
+
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>, field: keyof typeof formData) => {
+        const files = event.target.files;
+        if (files) {
+            const updatedImageURLs: string[] = [];
+
+            // Loop over each file and upload to Firebase
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const storageRef = ref(storage, `images/${file.name}-${Date.now()}`);
+
+                // Upload the file to Firebase
+                await uploadBytes(storageRef, file);
+
+                // Get the HTTPS URL for the uploaded file
+                const downloadURL = await getDownloadURL(storageRef);
+
+                updatedImageURLs.push(downloadURL);
+            }
+
+            // Update the formData state with the correct field type
+            setFormData((prevState) => ({
+                ...prevState,
+                [field]: [...(prevState[field] as string[]), ...updatedImageURLs],
+            }));
+        }
+    };
+
     useEffect(() => {
         const fetchBookingDetails = async () => {
             if (!uid || !id) {
-                console.error("UID or ID is undefined.");
+                console.error('UID or ID is undefined.');
                 return;
             }
 
             try {
                 const docRef = doc(db, `user/${uid}/bookings`, id);
                 const docSnap = await getDoc(docRef);
-    
+
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     setBookingDetails({
-                        dateTime: data.dateTime || '', // Provide a default value
+                        dateTime: data.dateTime || '',
                         bookingId: data.bookingId || '',
                         newStatus: data.newStatus || '',
                         editedTime: data.editedTime || '',
                         totalSalary: data.totalSalary || '',
                         updatedTotalSalary: data.updatedTotalSalary || '',
                         company: data.company || '',
+                        selectedCompany: data.selectedCompany || '',
                         trappedLocation: data.trappedLocation || '',
                         showroomLocation: data.showroomLocation || '',
                         fileNumber: data.fileNumber || '',
@@ -87,7 +141,7 @@ const ViewMore: React.FC = () => {
                         vehicleModel: data.vehicleModel || '',
                         phoneNumber: data.phoneNumber || '',
                         mobileNumber: data.mobileNumber || '',
-                        baseLocation: data.baseLocation || null, // Assuming this could be null
+                        baseLocation: data.baseLocation || null,
                         pickupLocation: data.pickupLocation || null,
                         dropoffLocation: data.dropoffLocation || null,
                         distance: data.distance || '',
@@ -97,20 +151,33 @@ const ViewMore: React.FC = () => {
                         vehicleImageURLs: data.vehicleImageURLs || [],
                         vehicleImgURLs: data.vehicleImgURLs || [],
                         fuelBillImageURLs: data.fuelBillImageURLs || [],
-                        comments: data.comments || '', // Add any additional fields here
+                        comments: data.comments || '',
+                        status: data.status || '',
+                        pickupTime: data.pickupTime || '',
+                        dropoffTime: data.dropoffTime || '',
+                        remark:data.remark ||'',
                     });
-                }
-                 else {
+
+                    // Now fetch the selected company's name using selectedCompany ID
+                    if (data.selectedCompany) {
+                        const companyDocRef = doc(db, `user/${uid}/driver`, data.selectedCompany);
+                        const companyDocSnap = await getDoc(companyDocRef);
+                        if (companyDocSnap.exists()) {
+                            const companyData = companyDocSnap.data();
+                            console.log('companyData', companyData);
+                            setSelectedCompanyName(companyData.company || null); // Adjust based on your company structure
+                        }
+                    }
+                } else {
                     console.log(`Document with ID ${id} does not exist!`);
                 }
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
         };
-    
+
         fetchBookingDetails();
-    }, [db, id]);
-    
+    }, [db, id, uid]);
 
     const togglePickupDetails = () => {
         setShowPickupDetails(!showPickupDetails);
@@ -124,7 +191,7 @@ const ViewMore: React.FC = () => {
 
     const handleFormChange = (e: any) => {
         const { name, value } = e.target;
-        setFormData(prevData => ({
+        setFormData((prevData) => ({
             ...prevData,
             [name]: value,
         }));
@@ -132,15 +199,16 @@ const ViewMore: React.FC = () => {
 
     const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-    if (!uid || !id) {
-        console.error("UID or ID is undefined.");
-        return; // Exit the function if either is undefined
-    }
+        if (!uid || !id) {
+            console.error('UID or ID is undefined.');
+            return; // Exit the function if either is undefined
+        }
         try {
             const docRef = doc(db, `user/${uid}/bookings`, id);
             await updateDoc(docRef, {
                 ...formData,
-                status: 'Order Completed', // Update the status to completed
+                status: 'Order Completed',
+                closedStatus: 'Admin closed booking',
             });
             console.log('Booking successfully updated!');
             setShowForm(false);
@@ -155,19 +223,19 @@ const ViewMore: React.FC = () => {
     return (
         <div className="container mx-auto my-8 p-4 bg-white shadow rounded-lg">
             <h5 className="font-semibold text-lg mb-5">Booking Details</h5>
-            <div className="flex mb-5">
-                <button onClick={togglePickupDetails} className="mr-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                    {showPickupDetails ? 'Close' : 'Show Pickup Details'}
-                </button>
-                <button onClick={toggleDropoffDetails} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
-                    {showDropoffDetails ? 'Close' : 'Show Dropoff Details'}
-                </button>
-               
-            </div>
-
+            {bookingDetails.status === 'Order Completed' && (
+                <div className="flex mb-5">
+                    <button onClick={togglePickupDetails} className="mr-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                        {showPickupDetails ? 'Close' : 'Show Pickup Details'}
+                    </button>
+                    <button onClick={toggleDropoffDetails} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+                        {showDropoffDetails ? 'Close' : 'Show Dropoff Details'}
+                    </button>
+                </div>
+            )}
             {showPickupDetails && (
-                 <div>
-                   <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
+                <div>
+                    <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {bookingDetails.rcBookImageURLs.length > 0 ? (
                             bookingDetails.rcBookImageURLs.map((url, index) => (
@@ -197,7 +265,7 @@ const ViewMore: React.FC = () => {
 
             {showDropoffDetails && (
                 <div>
-                     <h3 className="text-xl font-bold mt-5">Fuel Bill Images</h3>
+                    <h3 className="text-xl font-bold mt-5">Fuel Bill Images</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {bookingDetails.fuelBillImageURLs.length > 0 ? (
                             bookingDetails.fuelBillImageURLs.map((url, index) => (
@@ -236,15 +304,17 @@ const ViewMore: React.FC = () => {
                         <td className="p-2">{bookingDetails.bookingId}</td>
                     </tr>
                     {role === 'staff' && (
-    <tr>
-        <td className="bg-gray-100 p-2 font-semibold">Staff Name :</td>
-        <td className="p-2">{userName}</td>
-    </tr>
-)}
+                        <tr>
+                            <td className="bg-gray-100 p-2 font-semibold">Staff Name :</td>
+                            <td className="p-2">{userName}</td>
+                        </tr>
+                    )}
 
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Edited person :</td>
-                        <td className="p-2">{bookingDetails.newStatus}, {bookingDetails.editedTime}</td>
+                        <td className="p-2">
+                            {bookingDetails.newStatus}, {bookingDetails.editedTime}
+                        </td>
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Amount without insurance :</td>
@@ -254,10 +324,18 @@ const ViewMore: React.FC = () => {
                         <td className="bg-gray-100 p-2 font-semibold">Payable Amount with insurance:</td>
                         <td className="p-2">{bookingDetails.updatedTotalSalary}</td>
                     </tr>
+
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Company :</td>
                         <td className="p-2">{bookingDetails.company}</td>
                     </tr>
+                    {bookingDetails.company.toLowerCase() === 'rsa' && selectedCompanyName && (
+                        <tr>
+                            <td className="bg-gray-100 p-2 font-semibold">Selected Company :</td>
+                            <td className="p-2">{selectedCompanyName}</td>
+                        </tr>
+                    )}
+
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Trapped Location :</td>
                         <td className="p-2">{bookingDetails.trappedLocation}</td>
@@ -342,105 +420,199 @@ const ViewMore: React.FC = () => {
                         <td className="bg-gray-100 p-2 font-semibold">Comments :</td>
                         <td className="p-2">{bookingDetails.comments}</td>
                     </tr>
+                    {bookingDetails.status === 'Order Completed' && (
+    <>
+        <tr>
+            <td className="bg-gray-100 p-2 font-semibold">Pickup Time :</td>
+            <td className="p-2">{bookingDetails.pickupTime}</td>
+        </tr>
+        <tr>
+            <td className="bg-gray-100 p-2 font-semibold">Dropoff Time :</td>
+            <td className="p-2">{bookingDetails.dropoffTime}</td>
+        </tr>
+        <tr>
+            <td className="bg-gray-100 p-2 font-semibold">Remark :</td>
+            <td className="p-2">{bookingDetails.remark}</td>
+        </tr>
+       
+    </>
+)}
+
                 </tbody>
             </table>
+
             {showForm && (
-            <form onSubmit={handleFormSubmit} className="mt-8">
-                <div className="mb-4">
-                    <label htmlFor="dropoffTime" className="block text-sm font-medium text-gray-700">
-                        Dropoff Time
-                    </label>
-                    <input
-                        type="datetime-local"
-                        id="dropoffTime"
-                        name="dropoffTime"
-                        value={formData.dropoffTime}
-                        onChange={handleFormChange}
-                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-                        required
-                    />
+                <form onSubmit={handleFormSubmit} className="mt-8">
+                    <div className="flex mb-5">
+                        <button onClick={togglePickupDetails} className="mr-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                            {showPickupDetails ? 'Close' : 'Add Pickup Details'}
+                        </button>
+                        <button onClick={toggleDropoffDetails} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+                            {showDropoffDetails ? 'Close' : 'Add Dropoff Details'}
+                        </button>
+                    </div>
+
+                    {/* Pickup details */}
+                    {showPickupDetails && (
+                        <div>
+                            {/* RC Book Images */}
+                            <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
+                            <input type="file" multiple onChange={(e) => handleFileChange(e, 'rcBookImageURLs')} />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                {formData.rcBookImageURLs.length > 0 ? (
+                                    formData.rcBookImageURLs.map((url, index) => (
+                                        <div key={index} className="max-w-xs">
+                                            <img src={url} alt={`RC Book Image ${index}`} className="w-full h-auto" />
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="col-span-3">No RC Book Images available.</p>
+                                )}
+                            </div>
+
+                            {/* Vehicle Images (Pickup) */}
+                            <h2 className="text-xl font-bold mt-5">Vehicle Images (Pickup)</h2>
+                            <input type="file" multiple onChange={(e) => handleFileChange(e, 'vehicleImageURLs')} />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                {formData.vehicleImageURLs.length > 0 ? (
+                                    formData.vehicleImageURLs.map((url, index) => (
+                                        <div key={index} className="max-w-xs">
+                                            <img src={url} alt={`Vehicle Image ${index}`} className="w-full h-auto" />
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="col-span-full">No Vehicle Images available.</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Dropoff details */}
+                    {showDropoffDetails && (
+                        <div>
+                            {/* Fuel Bill Images */}
+                            <h3 className="text-xl font-bold mt-5">Fuel Bill Images</h3>
+                            <input type="file" multiple onChange={(e) => handleFileChange(e, 'fuelBillImageURLs')} />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                {formData.fuelBillImageURLs.length > 0 ? (
+                                    formData.fuelBillImageURLs.map((url, index) => (
+                                        <div key={index} className="max-w-xs">
+                                            <img src={url} alt={`Fuel Bill Image ${index}`} className="w-full h-auto" />
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="col-span-3">No Fuel Bill Images available.</p>
+                                )}
+                            </div>
+
+                            {/* Vehicle Images (Dropoff) */}
+                            <h2 className="text-xl font-bold mt-5">Vehicle Images (Dropoff)</h2>
+                            <input type="file" multiple onChange={(e) => handleFileChange(e, 'vehicleImgURLs')} />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                {formData.vehicleImgURLs.length > 0 ? (
+                                    formData.vehicleImgURLs.map((url, index) => (
+                                        <div key={index} className="max-w-xs">
+                                            <img src={url} alt={`Vehicle Image ${index}`} className="w-full h-auto" />
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="col-span-full">No Vehicle Images available.</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    <div className="mb-4">
+                        <label htmlFor="pickupTime" className="block text-sm font-medium text-gray-700">
+                            Pickup Time
+                        </label>
+                        <input
+                            type="datetime-local"
+                            id="pickupTime"
+                            name="pickupTime"
+                            value={formData.pickupTime}
+                            onChange={handleFormChange}
+                            className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="dropoffTime" className="block text-sm font-medium text-gray-700">
+                            Dropoff Time
+                        </label>
+                        <input
+                            type="datetime-local"
+                            id="dropoffTime"
+                            name="dropoffTime"
+                            value={formData.dropoffTime}
+                            onChange={handleFormChange}
+                            className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="totalDriverSalary" className="block text-sm font-medium text-gray-700">
+                            Driver Salary
+                        </label>
+                        <select id="totalDriverSalary" name="totalDriverSalary" value={formData.totalDriverSalary} onChange={handleFormChange} className="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="companyAmount" className="block text-sm font-medium text-gray-700">
+                            Company Amount
+                        </label>
+                        <select id="companyAmount" name="companyAmount" value={formData.companyAmount} onChange={handleFormChange} className="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
+                            Amount
+                        </label>
+                        <input
+                            type="number"
+                            id="amount"
+                            name="amount"
+                            value={formData.amount}
+                            onChange={handleFormChange}
+                            className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="distance" className="block text-sm font-medium text-gray-700">
+                            Distance
+                        </label>
+                        <input
+                            type="number"
+                            id="distance"
+                            name="distance"
+                            value={formData.distance}
+                            onChange={handleFormChange}
+                            className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="remark" className="block text-sm font-medium text-gray-700">
+                            Remark
+                        </label>
+                        <textarea id="remark" name="remark" value={formData.remark} onChange={handleFormChange} className="mt-1 block w-full p-2 border border-gray-300 rounded-md" />
+                    </div>
+                    <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                        Submit
+                    </button>
+                </form>
+            )}
+            {bookingDetails.status !== 'Order Completed' && (
+                <div className="flex justify-end mt-5">
+                    <button onClick={() => setShowForm(!showForm)} className="ml-4 px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">
+                        {showForm ? 'Close Form' : 'Booking Completed'}
+                    </button>
                 </div>
-                <div className="mb-4">
-                    <label htmlFor="driverSalary" className="block text-sm font-medium text-gray-700">
-                        Driver Salary
-                    </label>
-                    <select
-                        id="driverSalary"
-                        name="driverSalary"
-                        value={formData.driverSalary}
-                        onChange={handleFormChange}
-                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-                    >
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                    </select>
-                </div>
-                <div className="mb-4">
-                    <label htmlFor="companyAmount" className="block text-sm font-medium text-gray-700">
-                        Company Amount
-                    </label>
-                    <select
-                        id="companyAmount"
-                        name="companyAmount"
-                        value={formData.companyAmount}
-                        onChange={handleFormChange}
-                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-                    >
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                    </select>
-                </div>
-                <div className="mb-4">
-                    <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-                        Amount
-                    </label>
-                    <input
-                        type="number"
-                        id="amount"
-                        name="amount"
-                        value={formData.amount}
-                        onChange={handleFormChange}
-                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-                        required
-                    />
-                </div>
-                <div className="mb-4">
-                    <label htmlFor="distance" className="block text-sm font-medium text-gray-700">
-                        Distance
-                    </label>
-                    <input
-                        type="number"
-                        id="distance"
-                        name="distance"
-                        value={formData.distance}
-                        onChange={handleFormChange}
-                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-                        required
-                    />
-                </div>
-                <div className="mb-4">
-                    <label htmlFor="remark" className="block text-sm font-medium text-gray-700">
-                        Remark
-                    </label>
-                    <textarea
-                        id="remark"
-                        name="remark"
-                        value={formData.remark}
-                        onChange={handleFormChange}
-                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-                    />
-                </div>
-                <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                    Submit
-                </button>
-            </form>
-        )}
-            <div className="flex justify-end mt-5">
-                
-                <button onClick={() => setShowForm(!showForm)} className="ml-4 px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">
-                    {showForm ? 'Close Form' : 'Booking Completed'}
-                </button>
-            </div>
+            )}
         </div>
     );
 };
