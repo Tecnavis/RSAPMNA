@@ -52,6 +52,7 @@ const ShowroomCashCollection: React.FC = () => {
                     ...doc.data(),
                 })) as Booking[];
                 setBookings(bookingList);
+                console.log("bookingList",bookingList)
                 setFilteredBookings(bookingList); // Set filteredBookings initially to all bookings
             } catch (error) {
                 console.error('Error fetching bookings: ', error);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { DataTable } from 'mantine-datatable';
 import { Link, useNavigate } from 'react-router-dom';
-import { getFirestore, collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 import styles from './newbooking.module.css';
 import { Pagination } from '@mantine/core'; // Import Pagination from Mantine
 
@@ -34,15 +34,20 @@ const NewBooking = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const q = query(collection(db, `user/${uid}/bookings`), orderBy('createdAt', 'desc'));
-                const querySnapshot = await getDocs(q);
+                const q = query(
+                    collection(db, `user/${uid}/bookings`), 
+                    orderBy('createdAt', 'desc') // Sort by creation date
+                );                const querySnapshot = await getDocs(q);
                 let data: RecordData[] = querySnapshot.docs.map((doc) => ({
                     ...doc.data(),
                     id: doc.id,
                 })) as RecordData[];
 
-                setRecordsData(data);
-                setFilteredRecords(data);
+                const filteredData = data.filter((record) => record.status !== 'Order Completed');
+
+console.log("filteredData",filteredData)  
+              setRecordsData(filteredData);
+                                setFilteredRecords(data);
             } catch (error) {
                 console.error('Error fetching data: ', error);
             }
@@ -136,6 +141,7 @@ const NewBooking = () => {
                             >
                                 <td data-label="Date & Time">{rowData.dateTime}</td>
                                 <td data-label="Name">{rowData.customerName}</td>
+
                                 <td data-label="File Number">{rowData.fileNumber}</td>
                                 <td data-label="Phone Number">{rowData.phoneNumber}</td>
                                 <td data-label="Driver">{rowData.driver}</td>

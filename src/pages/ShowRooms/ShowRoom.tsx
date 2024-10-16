@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { addDoc, collection, getFirestore, getDocs, doc, updateDoc, serverTimestamp, query, orderBy, deleteDoc } from 'firebase/firestore';
+import { addDoc, collection, getFirestore, getDocs, doc, updateDoc, serverTimestamp, query, orderBy, deleteDoc, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import './ShowRoom.css';
 import { ChangeEvent, FormEvent } from 'react';
@@ -16,6 +16,7 @@ import QRCode from 'qrcode.react';
 import IconMapPin from '../../components/Icon/IconMapPin';
 
 interface ShowRoomType {
+    [key: string]: any;
     img: string;
     ShowRoom: string;
     description: string;
@@ -43,6 +44,7 @@ interface ShowRoomType {
     qrCode?: string;
     createdAt?: any;
     status?: string;
+    newShowRoom?: string;
 }
 
 interface ShowRoomRecord extends ShowRoomType {
@@ -121,7 +123,6 @@ const ShowRoom: React.FC = () => {
     const [filteredRecords, setFilteredRecords] = useState<ShowRoomRecord[]>([]);
     const listRef = useRef<HTMLDivElement | null>(null);
     const formRef = useRef<HTMLFormElement | null>(null);
-    const [baseOptions, setBaseOptions] = useState<AutocompleteResult[]>([]);
     const [baseLocation, setBaseLocation] = useState<AutocompleteResult | null>(null);
     const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
     const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
@@ -134,6 +135,23 @@ const ShowRoom: React.FC = () => {
 
     console.log(baseLocation, 'the baseLocation');
     const uid = sessionStorage.getItem('uid');
+    const userRole = sessionStorage.getItem('role'); // Assume 'role' is stored in sessionStorage
+console.log("userRole",userRole)
+    // Role-based access control
+    useEffect(() => {
+        if (userRole !== 'admin' && userRole !== 'staff') {
+            toast.error('You are an unauthorized user', { autoClose: 3000 });
+        }
+    }, [userRole]);
+
+    // Only allow access if role is 'admin' or 'staff'
+    if (userRole !== 'admin' && userRole !== 'staff') {
+        return (
+            <div style={{ textAlign: 'center', marginTop: '50px' }}>
+                <h1>You are an unauthorized user</h1>
+            </div>
+        );
+    }
     useEffect(() => {
         const term = searchTerm.toLowerCase();
         const filtered = existingShowRooms.filter((record) => {
@@ -227,14 +245,14 @@ const ShowRoom: React.FC = () => {
                 qrCodeBase64 = canvas.toDataURL('image/png'); // Convert canvas to Base64
             }
         }
-
+        const baseLocation = showRoom.Location.split(',')[0];
         const newShowRoom: ShowRoomType = {
             ...showRoom,
             createdAt: timestamp,
             status: 'admin added showroom',
             showroomLink: generatedLink || '',
             qrCode: qrCodeBase64,
-            Location: `${showRoom.Location}, ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`,
+            Location: `${baseLocation}, ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`,
             manualLocationName: manualLocationName, // Add manual location name
             manualLat: parseFloat(manualLat), // Add manual latitude and ensure it's a number
             manualLng: parseFloat(manualLng), // Add manual longitude and ensure it's a number
@@ -243,14 +261,20 @@ const ShowRoom: React.FC = () => {
         try {
             if (editRoomId) {
                 const roomRef = doc(db, `user/${uid}/showroom`, editRoomId);
-                await updateDoc(roomRef, newShowRoom as any);
-                toast.success('Showroom updated successfully', { autoClose: 3000 });
+                const docSnapshot = await getDoc(roomRef);
+    
+                if (docSnapshot.exists()) {
+                    await updateDoc(roomRef, newShowRoom as { [key: string]: any });
+                    toast.success('Showroom updated successfully', { autoClose: 3000 });
+                } else {
+                    toast.error('No document found to update', { autoClose: 3000 });
+                }
+    
                 setEditRoomId(null);
             } else {
-                await addDoc(collection(db, `user/${uid}/showroom`), newShowRoom);
+                await addDoc(collection(db, `user/${uid}/showroom`), newShowRoom as { [key: string]: any });
                 toast.success('Showroom added successfully', { autoClose: 3000 });
             }
-
             setShowRoom({
                 img: '',
                 ShowRoom: '',
@@ -330,8 +354,11 @@ const ShowRoom: React.FC = () => {
             setEditRoomId(currentRoomId);
             formRef.current?.scrollIntoView({ behavior: 'smooth' });
         } else {
-            // Deletion logic
-            const db = getFirestore();
+            if (!currentRoomId) {
+                console.error('Invalid currentRoomId');
+                toast.error('Invalid showroom ID, cannot delete!', { autoClose: 3000 });
+                return;
+            }            const db = getFirestore();
             const roomRef = doc(db, `user/${uid}/showroom`, currentRoomId);
             try {
                 await deleteDoc(roomRef);
@@ -393,7 +420,7 @@ const ShowRoom: React.FC = () => {
 
     const generateShowRoomLink = () => {
         const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`; // Your actual base URL
-        // const baseUrl = `http://localhost:5175/showrooms/showroom/showroomDetails`; // Your actual base URL
+        // const baseUrl = `http://localhost:5174/showrooms/showroom/showroomDetails`; // Your actual base URL
         const uid = sessionStorage.getItem('uid') || '';
 
         const queryParams = new URLSearchParams({
