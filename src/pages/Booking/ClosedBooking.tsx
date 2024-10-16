@@ -131,7 +131,7 @@ const ClosedBooking: React.FC = () => {
         } finally {
             setLoadingBookings((prev) => {
                 const updatedSet = new Set(prev);
-                updatedSet.delete(bookingId); // Remove booking ID from loading set
+                updatedSet.delete(bookingId); 
                 return updatedSet;
             });
         }

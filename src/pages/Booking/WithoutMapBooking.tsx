@@ -12,6 +12,7 @@ import ShowroomModalWithout from './ShowroomModalWithout';
 import styles from './withoutMap.module.css';
 import ReactSelect from 'react-select';
 import BaseLocationWithout from '../BaseLocation/BaseLocationWithout';
+import axios from 'axios';
 
 interface Showroom {
     value: string;
@@ -1368,7 +1369,7 @@ const addOrUpdateItem = async (): Promise<void> => {
                         <label htmlFor="selectedCompany" className={`${styles.label}`}>
                             Select Company
                         </label>
-                        <select id="selectedCompany" name="selectedCompany" className={styles.formControl} onChange={(e) => handleInputChange('selectedCompany', e.target.value)}>
+                        <select id="selectedCompany" name="selectedCompany" value={selectedCompany} className={styles.formControl} onChange={(e) => handleInputChange('selectedCompany', e.target.value)}>
                             <option value="">Select Company</option>
                             {companies.map((driver) => (
                                 <option key={driver.id} value={driver.id}>
