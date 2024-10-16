@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
+import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField } from '@mui/material';
 interface BookingDetails {
     dateTime: string;
     bookingId: string;
@@ -17,6 +18,8 @@ interface BookingDetails {
     totalDriverDistance: string;
     totalDriverSalary: string;
     vehicleNumber: string;
+    status:string;
+    selectedDriver:string;
     vehicleModel: string;
     phoneNumber: string;
     mobileNumber: string;
@@ -24,6 +27,7 @@ interface BookingDetails {
     pickupLocation: { name: string; lat: number; lng: number } | null;
     dropoffLocation: { name: string; lat: number; lng: number } | null;
     distance: string;
+    formAdded: string;
     serviceType: string;
     serviceVehicle: string;
     rcBookImageURLs: string[];
@@ -33,6 +37,13 @@ interface BookingDetails {
       comments:string;
 }
 
+interface Driver {
+    id: string;
+    name: string;
+    phone: string;
+    companyName: string;
+    // Add other relevant driver fields here
+}
 const ViewMore: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -44,9 +55,24 @@ const ViewMore: React.FC = () => {
     const { search } = useLocation();
     const [showPickupDetails, setShowPickupDetails] = useState(false);
     const [showDropoffDetails, setShowDropoffDetails] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [loadingId, setLoadingId] = useState<string | null>(null);
+    const [dId, setDId] = useState<string | null>(null);
+    const [bId, setBid] = useState<string | null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [docId, setDocId] = useState<string>('');
+    const [allDrivers, setALLDrivers] = useState<Driver[]>([]);
     const queryParams = new URLSearchParams(search);
+    const [isEditing, setIsEditing] = useState<boolean>(false);
+    const [uniform, setUniform] = useState<string | null>(null);
+    const [inventory, setInventory] = useState<string | null>(null);
+    const [feedbackVideo, setFeedbackVideo] = useState<string | null>(null);
+    const [behavior, setBehavior] = useState<string | null>(null);
+    const [idCard, setIdCard] = useState<string | null>(null);
+    const [fixedPoint, setFixedPoint] = useState<number | null>(null);
     const userName = sessionStorage.getItem('username');
     const [showForm, setShowForm] = useState(false);
+    const [loadingBookings, setLoadingBookings] = useState<Set<string>>(new Set());
     const [formData, setFormData] = useState({
         dropoffTime: '',
         driverSalary: 'No',
@@ -55,63 +81,102 @@ const ViewMore: React.FC = () => {
         distance: '',
         remark: '',
     });
-    useEffect(() => {
-        const fetchBookingDetails = async () => {
-            if (!uid || !id) {
-                console.error("UID or ID is undefined.");
-                return;
-            }
 
-            try {
-                const docRef = doc(db, `user/${uid}/bookings`, id);
-                const docSnap = await getDoc(docRef);
-    
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    setBookingDetails({
-                        dateTime: data.dateTime || '', // Provide a default value
-                        bookingId: data.bookingId || '',
-                        newStatus: data.newStatus || '',
-                        editedTime: data.editedTime || '',
-                        totalSalary: data.totalSalary || '',
-                        updatedTotalSalary: data.updatedTotalSalary || '',
-                        company: data.company || '',
-                        trappedLocation: data.trappedLocation || '',
-                        showroomLocation: data.showroomLocation || '',
-                        fileNumber: data.fileNumber || '',
-                        customerName: data.customerName || '',
-                        driver: data.driver || '',
-                        totalDriverDistance: data.totalDriverDistance || '',
-                        totalDriverSalary: data.totalDriverSalary || '',
-                        vehicleNumber: data.vehicleNumber || '',
-                        vehicleModel: data.vehicleModel || '',
-                        phoneNumber: data.phoneNumber || '',
-                        mobileNumber: data.mobileNumber || '',
-                        baseLocation: data.baseLocation || null, // Assuming this could be null
-                        pickupLocation: data.pickupLocation || null,
-                        dropoffLocation: data.dropoffLocation || null,
-                        distance: data.distance || '',
-                        serviceType: data.serviceType || '',
-                        serviceVehicle: data.serviceVehicle || '',
-                        rcBookImageURLs: data.rcBookImageURLs || [],
-                        vehicleImageURLs: data.vehicleImageURLs || [],
-                        vehicleImgURLs: data.vehicleImgURLs || [],
-                        fuelBillImageURLs: data.fuelBillImageURLs || [],
-                        comments: data.comments || '', // Add any additional fields here
-                    });
-                }
-                 else {
-                    console.log(`Document with ID ${id} does not exist!`);
-                }
-            } catch (error) {
-                console.error('Error fetching data:', error);
+    const fetchPoints = async () => {
+        try {
+            const querySnapshot = await getDocs(collection(db, `user/${uid}/driverPoint`));
+
+            if (!querySnapshot.empty) {
+                const docData = querySnapshot.docs[0].data();
+                setFixedPoint(docData.point); // Set the point value
+                setDocId(querySnapshot.docs[0].id); // Set the document ID
+            } else {
+                console.log('No documents found in the collection!');
             }
-        };
-    
+        } catch (err) {
+            console.error('Error fetching point:', err);
+        }
+    };
+
+    const fetchDrivers = async () => {
+        try {
+            const driversCollection = collection(db, `user/${uid}/driver`);
+            const driverSnapshot = await getDocs(driversCollection);
+            const driverList = driverSnapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            })) as Driver[]; // Type assertion to indicate the shape of objects is Driver
+
+            setALLDrivers(driverList); // Store the fetched drivers in state
+            console.log(driverList, 'Fetched Drivers'); // Optional logging
+        } catch (error) {
+            console.error('Error fetching drivers:', error);
+        }
+    };
+    const fetchBookingDetails = async () => {
+        if (!uid || !id) {
+            console.error("UID or ID is undefined.");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, `user/${uid}/bookings`, id);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                console.log(data,'this is the data')
+                setBookingDetails({
+                    dateTime: data.dateTime || '', // Provide a default value
+                    bookingId: data.bookingId || '',
+                    newStatus: data.newStatus || '',
+                    editedTime: data.editedTime || '',
+                    totalSalary: data.totalSalary || '',
+                    updatedTotalSalary: data.updatedTotalSalary || '',
+                    company: data.company || '',
+                    trappedLocation: data.trappedLocation || '',
+                    showroomLocation: data.showroomLocation || '',
+                    fileNumber: data.fileNumber || '',
+                    customerName: data.customerName || '',
+                    driver: data.driver || '',
+                    
+                    totalDriverDistance: data.totalDriverDistance || '',
+                    totalDriverSalary: data.totalDriverSalary || '',
+                    vehicleNumber: data.vehicleNumber || '',
+                    vehicleModel: data.vehicleModel || '',
+                    formAdded:data.formAdded ||'',
+                    phoneNumber: data.phoneNumber || '',
+                    selectedDriver:data.selectedDriver ||'',
+                    mobileNumber: data.mobileNumber || '',
+                    baseLocation: data.baseLocation || null, // Assuming this could be null
+                    pickupLocation: data.pickupLocation || null,
+                    dropoffLocation: data.dropoffLocation || null,
+                    distance: data.distance || '',
+                    serviceType: data.serviceType || '',
+                    serviceVehicle: data.serviceVehicle || '',
+                    status:data.string ||'',
+                    rcBookImageURLs: data.rcBookImageURLs || [],
+                    vehicleImageURLs: data.vehicleImageURLs || [],
+                    vehicleImgURLs: data.vehicleImgURLs || [],
+                    fuelBillImageURLs: data.fuelBillImageURLs || [],
+                    comments: data.comments || '', // Add any additional fields here
+                });
+            }
+             else {
+                console.log(`Document with ID ${id} does not exist!`);
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        }
+    };
+    useEffect(() => {
+       
+    fetchPoints();
         fetchBookingDetails();
+        fetchDrivers();
     }, [db, id]);
     
-
+console.log(bookingDetails?.bookingId,'this is the booking details booking id')
     const togglePickupDetails = () => {
         setShowPickupDetails(!showPickupDetails);
         setShowDropoffDetails(false);
@@ -128,6 +193,155 @@ const ViewMore: React.FC = () => {
             ...prevData,
             [name]: value,
         }));
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        const parsedValue = value === '' ? null : parseFloat(value); // Convert to number or assign null for empty input
+        setFixedPoint(parsedValue); // Update fixedPoint with the parsed number
+    };
+
+    const handleSaveClick = async () => {
+        try {
+            const docRef = doc(db, `user/${uid}/driverPoint`, docId); // Use the stored document ID
+
+            await updateDoc(docRef, {
+                point: fixedPoint, // Update the field with the new value
+            });
+
+            console.log('Point updated successfully!');
+        } catch (err) {
+            console.error('Error updating point:', err);
+        }
+        setIsEditing(false);
+    };
+
+    const handleEditClick = () => {
+        setIsEditing(true);
+    };
+
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        let points = 0;
+        setLoadingId(bId);
+        setLoading(true);
+
+        // Ensure fixedPoint is a number, and set to 0 if null or NaN
+        const validFixedPoint: number = typeof fixedPoint === 'number' ? fixedPoint : typeof fixedPoint === 'string' ? parseFloat(fixedPoint) : 0;
+
+        // Check each field and add points for "yes" answers
+        if (uniform === 'yes') points += validFixedPoint;
+        if (idCard === 'yes') points += validFixedPoint;
+        if (feedbackVideo === 'yes') points += validFixedPoint;
+        if (behavior === 'good') points += validFixedPoint; // Assuming "good" is equivalent to "yes"
+        if (inventory === 'filled') points += validFixedPoint; // Assuming "filled" is equivalent to "yes"
+
+        try {
+            // Ensure that both uid and dId are valid strings
+            console.log(bId,'these are the booking id')
+            console.log(uid,'these are the uid')
+            console.log(dId,'these are the driver id')
+            if (!uid || !dId || !bId) {
+                console.error('Invalid uid, driver ID, or booking ID.');
+                return;
+            }
+
+            // Retrieve the driver document from Firestore
+            const driverDocRef = doc(db, `user/${uid}/driver`, dId);
+            const driverDoc = await getDoc(driverDocRef);
+            console.log(driverDoc, 'this is the driver doc');
+
+            if (driverDoc.exists()) {
+                // Get the current points (if they exist) and add the new points
+                const currentPoints = driverDoc.data().points || 0;
+                console.log(currentPoints, 'this is the current points');
+                const newPoints = currentPoints + points;
+
+                // Update the driver document with the new points
+                console.log(newPoints,'this is the new points')
+                await updateDoc(driverDocRef, {
+                    rewardPoints: newPoints,
+                });
+
+                console.log(`Points updated successfully. New total: ${newPoints}`);
+
+                // Now update the booking document
+                const bookingDocRef = doc(db, `user/${uid}/bookings`, bId);
+                await updateDoc(bookingDocRef, {
+                    formAdded: true,
+                });
+
+                console.log(`Booking updated successfully. formAdded set to true.`);
+
+                // Call handleApprove to update booking status
+                await handleApprove(bId);
+                fetchBookingDetails();
+
+                // Close the request
+                onRequestClose();
+            } else {
+                console.log('Driver document not found.');
+            }
+        } catch (error) {
+            console.error('Error updating points:', error);
+        } finally {
+            setLoadingId(null);
+            setLoading(false);
+        }
+    };
+    
+
+    const onRequestOpen = () => {
+        const selectedDriver = bookingDetails?.selectedDriver;
+        const bookingId = id ?? null; // Ensure bookingId is either a string or null
+    
+        if (selectedDriver) {
+            setDId(selectedDriver);  // Assuming setDId updates the driver's ID state
+            setBid(bookingId);       // Set bookingId (either string or null)
+            setIsModalOpen(true);    // Open the modal
+        } else {
+            console.error('Selected driver is undefined');
+        }
+    };
+    
+
+    const onRequestClose = () => {
+        setIsModalOpen(false);
+        setUniform('');
+        setFeedbackVideo('');
+        setInventory('');
+        setIdCard('');
+        setBehavior('');
+    };
+    const handleApprove = async (bookingId: string) => {
+        setLoadingBookings((prev) => new Set(prev).add(bookingId)); // Add booking ID to loading set
+        try {
+            const db = getFirestore();
+            const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
+
+            // Update the document to set approved to true
+            await updateDoc(bookingRef, {
+                approved: true, // Add the approved field
+            });
+
+            // Update the state to reflect the changes immediately
+            setBookingDetails((prevDetails) => 
+                prevDetails && prevDetails.id === id 
+                  ? { ...prevDetails, approved: true } 
+                  : prevDetails
+              );
+
+            fetchBookingDetails();
+        } catch (error) {
+            console.error('Error updating booking status:', error);
+        } finally {
+            setLoadingBookings((prev) => {
+                const updatedSet = new Set(prev);
+                updatedSet.delete(bookingId); 
+                return updatedSet;
+            });
+        }
     };
 
     const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -440,7 +654,120 @@ const ViewMore: React.FC = () => {
                 <button onClick={() => setShowForm(!showForm)} className="ml-4 px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">
                     {showForm ? 'Close Form' : 'Booking Completed'}
                 </button>
+
+                {bookingDetails.selectedDriver &&
+                                                        !bookingDetails.formAdded &&
+                                                        allDrivers.some((driver) => driver.id === bookingDetails.selectedDriver && driver.companyName === 'RSA') ? (
+                                                            // Check if the booking matches the selected driver and the company name
+                                                            <button
+                                                                style={{
+                                                                    backgroundColor: 'green',
+                                                                    color: '#fff',
+                                                                    border: '1px solid #007bff',
+                                                                    padding: '8px 16px',
+                                                                    fontSize: '16px',
+                                                                    borderRadius: '4px',
+                                                                    cursor: 'pointer',
+                                                                    transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
+                                                                }}
+                                                                onClick={() => onRequestOpen()}
+                                                            >
+                                                                {bookingDetails.status === 'Approved' ? 'Approved' : 'Open form'}
+                                                            </button>
+                                                        ) : (
+                                                            // Fallback if the driver doesn’t match or no driver is selected
+                                                            <div>
+                                                                
+                                                            </div>
+                                                        )}
             </div>
+            <Dialog
+                open={isModalOpen}
+                onClose={onRequestClose}
+                maxWidth="sm" // Optional: controls the maximum width of the dialog
+                fullWidth // Optional: forces the dialog to take full width
+                scroll="paper" // Makes the modal content scrollable
+            >
+                <DialogTitle>
+                    {isEditing ? (
+                        <div>
+                            <TextField value={fixedPoint} onChange={handleInputChange} variant="outlined" size="small" />
+                            <Button variant="contained" color="primary" onClick={handleSaveClick}>
+                                Save
+                            </Button>
+                        </div>
+                    ) : (
+                        <div>
+                            <p>Point for each question</p>
+                            <Button variant="contained" color="primary" onClick={handleEditClick}>
+                                {fixedPoint}
+                            </Button>
+                        </div>
+                    )}
+                </DialogTitle>
+
+                <DialogContent dividers={true} style={{ maxHeight: '400px' }}>
+                    {' '}
+                    {/* Add maxHeight for scrollable content */}
+                    <form onSubmit={handleSubmit}>
+                        <FormControl component="fieldset" fullWidth>
+                            <FormLabel component="legend">Uniform:</FormLabel>
+                            <RadioGroup value={uniform} onChange={(e) => setUniform(e.target.value)}>
+                                <FormControlLabel value="yes" control={<Radio />} label="Yes" />
+                                <FormControlLabel value="no" control={<Radio />} label="No" />
+                            </RadioGroup>
+                        </FormControl>
+
+                        <FormControl component="fieldset" fullWidth>
+                            <FormLabel component="legend">Behavior:</FormLabel>
+                            <RadioGroup value={behavior} onChange={(e) => setBehavior(e.target.value)}>
+                                <FormControlLabel value="good" control={<Radio />} label="Good" />
+                                <FormControlLabel value="bad" control={<Radio />} label="Bad" />
+                            </RadioGroup>
+                        </FormControl>
+
+                        <FormControl component="fieldset" fullWidth>
+                            <FormLabel component="legend">ID Card:</FormLabel>
+                            <RadioGroup value={idCard} onChange={(e) => setIdCard(e.target.value)}>
+                                <FormControlLabel value="yes" control={<Radio />} label="Yes" />
+                                <FormControlLabel value="no" control={<Radio />} label="No" />
+                            </RadioGroup>
+                        </FormControl>
+
+                        <FormControl component="fieldset" fullWidth>
+                            <FormLabel component="legend">Inventory Sheet:</FormLabel>
+                            <RadioGroup value={inventory} onChange={(e) => setInventory(e.target.value)}>
+                                <FormControlLabel value="filled" control={<Radio />} label="Filled" />
+                                <FormControlLabel value="unfilled" control={<Radio />} label="Unfilled" />
+                            </RadioGroup>
+                        </FormControl>
+
+                        <FormControl component="fieldset" fullWidth>
+                            <FormLabel component="legend">Feedback Video:</FormLabel>
+                            <RadioGroup value={feedbackVideo} onChange={(e) => setFeedbackVideo(e.target.value)}>
+                                <FormControlLabel value="yes" control={<Radio />} label="Yes" />
+                                <FormControlLabel value="no" control={<Radio />} label="No" />
+                            </RadioGroup>
+                        </FormControl>
+                        <DialogActions>
+                            {loading ? (
+                                <Button variant="contained" color="primary">
+                                    <CircularProgress size={24} color="inherit" />
+                                </Button>
+                            ) : (
+                                <div>
+                                    <Button type="submit" variant="contained" color="primary">
+                                        Submit
+                                    </Button>
+                                    <Button onClick={onRequestClose} color="secondary">
+                                        Close
+                                    </Button>
+                                </div>
+                            )}
+                        </DialogActions>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

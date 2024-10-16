@@ -210,6 +210,7 @@ const ClosedBooking: React.FC = () => {
 
         try {
             // Ensure that both uid and dId are valid strings
+           
             if (!uid || !dId || !bId) {
                 console.error('Invalid uid, driver ID, or booking ID.');
                 return;
