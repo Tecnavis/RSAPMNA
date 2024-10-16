@@ -792,17 +792,28 @@ console.log("userRole",userRole)
                                 Location
                             </label>
                             <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" width="100%" sx={{ gap: 2 }}>
-                                <TextField label="Manual Location Name" name="manualLocationName" value={manualLocationName} onChange={handleManualInputChange} fullWidth variant="outlined" />
+    <TextField
+        label="Manual Location (Latitude, Longitude)"
+        name="manualLocation"
+        value={`${manualLat}, ${manualLng}`} // Combining lat and lng values
+        onChange={(e) => {
+            const [lat, lng] = e.target.value.split(",").map((val) => val.trim()); // Split input and trim whitespace
+            handleManualInputChange({ target: { name: "manualLat", value: lat } }); // Set manualLat
+            handleManualInputChange({ target: { name: "manualLng", value: lng } }); // Set manualLng
+        }}
+        fullWidth
+        variant="outlined"
+    />
 
-                                <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(manualLocationName)}`} target="_blank" rel="noopener noreferrer">
-                                    <IconMapPin />
-                                </a>
-                                <TextField label="Latitude" name="manualLat" value={manualLat} onChange={handleManualInputChange} fullWidth variant="outlined" />
-                                <TextField label="Longitude" name="manualLng" value={manualLng} onChange={handleManualInputChange} fullWidth variant="outlined" />
-                                {showRoom.locationLatLng.lat && showRoom.locationLatLng.lng && (
-                                    <Typography>{`Location Lat/Lng: ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`}</Typography>
-                                )}
-                            </Box>
+    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${manualLat},${manualLng}`)}`} target="_blank" rel="noopener noreferrer">
+        <IconMapPin />
+    </a>
+
+    {showRoom.locationLatLng.lat && showRoom.locationLatLng.lng && (
+        <Typography>{`Location Lat/Lng: ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`}</Typography>
+    )}
+</Box>
+
                         </div>
 
                         <div className="mb-4" style={{ marginBottom: '16px' }}>
