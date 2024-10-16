@@ -660,6 +660,7 @@ console.log(bookingDetails?.bookingId,'this is the booking details booking id')
                                                         allDrivers.some((driver) => driver.id === bookingDetails.selectedDriver && driver.companyName === 'RSA') ? (
                                                             // Check if the booking matches the selected driver and the company name
                                                             <button
+                                                            className='mx-3'
                                                                 style={{
                                                                     backgroundColor: 'green',
                                                                     color: '#fff',
