@@ -1,6 +1,7 @@
 import React, { useEffect, useState, ChangeEvent } from 'react';
 import { getFirestore, collection, getDocs, query, where, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 // Define the shape of a booking record
 
@@ -47,7 +48,7 @@ const ClosedBooking: React.FC = () => {
 
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
-
+    const navigate = useNavigate();
     const fetchPoints = async () => {
         try {
             const querySnapshot = await getDocs(collection(db, `user/${uid}/driverPoint`));
@@ -103,28 +104,28 @@ const ClosedBooking: React.FC = () => {
             console.error('Error fetching completed bookings:', error);
         }
     };
-// -------------------------------------------------hello-----------------
+    // ------------------------`/bookings/newbooking/viewmore/${rowData.id}`---------------------
     useEffect(() => {
         fetchCompletedBookings();
         fetchDrivers();
         fetchPoints();
     }, [uid]);
-
+    const handleViewMore = (id: string) => {
+        navigate(`/bookings/newbooking/viewmore/${id}`);
+      };
     const handleApprove = async (bookingId: string) => {
         setLoadingBookings((prev) => new Set(prev).add(bookingId)); // Add booking ID to loading set
         try {
             const db = getFirestore();
             const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
-    
+
             // Update the document to set approved to true
             await updateDoc(bookingRef, {
                 approved: true, // Add the approved field
             });
-    
+
             // Update the state to reflect the changes immediately
-            setCompletedBookings((prevBookings) =>
-                prevBookings.map((booking) => (booking.id === bookingId ? { ...booking, approved: true } : booking))
-            );
+            setCompletedBookings((prevBookings) => prevBookings.map((booking) => (booking.id === bookingId ? { ...booking, approved: true } : booking)));
             fetchCompletedBookings();
         } catch (error) {
             console.error('Error updating booking status:', error);
@@ -136,7 +137,6 @@ const ClosedBooking: React.FC = () => {
             });
         }
     };
-    
 
     const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value);
@@ -290,7 +290,15 @@ const ClosedBooking: React.FC = () => {
                                                     <td className="p-2 text-sm block md:table-cell">{booking.phoneNumber}</td>
                                                     <td className="p-2 text-sm block md:table-cell">{booking.serviceType}</td>
                                                     <td className="p-2 text-sm block md:table-cell">{booking.vehicleNumber}</td>
-
+                                                    <td>
+                                                    <Button
+                              variant="contained"
+                              color="primary"
+                              onClick={() => handleViewMore(booking.id)}  // Navigate on click
+                            >
+                              View More
+                            </Button>
+                                                    </td>
                                                     <td className="p-2 text-sm block md:table-cell">
                                                         {booking.selectedDriver &&
                                                         !booking.formAdded &&
@@ -316,40 +324,38 @@ const ClosedBooking: React.FC = () => {
                                                             <div>
                                                                 {loading ? (
                                                                     <button
-                                                                    style={{
-                                                                        backgroundColor: '#007bff',
-                                                                        color: '#fff',
-                                                                        border: '1px solid #007bff',
-                                                                        padding: '8px 16px',
-                                                                        fontSize: '16px',
-                                                                        borderRadius: '4px',
-                                                                        cursor: 'pointer',
-                                                                        transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
-                                                                    }}
-                                                                  
-                                                                    disabled={booking.status === 'Approved'}
-                                                                >
-                                                                   <CircularProgress size={24} color="inherit" />
-                                                                </button>
-                                                                ):(
+                                                                        style={{
+                                                                            backgroundColor: '#007bff',
+                                                                            color: '#fff',
+                                                                            border: '1px solid #007bff',
+                                                                            padding: '8px 16px',
+                                                                            fontSize: '16px',
+                                                                            borderRadius: '4px',
+                                                                            cursor: 'pointer',
+                                                                            transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
+                                                                        }}
+                                                                        disabled={booking.status === 'Approved'}
+                                                                    >
+                                                                        <CircularProgress size={24} color="inherit" />
+                                                                    </button>
+                                                                ) : (
                                                                     <button
-                                                                    style={{
-                                                                        backgroundColor: '#007bff',
-                                                                        color: '#fff',
-                                                                        border: '1px solid #007bff',
-                                                                        padding: '8px 16px',
-                                                                        fontSize: '16px',
-                                                                        borderRadius: '4px',
-                                                                        cursor: 'pointer',
-                                                                        transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
-                                                                    }}
-                                                                    onClick={() => handleApprove(booking.id)}
-                                                                    disabled={booking.status === 'Approved'}
-                                                                >
-                                                                    {booking.status === 'Approved' ? 'Approved' : 'Approve'}
-                                                                </button>
+                                                                        style={{
+                                                                            backgroundColor: '#007bff',
+                                                                            color: '#fff',
+                                                                            border: '1px solid #007bff',
+                                                                            padding: '8px 16px',
+                                                                            fontSize: '16px',
+                                                                            borderRadius: '4px',
+                                                                            cursor: 'pointer',
+                                                                            transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
+                                                                        }}
+                                                                        onClick={() => handleApprove(booking.id)}
+                                                                        disabled={booking.status === 'Approved'}
+                                                                    >
+                                                                        {booking.status === 'Approved' ? 'Approved' : 'Approve'}
+                                                                    </button>
                                                                 )}
-                                                                
                                                             </div>
                                                         )}
                                                     </td>
