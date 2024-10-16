@@ -276,7 +276,7 @@ console.log(bookingDetails?.bookingId,'this is the booking details booking id')
 
                 // Call handleApprove to update booking status
                 await handleApprove(bId);
-                fetchBookingDetails
+                fetchBookingDetails();
 
                 // Close the request
                 onRequestClose();
@@ -290,6 +290,7 @@ console.log(bookingDetails?.bookingId,'this is the booking details booking id')
             setLoading(false);
         }
     };
+    
 
     const onRequestOpen = () => {
         const selectedDriver = bookingDetails?.selectedDriver;
@@ -325,7 +326,12 @@ console.log(bookingDetails?.bookingId,'this is the booking details booking id')
             });
 
             // Update the state to reflect the changes immediately
-            // setCompletedBookings((prevBookings) => prevBookings.map((booking) => (booking.id === bookingId ? { ...booking, approved: true } : booking)));
+            setBookingDetails((prevDetails) => 
+                prevDetails && prevDetails.id === id 
+                  ? { ...prevDetails, approved: true } 
+                  : prevDetails
+              );
+
             fetchBookingDetails();
         } catch (error) {
             console.error('Error updating booking status:', error);
@@ -671,40 +677,7 @@ console.log(bookingDetails?.bookingId,'this is the booking details booking id')
                                                         ) : (
                                                             // Fallback if the driver doesn’t match or no driver is selected
                                                             <div>
-                                                                {loading ? (
-                                                                    <button
-                                                                        style={{
-                                                                            backgroundColor: '#007bff',
-                                                                            color: '#fff',
-                                                                            border: '1px solid #007bff',
-                                                                            padding: '8px 16px',
-                                                                            fontSize: '16px',
-                                                                            borderRadius: '4px',
-                                                                            cursor: 'pointer',
-                                                                            transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
-                                                                        }}
-                                                                        disabled={bookingDetails.status === 'Approved'}
-                                                                    >
-                                                                        <CircularProgress size={24} color="inherit" />
-                                                                    </button>
-                                                                ) : (
-                                                                    <button
-                                                                        style={{
-                                                                            backgroundColor: '#007bff',
-                                                                            color: '#fff',
-                                                                            border: '1px solid #007bff',
-                                                                            padding: '8px 16px',
-                                                                            fontSize: '16px',
-                                                                            borderRadius: '4px',
-                                                                            cursor: 'pointer',
-                                                                            transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
-                                                                        }}
-                                                                        onClick={() => handleApprove(bookingDetails.bookingId)}
-                                                                        disabled={bookingDetails.status === 'Approved'}
-                                                                    >
-                                                                        {bookingDetails.status === 'Approved' ? 'Approved' : 'Approve'}
-                                                                    </button>
-                                                                )}
+                                                                
                                                             </div>
                                                         )}
             </div>
