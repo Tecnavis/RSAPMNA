@@ -210,6 +210,7 @@ const ClosedBooking: React.FC = () => {
 
         try {
             // Ensure that both uid and dId are valid strings
+           
             if (!uid || !dId || !bId) {
                 console.error('Invalid uid, driver ID, or booking ID.');
                 return;
@@ -300,7 +301,7 @@ const ClosedBooking: React.FC = () => {
                             </Button>
                                                     </td>
                                                     <td className="p-2 text-sm block md:table-cell">
-                                                        {booking.selectedDriver &&
+                                                        {/* {booking.selectedDriver &&
                                                         !booking.formAdded &&
                                                         allDrivers.some((driver) => driver.id === booking.selectedDriver && driver.companyName === 'RSA') ? (
                                                             // Check if the booking matches the selected driver and the company name
@@ -357,7 +358,7 @@ const ClosedBooking: React.FC = () => {
                                                                     </button>
                                                                 )}
                                                             </div>
-                                                        )}
+                                                        )} */}
                                                     </td>
                                                 </tr>
                                             ))}

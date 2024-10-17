@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { storage } from '../../config/config';
+import { getFirestore, doc, getDoc, updateDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
+import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField } from '@mui/material';
 interface BookingDetails {
     dateTime: string;
     bookingId: string;
@@ -20,6 +21,7 @@ interface BookingDetails {
     totalDriverDistance: string;
     totalDriverSalary: string;
     vehicleNumber: string;
+    selectedDriver:string;
     vehicleModel: string;
     phoneNumber: string;
     mobileNumber: string;
@@ -27,6 +29,7 @@ interface BookingDetails {
     pickupLocation: { name: string; lat: number; lng: number } | null;
     dropoffLocation: { name: string; lat: number; lng: number } | null;
     distance: string;
+    formAdded: string;
     serviceType: string;
     serviceVehicle: string;
     rcBookImageURLs: string[];
@@ -52,6 +55,14 @@ interface FormData {
     rcBookImageURLs: string[];
     vehicleImgURLs: string[];
 }
+
+interface Driver {
+    id: string;
+    name: string;
+    phone: string;
+    companyName: string;
+    // Add other relevant driver fields here
+}
 const ViewMore: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -64,7 +75,21 @@ const ViewMore: React.FC = () => {
     const { search } = useLocation();
     const [showPickupDetails, setShowPickupDetails] = useState(false);
     const [showDropoffDetails, setShowDropoffDetails] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [loadingId, setLoadingId] = useState<string | null>(null);
+    const [dId, setDId] = useState<string | null>(null);
+    const [bId, setBid] = useState<string | null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [docId, setDocId] = useState<string>('');
+    const [allDrivers, setALLDrivers] = useState<Driver[]>([]);
     const queryParams = new URLSearchParams(search);
+    const [isEditing, setIsEditing] = useState<boolean>(false);
+    const [uniform, setUniform] = useState<string | null>(null);
+    const [inventory, setInventory] = useState<string | null>(null);
+    const [feedbackVideo, setFeedbackVideo] = useState<string | null>(null);
+    const [behavior, setBehavior] = useState<string | null>(null);
+    const [idCard, setIdCard] = useState<string | null>(null);
+    const [fixedPoint, setFixedPoint] = useState<number | null>(null);
     const userName = sessionStorage.getItem('username');
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState<FormData>({
@@ -195,6 +220,155 @@ const ViewMore: React.FC = () => {
             ...prevData,
             [name]: value,
         }));
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        const parsedValue = value === '' ? null : parseFloat(value); // Convert to number or assign null for empty input
+        setFixedPoint(parsedValue); // Update fixedPoint with the parsed number
+    };
+
+    const handleSaveClick = async () => {
+        try {
+            const docRef = doc(db, `user/${uid}/driverPoint`, docId); // Use the stored document ID
+
+            await updateDoc(docRef, {
+                point: fixedPoint, // Update the field with the new value
+            });
+
+            console.log('Point updated successfully!');
+        } catch (err) {
+            console.error('Error updating point:', err);
+        }
+        setIsEditing(false);
+    };
+
+    const handleEditClick = () => {
+        setIsEditing(true);
+    };
+
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        let points = 0;
+        setLoadingId(bId);
+        setLoading(true);
+
+        // Ensure fixedPoint is a number, and set to 0 if null or NaN
+        const validFixedPoint: number = typeof fixedPoint === 'number' ? fixedPoint : typeof fixedPoint === 'string' ? parseFloat(fixedPoint) : 0;
+
+        // Check each field and add points for "yes" answers
+        if (uniform === 'yes') points += validFixedPoint;
+        if (idCard === 'yes') points += validFixedPoint;
+        if (feedbackVideo === 'yes') points += validFixedPoint;
+        if (behavior === 'good') points += validFixedPoint; // Assuming "good" is equivalent to "yes"
+        if (inventory === 'filled') points += validFixedPoint; // Assuming "filled" is equivalent to "yes"
+
+        try {
+            // Ensure that both uid and dId are valid strings
+            console.log(bId,'these are the booking id')
+            console.log(uid,'these are the uid')
+            console.log(dId,'these are the driver id')
+            if (!uid || !dId || !bId) {
+                console.error('Invalid uid, driver ID, or booking ID.');
+                return;
+            }
+
+            // Retrieve the driver document from Firestore
+            const driverDocRef = doc(db, `user/${uid}/driver`, dId);
+            const driverDoc = await getDoc(driverDocRef);
+            console.log(driverDoc, 'this is the driver doc');
+
+            if (driverDoc.exists()) {
+                // Get the current points (if they exist) and add the new points
+                const currentPoints = driverDoc.data().points || 0;
+                console.log(currentPoints, 'this is the current points');
+                const newPoints = currentPoints + points;
+
+                // Update the driver document with the new points
+                console.log(newPoints,'this is the new points')
+                await updateDoc(driverDocRef, {
+                    rewardPoints: newPoints,
+                });
+
+                console.log(`Points updated successfully. New total: ${newPoints}`);
+
+                // Now update the booking document
+                const bookingDocRef = doc(db, `user/${uid}/bookings`, bId);
+                await updateDoc(bookingDocRef, {
+                    formAdded: true,
+                });
+
+                console.log(`Booking updated successfully. formAdded set to true.`);
+
+                // Call handleApprove to update booking status
+                await handleApprove(bId);
+                fetchBookingDetails();
+
+                // Close the request
+                onRequestClose();
+            } else {
+                console.log('Driver document not found.');
+            }
+        } catch (error) {
+            console.error('Error updating points:', error);
+        } finally {
+            setLoadingId(null);
+            setLoading(false);
+        }
+    };
+    
+
+    const onRequestOpen = () => {
+        const selectedDriver = bookingDetails?.selectedDriver;
+        const bookingId = id ?? null; // Ensure bookingId is either a string or null
+    
+        if (selectedDriver) {
+            setDId(selectedDriver);  // Assuming setDId updates the driver's ID state
+            setBid(bookingId);       // Set bookingId (either string or null)
+            setIsModalOpen(true);    // Open the modal
+        } else {
+            console.error('Selected driver is undefined');
+        }
+    };
+    
+
+    const onRequestClose = () => {
+        setIsModalOpen(false);
+        setUniform('');
+        setFeedbackVideo('');
+        setInventory('');
+        setIdCard('');
+        setBehavior('');
+    };
+    const handleApprove = async (bookingId: string) => {
+        setLoadingBookings((prev) => new Set(prev).add(bookingId)); // Add booking ID to loading set
+        try {
+            const db = getFirestore();
+            const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
+
+            // Update the document to set approved to true
+            await updateDoc(bookingRef, {
+                approved: true, // Add the approved field
+            });
+
+            // Update the state to reflect the changes immediately
+            setBookingDetails((prevDetails) => 
+                prevDetails && prevDetails.id === id 
+                  ? { ...prevDetails, approved: true } 
+                  : prevDetails
+              );
+
+            fetchBookingDetails();
+        } catch (error) {
+            console.error('Error updating booking status:', error);
+        } finally {
+            setLoadingBookings((prev) => {
+                const updatedSet = new Set(prev);
+                updatedSet.delete(bookingId); 
+                return updatedSet;
+            });
+        }
     };
 
     const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
