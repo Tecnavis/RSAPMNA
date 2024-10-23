@@ -26,14 +26,16 @@ const RsaStaffReport: React.FC = () => {
 
     useEffect(() => {
         const fetchUsers = async () => {
+            setLoading(true);
             try {
                 const usersCollection = collection(db, `user/${uid}/users`);
                 const userSnapshot = await getDocs(usersCollection);
                 const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+                console.log("userList",userList)
                 setUsers(userList);
-                setLoading(false);
             } catch (error) {
                 console.error('Error fetching users:', error);
+            } finally {
                 setLoading(false);
             }
         };
@@ -85,7 +87,7 @@ const RsaStaffReport: React.FC = () => {
                     <thead>
                         <tr className="bg-gray-100">
                             <th className="py-2 px-4">User Name</th>
-                            <th className="py-2 px-4">Role</th>
+                            {/* <th className="py-2 px-4">Role</th> */}
                             <th className="py-2 px-4">Actions</th>
                         </tr>
                     </thead>
@@ -105,19 +107,7 @@ const RsaStaffReport: React.FC = () => {
                                         user.userName
                                     )}
                                 </td>
-                                <td className="border px-4 py-2">
-                                    {editUserId === user.id ? (
-                                        <input
-                                            type="text"
-                                            name="role"
-                                            value={editUserData.role}
-                                            onChange={handleUserInputChange}
-                                            className="border rounded p-1"
-                                        />
-                                    ) : (
-                                        user.role
-                                    )}
-                                </td>
+                               
                                 <td className="border px-4 py-2 flex gap-2 items-center">
                                     {editUserId === user.id ? (
                                         <button onClick={handleSaveUserClick} className="text-green-500 hover:text-green-700">
@@ -129,7 +119,7 @@ const RsaStaffReport: React.FC = () => {
                                         </button>
                                     )}
                                     <Link
-                                        to={`/userdetails/${user.id}`}
+                                        to={`/rsastaffReport/userdetails/${user.id}`}
                                         className="text-blue-500 hover:text-blue-700 bg-blue-100 px-2 py-1 rounded-md shadow-md"
                                     >
                                         View Details

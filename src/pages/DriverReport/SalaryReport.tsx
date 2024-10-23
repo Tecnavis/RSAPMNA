@@ -69,8 +69,7 @@ const SalaryReport: React.FC = () => {
 
                     setDriver({
                         ...driverData,
-                        advance: driverData.advance || 0,
-                        advancePaymentDate: driverData.advancePaymentDate || '',
+                        advance: parseFloat((driverData.advance || 0).toFixed(2)),                        advancePaymentDate: driverData.advancePaymentDate || '',
                     });
                 } else {
                     console.log('No such document!');
@@ -463,51 +462,56 @@ const SalaryReport: React.FC = () => {
     return (
         <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg sm:p-8 lg:p-10">
             {driver && (
-                <h1 className="text-3xl font-bold mb-5 text-center text-gray-800">
-                    Salary Report <span className="text-red-500">{driver.driverName}</span>
-                </h1>
-            )}
-            <div className="flex flex-col items-center mb-4">
-                <label htmlFor="monthSelect" className="text-lg font-semibold mb-1">
-                    Select Month:
-                </label>
-                <select
-                    id="monthSelect"
-                    className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
-                >
-                    <option value="">All</option>
-                    {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((month) => (
-                        <option key={month} value={month}>
-                            {month}
-                        </option>
-                    ))}
-                </select>
-            </div>
+              
+                            <h1 className="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300"> Salary Report <span className="text-red-500">{driver.driverName}</span>
+</h1>
 
-            {/* Year Selection */}
-            <div className="flex flex-col items-center mb-4">
-                <label htmlFor="yearSelect" className="text-lg font-semibold mb-1">
-                    Select Year:
-                </label>
-                <select
-                    id="yearSelect"
-                    className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(e.target.value)}
-                >
-                    <option value="">All</option>
-                    {Array.from({ length: 10 }, (_, i) => {
-                        const year = new Date().getFullYear() - i; // Generate the last 10 years
-                        return (
-                            <option key={year} value={year}>
-                                {year}
-                            </option>
-                        );
-                    })}
-                </select>
-            </div>
+            )}
+           <div className="flex justify-center mb-4">
+    {/* Month Selection */}
+    <div className="flex flex-col items-center mr-4">
+        <label htmlFor="monthSelect" className="text-lg font-semibold mb-1">
+            Select Month:
+        </label>
+        <select
+            id="monthSelect"
+            className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+        >
+            <option value="">All</option>
+            {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((month) => (
+                <option key={month} value={month}>
+                    {month}
+                </option>
+            ))}
+        </select>
+    </div>
+
+    {/* Year Selection */}
+    <div className="flex flex-col items-center">
+        <label htmlFor="yearSelect" className="text-lg font-semibold mb-1">
+            Select Year:
+        </label>
+        <select
+            id="yearSelect"
+            className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+        >
+            <option value="">All</option>
+            {Array.from({ length: 10 }, (_, i) => {
+                const year = new Date().getFullYear() - i; // Generate the last 10 years
+                return (
+                    <option key={year} value={year}>
+                        {year}
+                    </option>
+                );
+            })}
+        </select>
+    </div>
+</div>
+
 
             {/* ------------------------------------------------- */}
             <div className="mb-4 flex flex-col items-center">
@@ -672,7 +676,16 @@ const SalaryReport: React.FC = () => {
                                             booking.transferedSalary || 0
                                         )}
                                     </td>
-                                    <td className="border px-4 py-2">{booking.balanceSalary}</td>
+                                    <td
+    className="border px-4 py-2"
+    style={{
+        backgroundColor: booking.balanceSalary === 0 ? '#e6ffe6' : '#ffe6e6', // Light green and light red
+        color: booking.balanceSalary === 0 ? 'black' : 'black' // Adjust text color as needed
+    }}
+>
+    {booking.balanceSalary}
+</td>
+
                                     <td className="border px-4 py-2">
                                         {editingBookingId === booking.id ? (
                                             <>
