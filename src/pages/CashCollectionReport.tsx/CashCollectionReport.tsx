@@ -4,6 +4,7 @@ import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc
 import Modal from 'react-modal';
 import { parse, format } from 'date-fns';
 import styles from './cashCollectionReport.module.css';
+import IconEdit from '../../components/Icon/IconEdit';
 interface Driver {
     id?: string;
     driverName?: string;
@@ -48,13 +49,12 @@ const CashCollectionReport: React.FC = () => {
     const [showAmountDiv, setShowAmountDiv] = useState(true); // Add state to show/hide the div
     const [totalBalances, setTotalBalances] = useState(0);
     const [clickedButtons, setClickedButtons] = useState<Record<string, boolean>>({});
-// ----------------------------------------------------------------------------------------------------------------------------------
-const [disableFields, setDisableFields] = useState(false); // State to disable/enable fields
-const [disableOkButton, setDisableOkButton] = useState(true); // For OK button initially disabled
-const role = sessionStorage.getItem('role');
-const userName = sessionStorage.getItem('username');
 
-console.log("role",userName)
+    const [netTotalAmountInHand, setNetTotalAmountInHand] = useState(0); // State to disable/enable fields
+    const role = sessionStorage.getItem('role');
+    const userName = sessionStorage.getItem('username');
+    // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    console.log('role', userName);
     useEffect(() => {
         const fetchDriver = async () => {
             if (!uid || !id) {
@@ -141,55 +141,55 @@ console.log("role",userName)
         }
     };
 
-    const handleInvoiceClick = (booking: Booking) => {
-        const balance = calculateBalance((booking.amount ?? 0).toString(), booking.receivedAmount || 0);
-        navigate(`/users/driver/driverdetails/cashcollection/driverInvoice/${booking.id}`, {
-            state: {
-                amount: (booking.amount ?? 0).toString(),
-                receivedAmount: (booking.receivedAmount ?? 0).toString(),
-                balance: balance.toString(),
-            },
-        });
-    };
-// ---------------------------------------------------------------------------------------
-    const handleAmountReceivedChange = async (bookingId: string, receivedAmount: string) => {
-        try {
-            if (!uid || typeof uid !== 'string') {
-                throw new Error('User ID (uid) is not defined or is not a string.');
-            }
-            if (!bookingId || typeof bookingId !== 'string') {
-                throw new Error('Booking ID is not defined or is not a string.');
-            }
-            const booking = bookings.find((booking) => booking.id === bookingId);
-            const amount = booking?.amount || 0; // Fallback to 0 if booking not found
+    // const handleInvoiceClick = (booking: Booking) => {
+    //     const balance = calculateBalance((booking.amount ?? 0).toString(), booking.receivedAmount || 0);
+    //     navigate(`/users/driver/driverdetails/cashcollection/driverInvoice/${booking.id}`, {
+    //         state: {
+    //             amount: (booking.amount ?? 0).toString(),
+    //             receivedAmount: (booking.receivedAmount ?? 0).toString(),
+    //             balance: balance.toString(),
+    //         },
+    //     });
+    // };
 
-            // Update the booking's receivedAmount and balance
-            const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
-            await updateDoc(bookingRef, {
-                receivedAmount: parseFloat(receivedAmount),
-                balance: calculateBalance(amount.toString(), receivedAmount), // Convert amount to string
-            });
+    // const handleAmountReceivedChange = async (bookingId: string, receivedAmount: string) => {
+    //     try {
+    //         if (!uid || typeof uid !== 'string') {
+    //             throw new Error('User ID (uid) is not defined or is not a string.');
+    //         }
+    //         if (!bookingId || typeof bookingId !== 'string') {
+    //             throw new Error('Booking ID is not defined or is not a string.');
+    //         }
+    //         const booking = bookings.find((booking) => booking.id === bookingId);
+    //         const amount = booking?.amount || 0; // Fallback to 0 if booking not found
 
-            // Update local state with the new receivedAmount
-            setBookings(bookings.map((booking) => (booking.id === bookingId ? { ...booking, receivedAmount: parseFloat(receivedAmount) } : booking)));
+    //         // Update the booking's receivedAmount and balance
+    //         const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
+    //         await updateDoc(bookingRef, {
+    //             receivedAmount: parseFloat(receivedAmount),
+    //             balance: calculateBalance(amount.toString(), receivedAmount), // Convert amount to string
+    //         });
 
-            await updateTotalBalance(); 
-            // -----------------------------------------------------------------
-            // const netTotal = calculateNetTotalAmountInHand();
-            if (!id || typeof id !== 'string') {
-                throw new Error('Driver ID (id) is not defined or is not a string.');
-            }
+    //         // Update local state with the new receivedAmount
+    //         setBookings(bookings.map((booking) => (booking.id === bookingId ? { ...booking, receivedAmount: parseFloat(receivedAmount) } : booking)));
 
-            // Update netTotalAmountInHand in the driver's document
+    //         await updateTotalBalance();
+    //         // -----------------------------------------------------------------
+    //         // const netTotal = calculateNetTotalAmountInHand();
+    //         if (!id || typeof id !== 'string') {
+    //             throw new Error('Driver ID (id) is not defined or is not a string.');
+    //         }
 
-            setClickedButtons((prevState) => ({
-                ...prevState,
-                [bookingId]: true, 
-            }));
-        } catch (error) {
-            console.error('Error updating received amount:', error);
-        }
-    };
+    //         // Update netTotalAmountInHand in the driver's document
+
+    //         setClickedButtons((prevState) => ({
+    //             ...prevState,
+    //             [bookingId]: true,
+    //         }));
+    //     } catch (error) {
+    //         console.error('Error updating received amount:', error);
+    //     }
+    // };
 
     const calculateBalance = (amount: string | number, receivedAmount: string | number) => {
         return (parseFloat(amount.toString()) - parseFloat(receivedAmount.toString())).toFixed(2);
@@ -219,69 +219,58 @@ console.log("role",userName)
         console.log('Net Total Amount in Hand:', netTotal);
         return netTotal;
     };
-// ---------------------------------------------------------------------------
-const updateTotalBalance = async () => {
-    try {
-        if (!uid || typeof uid !== 'string') {
-            throw new Error('User ID (uid) is not defined or is not a string.');
+
+    const updateTotalBalance = async () => {
+        try {
+            if (!uid || typeof uid !== 'string') {
+                throw new Error('User ID (uid) is not defined or is not a string.');
+            }
+            if (!id || typeof id !== 'string') {
+                throw new Error('Driver ID (id) is not defined or is not a string.');
+            }
+
+            // Ensure that bookings and driver are fully loaded
+            if (!bookings || bookings.length === 0) {
+                console.log('Bookings are not loaded yet.');
+                return; // Exit early if bookings are not loaded
+            }
+            if (!driver) {
+                console.log('Driver data is not loaded yet.');
+                return; // Exit early if driver data is not loaded
+            }
+
+            const totalBalances = bookings.reduce((acc, booking) => {
+                const amount = parseFloat(booking.amount?.toString() || '0');
+                const receivedAmount = parseFloat(booking.receivedAmount?.toString() || '0');
+                const newAcc = acc + (amount - receivedAmount);
+                console.log(`Accumulated Total Balance So Far: ${newAcc}`);
+
+                return newAcc;
+            }, 0);
+
+            console.log('Total Balanceee:', totalBalances);
+            const calculatedNetTotalAmountInHand = calculateNetTotalAmountInHand();
+            setTotalBalances(totalBalances);
+            // const calculatedNetTotalAmountInHand = calculateNetTotalAmountInHand();
+            setNetTotalAmountInHand(parseFloat(calculatedNetTotalAmountInHand));
+
+            const driverRef = doc(db, `user/${uid}/driver`, id);
+            console.log('Total Balanceee:', totalBalances);
+            console.log('Total netTotalAmountInHand:', calculatedNetTotalAmountInHand);
+
+            if (parseFloat(calculatedNetTotalAmountInHand) !== 0) {
+                await updateDoc(driverRef, {
+                    totalBalances: totalBalances,
+                    netTotalAmountInHand: parseFloat(calculatedNetTotalAmountInHand),
+                });
+                console.log('Total balance and net total updated successfully:', calculatedNetTotalAmountInHand);
+            } else {
+                console.log('Net Total is zero, skipping update.');
+            }
+        } catch (error) {
+            console.error('Error updating total balance:', error);
         }
-        if (!id || typeof id !== 'string') {
-            throw new Error('Driver ID (id) is not defined or is not a string.');
-        }
-
-        // Ensure that bookings and driver are fully loaded
-        if (!bookings || bookings.length === 0) {
-            console.log('Bookings are not loaded yet.');
-            return; // Exit early if bookings are not loaded
-        }
-        if (!driver) {
-            console.log('Driver data is not loaded yet.');
-            return; // Exit early if driver data is not loaded
-        }
-
-        const totalBalances = bookings.reduce((acc, booking) => {
-            const amount = parseFloat(booking.amount?.toString() || '0');
-            const receivedAmount = parseFloat(booking.receivedAmount?.toString() || '0');
-
-            console.log(`Booking ID: ${booking.id}`);
-            console.log(`Original Amount: ${amount}`);
-            console.log(`Received Amount: ${receivedAmount}`);
-            console.log(`Amount Remaining (Amount - Received Amount): ${amount - receivedAmount}`);
-
-            const newAcc = acc + (amount - receivedAmount);
-
-            console.log(`Accumulated Total Balance So Far: ${newAcc}`);
-
-            return newAcc;
-        }, 0);
-
-        console.log('Total Balanceee:', totalBalances);
-
-        // Update local state for total balance
-        setTotalBalances(totalBalances);
-
-        const netTotalAmountInHand = calculateNetTotalAmountInHand();
-
-        // Update the driver's total balance and net total in Firestore
-        const driverRef = doc(db, `user/${uid}/driver`, id);
-        console.log('Total Balanceee:', totalBalances);
-        console.log('Total netTotalAmountInHand:', netTotalAmountInHand);
-
-        // Ensure that netTotalAmountInHand is not '0' before updating Firestore
-        if (parseFloat(netTotalAmountInHand) !== 0) {
-            await updateDoc(driverRef, {
-                totalBalances: totalBalances,
-                netTotalAmountInHand: parseFloat(netTotalAmountInHand), // Correctly reference the calculated net total
-            });
-            console.log('Total balance and net total updated successfully:', netTotalAmountInHand);
-        } else {
-            console.log('Net Total is zero, skipping update.');
-        }
-    } catch (error) {
-        console.error('Error updating total balance:', error);
-    }
-};
-
+    };
 
     const handleApproveClick = (booking: Booking) => {
         const balance = calculateBalance(booking.amount.toString(), booking.receivedAmount || 0);
@@ -338,7 +327,6 @@ const updateTotalBalance = async () => {
 
         setFilteredBookings(filtered);
     };
-    // -----------------------------------------------------------------------------------------------
     const calculateMonthlyTotals = () => {
         const totalAmount = filteredBookings.reduce((acc, booking) => {
             const amount = typeof booking.amount === 'number' ? booking.amount : parseFloat(booking.amount || '0');
@@ -449,47 +437,33 @@ const updateTotalBalance = async () => {
 
         return updatedBookings;
     };
-// ---------------------------------------------------true-----------------
     const handleAmountReceiveChange = async (receivedAmount: number) => {
         try {
             const updatedBookings = distributeReceivedAmount(receivedAmount, bookings);
             setBookings(updatedBookings); // Update state with new bookings
-    
-            // Create a Firestore batch for multiple updates
+
+            // Now, update the Firestore with the new received amounts
             const batch = writeBatch(db);
-    
-            // Update the bookings and the corresponding user document
-            for (const booking of updatedBookings) {
+
+            updatedBookings.forEach((booking) => {
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
+               
                 batch.update(bookingRef, {
                     receivedAmount: booking.receivedAmount,
                     balance: calculateBalance(booking.amount, booking.receivedAmount || 0),
                     role: role || 'unknown', // Add role to the update
                     userName: userName || 'unknown',
                 });
-    
-                // Now update the corresponding user document based on userName
-                const userQuerySnapshot = await getDocs(
-                    query(collection(db, `user/${uid}/users`), where('userName', '==', booking.userName))
-                );
-    
-                // Loop through users and update the receivedAmount
-                userQuerySnapshot.forEach((userDoc) => {
-                    const userRef = doc(db, `user/${uid}/users`, userDoc.id);
-                    batch.update(userRef, {
-                        receivedAmount: (userDoc.data().receivedAmount || 0) + (booking.receivedAmount || 0), // Increment receivedAmount
-                    });
-                });
-            }
-    
-            await batch.commit(); // Commit the batch update
-            updateTotalBalance(); // Recalculate total balance
-            setShowAmountDiv(false); // Hide amount input div
+            });
+
+            await batch.commit();
+            updateTotalBalance();
+            setShowAmountDiv(false);
+            window.location.reload();
         } catch (error) {
             console.error('Error distributing received amount:', error);
         }
     };
-    
 
     return (
         <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg">
@@ -665,9 +639,13 @@ const updateTotalBalance = async () => {
                                     <th className={styles.tableCell}>PayableAmount By Customer</th>
 
                                     <th className={styles.tableCell}>Amount Received From The Customer</th>
-                                    <th className={styles.tableCell}>Received Amount From Driver</th>
+                                    {/* <th className={styles.tableCell}>Received Amount From Driver</th> */}
                                     <th className={styles.tableCell}>Balance</th>
-                                    <th className={styles.tableCell}>Actions</th>
+                                    {role !== 'staff' && (
+
+                                    <th className={styles.tableCell}>Edit</th>
+                                    )}
+                                    <th className={styles.tableCell}>Approve</th>
                                 </tr>
                             </thead>
                             <tbody className={styles.tableBody}>
@@ -685,63 +663,38 @@ const updateTotalBalance = async () => {
                                         <td className={styles.responsiveCell}>{booking.updatedTotalSalary}</td>
 
                                         <td className={styles.responsiveCell}>{booking.amount}</td>
-                                        {/* <tr key={booking.id}> */}
-                                        <td key={booking.id} className={styles.responsiveCell}>
-    <div style={{ display: 'flex', alignItems: 'center' }}>
-        <input
-            type="text"
-            value={booking.receivedAmount ?? ''}  // Use `??` to handle undefined
-            onChange={(e) => handleAmountReceivedChange(booking.id, e.target.value)}
-            style={{ 
-                border: '1px solid #d1d5db', 
-                borderRadius: '0.25rem', 
-                padding: '0.25rem 0.5rem',
-                marginRight: '0.5rem'
-            }}
-            disabled={booking.approved}
-            min="0"
-        />
-        <button
-            onClick={() => handleAmountReceivedChange(booking.id, (booking.receivedAmount ?? 0).toString())}  // Ensure non-undefined value
-            style={{
-                backgroundColor: booking.receivedAmount && booking.receivedAmount > 0 ? '#4CAF50' : '#d1d5db',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.25rem',
-                padding: '0.25rem 0.5rem',
-                cursor: booking.receivedAmount && booking.receivedAmount > 0 ? 'pointer' : 'not-allowed'
-            }}
-            disabled={booking.approved || (booking.receivedAmount ?? 0) <= 0}  // Use default when checking value
-        >
-            OK
-        </button>
-    </div>
-</td>
+                                        
 
+                                        <td
+                                            className={styles.responsiveCell}
+                                            style={{
+                                                backgroundColor:
+                                                    Number(calculateBalance(booking.amount, booking.receivedAmount || 0)) === 0
+                                                        ? '#e6ffe6' // Light green for zero balance
+                                                        : '#ffe6e6', // Light red for non-zero balance
+                                            }}
+                                        >
+                                            {calculateBalance(booking.amount, booking.receivedAmount || 0)}
+                                        </td>
+                                        {role !== 'staff' && (
+  <td className={styles.responsiveCell}>
+    <button
+      onClick={() => handleEditClick(booking)}
+      className={`text-blue-500 hover:text-blue-700 ${booking.approved ? 'cursor-not-allowed opacity-50' : ''}`}
+      disabled={booking.approved}
+    >
+      <IconEdit />
+    </button>
+  </td>
+)}
 
-                                        {/* </tr> */}
-
-                                        <td className={styles.responsiveCell}>{calculateBalance(booking.amount, booking.receivedAmount || 0)}</td>
-                                        <td className={styles.responsiveCell}>
-                                            <button
-                                                onClick={() => handleEditClick(booking)}
-                                                className={`text-blue-500 hover:text-blue-700 ${booking.approved ? 'cursor-not-allowed opacity-50' : ''}`}
-                                                disabled={booking.approved}
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                onClick={() => handleInvoiceClick(booking)}
-                                                className={`text-green-500 hover:text-green-700 ${booking.approved ? 'cursor-not-allowed opacity-50' : ''}`}
-                                                disabled={booking.approved}
-                                            >
-                                                Invoice
-                                            </button>
+                                      
+                                        <td>
                                             <button
                                                 onClick={() => handleApproveClick(booking)}
-                                                className={`text-${booking.approved ? 'green-500' : 'red-500'} hover:text-${booking.approved ? 'green-700' : 'red-700'} ${
-                                                    booking.approved ? 'cursor-not-allowed' : ''
-                                                }`}
+                                                className={`${booking.approved ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-700'} hover:${booking.approved ? 'bg-green-300' : 'bg-red-300'} ${
+                                                    booking.approved ? 'cursor-not-allowed' : 'cursor-pointer'
+                                                } px-4 py-2 rounded`}
                                                 disabled={booking.approved}
                                             >
                                                 {booking.approved ? 'Approved' : 'Approve'}
@@ -750,6 +703,23 @@ const updateTotalBalance = async () => {
                                     </tr>
                                 ))}
                             </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td className={styles.tableCell}></td>
+                                    <td className={styles.tableCell}></td>
+                                    <td className={styles.tableCell}></td>
+                                    <td className={styles.tableCell} style={{ color: 'blue', fontSize: '18px' }}>
+                                        Totals{' '}
+                                    </td>
+                                    <td className={styles.tableCell} style={{ color: 'blue', fontSize: '18px' }}>
+                                        {/* Ensure calculateBalance returns a valid number */}
+                                        {Number(filteredBookings.reduce((total, booking) => total + parseFloat(calculateBalance(booking.amount, booking.receivedAmount || 0)), 0)).toFixed(2)}
+                                    </td>
+
+                                    <td className={styles.tableCell}></td>
+                                    <td className={styles.tableCell}></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
 
@@ -759,12 +729,12 @@ const updateTotalBalance = async () => {
                                 <div className="relative flex flex-col w-full bg-white shadow-lg rounded-lg outline-none focus:outline-none">
                                     <div className="flex items-start justify-between p-5 border-b border-solid rounded-t border-blueGray-200">
                                         <h3 className="text-lg font-semibold text-gray-800">Edit Booking Amount</h3>
-                                        <button
+                                        {/* <button
                                             className="p-1 ml-auto bg-transparent border-0 text-black opacity-5 float-right text-3xl leading-none font-semibold outline-none focus:outline-none"
                                             onClick={() => setEditingBooking(null)}
                                         >
                                             <span className="text-black opacity-5">×</span>
-                                        </button>
+                                        </button> */}
                                     </div>
                                     <div className="relative p-6 flex-auto">
                                         <input
@@ -843,4 +813,4 @@ const updateTotalBalance = async () => {
 };
 
 export default CashCollectionReport;
-// ------------------------------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------

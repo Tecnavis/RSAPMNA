@@ -82,7 +82,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [company, setCompany] = useState<string>('');
     const [customerName, setCustomerName] = useState<string>('');
     const [mobileNumber, setMobileNumber] = useState<string>('');
-    const [serviceVehicle, setServiceVehicle] = useState<string>('');
+    // const [serviceVehicle, setServiceVehicle] = useState<string>('');
     const [vehicleNumber, setVehicleNumber] = useState<string>('');
     const [vehicleModel, setVehicleModel] = useState<string>('');
     const [vehicleSection, setVehicleSection] = useState<string>('');
@@ -150,7 +150,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             // setDis3(editData.dis3 || '');
 
             setVehicleNumber(editData.vehicleNumber || '');
-            setServiceVehicle(editData.serviceVehicle || '');
+            // setServiceVehicle(editData.serviceVehicle || '');
             setVehicleModel(editData.vehicleModel || '');
             setVehicleSection(editData.vehicleSection || '');
             setShowroomLocation(editData.showroomLocation || '');
@@ -272,19 +272,19 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         setBodyShope(insurance);
     };
 
-    useEffect(() => {
-        if (selectedDriver) {
-            const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
+    // useEffect(() => {
+    //     if (selectedDriver) {
+    //         const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
 
-            if (selectedDriverData) {
-                if (selectedDriverData.serviceVehicle) {
-                    setServiceVehicle(renderServiceVehicle(selectedDriverData.serviceVehicle, serviceType));
-                }
-            } else {
-                console.error('Driver not found:', selectedDriver);
-            }
-        }
-    }, [selectedDriver, serviceType, drivers]);
+    //         if (selectedDriverData) {
+    //             if (selectedDriverData.serviceVehicle) {
+    //                 setServiceVehicle(renderServiceVehicle(selectedDriverData.serviceVehicle, serviceType));
+    //             }
+    //         } else {
+    //             console.error('Driver not found:', selectedDriver);
+    //         }
+    //     }
+    // }, [selectedDriver, serviceType, drivers]);
     useEffect(() => {
         console.log('Selected Company ID:', selectedCompany);
         console.log('Companies Data:', companies); // Log the companies array
@@ -409,9 +409,9 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             case 'distance':
                 setDistance(value || 0); // Default to 0 if totalDistance is NaN
                 break;
-            case 'serviceVehicle':
-                setServiceVehicle(value);
-                break;
+            // case 'serviceVehicle':
+            //     setServiceVehicle(value);
+            //     break;
             //---------------------
             case 'selectedDriver':
                 setSelectedDriver(value || '');
@@ -949,13 +949,13 @@ console.log("firstselectedDriverData",selectedDriverData)
         }
     }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope, adjustValue]);
 
-    const renderServiceVehicle = (serviceVehicle: any, serviceType: any) => {
-        if (serviceVehicle && serviceVehicle[serviceType]) {
-            return serviceVehicle[serviceType];
-        } else {
-            return 'Unknown Vehicle';
-        }
-    };
+    // const renderServiceVehicle = (serviceVehicle: any, serviceType: any) => {
+    //     if (serviceVehicle && serviceVehicle[serviceType]) {
+    //         return serviceVehicle[serviceType];
+    //     } else {
+    //         return 'Unknown Vehicle';
+    //     }
+    // };
     const formatDate = (date: any) => {
         const day = date.getDate().toString().padStart(2, '0');
         const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are zero-based
@@ -1084,7 +1084,7 @@ console.log("firstselectedDriverData",selectedDriverData)
                     statusEdit: activeForm === 'withoutMap' ? 'mapbooking' : 'withoutmapbooking',
                     selectedCompany: selectedCompany || '',
                     serviceType: serviceType || '',
-                    serviceVehicle: serviceVehicle || '',
+                    // serviceVehicle: serviceVehicle || '',
                     serviceCategory: serviceCategory || '',
                     vehicleModel: vehicleModel || '',
                     vehicleSection: vehicleSection || '',
@@ -1688,64 +1688,76 @@ console.log("firstselectedDriverData",selectedDriverData)
                                 adjustValue={adjustValue}
                                 bodyShope={bodyShope}
                                 onInsuranceChange={handleBodyInsuranceChange}
+                                // onInsuranceAmountBodyChange={}
                             />
-                            <div>Selected Service Category: {availableServices}</div>
-                            <div className="mt-4 flex items-center">
-                                <label htmlFor="totalSalary" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    Total Amount without insurance
-                                </label>
-                                <div className="form-input flex-1">
-                                    <input
-                                        id="totalSalary"
-                                        type="text"
-                                        name="totalSalary"
-                                        className="w-full  text-bold"
-                                        style={{
-                                            padding: '0.5rem',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '5px',
-                                            fontSize: '1rem',
-                                            outline: 'none',
-                                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                        }}
-                                        value={totalSalary}
-                                        readOnly
-                                    />
-                                </div>
-                            </div>
-                            <div className="mt-4 flex items-center">
-                                <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    Insurance Amount Body
-                                </label>
-                                <div className="form-input flex-1">{insuranceAmountBody}</div>
-                            </div>
-                            <div className="mt-4 flex items-center">
-                                <label htmlFor="updatedTotalSalary" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
-                                    Payable Amount (with insurance)
-                                </label>
-                                <div className="form-input flex-1">
-                                    <input
-                                        id="updatedTotalSalary"
-                                        type="text"
-                                        name="updatedTotalSalary"
-                                        className="w-full text-danger"
-                                        style={{
-                                            padding: '0.5rem',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '5px',
-                                            fontSize: '2rem',
-                                            outline: 'none',
-                                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                        }}
-                                        value={updatedTotalSalary}
-                                        readOnly
-                                    />
-                                </div>
-                            </div>
+                            {/* <div>Selected Service Category: {availableServices}</div> */}
+                            <div className="mt-4 flex items-center space-x-4">
+    {/* Total Amount without insurance */}
+    <div className="flex items-center w-1/3">
+        <label htmlFor="totalSalary" className="ltr:mr-2 rtl:ml-2 mb-0">
+            Total Amount without insurance
+        </label>
+        <div className="form-input flex-1">
+            <input
+                id="totalSalary"
+                type="text"
+                name="totalSalary"
+                className="w-full text-bold"
+                style={{
+                    padding: '0.5rem',
+                    border: '1px solid #ccc',
+                    borderRadius: '5px',
+                    fontSize: '1rem',
+                    outline: 'none',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                }}
+                value={totalSalary}
+                readOnly
+            />
+        </div>
+    </div>
+
+    {/* Insurance Amount Body */}
+    <div className="flex items-center w-1/3">
+        <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 mb-0">
+            Insurance Amount Body
+        </label>
+        <div className="form-input flex-1">
+            {insuranceAmountBody}
+        </div>
+    </div>
+
+    {/* Payable Amount (with insurance) */}
+    <div className="flex items-center w-1/3">
+        <label htmlFor="updatedTotalSalary" className="ltr:mr-2 rtl:ml-2 mb-0">
+            Payable Amount (with insurance)
+        </label>
+        <div className="form-input flex-1">
+            <input
+                id="updatedTotalSalary"
+                type="text"
+                name="updatedTotalSalary"
+                className="w-full text-danger"
+                style={{
+                    padding: '0.5rem',
+                    border: '1px solid #ccc',
+                    borderRadius: '5px',
+                    fontSize: '2rem',
+                    outline: 'none',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                }}
+                value={updatedTotalSalary}
+                readOnly
+            />
+        </div>
+    </div>
+
+</div>
+
                         </div>
                     </React.Fragment>
                 )}
-                <div className={styles.formGroup}>
+                {/* <div className={styles.formGroup}>
                     <label htmlFor="serviceVehicle" className={styles.label}>
                         Service Vehicle Number
                     </label>
@@ -1759,7 +1771,7 @@ console.log("firstselectedDriverData",selectedDriverData)
                         value={serviceVehicle}
                         className={styles.formControl}
                     />
-                </div>
+                </div> */}
 
                 <div className={styles.formGroup}>
                     <label htmlFor="totalDriverDistance" className={styles.label}>
@@ -1808,7 +1820,7 @@ console.log("firstselectedDriverData",selectedDriverData)
 
                 <div className={styles.formGroup}>
                     <label htmlFor="phoneNumber" className={styles.label}>
-                        Phone Number
+                    Mobile Number 1
                     </label>
                     <input
                         id="phoneNumber"
@@ -1824,7 +1836,7 @@ console.log("firstselectedDriverData",selectedDriverData)
 
                 <div className={styles.formGroup}>
                     <label htmlFor="mobileNumber" className={styles.label}>
-                        Mobile Number
+                        Mobile Number 2
                     </label>
                     <input
                         type="tel"

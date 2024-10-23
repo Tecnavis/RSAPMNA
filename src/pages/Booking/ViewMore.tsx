@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { storage } from '../../config/config';
-import { getFirestore, doc, getDoc, updateDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
-import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField } from '@mui/material';
 interface BookingDetails {
     dateTime: string;
     bookingId: string;
@@ -21,7 +20,6 @@ interface BookingDetails {
     totalDriverDistance: string;
     totalDriverSalary: string;
     vehicleNumber: string;
-    selectedDriver:string;
     vehicleModel: string;
     phoneNumber: string;
     mobileNumber: string;
@@ -29,7 +27,6 @@ interface BookingDetails {
     pickupLocation: { name: string; lat: number; lng: number } | null;
     dropoffLocation: { name: string; lat: number; lng: number } | null;
     distance: string;
-    formAdded: string;
     serviceType: string;
     serviceVehicle: string;
     rcBookImageURLs: string[];
@@ -55,14 +52,6 @@ interface FormData {
     rcBookImageURLs: string[];
     vehicleImgURLs: string[];
 }
-
-interface Driver {
-    id: string;
-    name: string;
-    phone: string;
-    companyName: string;
-    // Add other relevant driver fields here
-}
 const ViewMore: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -75,21 +64,7 @@ const ViewMore: React.FC = () => {
     const { search } = useLocation();
     const [showPickupDetails, setShowPickupDetails] = useState(false);
     const [showDropoffDetails, setShowDropoffDetails] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [loadingId, setLoadingId] = useState<string | null>(null);
-    const [dId, setDId] = useState<string | null>(null);
-    const [bId, setBid] = useState<string | null>(null);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [docId, setDocId] = useState<string>('');
-    const [allDrivers, setALLDrivers] = useState<Driver[]>([]);
     const queryParams = new URLSearchParams(search);
-    const [isEditing, setIsEditing] = useState<boolean>(false);
-    const [uniform, setUniform] = useState<string | null>(null);
-    const [inventory, setInventory] = useState<string | null>(null);
-    const [feedbackVideo, setFeedbackVideo] = useState<string | null>(null);
-    const [behavior, setBehavior] = useState<string | null>(null);
-    const [idCard, setIdCard] = useState<string | null>(null);
-    const [fixedPoint, setFixedPoint] = useState<number | null>(null);
     const userName = sessionStorage.getItem('username');
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState<FormData>({
@@ -105,7 +80,15 @@ const ViewMore: React.FC = () => {
         rcBookImageURLs: [],
         vehicleImgURLs: [],
     });
+    const [selectedImage, setSelectedImage] = useState<string | null>(null); // State to hold selected image for modal
 
+    const handleImageClick = (url: string) => {
+        setSelectedImage(url); // Set selected image for modal
+    };
+
+    const closeModal = () => {
+        setSelectedImage(null); // Clear selected image
+    };
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>, field: keyof typeof formData) => {
         const files = event.target.files;
         if (files) {
@@ -132,7 +115,7 @@ const ViewMore: React.FC = () => {
             }));
         }
     };
-
+// ------------------------------------------------------------
     useEffect(() => {
         const fetchBookingDetails = async () => {
             if (!uid || !id) {
@@ -204,6 +187,19 @@ const ViewMore: React.FC = () => {
         fetchBookingDetails();
     }, [db, id, uid]);
 
+    // const togglePickupDetails = () => {
+    //     if (bookingDetails?.status === 'Order Completed') {
+    //         setShowPickupDetails(!showPickupDetails);
+    //         setShowDropoffDetails(false);
+    //     }
+    // };
+    
+    // const toggleDropoffDetails = () => {
+    //     if (bookingDetails?.status === 'Order Completed') {
+    //         setShowDropoffDetails(!showDropoffDetails);
+    //         setShowPickupDetails(false);
+    //     }
+    // };
     const togglePickupDetails = () => {
         setShowPickupDetails(!showPickupDetails);
         setShowDropoffDetails(false);
@@ -213,6 +209,7 @@ const ViewMore: React.FC = () => {
         setShowDropoffDetails(!showDropoffDetails);
         setShowPickupDetails(false);
     };
+    
 
     const handleFormChange = (e: any) => {
         const { name, value } = e.target;
@@ -220,155 +217,6 @@ const ViewMore: React.FC = () => {
             ...prevData,
             [name]: value,
         }));
-    };
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        const parsedValue = value === '' ? null : parseFloat(value); // Convert to number or assign null for empty input
-        setFixedPoint(parsedValue); // Update fixedPoint with the parsed number
-    };
-
-    const handleSaveClick = async () => {
-        try {
-            const docRef = doc(db, `user/${uid}/driverPoint`, docId); // Use the stored document ID
-
-            await updateDoc(docRef, {
-                point: fixedPoint, // Update the field with the new value
-            });
-
-            console.log('Point updated successfully!');
-        } catch (err) {
-            console.error('Error updating point:', err);
-        }
-        setIsEditing(false);
-    };
-
-    const handleEditClick = () => {
-        setIsEditing(true);
-    };
-
-
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        let points = 0;
-        setLoadingId(bId);
-        setLoading(true);
-
-        // Ensure fixedPoint is a number, and set to 0 if null or NaN
-        const validFixedPoint: number = typeof fixedPoint === 'number' ? fixedPoint : typeof fixedPoint === 'string' ? parseFloat(fixedPoint) : 0;
-
-        // Check each field and add points for "yes" answers
-        if (uniform === 'yes') points += validFixedPoint;
-        if (idCard === 'yes') points += validFixedPoint;
-        if (feedbackVideo === 'yes') points += validFixedPoint;
-        if (behavior === 'good') points += validFixedPoint; // Assuming "good" is equivalent to "yes"
-        if (inventory === 'filled') points += validFixedPoint; // Assuming "filled" is equivalent to "yes"
-
-        try {
-            // Ensure that both uid and dId are valid strings
-            console.log(bId,'these are the booking id')
-            console.log(uid,'these are the uid')
-            console.log(dId,'these are the driver id')
-            if (!uid || !dId || !bId) {
-                console.error('Invalid uid, driver ID, or booking ID.');
-                return;
-            }
-
-            // Retrieve the driver document from Firestore
-            const driverDocRef = doc(db, `user/${uid}/driver`, dId);
-            const driverDoc = await getDoc(driverDocRef);
-            console.log(driverDoc, 'this is the driver doc');
-
-            if (driverDoc.exists()) {
-                // Get the current points (if they exist) and add the new points
-                const currentPoints = driverDoc.data().points || 0;
-                console.log(currentPoints, 'this is the current points');
-                const newPoints = currentPoints + points;
-
-                // Update the driver document with the new points
-                console.log(newPoints,'this is the new points')
-                await updateDoc(driverDocRef, {
-                    rewardPoints: newPoints,
-                });
-
-                console.log(`Points updated successfully. New total: ${newPoints}`);
-
-                // Now update the booking document
-                const bookingDocRef = doc(db, `user/${uid}/bookings`, bId);
-                await updateDoc(bookingDocRef, {
-                    formAdded: true,
-                });
-
-                console.log(`Booking updated successfully. formAdded set to true.`);
-
-                // Call handleApprove to update booking status
-                await handleApprove(bId);
-                fetchBookingDetails();
-
-                // Close the request
-                onRequestClose();
-            } else {
-                console.log('Driver document not found.');
-            }
-        } catch (error) {
-            console.error('Error updating points:', error);
-        } finally {
-            setLoadingId(null);
-            setLoading(false);
-        }
-    };
-    
-
-    const onRequestOpen = () => {
-        const selectedDriver = bookingDetails?.selectedDriver;
-        const bookingId = id ?? null; // Ensure bookingId is either a string or null
-    
-        if (selectedDriver) {
-            setDId(selectedDriver);  // Assuming setDId updates the driver's ID state
-            setBid(bookingId);       // Set bookingId (either string or null)
-            setIsModalOpen(true);    // Open the modal
-        } else {
-            console.error('Selected driver is undefined');
-        }
-    };
-    
-
-    const onRequestClose = () => {
-        setIsModalOpen(false);
-        setUniform('');
-        setFeedbackVideo('');
-        setInventory('');
-        setIdCard('');
-        setBehavior('');
-    };
-    const handleApprove = async (bookingId: string) => {
-        setLoadingBookings((prev) => new Set(prev).add(bookingId)); // Add booking ID to loading set
-        try {
-            const db = getFirestore();
-            const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
-
-            // Update the document to set approved to true
-            await updateDoc(bookingRef, {
-                approved: true, // Add the approved field
-            });
-
-            // Update the state to reflect the changes immediately
-            setBookingDetails((prevDetails) => 
-                prevDetails && prevDetails.id === id 
-                  ? { ...prevDetails, approved: true } 
-                  : prevDetails
-              );
-
-            fetchBookingDetails();
-        } catch (error) {
-            console.error('Error updating booking status:', error);
-        } finally {
-            setLoadingBookings((prev) => {
-                const updatedSet = new Set(prev);
-                updatedSet.delete(bookingId); 
-                return updatedSet;
-            });
-        }
     };
 
     const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -397,7 +245,7 @@ const ViewMore: React.FC = () => {
     return (
         <div className="container mx-auto my-8 p-4 bg-white shadow rounded-lg">
             <h5 className="font-semibold text-lg mb-5">Booking Details</h5>
-            {bookingDetails.status === 'Order Completed' && (
+            {/* {bookingDetails.status === 'Order Completed' && ( */}
                 <div className="flex mb-5">
                     <button onClick={togglePickupDetails} className="mr-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
                         {showPickupDetails ? 'Close' : 'Show Pickup Details'}
@@ -406,7 +254,8 @@ const ViewMore: React.FC = () => {
                         {showDropoffDetails ? 'Close' : 'Show Dropoff Details'}
                     </button>
                 </div>
-            )}
+            {/* )} */}
+            
             {showPickupDetails && (
                 <div>
                     <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
@@ -414,7 +263,13 @@ const ViewMore: React.FC = () => {
                         {bookingDetails.rcBookImageURLs.length > 0 ? (
                             bookingDetails.rcBookImageURLs.map((url, index) => (
                                 <div key={index} className="max-w-xs">
-                                    <img src={url} alt={`RC Book Image ${index}`} className="w-full h-auto" />
+                                    <a href={url} download className="block mb-2 text-blue-500">Download</a>
+                                    <img
+                                        src={url}
+                                        alt={`RC Book Image ${index}`}
+                                        className="w-full h-auto cursor-pointer"
+                                        onClick={() => handleImageClick(url)} // Open image in modal
+                                    />
                                 </div>
                             ))
                         ) : (
@@ -427,7 +282,13 @@ const ViewMore: React.FC = () => {
                         {bookingDetails.vehicleImageURLs.length > 0 ? (
                             bookingDetails.vehicleImageURLs.map((url, index) => (
                                 <div key={index} className="max-w-xs">
-                                    <img src={url} alt={`Vehicle Image ${index}`} className="w-full h-auto" />
+                                    <a href={url} download className="block mb-2 text-blue-500">Download</a>
+                                    <img
+                                        src={url}
+                                        alt={`Vehicle Image ${index}`}
+                                        className="w-full h-auto cursor-pointer"
+                                        onClick={() => handleImageClick(url)} // Open image in modal
+                                    />
                                 </div>
                             ))
                         ) : (
@@ -439,12 +300,20 @@ const ViewMore: React.FC = () => {
 
             {showDropoffDetails && (
                 <div>
-                    <h3 className="text-xl font-bold mt-5">Fuel Bill Images</h3>
+                    {bookingDetails.status === 'Order Completed' && (
+                        <h3 className="text-xl font-bold mt-5">Fuel Bill Images</h3>
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {bookingDetails.fuelBillImageURLs.length > 0 ? (
                             bookingDetails.fuelBillImageURLs.map((url, index) => (
                                 <div key={index} className="max-w-xs">
-                                    <img src={url} alt={`Fuel Bill Image ${index}`} className="w-full h-auto" />
+                                    <a href={url} download className="block mb-2 text-blue-500">Download</a>
+                                    <img
+                                        src={url}
+                                        alt={`Fuel Bill Image ${index}`}
+                                        className="w-full h-auto cursor-pointer"
+                                        onClick={() => handleImageClick(url)} // Open image in modal
+                                    />
                                 </div>
                             ))
                         ) : (
@@ -457,7 +326,13 @@ const ViewMore: React.FC = () => {
                         {bookingDetails.vehicleImgURLs.length > 0 ? (
                             bookingDetails.vehicleImgURLs.map((url, index) => (
                                 <div key={index} className="max-w-xs">
-                                    <img src={url} alt={`Vehicle Image ${index}`} className="w-full h-auto" />
+                                    <a href={url} download className="block mb-2 text-blue-500">Download</a>
+                                    <img
+                                        src={url}
+                                        alt={`Vehicle Image ${index}`}
+                                        className="w-full h-auto cursor-pointer"
+                                        onClick={() => handleImageClick(url)} // Open image in modal
+                                    />
                                 </div>
                             ))
                         ) : (
@@ -466,6 +341,26 @@ const ViewMore: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Modal for viewing the selected image */}
+            {selectedImage && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="relative">
+            <img
+                src={selectedImage}
+                alt="Selected"
+                className="max-w-full max-h-[80vh] object-contain" // Limit height to 80% of the viewport height
+            />
+            <button
+                onClick={closeModal}
+                className="absolute top-2 right-2 bg-white text-black rounded-full p-1"
+            >
+                X
+            </button>
+        </div>
+    </div>
+)}
+
 
             <table className="w-full border-collapse mt-5">
                 <tbody>

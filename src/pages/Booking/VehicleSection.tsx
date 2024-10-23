@@ -22,7 +22,9 @@ const VehicleSection = ({
         insurance: bodyShope || '', // Initialize insurance with bodyShope
         insuranceAmountBody: insuranceAmountBody || '', // Allow insurance amount to be an empty string for manual entry
     });
-    const role = sessionStorage.getItem('role');     const adjustmentApplied = useRef(false);
+    const [changedInsuranceAmountBody, setChangedInsuranceAmountBody] = useState(insuranceAmountBody || '');
+    const role = sessionStorage.getItem('role');   
+      const adjustmentApplied = useRef(false);
     const uid = sessionStorage.getItem('uid');
     //    ------------------------------------------------------------
     const db = getFirestore();
@@ -104,7 +106,11 @@ const VehicleSection = ({
         }));
         onInsuranceAmountBodyChange(value);
     };
-
+    const handleChangedInsuranceChange = (e:any) => {
+        const { value } = e.target;
+        setChangedInsuranceAmountBody(value); // Update local state
+        onInsuranceAmountBodyChange(value); // Notify parent component of the change
+    };
     const handleAdjustValueChange = (e: any) => {
         const { value } = e.target;
         onAdjustValueChange(value);
@@ -214,12 +220,12 @@ const VehicleSection = ({
                         </label>
                         {showRoom.insurance === 'insurance' && (
                             <div className="mt-2" style={{ marginTop: '10px', fontSize: '0.9em' }}>
-                                <label style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>Insurance Amount:</label>
+                                <label style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>Insurance Amount (if the insurance amount changes!):</label>
                                 <input
                                     type="number"
-                                    name="insuranceAmount"
-                                    value={showRoom.insuranceAmountBody} // Bind state to input
-                                    onChange={handleInsuranceAmountChange} // Update state and parent component
+                                    name="changedInsuranceAmountBody"
+                                    value={changedInsuranceAmountBody} // Bind state to input
+                                    onChange={handleChangedInsuranceChange} // Update state and parent component
                                     style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }}
                                 />
                             </div>
@@ -238,11 +244,10 @@ const VehicleSection = ({
                     />
                     Showroom
                 </label>
-            </div>
-            <br />
+                <br />
             <div>
-                <div>
-                    <label style={{ fontSize: '1em', color: '#333' }}>Adjustment Value:</label>
+                <div  className="flex items-center ml-6 ">
+                    <label style={{ fontSize: '1.5em', color: 'red',marginRight:'10px' }}>Adjustment Value:</label>
                     <input type="number" value={adjustValue} onChange={handleAdjustValueChange} style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }} />
                     <button
                         onClick={applyAdjustment}
@@ -260,6 +265,8 @@ const VehicleSection = ({
                     </button>
                 </div>
             </div>
+            </div>
+          
         </div>
     );
 };

@@ -40,21 +40,21 @@ const ShowRoomDetails: React.FC = () => {
     const [signInData, setSignInData] = useState({ phoneNumber: '' }); // New state for sign-in form
     const userRole = sessionStorage.getItem('role'); // Assume 'role' is stored in sessionStorage
     console.log("userRole",userRole)
-        // Role-based access control
-        useEffect(() => {
-            if (userRole !== 'admin' && userRole !== 'staff') {
-                toast.error('You are an unauthorized user', { autoClose: 3000 });
-            }
-        }, [userRole]);
+        // // Role-based access control
+        // useEffect(() => {
+        //     if (userRole !== 'admin' && userRole !== 'staff') {
+        //         toast.error('You are an unauthorized user', { autoClose: 3000 });
+        //     }
+        // }, [userRole]);
     
-        // Only allow access if role is 'admin' or 'staff'
-        if (userRole !== 'admin' && userRole !== 'staff') {
-            return (
-                <div style={{ textAlign: 'center', marginTop: '50px' }}>
-                    <h1>You are an unauthorized user</h1>
-                </div>
-            );
-        }
+        // // Only allow access if role is 'admin' or 'staff'
+        // if (userRole !== 'admin' && userRole !== 'staff') {
+        //     return (
+        //         <div style={{ textAlign: 'center', marginTop: '50px' }}>
+        //             <h1>You are an unauthorized user</h1>
+        //         </div>
+        //     );
+        // }
     useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
         setShowRoomDetails({
