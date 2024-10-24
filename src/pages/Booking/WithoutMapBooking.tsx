@@ -260,6 +260,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     };
 
     const handleInsuranceAmountBodyChange = (amount: any) => {
+        console.log("amount",amount)
         setInsuranceAmountBody(amount);
     };
     const handleAdjustValueChange = (newAdjustValue: any) => {
@@ -1037,6 +1038,20 @@ console.log("firstselectedDriverData",selectedDriverData)
             try {
                 const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
                 const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
+                if (!selectedDriverData) {
+                    console.error('Selected driver not found');
+                    return;
+                }
+    
+                const { advancePayment, netTotalAmountInHand} = selectedDriverData;
+    console.log("advancePayment",advancePayment)
+    console.log("netTotalAmountInHand",netTotalAmountInHand)
+
+                // Check if advancePayment is less than or equal to netTotalAmountInHand
+                if (advancePayment < netTotalAmountInHand) {
+                    alert('Exceeds Credit Limit Amount');
+                    return; // Stop execution if condition is not met
+                }
                 const fcmToken = selectedDriverData ? selectedDriverData.fcmToken : null;
                 const pickupDistance = selectedDriverData ? selectedDriverData.pickupDistance || 0 : 0;
 
@@ -1094,7 +1109,7 @@ console.log("firstselectedDriverData",selectedDriverData)
                     trappedLocation: trappedLocation || '',
                     updatedTotalSalary: updatedTotalSalary || 0,
                     insuranceAmountBody: insuranceAmountBody || '',
-                    paymentStatus: 'Not Paid',
+                    // paymentStatus: 'Not Paid',
                     pickupDistance: pickupDistance,
                 };
 

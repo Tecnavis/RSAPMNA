@@ -124,14 +124,14 @@ const CardLayout = () => {
             }
 
             const docRef = await addDoc(collection(db, `user/${uid}/rewarditems`), {
-                name: formData.name,
-                description: formData.description,
-                price: formData.price,
-                category: formData.category,
-                percentage: formData.percentage,
-                stock: formData.stock,
-                points: formData.points,
-                image: imageUrl,
+                name: formData.name || '',
+                description: formData.description || '',
+                price: formData.price || '',
+                category: formData.category || '',
+                percentage: formData.percentage || '',
+                stock: formData.stock || '',
+                points: formData.points || '',
+                image: imageUrl || '',
             });
 
             Swal.fire({

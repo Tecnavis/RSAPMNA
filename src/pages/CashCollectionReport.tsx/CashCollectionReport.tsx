@@ -141,57 +141,7 @@ const CashCollectionReport: React.FC = () => {
         }
     };
 
-    // const handleInvoiceClick = (booking: Booking) => {
-    //     const balance = calculateBalance((booking.amount ?? 0).toString(), booking.receivedAmount || 0);
-    //     navigate(`/users/driver/driverdetails/cashcollection/driverInvoice/${booking.id}`, {
-    //         state: {
-    //             amount: (booking.amount ?? 0).toString(),
-    //             receivedAmount: (booking.receivedAmount ?? 0).toString(),
-    //             balance: balance.toString(),
-    //         },
-    //     });
-    // };
-
-    // const handleAmountReceivedChange = async (bookingId: string, receivedAmount: string) => {
-    //     try {
-    //         if (!uid || typeof uid !== 'string') {
-    //             throw new Error('User ID (uid) is not defined or is not a string.');
-    //         }
-    //         if (!bookingId || typeof bookingId !== 'string') {
-    //             throw new Error('Booking ID is not defined or is not a string.');
-    //         }
-    //         const booking = bookings.find((booking) => booking.id === bookingId);
-    //         const amount = booking?.amount || 0; // Fallback to 0 if booking not found
-
-    //         // Update the booking's receivedAmount and balance
-    //         const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
-    //         await updateDoc(bookingRef, {
-    //             receivedAmount: parseFloat(receivedAmount),
-    //             balance: calculateBalance(amount.toString(), receivedAmount), // Convert amount to string
-    //         });
-
-    //         // Update local state with the new receivedAmount
-    //         setBookings(bookings.map((booking) => (booking.id === bookingId ? { ...booking, receivedAmount: parseFloat(receivedAmount) } : booking)));
-
-    //         await updateTotalBalance();
-    //         // -----------------------------------------------------------------
-    //         // const netTotal = calculateNetTotalAmountInHand();
-    //         if (!id || typeof id !== 'string') {
-    //             throw new Error('Driver ID (id) is not defined or is not a string.');
-    //         }
-
-    //         // Update netTotalAmountInHand in the driver's document
-
-    //         setClickedButtons((prevState) => ({
-    //             ...prevState,
-    //             [bookingId]: true,
-    //         }));
-    //     } catch (error) {
-    //         console.error('Error updating received amount:', error);
-    //     }
-    // };
-
-    const calculateBalance = (amount: string | number, receivedAmount: string | number) => {
+   const calculateBalance = (amount: string | number, receivedAmount: string | number) => {
         return (parseFloat(amount.toString()) - parseFloat(receivedAmount.toString())).toFixed(2);
     };
 
@@ -447,11 +397,12 @@ const CashCollectionReport: React.FC = () => {
 
             updatedBookings.forEach((booking) => {
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
-               
+                const receivedAmt = typeof booking.receivedAmount === 'number' ? booking.receivedAmount : 0;
+
                 batch.update(bookingRef, {
-                    receivedAmount: booking.receivedAmount,
-                    balance: calculateBalance(booking.amount, booking.receivedAmount || 0),
-                    role: role || 'unknown', // Add role to the update
+receivedAmount: receivedAmt,
+balance: String(calculateBalance(booking.amount, booking.receivedAmount || 0)), // Ensure it's stored as a string
+role: role || 'unknown', // Add role to the update
                     userName: userName || 'unknown',
                 });
             });
