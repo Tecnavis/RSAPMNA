@@ -655,7 +655,7 @@ console.log(bookingDetails?.bookingId,'this is the booking details booking id')
                     {showForm ? 'Close Form' : 'Booking Completed'}
                 </button>
 
-                {bookingDetails.selectedDriver && bookingDetails.status === 'Order Completed' &&
+                {bookingDetails.selectedDriver &&
                                                         !bookingDetails.formAdded &&
                                                         allDrivers.some((driver) => driver.id === bookingDetails.selectedDriver && driver.companyName === 'RSA') ? (
                                                             // Check if the booking matches the selected driver and the company name
