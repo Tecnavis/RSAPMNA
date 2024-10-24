@@ -132,6 +132,7 @@ const ShowRoom: React.FC = () => {
     const [manualLng, setManualLng] = useState<string>('');
     const [generatedLink, setGeneratedLink] = useState<string>('');
     const qrRef = useRef<HTMLDivElement>(null); // Change the type to HTMLDivElement
+    const [manualLatLng, setManualLatLng] = useState<string>(''); // Initialize with an empty string
 
     console.log(baseLocation, 'the baseLocation');
     const uid = sessionStorage.getItem('uid');
@@ -246,6 +247,8 @@ console.log("userRole",userRole)
             }
         }
         const baseLocation = showRoom.Location.split(',')[0];
+        const [manualLat, manualLng] = manualLatLng.split(',').map(coord => coord.trim());
+
         const newShowRoom: ShowRoomType = {
             ...showRoom,
             createdAt: timestamp,
@@ -343,8 +346,13 @@ console.log("userRole",userRole)
     const onConfirmAction = async () => {
         if (isEditing) {
             const roomToEdit = existingShowRooms.find((room) => room.id === currentRoomId);
-            console.log('Editing room:', roomToEdit); // Debugging line
-            setOpen(true);
+            // if (roomToEdit) {
+            //     // Split manualLatLng into manualLat and manualLng if manualLatLng is present
+            //     if (roomToEdit.manualLat && roomToEdit.manualLng) {
+            //         setManualLat(roomToEdit.manualLat.toString()); // Convert to string for input
+            //         setManualLng(roomToEdit.manualLng.toString()); // Convert to string for input
+            //     }
+                            setOpen(true);
             setShowRoom(roomToEdit!);
             setManualLocationName(roomToEdit?.manualLocationName || '');
             setManualLat(roomToEdit?.manualLat.toString() || ''); // Convert to string for input
@@ -389,8 +397,7 @@ console.log("userRole",userRole)
     };
     const handleManualInputChange = (event: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = event.target;
-        const numericValue = parseFloat(value); // Convert string to number
-
+    
         if (name === 'manualLocationName') {
             setManualLocationName(value);
             setShowRoom((prevShowRoom) => ({
@@ -398,22 +405,19 @@ console.log("userRole",userRole)
                 manualLocationName: value, // Update state here
                 Location: value,
             }));
-        } else if (name === 'manualLat') {
-            setManualLat(value);
-            setShowRoom((prevShowRoom) => ({
-                ...prevShowRoom,
-                manualLat: numericValue, // Update state here
-                locationLatLng: { ...prevShowRoom.locationLatLng, lat: numericValue }, // Ensure lat is a number
-            }));
-        } else if (name === 'manualLng') {
-            setManualLng(value);
-            setShowRoom((prevShowRoom) => ({
-                ...prevShowRoom,
-                manualLng: numericValue, // Update state here
-                locationLatLng: { ...prevShowRoom.locationLatLng, lng: numericValue }, // Ensure lng is a number
-            }));
+        } else if (name === 'manualLatLng') { // Update for combined input
+            const [lat, lng] = value.split(',').map((coord) => parseFloat(coord.trim())); // Split and parse
+            if (!isNaN(lat) && !isNaN(lng)) {
+                setManualLatLng(value); // Set the full comma-separated string
+                setShowRoom((prevShowRoom) => ({
+                    ...prevShowRoom,
+                    locationLatLng: { lat, lng }, // Update latitude and longitude
+                }));
+            }
         }
     };
+    
+    // -----------------------------------------------------------------
 
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
@@ -788,22 +792,36 @@ console.log("userRole",userRole)
                             />
                         </div>
                         <div className="mb-4" style={{ marginBottom: '16px' }}>
-                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                                Location
-                            </label>
-                            <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" width="100%" sx={{ gap: 2 }}>
-                                <TextField label="Manual Location Name" name="manualLocationName" value={manualLocationName} onChange={handleManualInputChange} fullWidth variant="outlined" />
+    <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+        Location
+    </label>
+    <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" width="100%" sx={{ gap: 2 }}>
+        <TextField
+            label="Manual Location Name"
+            name="manualLocationName"
+            value={manualLocationName}
+            onChange={handleManualInputChange}
+            fullWidth
+            variant="outlined"
+        />
+        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(manualLocationName)}`} target="_blank" rel="noopener noreferrer">
+            <IconMapPin />
+        </a>
+        <TextField
+            label="Latitude,Longitude"
+            name="manualLatLng" // Ensure the name matches the handler
+            value={manualLatLng} // Use the state variable
+            onChange={handleManualInputChange} // Use the updated handler
+            placeholder="e.g. 40.7128,-74.0060"
+            fullWidth
+            variant="outlined"
+        />
+        {showRoom.locationLatLng.lat && showRoom.locationLatLng.lng && (
+            <Typography>{`Location Lat/Lng: ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`}</Typography>
+        )}
+    </Box>
+</div>
 
-                                <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(manualLocationName)}`} target="_blank" rel="noopener noreferrer">
-                                    <IconMapPin />
-                                </a>
-                                <TextField label="Latitude" name="manualLat" value={manualLat} onChange={handleManualInputChange} fullWidth variant="outlined" />
-                                <TextField label="Longitude" name="manualLng" value={manualLng} onChange={handleManualInputChange} fullWidth variant="outlined" />
-                                {showRoom.locationLatLng.lat && showRoom.locationLatLng.lng && (
-                                    <Typography>{`Location Lat/Lng: ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`}</Typography>
-                                )}
-                            </Box>
-                        </div>
 
                         <div className="mb-4" style={{ marginBottom: '16px' }}>
                             <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>

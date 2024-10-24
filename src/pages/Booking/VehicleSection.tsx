@@ -18,16 +18,19 @@ const VehicleSection = ({
     const [showRoom, setShowRoom] = useState({
         availableServices: serviceCategory || '',
         hasInsurance: '',
+        lifting: '',
         insuranceAmount: '',
         insurance: bodyShope || '', // Initialize insurance with bodyShope
         insuranceAmountBody: insuranceAmountBody || '', // Allow insurance amount to be an empty string for manual entry
     });
-    const [changedInsuranceAmountBody, setChangedInsuranceAmountBody] = useState(insuranceAmountBody || '');
+    const [changedInsuranceAmountBody, setChangedInsuranceAmountBody] = useState('');
+    console.log("changedInsuranceAmountBody",changedInsuranceAmountBody)
     const role = sessionStorage.getItem('role');   
       const adjustmentApplied = useRef(false);
     const uid = sessionStorage.getItem('uid');
     //    ------------------------------------------------------------
     const db = getFirestore();
+    
 
     useEffect(() => {
         const fetchInsuranceAmountBody = async () => {
@@ -55,10 +58,10 @@ const VehicleSection = ({
             }
         };
 
-        if (showroomLocation) {
+        if (!changedInsuranceAmountBody && showroomLocation) {
             fetchInsuranceAmountBody();
         }
-    }, [showroomLocation, onInsuranceAmountBodyChange]);
+    }, [showroomLocation, changedInsuranceAmountBody, onInsuranceAmountBodyChange]);
     useEffect(() => {
         if (bodyShope !== showRoom.insurance) {
             setShowRoom((prevShowRoom) => ({
@@ -73,11 +76,14 @@ const VehicleSection = ({
                 ...prevShowRoom,
                 availableServices: serviceCategory,
             }));
+            
         }
+
     }, [serviceCategory]);
 
     const handleServiceChange = (e: any) => {
         const { value } = e.target;
+        console.log("valuess",value)
         setShowRoom((prevShowRoom) => ({
             ...prevShowRoom,
             availableServices: value,
@@ -108,8 +114,9 @@ const VehicleSection = ({
     };
     const handleChangedInsuranceChange = (e:any) => {
         const { value } = e.target;
-        setChangedInsuranceAmountBody(value); // Update local state
-        onInsuranceAmountBodyChange(value); // Notify parent component of the change
+        setChangedInsuranceAmountBody(value);
+console.log("changedInsuranceAmountBodyyy",value)      
+  onInsuranceAmountBodyChange(value); // Notify parent component of the change
     };
     const handleAdjustValueChange = (e: any) => {
         const { value } = e.target;
@@ -232,7 +239,7 @@ const VehicleSection = ({
                         )}
                     </div>
                 )}
-                <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
+                 <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
                     <input
                         type="radio"
                         name="availableServices"
@@ -243,6 +250,18 @@ const VehicleSection = ({
                         style={{ marginRight: '5px' }}
                     />
                     Showroom
+                </label>
+                <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
+                    <input
+                        type="radio"
+                        name="lifting"
+                        value="lifting"
+                        checked={showRoom.availableServices === 'lifting'}
+                        onChange={handleServiceChange}
+                        className="mr-1"
+                        style={{ marginRight: '5px' }}
+                    />
+                    Lifting
                 </label>
                 <br />
             <div>
