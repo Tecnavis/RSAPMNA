@@ -260,7 +260,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     };
 
     const handleInsuranceAmountBodyChange = (amount: any) => {
-        console.log("amount",amount)
+        console.log('amount', amount);
         setInsuranceAmountBody(amount);
     };
     const handleAdjustValueChange = (newAdjustValue: any) => {
@@ -289,12 +289,12 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     useEffect(() => {
         console.log('Selected Company ID:', selectedCompany);
         console.log('Companies Data:', companies); // Log the companies array
-    
+
         if (selectedCompany) {
             // Find the company details corresponding to the selected company
             const foundCompanyData = companies.find((company) => company.id === selectedCompany); // Update this to match your company data structure
-            console.log("foundCompanyData", foundCompanyData);
-    
+            console.log('foundCompanyData', foundCompanyData);
+
             if (foundCompanyData) {
                 console.log('Found Company Data:', foundCompanyData);
                 setSelectedCompanyData(foundCompanyData);
@@ -307,8 +307,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             setSelectedCompanyData(null);
         }
     }, [selectedCompany, companies]); // Use 'companies' instead of 'drivers'
-    
-    
+
     const handleInputChange = (field: any, value: any) => {
         switch (field) {
             case 'showroomLocation':
@@ -418,7 +417,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 setSelectedDriver(value || '');
 
                 const selectedDriverData = drivers.find((driver) => driver.id === value);
-console.log("firstselectedDriverData",selectedDriverData)
+                console.log('firstselectedDriverData', selectedDriverData);
                 if (selectedDriverData) {
                     const isRSA = selectedDriverData.companyName === 'RSA';
 
@@ -810,7 +809,6 @@ console.log("firstselectedDriverData",selectedDriverData)
 
     // Calculate total salary based on filtered serviceDetails
     useEffect(() => {
-
         if (drivers.length > 0) {
             const totalSalaries = drivers.map((driver) => {
                 const isRSA = driver.companyName === 'RSA';
@@ -1042,10 +1040,10 @@ console.log("firstselectedDriverData",selectedDriverData)
                     console.error('Selected driver not found');
                     return;
                 }
-    
-                const { advancePayment, netTotalAmountInHand} = selectedDriverData;
-    console.log("advancePayment",advancePayment)
-    console.log("netTotalAmountInHand",netTotalAmountInHand)
+
+                const { advancePayment, netTotalAmountInHand } = selectedDriverData;
+                console.log('advancePayment', advancePayment);
+                console.log('netTotalAmountInHand', netTotalAmountInHand);
 
                 // Check if advancePayment is less than or equal to netTotalAmountInHand
                 if (advancePayment < netTotalAmountInHand) {
@@ -1707,68 +1705,64 @@ console.log("firstselectedDriverData",selectedDriverData)
                             />
                             {/* <div>Selected Service Category: {availableServices}</div> */}
                             <div className="mt-4 flex items-center space-x-4">
-    {/* Total Amount without insurance */}
-    <div className="flex items-center w-1/3">
-        <label htmlFor="totalSalary" className="ltr:mr-2 rtl:ml-2 mb-0">
-            Total Amount without insurance
-        </label>
-        <div className="form-input flex-1">
-            <input
-                id="totalSalary"
-                type="text"
-                name="totalSalary"
-                className="w-full text-bold"
-                style={{
-                    padding: '0.5rem',
-                    border: '1px solid #ccc',
-                    borderRadius: '5px',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                }}
-                value={totalSalary}
-                readOnly
-            />
-        </div>
-    </div>
+                                {/* Total Amount without insurance */}
+                                <div className="flex items-center w-1/3">
+                                    <label htmlFor="totalSalary" className="ltr:mr-2 rtl:ml-2 mb-0">
+                                        Total Amount without insurance
+                                    </label>
+                                    <div className="form-input flex-1">
+                                        <input
+                                            id="totalSalary"
+                                            type="text"
+                                            name="totalSalary"
+                                            className="w-full text-bold"
+                                            style={{
+                                                padding: '0.5rem',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '5px',
+                                                fontSize: '1rem',
+                                                outline: 'none',
+                                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                                            }}
+                                            value={totalSalary}
+                                            readOnly
+                                        />
+                                    </div>
+                                </div>
 
-    {/* Insurance Amount Body */}
-    <div className="flex items-center w-1/3">
-        <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 mb-0">
-            Insurance Amount Body
-        </label>
-        <div className="form-input flex-1">
-            {insuranceAmountBody}
-        </div>
-    </div>
+                                {/* Insurance Amount Body */}
+                                <div className="flex items-center w-1/3">
+                                    <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 mb-0">
+                                        Insurance Amount Body
+                                    </label>
+                                    <div className="form-input flex-1">{insuranceAmountBody}</div>
+                                </div>
 
-    {/* Payable Amount (with insurance) */}
-    <div className="flex items-center w-1/3">
-        <label htmlFor="updatedTotalSalary" className="ltr:mr-2 rtl:ml-2 mb-0">
-            Payable Amount (with insurance)
-        </label>
-        <div className="form-input flex-1">
-            <input
-                id="updatedTotalSalary"
-                type="text"
-                name="updatedTotalSalary"
-                className="w-full text-danger"
-                style={{
-                    padding: '0.5rem',
-                    border: '1px solid #ccc',
-                    borderRadius: '5px',
-                    fontSize: '2rem',
-                    outline: 'none',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                }}
-                value={updatedTotalSalary}
-                readOnly
-            />
-        </div>
-    </div>
-
-</div>
-
+                                {/* Payable Amount (with insurance) */}
+                                <div className="flex items-center w-1/3">
+                                    <label htmlFor="updatedTotalSalary" className="ltr:mr-2 rtl:ml-2 mb-0">
+                                        Payable Amount (with insurance)
+                                    </label>
+                                    <div className="form-input flex-1">
+                                        <input
+                                            id="updatedTotalSalary"
+                                            type="text"
+                                            name="updatedTotalSalary"
+                                            className="w-full text-danger"
+                                            style={{
+                                                padding: '0.5rem',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '5px',
+                                                fontSize: '2rem',
+                                                outline: 'none',
+                                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                                            }}
+                                            value={updatedTotalSalary}
+                                            readOnly
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </React.Fragment>
                 )}
@@ -1835,7 +1829,7 @@ console.log("firstselectedDriverData",selectedDriverData)
 
                 <div className={styles.formGroup}>
                     <label htmlFor="phoneNumber" className={styles.label}>
-                    Mobile Number 1
+                        Mobile Number 1
                     </label>
                     <input
                         id="phoneNumber"

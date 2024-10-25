@@ -346,18 +346,18 @@ console.log("userRole",userRole)
     const onConfirmAction = async () => {
         if (isEditing) {
             const roomToEdit = existingShowRooms.find((room) => room.id === currentRoomId);
-            // if (roomToEdit) {
-            //     // Split manualLatLng into manualLat and manualLng if manualLatLng is present
-            //     if (roomToEdit.manualLat && roomToEdit.manualLng) {
-            //         setManualLat(roomToEdit.manualLat.toString()); // Convert to string for input
-            //         setManualLng(roomToEdit.manualLng.toString()); // Convert to string for input
-            //     }
-                            setOpen(true);
+            console.log('Editing room:', roomToEdit); // Debugging line
+           
+            setOpen(true);
             setShowRoom(roomToEdit!);
             setManualLocationName(roomToEdit?.manualLocationName || '');
-            setManualLat(roomToEdit?.manualLat.toString() || ''); // Convert to string for input
-            setManualLng(roomToEdit?.manualLng.toString() || ''); // Convert to string for input
+             // Split manualLatLng here and set state
+        const { manualLat, manualLng } = roomToEdit!;
+        setManualLat(manualLat.toString()); // Convert to string for input
+        setManualLng(manualLng.toString()); // Convert to string for input
+        setManualLatLng(`${manualLat},${manualLng}`); // Set combined input
 
+            
             console.log('Set showroom state:', roomToEdit); // Debugging line
             setEditRoomId(currentRoomId);
             formRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -366,7 +366,9 @@ console.log("userRole",userRole)
                 console.error('Invalid currentRoomId');
                 toast.error('Invalid showroom ID, cannot delete!', { autoClose: 3000 });
                 return;
-            }            const db = getFirestore();
+            }           
+            
+            const db = getFirestore();
             const roomRef = doc(db, `user/${uid}/showroom`, currentRoomId);
             try {
                 await deleteDoc(roomRef);
