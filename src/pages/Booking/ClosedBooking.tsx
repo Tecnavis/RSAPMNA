@@ -45,10 +45,10 @@ const ClosedBooking: React.FC = () => {
     const [dId, setDId] = useState<string | null>(null);
     const [bId, setBid] = useState<string | null>(null);
     const [loadingBookings, setLoadingBookings] = useState<Set<string>>(new Set());
-
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
     const navigate = useNavigate();
+    
     const fetchPoints = async () => {
         try {
             const querySnapshot = await getDocs(collection(db, `user/${uid}/driverPoint`));
@@ -112,7 +112,7 @@ const ClosedBooking: React.FC = () => {
     }, [uid]);
     const handleViewMore = (id: string) => {
         navigate(`/bookings/newbooking/viewmore/${id}`);
-      };
+    };
     const handleApprove = async (bookingId: string) => {
         setLoadingBookings((prev) => new Set(prev).add(bookingId)); // Add booking ID to loading set
         try {
@@ -132,7 +132,7 @@ const ClosedBooking: React.FC = () => {
         } finally {
             setLoadingBookings((prev) => {
                 const updatedSet = new Set(prev);
-                updatedSet.delete(bookingId); 
+                updatedSet.delete(bookingId);
                 return updatedSet;
             });
         }
@@ -210,7 +210,7 @@ const ClosedBooking: React.FC = () => {
 
         try {
             // Ensure that both uid and dId are valid strings
-           
+
             if (!uid || !dId || !bId) {
                 console.error('Invalid uid, driver ID, or booking ID.');
                 return;
@@ -292,73 +292,15 @@ const ClosedBooking: React.FC = () => {
                                                     <td className="p-2 text-sm block md:table-cell">{booking.serviceType}</td>
                                                     <td className="p-2 text-sm block md:table-cell">{booking.vehicleNumber}</td>
                                                     <td>
-                                                    <Button
-                              variant="contained"
-                              color="primary"
-                              onClick={() => handleViewMore(booking.id)}  // Navigate on click
-                            >
-                              View More
-                            </Button>
+                                                        <Button
+                                                            variant="contained"
+                                                            color="primary"
+                                                            onClick={() => handleViewMore(booking.id)} // Navigate on click
+                                                        >
+                                                            View More
+                                                        </Button>
                                                     </td>
                                                     <td className="p-2 text-sm block md:table-cell">
-                                                        {/* {booking.selectedDriver &&
-                                                        !booking.formAdded &&
-                                                        allDrivers.some((driver) => driver.id === booking.selectedDriver && driver.companyName === 'RSA') ? (
-                                                            // Check if the booking matches the selected driver and the company name
-                                                            <button
-                                                                style={{
-                                                                    backgroundColor: 'green',
-                                                                    color: '#fff',
-                                                                    border: '1px solid #007bff',
-                                                                    padding: '8px 16px',
-                                                                    fontSize: '16px',
-                                                                    borderRadius: '4px',
-                                                                    cursor: 'pointer',
-                                                                    transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
-                                                                }}
-                                                                onClick={() => onRequestOpen(booking.selectedDriver, booking.id)}
-                                                            >
-                                                                {booking.status === 'Approved' ? 'Approved' : 'Open form'}
-                                                            </button>
-                                                        ) : (
-                                                            // Fallback if the driver doesn’t match or no driver is selected
-                                                            <div>
-                                                                {loading ? (
-                                                                    <button
-                                                                        style={{
-                                                                            backgroundColor: '#007bff',
-                                                                            color: '#fff',
-                                                                            border: '1px solid #007bff',
-                                                                            padding: '8px 16px',
-                                                                            fontSize: '16px',
-                                                                            borderRadius: '4px',
-                                                                            cursor: 'pointer',
-                                                                            transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
-                                                                        }}
-                                                                        disabled={booking.status === 'Approved'}
-                                                                    >
-                                                                        <CircularProgress size={24} color="inherit" />
-                                                                    </button>
-                                                                ) : (
-                                                                    <button
-                                                                        style={{
-                                                                            backgroundColor: '#007bff',
-                                                                            color: '#fff',
-                                                                            border: '1px solid #007bff',
-                                                                            padding: '8px 16px',
-                                                                            fontSize: '16px',
-                                                                            borderRadius: '4px',
-                                                                            cursor: 'pointer',
-                                                                            transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
-                                                                        }}
-                                                                        onClick={() => handleApprove(booking.id)}
-                                                                        disabled={booking.status === 'Approved'}
-                                                                    >
-                                                                        {booking.status === 'Approved' ? 'Approved' : 'Approve'}
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        )} */}
                                                     </td>
                                                 </tr>
                                             ))}
