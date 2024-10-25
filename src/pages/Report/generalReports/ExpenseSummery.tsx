@@ -7,18 +7,12 @@ import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconTrashLines from '../../../components/Icon/IconTrashLines';
 import IconEdit from '../../../components/Icon/IconEdit';
 import IconEye from '../../../components/Icon/IconEye';
-import { collection, getDocs, getFirestore, query, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-
-const generateExpenseId = () => {
-    const timestamp = Date.now().toString(); // Current timestamp
-    const randomStr = Math.random().toString(36).substring(2, 8); // Random string
-    return `EXP-${timestamp}-${randomStr}`;
-};
+import { collection, getDocs, getFirestore, doc, deleteDoc, query } from 'firebase/firestore';
 
 const ExpenseSummery = () => {
     const dispatch = useDispatch();
     useEffect(() => {
-        dispatch(setPageTitle('Expense List'));
+        dispatch(setPageTitle('Driver List'));
     }, [dispatch]);
 
     const [items, setItems] = useState([]);
@@ -31,72 +25,55 @@ const ExpenseSummery = () => {
     const [selectedRecords, setSelectedRecords] = useState([]);
     const [search, setSearch] = useState('');
     const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({
-        columnAccessor: 'customerName',
+        columnAccessor: 'driverName',
         direction: 'asc',
     });
 
     const db = getFirestore();
-    const uid = sessionStorage.getItem('uid')
+    const uid = sessionStorage.getItem('uid');
 
     useEffect(() => {
-        const fetchExpensesAndDrivers = async () => {
+        const fetchDriversAndExpenses = async () => {
             try {
-                const expensesQuery = query(collection(db, `user/${uid}/bookings`));
                 const driversQuery = query(collection(db, `user/${uid}/driver`));
+                const driversSnapshot = await getDocs(driversQuery);
 
-                const [expensesSnapshot, driversSnapshot] = await Promise.all([
-                    getDocs(expensesQuery),
-                    getDocs(driversQuery)
-                ]);
+                const driversData = await Promise.all(
+                    driversSnapshot.docs.map(async (driverDoc) => {
+                        const driverData = { id: driverDoc.id, ...driverDoc.data() };
 
-                const driversData = {};
-                driversSnapshot.forEach((doc) => {
-                    driversData[doc.id] = doc.data();
-                });
+                        // Fetch Expenses sub-collection
+                        const expensesQuery = query(collection(db, `user/${uid}/driver/${driverDoc.id}/Expenses`));
+                        const expensesSnapshot = await getDocs(expensesQuery);
+                        const expenses = expensesSnapshot.docs.map((expenseDoc) => ({
+                            id: expenseDoc.id,
+                            ...expenseDoc.data(),
+                        }));
 
-                const expensesData = [];
-                for (const docSnapshot of expensesSnapshot.docs) {
-                    const expense = docSnapshot.data();
+                        // Assign the latest expense name or any other logic you prefer
+                        driverData.expenseName = expenses.length > 0 ? expenses[0].expenseName : 'N/A';
+                        return driverData;
+                    })
+                );
 
-                    if (!expense.ExpenseId) {
-                        const expenseId = generateExpenseId();
-                        expense.ExpenseId = expenseId;
-                        // Update the Firestore document with the new ExpenseId
-                        await updateDoc(doc(db, `user/${uid}/bookings`, docSnapshot.id), { ExpenseId: expenseId });
-                    }
-
-                    // Add driver information
-                    const driverId = expense.selectedDriver;
-                    const driver = driversData[driverId];
-                    if (driver) {
-                        expense.driverName = driver.driverName;
-                        expense.driverImg = driver.profileImageUrl; // Assuming there's an 'img' field in the driver data
-                    }
-
-                    expensesData.push({ id: docSnapshot.id, ...expense });
-                }
-
-                setItems(expensesData);
-                setInitialRecords(sortBy(expensesData, 'ExpenseId')); // Assuming 'ExpenseId' is the field you want to sort by initially
+                setItems(driversData);
+                setInitialRecords(sortBy(driversData, 'driverName'));
                 setLoading(false);
             } catch (error) {
-                console.error('Error fetching expenses or drivers:', error);
+                console.error('Error fetching drivers and expenses:', error);
                 setLoading(false);
             }
         };
 
-        fetchExpensesAndDrivers();
+        fetchDriversAndExpenses();
     }, [db]);
 
     useEffect(() => {
         const filteredRecords = items.filter((item) => {
             return (
-                item.ExpenseId?.toLowerCase().includes(search.toLowerCase()) ||
-                item.customerName?.toLowerCase().includes(search.toLowerCase()) ||
+                item.driverName?.toLowerCase().includes(search.toLowerCase()) ||
                 item.email?.toLowerCase().includes(search.toLowerCase()) ||
-                item.dateTime?.toLowerCase().includes(search.toLowerCase()) ||
-                item.updatedTotalSalary?.toString().toLowerCase().includes(search.toLowerCase()) ||
-                item.status?.toLowerCase().includes(search.toLowerCase())
+                item.phone?.toLowerCase().includes(search.toLowerCase())
             );
         });
         setInitialRecords(filteredRecords);
@@ -117,14 +94,14 @@ const ExpenseSummery = () => {
     const deleteRow = async (id) => {
         if (window.confirm('Are you sure want to delete selected row ?')) {
             try {
-                await deleteDoc(doc(db, `user/${uid}/expenses`, id));
+                await deleteDoc(doc(db, `user/${uid}/driver`, id));
                 const updatedRecords = items.filter((item) => item.id !== id);
                 setItems(updatedRecords);
                 setInitialRecords(updatedRecords);
                 setRecords(updatedRecords.slice((page - 1) * pageSize, page * pageSize));
                 setSelectedRecords([]);
             } catch (error) {
-                console.error('Error deleting expense:', error);
+                console.error('Error deleting driver:', error);
             }
         }
     };
@@ -150,54 +127,51 @@ const ExpenseSummery = () => {
                         records={records}
                         columns={[
                             {
-                                accessor: 'ExpenseId',
+                                accessor: 'driverName',
                                 sortable: true,
-                                render: ({ ExpenseId, id }) => (
-                                    <NavLink
-                                        to={{
-                                            pathname: `/general/expense/preview/${id}`, // Ensure `${id}` is correctly interpolated
-                                        }}
-                                    >
-                                        <div className="text-primary underline hover:no-underline font-semibold">{`#${ExpenseId}`}</div>
-                                    </NavLink>
-                                ),
+                                render: ({ driverName }) => <div className="font-semibold">{driverName}</div>,
                             },
                             {
-                                accessor: 'dateTime',
-                                sortable: true,
-                            },
-                            {
-                                accessor: 'driver',
-                                sortable: true,
-                                render: ({ driverName, driverImg }) => (
+                                accessor: 'profileImageUrl',
+                                sortable: false,
+                                render: ({ profileImageUrl }) => (
                                     <div className="flex items-center font-semibold">
-                                        <div className="p-0.5 bg-white-dark/30 rounded-full w-max ltr:mr-2 rtl:ml-2">
-                                            <img className="h-8 w-8 rounded-full object-cover" src={driverImg} alt={driverName} />
-                                        </div>
-                                        <div>{driverName}</div>
+                                        <img className="h-8 w-8 rounded-full object-cover" src={profileImageUrl} alt="Driver" />
                                     </div>
                                 ),
                             },
                             {
-                                accessor: 'customerName',
+                                accessor: 'email',
                                 sortable: true,
                             },
                             {
-                                accessor: 'fuelBillAmount',
+                                accessor: 'phone',
                                 sortable: true,
                             },
-                         
-                            // {
-                            //     accessor: 'payable amount',
-                            //     sortable: true,
-                            //     titleClassName: 'text-right',
-                            //     render: ({ updatedTotalSalary }) => <div className="text-right font-semibold">{`$${updatedTotalSalary}`}</div>,
-                            // },
-                            // {
-                            //     accessor: 'status',
-                            //     sortable: true,
-                            //     render: ({ paymentStatus }) => <span className={`badge badge-outline-${paymentStatus === 'Paid' ? 'success' : 'warning'}`}>{paymentStatus}</span>,
-                            // },
+                            {
+                                accessor: 'expenseName',
+                                title: 'Expense Name',
+                                sortable: true,
+                                render: ({ expenseName }) => (
+                                    <div>{expenseName}</div>
+                                ),
+                            },
+                            {
+                                accessor: 'amount',
+                                title: 'Expense Amount',
+                                sortable: true,
+                                render: ({ amount }) => (
+                                    <div>{amount}</div>
+                                ),
+                            },
+                            {
+                                accessor: 'createdAt',
+                                title: 'Date & Time',
+                                sortable: true,
+                                render: ({ createdAt }) => (
+                                    <div>{createdAt}</div>
+                                ),
+                            },
                             {
                                 accessor: 'action',
                                 title: 'Actions',
@@ -205,10 +179,10 @@ const ExpenseSummery = () => {
                                 textAlignment: 'center',
                                 render: ({ id }) => (
                                     <div className="flex gap-4 items-center w-max mx-auto">
-                                        <NavLink to={`/apps/expense/edit/${id}`} className="flex hover:text-info">
+                                        <NavLink to={`/apps/driver/edit/${id}`} className="flex hover:text-info">
                                             <IconEdit className="w-4.5 h-4.5" />
                                         </NavLink>
-                                        <NavLink to={`/apps/expense/preview/${id}`} className="flex hover:text-primary">
+                                        <NavLink to={`/apps/driver/view/${id}`} className="flex hover:text-primary">
                                             <IconEye />
                                         </NavLink>
                                         <button type="button" className="flex hover:text-danger" onClick={() => deleteRow(id)}>
