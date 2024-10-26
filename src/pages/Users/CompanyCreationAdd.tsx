@@ -48,6 +48,7 @@ const CompanyCreationAdd = () => {
 
     const [companyName, setCompanyName] = useState("Company");
     const [errorMessage, setErrorMessage] = useState('');
+    const [advance, setAdvance] = useState('0');
 
     const [personalphone, setPersonalPhone] = useState('');
     const [salaryPerKm, setSalaryPerKm] = useState<SalaryPerKm>({});
@@ -311,7 +312,8 @@ const [phoneError, setPhoneError] = useState('');
                 basicSalaries,
                 password,
                 confirmPassword,
-                profileImageUrl // Use the corrected variable name
+                profileImageUrl ,
+advance,
             };
     
             if (editData) {

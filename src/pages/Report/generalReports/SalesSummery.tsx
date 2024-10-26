@@ -8,84 +8,108 @@ import IconTrashLines from '../../../components/Icon/IconTrashLines';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconEdit from '../../../components/Icon/IconEdit';
 import IconEye from '../../../components/Icon/IconEye';
-import { collection, getDocs, getFirestore, query, updateDoc, doc, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, getFirestore, query, updateDoc, doc, where, orderBy, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import dayjs from 'dayjs';
 
-const generateInvoiceId = () => {
-    const timestamp = Date.now().toString(); // Current timestamp
-    const randomStr = Math.random().toString(36).substring(2, 8); // Random string
+const generateInvoiceId = (): string => {
+    const timestamp = Date.now().toString();
+    const randomStr = Math.random().toString(36).substring(2, 8);
     return `INV-${timestamp}-${randomStr}`;
 };
 
+interface Booking {
+    id: string;
+    customerName?: string;
+    email?: string;
+    dateTime?: string;
+    updatedTotalSalary?: number;
+    paymentStatus?: string;
+    selectedDriver?: string;
+    invoice?: string;
+    driverName?: string;
+    driverImg?: string;
+}
+
+interface Driver {
+    driverName?: string;
+    profileImageUrl?: string;
+}
+interface ExtendedBooking extends Booking {
+    bookingId: string;
+}
 const SalesSummary = () => {
     const dispatch = useDispatch();
+    
     useEffect(() => {
         dispatch(setPageTitle('Invoice List'));
     }, [dispatch]);
 
-    const [items, setItems] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-    const PAGE_SIZES = [10, 20, 30, 50, 100]; // Define page sizes here
-    const [initialRecords, setInitialRecords] = useState([]);
-    const [records, setRecords] = useState([]);
-    const [selectedRecords, setSelectedRecords] = useState([]);
-    const [search, setSearch] = useState('');
+    const [items, setItems] = useState<Booking[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [page, setPage] = useState<number>(1);
+    const [pageSize, setPageSize] = useState<number>(10);
+    const PAGE_SIZES = [10, 20, 30, 50, 100];
+    const [initialRecords, setInitialRecords] = useState<Booking[]>([]);
+    const [records, setRecords] = useState<Booking[]>([]);
+    const [selectedRecords, setSelectedRecords] = useState<Booking[]>([]);
+    const [search, setSearch] = useState<string>('');
     const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({
         columnAccessor: 'customerName',
         direction: 'asc',
     });
-    const [historyRange, setHistoryRange] = useState('10'); // State for history range filter
-    const [totalAmount, setTotalAmount] = useState(0); // State for total amount
+    const [historyRange, setHistoryRange] = useState<string>('10');
+    const [totalAmount, setTotalAmount] = useState<number>(0);
     const db = getFirestore();
-    const uid = sessionStorage.getItem('uid')
+    const uid = sessionStorage.getItem('uid') || '';
 
     useEffect(() => {
         const from = (page - 1) * pageSize;
         const to = from + pageSize;
-        setRecords([...initialRecords.slice(from, to)]);
+        setRecords(initialRecords.slice(from, to));
     }, [page, pageSize, initialRecords]);
 
     useEffect(() => {
         const fetchBookingsAndDrivers = async () => {
             try {
-                const bookingsQuery = query(collection(db, `user/${uid}/bookings`), orderBy('createdAt', 'desc'));
+                const bookingsQuery = query(
+                    collection(db, `user/${uid}/bookings`),
+                    where('status', '==', 'Order Completed'),
+                    orderBy('createdAt', 'desc')
+                );
                 const driversQuery = query(collection(db, `user/${uid}/driver`));
-
+    
                 const [bookingsSnapshot, driversSnapshot] = await Promise.all([
                     getDocs(bookingsQuery),
                     getDocs(driversQuery)
                 ]);
-
-                const driversData = {};
+    
+                const driversData: Record<string, Driver> = {};
                 driversSnapshot.forEach((doc) => {
-                    driversData[doc.id] = doc.data();
+                    driversData[doc.id] = doc.data() as Driver;
                 });
-
-                const bookingsData = [];
+    
+                const bookingsData: ExtendedBooking[] = [];
                 for (const docSnapshot of bookingsSnapshot.docs) {
-                    const booking = docSnapshot.data();
-
+                    const booking = docSnapshot.data() as Booking;
+                
                     if (!booking.invoice) {
                         const invoiceId = generateInvoiceId();
                         booking.invoice = invoiceId;
-                        // Update the Firestore document with the new invoice ID
                         await updateDoc(doc(db, `user/${uid}/bookings`, docSnapshot.id), { invoice: invoiceId });
                     }
-                    // Add driver information
+                
                     const driverId = booking.selectedDriver;
-                    const driver = driversData[driverId];
+                    const driver = driversData[driverId || ''];
                     if (driver) {
                         booking.driverName = driver.driverName;
-                        booking.driverImg = driver.profileImageUrl; // Assuming there's an 'img' field in the driver data
+                        booking.driverImg = driver.profileImageUrl;
                     }
-                    bookingsData.push({ id: docSnapshot.id, ...booking });
+                
+                    // Add bookingId to each booking item
+                    bookingsData.push({ bookingId: docSnapshot.id, ...booking });
                 }
-
-                // Sort bookingsData by createdAt in descending order
+    
                 const sortedBookingsData = sortBy(bookingsData, (booking) => -dayjs(booking.dateTime).valueOf());
-
                 setItems(sortedBookingsData);
                 setInitialRecords(sortedBookingsData);
                 setLoading(false);
@@ -94,12 +118,12 @@ const SalesSummary = () => {
                 setLoading(false);
             }
         };
-
+    
         fetchBookingsAndDrivers();
-    }, [db]);
+    }, [db, uid]);
 
     useEffect(() => {
-        const filterRecordsByDate = (records) => {
+        const filterRecordsByDate = (records: Booking[]) => {
             const currentDate = dayjs();
             let filteredRecords = records;
 
@@ -121,7 +145,6 @@ const SalesSummary = () => {
         const filteredRecords = filterRecordsByDate(items);
         setInitialRecords(filteredRecords);
 
-        // Calculate total amount
         const total = filteredRecords.reduce((acc, record) => acc + (record.updatedTotalSalary || 0), 0);
         setTotalAmount(total);
     }, [historyRange, items]);
@@ -149,11 +172,11 @@ const SalesSummary = () => {
     useEffect(() => {
         const from = (page - 1) * pageSize;
         const to = from + pageSize;
-        setRecords([...initialRecords.slice(from, to)]);
+        setRecords(initialRecords.slice(from, to));
     }, [page, pageSize, initialRecords]);
 
-    const deleteRow = (id) => {
-        if (window.confirm('Are you sure want to delete selected row ?')) {
+    const deleteRow = (id: string) => {
+        if (window.confirm('Are you sure want to delete selected row?')) {
             const updatedRecords = items.filter(item => item.id !== id);
             setItems(updatedRecords);
             setInitialRecords(updatedRecords);
@@ -271,7 +294,6 @@ const SalesSummary = () => {
                         onSortStatusChange={setSortStatus}
                         selectedRecords={selectedRecords}
                         onSelectedRecordsChange={setSelectedRecords}
-                        loading={loading}
                     />
                 </div>
 

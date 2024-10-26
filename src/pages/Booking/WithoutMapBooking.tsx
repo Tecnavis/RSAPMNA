@@ -68,6 +68,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [updatedTotalSalary, setUpdatedTotalSalary] = useState<number>(0);
     const [companies, setCompanies] = useState<Driver[]>([]);
     const [totalDriverDistance, setTotalDriverDistance] = useState<string>('');
+    
+    const [receivedAmount, setReceivedAmount] = useState<number>(0);
 
     const { state } = useLocation();
     const [isModalOpen1, setIsModalOpen1] = useState<boolean>(false);
@@ -1036,20 +1038,20 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             try {
                 const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
                 const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
-                if (!selectedDriverData) {
-                    console.error('Selected driver not found');
-                    return;
-                }
+                // if (!selectedDriverData) {
+                //     console.error('Selected driver not found');
+                //     return;
+                // }
 
-                const { advancePayment, netTotalAmountInHand } = selectedDriverData;
-                console.log('advancePayment', advancePayment);
-                console.log('netTotalAmountInHand', netTotalAmountInHand);
+                // const { advancePayment, netTotalAmountInHand } = selectedDriverData;
+                // console.log('advancePayment', advancePayment);
+                // console.log('netTotalAmountInHand', netTotalAmountInHand);
 
-                // Check if advancePayment is less than or equal to netTotalAmountInHand
-                if (advancePayment < netTotalAmountInHand) {
-                    alert('Exceeds Credit Limit Amount');
-                    return; // Stop execution if condition is not met
-                }
+                // // Check if advancePayment is less than or equal to netTotalAmountInHand
+                // if (advancePayment < netTotalAmountInHand) {
+                //     alert('Exceeds Credit Limit Amount');
+                //     return; // Stop execution if condition is not met
+                // }
                 const fcmToken = selectedDriverData ? selectedDriverData.fcmToken : null;
                 const pickupDistance = selectedDriverData ? selectedDriverData.pickupDistance || 0 : 0;
 
@@ -1107,7 +1109,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     trappedLocation: trappedLocation || '',
                     updatedTotalSalary: updatedTotalSalary || 0,
                     insuranceAmountBody: insuranceAmountBody || '',
-                    // paymentStatus: 'Not Paid',
+                     receivedAmount: receivedAmount || 0,
                     pickupDistance: pickupDistance,
                 };
 
