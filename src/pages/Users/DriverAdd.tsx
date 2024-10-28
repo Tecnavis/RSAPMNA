@@ -44,6 +44,7 @@ const DriverAdd = () => {
 
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [advancePayment, setAdvancePayment] = useState('0');
+    const [advance, setAdvance] = useState<number>(0);
 
     const storage = getStorage();
     const uid = sessionStorage.getItem('uid');
@@ -281,6 +282,8 @@ const DriverAdd = () => {
                 confirmPassword,
                 profileImageUrl,
                 advancePayment,
+                advance
+
             };
 
             if (editData) {

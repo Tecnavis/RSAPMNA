@@ -5,6 +5,7 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { storage } from '../../config/config';
 import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField } from '@mui/material';
 interface BookingDetails {
+    id: string;
     dateTime: string;
     bookingId: string;
     newStatus: string;
@@ -194,6 +195,7 @@ const ViewMore: React.FC = () => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 setBookingDetails({
+                    id:data.id || '',
                     dateTime: data.dateTime || '',
                     bookingId: data.bookingId || '',
                     newStatus: data.newStatus || '',

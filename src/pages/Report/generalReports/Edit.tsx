@@ -6,12 +6,33 @@ import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import IconSave from '../../../components/Icon/IconSave';
 // import IconCancel from '../../../components/Icon/IconCancel';
 
+interface Booking {
+    id?: string;
+    customerName?: string;
+    pickupLocation?: {
+        name?: string;
+        lat?: string;
+        lng?: string;
+    };
+    phoneNumber?: string;
+    mobileNumber?: string;
+    invoice?: string;
+    dateTime?: string;
+    fileNumber?: string;
+    bookingId?: string;
+    serviceType?: string;
+    vehicleModel?: string;
+    vehicleNumber?: string;
+    updatedTotalSalary?: string;
+    [key: string]: any; // To handle any additional dynamic properties
+}
+
 const Edit = () => {
-    const { id } = useParams();
-    const uid = sessionStorage.getItem('uid')
-    const [booking, setBooking] = useState(null);
+    const { id } = useParams<{ id: string }>();
+    const uid = sessionStorage.getItem('uid') || '';
+    const [booking, setBooking] = useState<Booking | null>(null);
     const [loading, setLoading] = useState(false);
-    const [formValues, setFormValues] = useState({});
+    const [formValues, setFormValues] = useState<Booking>({});
     const dispatch = useDispatch();
     const db = getFirestore();
     const navigate = useNavigate();
@@ -20,22 +41,22 @@ const Edit = () => {
         const fetchBooking = async () => {
             setLoading(true);
             try {
-                const bookingDocRef = doc(db, `user/${uid}/bookings`, id);
+                const bookingDocRef = doc(db, `user/${uid}/bookings`, id!);
                 const bookingSnapshot = await getDoc(bookingDocRef);
 
                 if (bookingSnapshot.exists()) {
-                    const bookingData = bookingSnapshot.data();
+                    const bookingData = bookingSnapshot.data() as Booking;
                     setBooking({ id: bookingSnapshot.id, ...bookingData });
-                    setFormValues(bookingData); // Set form values
+                    setFormValues(bookingData);
                     dispatch(setPageTitle(`Edit Invoice - ${bookingSnapshot.id}`));
                 } else {
                     console.log(`No booking found with ID: ${id}`);
                     setBooking(null);
                     dispatch(setPageTitle('Edit Invoice'));
                 }
-                setLoading(false);
             } catch (error) {
                 console.error('Error fetching booking:', error);
+            } finally {
                 setLoading(false);
             }
         };
@@ -45,7 +66,7 @@ const Edit = () => {
         }
     }, [db, id, dispatch]);
 
-    const handleChange = (e) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormValues({ ...formValues, [name]: value });
     };
@@ -53,12 +74,12 @@ const Edit = () => {
     const handleSave = async () => {
         setLoading(true);
         try {
-            const bookingDocRef = doc(db, `user/${uid}/bookings`, id);
+            const bookingDocRef = doc(db, `user/${uid}/bookings`, id!);
             await updateDoc(bookingDocRef, formValues);
-            setLoading(false);
-            navigate(`/general/sales/preview/${id}`); // Redirect to preview page
+            navigate(`/general/sales/preview/${id}`);
         } catch (error) {
             console.error('Error updating booking:', error);
+        } finally {
             setLoading(false);
         }
     };
@@ -104,18 +125,18 @@ const Edit = () => {
                         <div className="space-y-1 text-white-dark">
                             <div>Issue For:</div>
                             <div className="text-black dark:text-white font-semibold">
-                                <input type="text" name="customerName" value={formValues.customerName} onChange={handleChange} className="form-input" />
+                                <input type="text" name="customerName" value={formValues.customerName || ''} onChange={handleChange} className="form-input" />
                             </div>
                             <div>
-                                <input type="text" name="pickupLocation.name" value={formValues.pickupLocation?.name} onChange={handleChange} className="form-input" />
-                                <input type="text" name="pickupLocation.lat" value={formValues.pickupLocation?.lat} onChange={handleChange} className="form-input" />
-                                <input type="text" name="pickupLocation.lng" value={formValues.pickupLocation?.lng} onChange={handleChange} className="form-input" />
+                                <input type="text" name="pickupLocation.name" value={formValues.pickupLocation?.name || ''} onChange={handleChange} className="form-input" />
+                                <input type="text" name="pickupLocation.lat" value={formValues.pickupLocation?.lat || ''} onChange={handleChange} className="form-input" />
+                                <input type="text" name="pickupLocation.lng" value={formValues.pickupLocation?.lng || ''} onChange={handleChange} className="form-input" />
                             </div>
                             <div>
-                                Phone :<input type="text" name="phoneNumber" value={formValues.phoneNumber} onChange={handleChange} className="form-input" />
+                                Phone :<input type="text" name="phoneNumber" value={formValues.phoneNumber || ''} onChange={handleChange} className="form-input" />
                             </div>
                             <div>
-                                Mobile :<input type="text" name="mobileNumber" value={formValues.mobileNumber} onChange={handleChange} className="form-input" />
+                                Mobile :<input type="text" name="mobileNumber" value={formValues.mobileNumber || ''} onChange={handleChange} className="form-input" />
                             </div>
                         </div>
                     </div>
@@ -124,54 +145,22 @@ const Edit = () => {
                             <div className="flex items-center w-full justify-between mb-2">
                                 <div className="text-white-dark">Invoice :</div>
                                 <div>
-                                    <input type="text" name="invoice" value={formValues.invoice} onChange={handleChange} className="form-input" />
+                                    <input type="text" name="invoice" value={formValues.invoice || ''} onChange={handleChange} className="form-input" />
                                 </div>
                             </div>
                             <div className="flex items-center w-full justify-between mb-2">
                                 <div className="text-white-dark">Issue Date :</div>
                                 <div>
-                                    <input type="date" name="dateTime" value={formValues.dateTime} onChange={handleChange} className="form-input" />
+                                    <input type="date" name="dateTime" value={formValues.dateTime || ''} onChange={handleChange} className="form-input" />
                                 </div>
                             </div>
                             <div className="flex items-center w-full justify-between mb-2">
                                 <div className="text-white-dark">Order ID :</div>
                                 <div>
-                                    <input type="text" name="fileNumber" value={formValues.fileNumber} onChange={handleChange} className="form-input" />
+                                    <input type="text" name="fileNumber" value={formValues.fileNumber || ''} onChange={handleChange} className="form-input" />
                                 </div>
                             </div>
                         </div>
-                        {/* <div className="xl:1/3 lg:w-2/5 sm:w-1/2">
-                            <div className="flex items-center w-full justify-between mb-2">
-                                <div className="text-white-dark">Bank Name:</div>
-                                <div>
-                                    <input type="text" name="bankName" value={formValues.bankName} onChange={handleChange} className="form-input" />
-                                </div>
-                            </div>
-                            <div className="flex items-center w-full justify-between mb-2">
-                                <div className="text-white-dark">Account Number:</div>
-                                <div>
-                                    <input type="text" name="accountNumber" value={formValues.accountNumber} onChange={handleChange} className="form-input" />
-                                </div>
-                            </div>
-                            <div className="flex items-center w-full justify-between mb-2">
-                                <div className="text-white-dark">SWIFT Code:</div>
-                                <div>
-                                    <input type="text" name="swiftCode" value={formValues.swiftCode} onChange={handleChange} className="form-input" />
-                                </div>
-                            </div>
-                            <div className="flex items-center w-full justify-between mb-2">
-                                <div className="text-white-dark">IBAN:</div>
-                                <div>
-                                    <input type="text" name="iban" value={formValues.iban} onChange={handleChange} className="form-input" />
-                                </div>
-                            </div>
-                            <div className="flex items-center w-full justify-between mb-2">
-                                <div className="text-white-dark">Country:</div>
-                                <div>
-                                    <input type="text" name="country" value={formValues.country} onChange={handleChange} className="form-input" />
-                                </div>
-                            </div>
-                        </div> */}
                     </div>
                 </div>
                 <div className="table-responsive mt-6">
@@ -187,25 +176,22 @@ const Edit = () => {
                         </thead>
                         <tbody>
                             <tr>
-                                <td>{formValues.bookingId}</td>
+                                <td>{formValues.bookingId || ''}</td>
                                 <td>
-                                    <input type="text" name="serviceType" value={formValues.serviceType} onChange={handleChange} className="form-input" />
+                                    <input type="text" name="serviceType" value={formValues.serviceType || ''} onChange={handleChange} className="form-input" />
                                 </td>
                                 <td>
-                                    <input type="text" name="vehicleModel" value={formValues.vehicleModel} onChange={handleChange} className="form-input" />
+                                    <input type="text" name="vehicleModel" value={formValues.vehicleModel || ''} onChange={handleChange} className="form-input" />
                                 </td>
                                 <td className="text-center">
-                                    <input type="text" name="vehicleNumber" value={formValues.vehicleNumber} onChange={handleChange} className="form-input" />
+                                    <input type="text" name="vehicleNumber" value={formValues.vehicleNumber || ''} onChange={handleChange} className="form-input" />
                                 </td>
                                 <td className="text-center">
-                                    <input type="text" name="updatedTotalSalary" value={formValues.updatedTotalSalary} onChange={handleChange} className="form-input" />
+                                    <input type="text" name="updatedTotalSalary" value={formValues.updatedTotalSalary || ''} onChange={handleChange} className="form-input" />
                                 </td>
                             </tr>
                         </tbody>
                     </table>
-                </div>
-                <div className="grid sm:grid-cols-2 grid-cols-1 px-4 mt-6">
-                    {/* Additional sections as needed */}
                 </div>
             </div>
         </div>

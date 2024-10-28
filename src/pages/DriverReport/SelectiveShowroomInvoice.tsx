@@ -56,7 +56,7 @@ const SelectiveShowroomInvoice = () => {
     };
 
     // Calculate total payable amount
-    const totalPayableAmount = bookings.reduce((total, booking) => total + (Number(booking.insuranceAmountBody) + Number(booking.showroomAmount)), 0);
+    const totalPayableAmount = bookings.reduce((total:any, booking:any) => total + (Number(booking.insuranceAmountBody) + Number(booking.showroomAmount)), 0);
 
     const columns = [
         { key: 'id', label: 'S.NO' },
@@ -145,7 +145,7 @@ const SelectiveShowroomInvoice = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {bookings.map((booking, index) => (
+                            {bookings.map((booking:any, index:any) => (
                                 <tr key={booking.id}>
                                     <td>{index + 1}</td>
                                     <td>{booking.serviceType}</td>

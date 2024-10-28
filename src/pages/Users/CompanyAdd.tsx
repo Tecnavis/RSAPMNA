@@ -54,6 +54,8 @@ const CompanyAdd = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [advancePayment, setAdvancePayment] = useState('');
+    const [advance, setAdvance] = useState<number>(0);
+
     const [baseLocation, setBaseLocation] = useState('');
     const [baseLocations, setBaseLocations] = useState<Location[]>([]);
     const [serviceOptions, setServiceOptions] = useState<string[]>([]);
@@ -338,6 +340,7 @@ const CompanyAdd = () => {
                 password,
                 confirmPassword,
                 profileImageUrl,
+                advance,
             };
     
             if (editData) {
