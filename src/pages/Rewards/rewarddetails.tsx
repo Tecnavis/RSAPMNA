@@ -12,6 +12,19 @@ interface Product {
   category: string;
 }
 
+
+interface RewardItem {
+  _id: string;
+  name: string;
+  description: string;
+  points: string;
+  price: string;
+  category: string;
+  percentage: string;
+  stock: string;
+  image?: string;
+}
+
 interface Redemption {
   id: number;
   product: Product;
@@ -40,6 +53,7 @@ const RewardPage: React.FC = () => {
   const phoneNumber = queryParams.get('phoneNumber'); // Driver Name
   const [percentage, setPercentage] = useState<number>(0);
   const [rewardPoints, setRewardPoints] = useState<number>(0);
+  const [rewards, setRewards] = useState<RewardItem[]>([]);
   const [rewardDriverPoints, setRewardDriverPoints] = useState<number>(0);
   const [rewardStaffPoints, setRewardStaffPoints] = useState<number>(0);
   const [rewardShowroomPoints, setRewardShowroomPoints] = useState<number>(0);
@@ -62,7 +76,28 @@ const RewardPage: React.FC = () => {
     { id: 3, product: products[2], redeemedDate: '2023-09-15', status: 'upcoming' },
   ]);
 
-// ---------------ShowRoom---------------------------------------------------------------------
+
+  // ---------------ShowRoom---------------------------------------------------------------------
+
+  const fetchData = async () => {
+    try {
+        const querySnapshot = await getDocs(collection(db, `user/${uid}/rewarditems`));
+        const rewardsData: RewardItem[] = querySnapshot.docs
+            .map((doc) => ({
+                _id: doc.id,
+                ...doc.data(),
+            }))
+            .filter((item) => item.category === 'Driver') as RewardItem[]; // Filter by category 'Driver'
+        
+        setRewards(rewardsData);
+    } catch (error) {
+        console.error('Error fetching reward items:', error);
+    }
+};
+
+console.log(rewards,'this is the rewards')
+
+
   useEffect(() => {
     const driverRef = doc(db, `user/${uid}/showroom`, id || "");
     
@@ -78,6 +113,7 @@ const RewardPage: React.FC = () => {
     return () => unsubscribe(); // Clean up the snapshot listener
   }, [id, db, uid]);
    // Fetch bookings
+
 useEffect(() => {
   const fetchBookings = async () => {
     try {
@@ -107,7 +143,7 @@ console.log("fetchedBookings",fetchedBookings)
       console.error("Error fetching bookings: ", error);
     }
   };
-
+  fetchData();
   fetchBookings();
 }, [id, db, uid, category]);
 const updateRewardPoints = async (bookingCount: number) => {
@@ -359,9 +395,9 @@ useEffect(() => {
     }
 }, [percentage, bookings]);
 
-  const handleRedeem = (product: Product) => {
-    if (rewardPoints >= product.price) {
-      alert(`Redeemed ${product.name}!`);
+  const handleRedeem = (reward: RewardItem) => {
+    if (rewards >= reward.price) {
+      alert(`Redeemed ${reward.name}!`);
     } else {
       alert('Not enough reward points.');
     }
@@ -416,19 +452,19 @@ useEffect(() => {
       <section className="products-section">
         <h3>Redeemable Products</h3>
         <div className="product-list">
-          {products.map((product) => (
-            <div key={product.id} className="product-card">
-              <img src={product.image} alt={product.name} className="product-image" />
+          {rewards.map((reward) => (
+            <div key={reward._id} className="product-card">
+              <img src={reward.image} alt={reward.name} className="product-image" />
               <div className="product-details">
-                <h4>{product.name}</h4>
-                <p>{product.description}</p>
-                <p className="product-price">{product.price} points</p>
+                <h4>{reward.name}</h4>
+                <p>{reward.description}</p>
+                <p className="product-price">{reward.price} points</p>
                 <button
                   className="redeem-btn"
-                  onClick={() => handleRedeem(product)}
-                  disabled={rewardPoints < product.price}
+                  onClick={() => handleRedeem(reward)}
+                  disabled={rewardPoints < reward.price}
                 >
-                  {rewardPoints >= product.price ? 'Redeem Now' : 'Insufficient Points'}
+                  {rewardPoints >= reward.price ? 'Redeem Now' : 'Insufficient Points'}
                 </button>
               </div>
             </div>
