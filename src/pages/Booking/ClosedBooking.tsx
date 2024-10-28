@@ -286,7 +286,7 @@ const ClosedBooking: React.FC = () => {
                                             .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()) // Sort by dateTime descending
                                             .map((booking) => (
                                                 <tr key={booking.id} className="bg-white border border-gray-300 block md:table-row">
-                                                    <td className="p-2 text-sm block md:table-cell">{new Date(booking.dateTime).toLocaleString('en-GB')} </td>
+                                                    <td className="p-2 text-sm block md:table-cell">{booking.dateTime} </td>
                                                     <td className="p-2 text-sm block md:table-cell">{booking.customerName}</td>
                                                     <td className="p-2 text-sm block md:table-cell">{booking.phoneNumber}</td>
                                                     <td className="p-2 text-sm block md:table-cell">{booking.serviceType}</td>
