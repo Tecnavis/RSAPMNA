@@ -24,6 +24,8 @@ interface Booking {
     updatedTotalSalary?: number;
     disabled?: boolean;
     userName?: string;
+    selectedCompany:string;
+
 }
 
 const CashCollectionReport: React.FC = () => {
@@ -82,24 +84,44 @@ const CashCollectionReport: React.FC = () => {
         const fetchBookings = async () => {
             try {
                 const bookingsRef = collection(db, `user/${uid}/bookings`);
-                const q = query(
+                
+                // Query bookings where selectedCompany is equal to id
+                const companyQuery = query(
+                    bookingsRef,
+                    where('selectedCompany', '==', id),
+                    where('status', '==', 'Order Completed'),
+                    // orderBy('createdAt', 'desc')
+                );
+                const companySnapshot = await getDocs(companyQuery);
+                const bookingsWithCompany = companySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Booking[];
+    
+                // Query bookings where selectedDriver is equal to id (fallback if selectedCompany does not exist)
+                const driverQuery = query(
                     bookingsRef,
                     where('selectedDriver', '==', id),
                     where('status', '==', 'Order Completed'),
-                    orderBy('createdAt', 'desc') // Ordering by createdAt in descending order
+                    orderBy('createdAt', 'desc')
                 );
-                const querySnapshot = await getDocs(q);
-                const fetchedBookings = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Booking[];
-                setBookings(fetchedBookings);
-                setFilteredBookings(fetchedBookings); // Initially set filtered bookings to all fetched bookings
+                const driverSnapshot = await getDocs(driverQuery);
+                const bookingsWithDriver = driverSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Booking[];
+    
+                // Combine both queries, filtering out duplicates if any
+                const combinedBookings = [
+                    ...bookingsWithCompany,
+                    ...bookingsWithDriver.filter(booking => !booking.selectedCompany || booking.selectedCompany !== id),
+                ];
+    
+                setBookings(combinedBookings);
+                setFilteredBookings(combinedBookings); // Initially set filtered bookings to all fetched bookings
             } catch (error) {
                 console.error('Error fetching bookings:', error);
             }
         };
-
+    
         fetchBookings();
         updateTotalBalance();
     }, [db, id, uid]);
+    
 
     useEffect(() => {
         filterBookingsByMonthAndYear();
@@ -397,10 +419,12 @@ const CashCollectionReport: React.FC = () => {
 
             updatedBookings.forEach((booking) => {
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
-                const receivedAmt = typeof booking.receivedAmount === 'number' ? booking.receivedAmount : 0;
+                // const receivedAmt = typeof booking.receivedAmount === 'number' ? booking.receivedAmount : 0;
 
                 batch.update(bookingRef, {
-receivedAmount: receivedAmt,
+// receivedAmount: receivedAmt,
+receivedAmount: booking.receivedAmount,
+
 balance: String(calculateBalance(booking.amount, booking.receivedAmount || 0)), // Ensure it's stored as a string
 role: role || 'unknown', // Add role to the update
                     userName: userName || 'unknown',
