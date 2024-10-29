@@ -83,17 +83,22 @@ const RewardPage: React.FC = () => {
     try {
         const querySnapshot = await getDocs(collection(db, `user/${uid}/rewarditems`));
         const rewardsData: RewardItem[] = querySnapshot.docs
-            .map((doc) => ({
-                _id: doc.id,
-                ...doc.data(),
-            }))
-            .filter((item) => item.category === 'Driver') as RewardItem[]; // Filter by category 'Driver'
-        
+            .map((doc) => {
+                const data = doc.data() as RewardItem; // Cast data to RewardItem type
+                return {
+                    ...data,
+                    _id: doc.id, // Explicitly set _id to avoid duplication
+                };
+            })
+            .filter((item) => !category || item.category === category);
+
         setRewards(rewardsData);
     } catch (error) {
         console.error('Error fetching reward items:', error);
     }
 };
+
+
 
 console.log(rewards,'this is the rewards')
 
@@ -395,9 +400,9 @@ useEffect(() => {
     }
 }, [percentage, bookings]);
 
-  const handleRedeem = (reward: RewardItem) => {
-    if (rewards >= reward.price) {
-      alert(`Redeemed ${reward.name}!`);
+  const handleRedeem = (product: Product) => {
+    if (rewardPoints >= product.price) {
+      alert(`Redeemed ${product.name}!`);
     } else {
       alert('Not enough reward points.');
     }
@@ -459,12 +464,13 @@ useEffect(() => {
                 <h4>{reward.name}</h4>
                 <p>{reward.description}</p>
                 <p className="product-price">{reward.price} points</p>
+                {/* <p>{driverName} you are on the way {reward.price}</p> */}
                 <button
                   className="redeem-btn"
-                  onClick={() => handleRedeem(reward)}
-                  disabled={rewardPoints < reward.price}
+                  // onClick={() => handleRedeem(reward)}
+                  // disabled={rewardPoints < reward.price}
                 >
-                  {rewardPoints >= reward.price ? 'Redeem Now' : 'Insufficient Points'}
+                 redeem Now
                 </button>
               </div>
             </div>
