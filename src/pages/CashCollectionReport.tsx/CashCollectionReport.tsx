@@ -15,7 +15,10 @@ interface Driver {
 interface Booking {
     id: string;
     amount: number; // Change to number
-    receivedAmount?: number; // Keep as optional, type changed to number
+    receivedAmount?: number; 
+    receivedAmountCompany?: number; 
+
+    // Keep as optional, type changed to number
     dateTime: string;
     fileNumber?: string;
     selectedDriver?: string;
@@ -37,7 +40,8 @@ const CashCollectionReport: React.FC = () => {
     const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
     const [editingAmount, setEditingAmount] = useState<string>('');
     const [receivedAmount, setReceivedAmount] = useState<string>('');
-    const [password, setPassword] = useState<string>('');
+    const [receivedAmountCompany, setReceivedAmountCompany] = useState<string>('');
+const [password, setPassword] = useState<string>('');
     const [modalIsOpen, setModalIsOpen] = useState<boolean>(false);
     const [bookingToApprove, setBookingToApprove] = useState<Booking | null>(null);
     const [selectedMonth, setSelectedMonth] = useState<string>('');
@@ -162,7 +166,7 @@ const CashCollectionReport: React.FC = () => {
             setEditingBooking(null);
         }
     };
-
+// -----------------------------------------------------------------------------------------------
    const calculateBalance = (amount: string | number, receivedAmount: string | number) => {
         return (parseFloat(amount.toString()) - parseFloat(receivedAmount.toString())).toFixed(2);
     };

@@ -61,7 +61,7 @@ const RewardPage: React.FC = () => {
     const [bookings, setBookings] = useState<Booking[]>([]);
   const db = getFirestore();
   const uid = sessionStorage.getItem('uid');
-  console.log("phoneNumber",phoneNumber)
+  console.log("id",id)
   // Sample products for redemption
   const [products] = useState<Product[]>([
     { id: 1, image: 'https://via.placeholder.com/150', name: 'Product 1', description: 'Description of product 1', price: 500, category: 'Electronics' },
@@ -106,7 +106,7 @@ console.log(rewards,'this is the rewards')
         const driverData = docSnapshot.data();
         const fetchedRewardPoints = driverData?.rewardPoints || 0;
         setRewardShowroomPoints(fetchedRewardPoints);
-        console.log(` rewardPoints: ${fetchedRewardPoints}`);
+        console.log(` rewardPointsee: ${fetchedRewardPoints}`);
       }
     });
 
@@ -195,7 +195,7 @@ useEffect(() => {
       const querySnapshot = await getDocs(q);
       const fetchedBookings: Booking[] = [];
 
-console.log("fetchedBookings",fetchedBookings)  
+console.log("fetchedBookingssss",fetchedBookings)  
     querySnapshot.forEach((doc) => {
         fetchedBookings.push({ id: doc.id, ...doc.data() } as Booking);
       });
@@ -259,32 +259,6 @@ const updateShowroomStaffRewardPoints = async (bookingCount: number, phoneNumber
   }
 };
 
-// ----------------------------------------Staff-------------------------------------------------------
-useEffect(() => {
-  const userRef = doc(db, `user/${uid}/users`, id || "");
-  
-  const unsubscribe = onSnapshot(userRef, (docSnapshot) => {
-    if (docSnapshot.exists()) {
-      const userData = docSnapshot.data();
-      console.log("userData",userData)
-      if (userData) {
-        const fetchedUserPercentage = userData?.percentage || 0;
-        const fetchedRewardPoints = userData?.rewardPoints || 0;
-        setPercentage(fetchedUserPercentage);
-        setRewardStaffPoints(fetchedRewardPoints);
-        console.log(`Fetched percentage: ${fetchedUserPercentage}, rewardPoints: ${fetchedRewardPoints}`);
-      } else {
-        console.error("No user data found");
-      }
-    } else {
-      console.error("Document does not exist");
-    }
-  }, (error) => {
-    console.error("Error fetching user data:", error);
-  });
-
-  return () => unsubscribe(); // Clean up the snapshot listener
-}, [id, db, uid]);
 
 useEffect(() => {
   const fetchBookings = async () => {
@@ -498,7 +472,23 @@ useEffect(() => {
           </div>
         </div>
       </section>
- 
+      <section className="bookings-section">
+        <h3>Your Bookings</h3>
+        {bookings.length === 0 ? (
+          <p>No bookings found.</p>
+        ) : (
+          <div className="bookings-list">
+            {bookings.map((booking) => (
+              <div key={booking.id} className="booking-card">
+                <h4>Booking ID: {booking.id}</h4>
+                <p>Selected Driver: {booking.selectedDriver}</p>
+                <p>Company: {booking.company}</p>
+                <p>Updated Total Salary: {booking.updatedTotalSalary}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 };
