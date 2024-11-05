@@ -14,7 +14,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
     <script src="https://maps.ola.com/api/js?key=import.meta.env.VITE_REACT_APP_API_KEY"></script>
-
+    <script
+    async
+    defer
+    src="https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places"
+  ></script>
+  
 </head>
 <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

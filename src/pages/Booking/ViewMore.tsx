@@ -45,8 +45,9 @@ interface BookingDetails {
 }
 interface FormData {
     pickupTime: string;
+    serviceVehicle:string;
     dropoffTime: string;
-    totalDriverSalary: string;
+    driverSalary: string;
     companyAmount: string;
     amount: string;
     distance: string;
@@ -96,8 +97,9 @@ const ViewMore: React.FC = () => {
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState<FormData>({
         pickupTime: '',
+        serviceVehicle:'',
         dropoffTime: '',
-        totalDriverSalary: 'No',
+        driverSalary: 'No',
         companyAmount: 'No',
         amount: '',
         distance: '',
@@ -809,6 +811,7 @@ const ViewMore: React.FC = () => {
                             required
                         />
                     </div>
+                  
                     <div className="mb-4">
                         <label htmlFor="dropoffTime" className="block text-sm font-medium text-gray-700">
                             Dropoff Time
@@ -824,13 +827,27 @@ const ViewMore: React.FC = () => {
                         />
                     </div>
                     <div className="mb-4">
-                        <label htmlFor="totalDriverSalary" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="serviceVehicle" className="block text-sm font-medium text-gray-700">
+                        Service Vehicle Number
+                        </label>
+                        <input
+                            type="text"
+                            id="serviceVehicle"
+                            name="serviceVehicle"
+                            value={formData.serviceVehicle}
+                            onChange={handleFormChange}
+                            className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="driverSalary" className="block text-sm font-medium text-gray-700">
                             Driver Salary
                         </label>
                         <select
-                            id="totalDriverSalary"
-                            name="totalDriverSalary"
-                            value={formData.totalDriverSalary}
+                            id="driverSalary"
+                            name="driverSalary"
+                            value={formData.driverSalary}
                             onChange={handleFormChange}
                             className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
                         >

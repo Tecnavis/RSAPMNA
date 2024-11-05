@@ -1,218 +1,248 @@
 import React, { useEffect, useState } from 'react';
-import { format } from 'date-fns'; // Assuming you're using date-fns for formatting dates
-import { useParams } from 'react-router-dom';
-import { doc, getDoc, getFirestore } from 'firebase/firestore';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { format } from 'date-fns';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { doc, getDoc, getFirestore, collection, getDocs, updateDoc } from 'firebase/firestore';
 
 interface Staff {
     name: string;
     phone_number: string;
-  
 }
-interface Booking {
-    bookingId: string;
-    userName: string;
+
+interface StaffReceived {
+    id?: string;
     amount: number;
     date: string;
-    // Add other booking fields as needed
+    amountGiven?: number;
 }
+
 const StaffDetailsReport = () => {
-    const [staff, setStaff] = useState(null); // Fetch and set your staff data
-    const [selectedMonth, setSelectedMonth] = useState('');
-    const [selectedYear, setSelectedYear] = useState('');
-    const [receivedAmount, setReceivedAmount] = useState('');
-    const [modalIsOpen, setModalIsOpen] = useState(false);
-    const [password, setPassword] = useState('');
+    const [staff, setStaff] = useState<Staff | null>(null);
+    const [staffReceivedEntries, setStaffReceivedEntries] = useState<StaffReceived[]>([]);
+    const [amountGivenValues, setAmountGivenValues] = useState<{ [key: number]: number }>({});
+    const [buttonColors, setButtonColors] = useState<{ [key: number]: string }>({});
+    const [filteredEntries, setFilteredEntries] = useState<StaffReceived[]>([]);
     const { id } = useParams<{ id: string }>();
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid') || '';
-    const [bookings, setBookings] = useState<Booking[]>([]);
+    const role = sessionStorage.getItem('role');
+const navigate = useNavigate()
+    useEffect(() => {
+        const fetchStaffDetails = async () => {
+            if (!uid || !id) return;
 
-console.log("id",id)
-useEffect(() => {
-    const fetchStaffDetails = async () => {
-        if (!uid) {
-            console.error("UID is not defined");
-            return; // Exit if uid is not defined
-        }
+            try {
+                const docRef = doc(db, `user/${uid}/users`, id);
+                const docSnap = await getDoc(docRef);
 
-        try {
-            const docRef = doc(db, `user/${uid}/users`, id);
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-                setStaff(docSnap.data() as Staff); // Set the staff data
-            } else {
-                console.log("No such document!");
-                setStaff(null); // Clear the state if no document exists
+                if (docSnap.exists()) {
+                    setStaff(docSnap.data() as Staff);
+                } else {
+                    setStaff(null);
+                }
+            } catch (error) {
+                console.error("Error fetching staff details: ", error);
             }
-        } catch (error) {
-            console.error("Error fetching staff details: ", error);
-        }
-    };
+        };
 
-    fetchStaffDetails();
-}, [id, uid]);
-useEffect(() => {
-    const fetchBookings = async () => {
-        if (!staff || !staff.userName) return;
+        fetchStaffDetails();
+    }, [id, uid]);
 
-        try {
-            const bookingsQuery = query(
-                collection(db, `user/${uid}/bookings`),
-                where("userName", "==", staff.userName)
-            );
-            const querySnapshot = await getDocs(bookingsQuery);
-            const fetchedBookings = querySnapshot.docs
-                .map((doc) => doc.data() as Booking)
-                .filter((booking) => {
-                    const bookingDate = new Date(booking.date);
-                    const isMatchingMonth = selectedMonth
-                        ? bookingDate.getMonth() + 1 === parseInt(selectedMonth)
-                        : true;
-                    const isMatchingYear = selectedYear
-                        ? bookingDate.getFullYear() === parseInt(selectedYear)
-                        : true;
-                    return isMatchingMonth && isMatchingYear;
+    useEffect(() => {
+        const fetchStaffReceivedEntries = async () => {
+            if (!uid || !id) return;
+
+            try {
+                const staffReceivedQuery = collection(db, `user/${uid}/users/${id}/staffReceived`);
+                const querySnapshot = await getDocs(staffReceivedQuery);
+
+                const fetchedEntries = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                } as StaffReceived));
+                setStaffReceivedEntries(fetchedEntries);
+                setFilteredEntries(fetchedEntries); // Initialize filteredEntries
+                const initialColors = fetchedEntries.map(entry => {
+                    const amountGiven = entry.amountGiven || 0;
+                    return amountGiven <= 0 ? 'red' : amountGiven < entry.amount ? 'orange' : 'green';
                 });
+                setButtonColors(initialColors);
+            } catch (error) {
+                console.error("Error fetching staff received entries: ", error);
+            }
+        };
 
-            setBookings(fetchedBookings);
-        } catch (error) {
-            console.error("Error fetching bookings: ", error);
+        fetchStaffReceivedEntries();
+    }, [uid, id]);
+
+    const handleAmountGivenChange = (index: number, value: number) => {
+        setAmountGivenValues((prev) => ({
+            ...prev,
+            [index]: value,
+        }));
+    };
+
+    const calculateBalance = (amount: number, amountGiven: number = 0) => amount - amountGiven;
+
+    const handleSaveAmountGiven = async (index: number) => {
+        const entry = staffReceivedEntries[index];
+        const newAmountGiven = amountGivenValues[index];
+
+        if (entry && entry.id) {
+            try {
+                const docRef = doc(db, `user/${uid}/users/${id}/staffReceived`, entry.id);
+                await updateDoc(docRef, { amountGiven: newAmountGiven });
+                console.log("Amount given updated successfully");
+
+                const newColor = newAmountGiven < entry.amount ? 'orange' : 'green';
+                setButtonColors((prev) => ({
+                    ...prev,
+                    [index]: newColor,
+                }));
+
+                setStaffReceivedEntries((prevEntries) =>
+                    prevEntries.map((e, i) =>
+                        i === index ? { ...e, amountGiven: newAmountGiven } : e
+                    )
+                );
+            } catch (error) {
+                console.error("Error updating amount given: ", error);
+            }
         }
     };
 
-    fetchBookings();
-}, [staff, selectedMonth, selectedYear, uid]);
-
-
-    // Replace these with actual data fetching logic
-    const calculateNetTotalAmountInHand = () => {
-        // Implement your logic here
-        return 0; // Placeholder
+    // Function to filter entries based on payment status
+    const filterEntries = (status: string) => {
+        let filtered;
+        if (status === 'notPaid') {
+            filtered = staffReceivedEntries.filter(entry => !(entry.amountGiven || 0));
+        } else if (status === 'paymentNotCompleted') {
+            filtered = staffReceivedEntries.filter(entry => (entry.amountGiven || 0) < entry.amount);
+        } else if (status === 'paymentCompleted') {
+            filtered = staffReceivedEntries.filter(entry => (entry.amountGiven || 0) >= entry.amount);
+        } else {
+            filtered = staffReceivedEntries; // Show all if no status is matched
+        }
+        setFilteredEntries(filtered);
     };
-
-    const handleAmountReceiveChange = (amount) => {
-        // Implement the logic for handling amount received
+    const handleInvoiceClick = (entry: StaffReceived) => {
+        navigate('/rsastaffReport/userdetails/satffinvoice', {
+            state: {
+                staff,
+                entries: staffReceivedEntries, // Pass the relevant entries to the invoice
+            },
+        });
     };
-
+    
     return (
         <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg">
-            <h1 className="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">Staff Details Report</h1>
+            <h1 className="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">
+                Staff Details Report
+            </h1>
 
             {staff ? (
                 <>
                     <div className="container-fluid mb-5">
                         <div className="flex flex-wrap text-center md:text-left">
-                            <div className="w-full md:w-1/2 mb-4 p-6 bg-white shadow-lg rounded-lg transition-transform duration-300 hover:scale-105">
-                                <h2 className="text-2xl font-bold text-gray-800 mb-2 border-b-2 border-gray-200 pb-2">
+                            <div className="w-full md:w-1/2 mb-4 p-6 bg-white shadow-lg rounded-lg">
+                                <h2 className="text-2xl font-bold text-gray-800 mb-2">
                                     👤 Staff: <span className="text-indigo-600">{staff.name}</span>
                                 </h2>
-                                <div className="mt-4">
-                                    <p className="text-lg text-gray-700">
-                                        📞 <span className="font-medium">Phone:</span> {staff.phone_number}
-                                    </p>
-                                    
-                                </div>
-                            </div>
-
-                            <div className="w-[560px] h-[165px] ml-6 flex justify-center md:justify-end p-2 bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl hover:scale-105">
-                                <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-                                    <span className="text-3xl mr-2">💵</span>
-                                    Net Total Amount in Hand:
-                                    <span className="text-yellow-300 text-2xl ml-2 font-extrabold">{calculateNetTotalAmountInHand()}</span>
-                                </h2>
+                                <p className="text-lg text-gray-700">
+                                    📞 <span className="font-medium">Phone:</span> {staff.phone_number}
+                                </p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="container-fluid mb-5">
-                        <div className="flex flex-wrap justify-between items-center text-center md:text-left">
-                            <div className="w-full md:w-auto flex flex-col md:flex-row items-center md:justify-end">
-                                <div className="flex items-center mb-4 md:mb-0 space-x-2">
-                                    <label htmlFor="month" className="text-gray-700 font-semibold text-lg">
-                                        Filter by Month:
-                                    </label>
-                                    <select
-                                        id="month"
-                                        value={selectedMonth}
-                                        onChange={(e) => setSelectedMonth(e.target.value)}
-                                        className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200 ease-in-out"
-                                    >
-                                        <option value="">All Months</option>
-                                        {Array.from({ length: 12 }, (_, index) => {
-                                            const month = index + 1;
-                                            return (
-                                                <option key={month} value={month.toString()}>
-                                                    {new Date(0, month - 1).toLocaleString('default', { month: 'long' })}
-                                                </option>
-                                            );
-                                        })}
-                                    </select>
-                                </div>
-
-                                <div className="flex items-center space-x-2">
-                                    <label htmlFor="year" className="text-gray-700 font-semibold text-lg">
-                                        Filter by Year:
-                                    </label>
-                                    <select
-                                        id="year"
-                                        value={selectedYear}
-                                        onChange={(e) => setSelectedYear(e.target.value)}
-                                        className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200 ease-in-out"
-                                    >
-                                        <option value="">All Years</option>
-                                        {Array.from({ length: 5 }, (_, index) => {
-                                            const year = new Date().getFullYear() - index;
-                                            return (
-                                                <option key={year} value={year.toString()}>
-                                                    {year}
-                                                </option>
-                                            );
-                                        })}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
+                    {/* Buttons for filtering payment status */}
+                    <div className="mb-4 flex justify-center space-x-4">
+                        <button
+                            onClick={() => filterEntries('notPaid')}
+                            className="bg-red-500 text-white font-bold py-2 px-4 rounded"
+                        >
+                            Not Paid
+                        </button>
+                        <button
+                            onClick={() => filterEntries('paymentNotCompleted')}
+                            className="bg-orange-500 text-white font-bold py-2 px-4 rounded"
+                        >
+                            Payment Not Completed
+                        </button>
+                        <button
+                            onClick={() => filterEntries('paymentCompleted')}
+                            className="bg-green-500 text-white font-bold py-2 px-4 rounded"
+                        >
+                            Payment Completed
+                        </button>
                     </div>
-
-                    {/* Additional components or logic for displaying staff report can go here */}
-
-                    <button
-                        onClick={() => setModalIsOpen(true)}
-                        className={`px-6 py-2 font-semibold rounded-md text-white transition duration-300 ease-in-out bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-opacity-50`}
-                    >
-                        Record Amount Received
-                    </button>
-
-                  
 
                     <div className="overflow-x-auto">
                         <table className="min-w-full bg-white shadow-md rounded-lg">
                             <thead>
                                 <tr>
-                                    <th className="px-6 py-3 border-b-2 border-gray-300">Booking ID</th>
-                                    <th className="px-6 py-3 border-b-2 border-gray-300">Staff Amount</th>
+                                    <th className="px-6 py-3 border-b-2 border-gray-300">Date</th>
+                                    <th className="px-6 py-3 border-b-2 border-gray-300">Staff Received Amount</th>
+                                    {role !== 'staff' && (
+                                        <th className="px-6 py-3 border-b-2 border-gray-300">Amount Given From Staff</th>
+                                    )}
+                                    <th className="px-6 py-3 border-b-2 border-gray-300">Balance</th>
+                                    {role !== 'staff' && (
+                                        <th className="px-6 py-3 border-b-2 border-gray-300">Actions</th>
+                                    )}
                                 </tr>
                             </thead>
                             <tbody>
-    {bookings.map((booking) => (
-        <tr key={booking.bookingId}>
-            <td className="px-6 py-4 border-b">{booking.bookingId}</td>
-            <td className="px-6 py-4 border-b">
-                {booking.staffReceivedAmounts?.length > 0
-                    ? booking.staffReceivedAmounts.join(', ') // Assuming this is an array of amounts
-                    : 'No amounts recorded'}
-            </td>
-        </tr>
-    ))}
-</tbody>
+                                {filteredEntries.map((entry, index) => (
+                                    <tr key={index}>
+                                        <td className="px-6 py-4 border-b">
+                                            {format(new Date(entry.date), 'yyyy-MM-dd HH:mm')}
+                                        </td>
+                                        <td className="px-6 py-4 border-b">
+                                            {entry.amount.toFixed(2)}
+                                        </td>
+                                        {role !== 'staff' && (
+                                            <td className="px-6 py-4 border-b">
+                                                <input
+                                                    type="number"
+                                                    value={amountGivenValues[index] || entry.amountGiven || 0}
+                                                    onChange={(e) => handleAmountGivenChange(index, Number(e.target.value))}
+                                                    placeholder="Enter Amount"
+                                                    className="border border-gray-300 rounded-lg p-2"
+                                                />
+                                            </td>
+                                        )}
+                                        <td className="px-6 py-4 border-b">
+                                            {calculateBalance(entry.amount, amountGivenValues[index] || entry.amountGiven || 0).toFixed(2)}
+                                        </td>
+                                        {role !== 'staff' && (
+                                            <td className="px-6 py-4 border-b">
+                                                <button
+                                                    onClick={() => handleSaveAmountGiven(index)}
+                                                    style={{
+                                                        backgroundColor: buttonColors[index] || 'red', // Fallback to red
+                                                    }}
+                                                    className="text-white font-bold py-2 px-4 rounded"
+                                                >
+                                                    Save
+                                                </button>
+                                                <br />
+                                                <button
+    onClick={() => handleInvoiceClick(entry)} // Add the invoice click handler
+    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition duration-200 ease-in-out shadow-lg transform hover:scale-105 mt-2"
+>
+    Invoice
+</button>
 
-
+                                            </td>
+                                        )}
+                                    </tr>
+                                ))}
+                            </tbody>
                         </table>
-                    </div>                </>
+                    </div>
+                </>
             ) : (
-                <p>Loading...</p>
+                <p className="text-center text-red-500">No staff details found.</p>
             )}
         </div>
     );

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, writeBatch } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, writeBatch, arrayUnion } from 'firebase/firestore';
 import Modal from 'react-modal';
 import { parse, format } from 'date-fns';
 import styles from './cashCollectionReport.module.css';
@@ -10,27 +10,28 @@ interface Driver {
     driverName?: string;
     advance?: number;
     personalphone?: string;
+    companyName?: string;
 }
 
 interface Booking {
     id: string;
     amount: number; // Change to number
-    receivedAmount?: number; 
-    receivedAmountCompany?: number; 
+    receivedAmount?: number;
+    receivedAmountCompany?: number;
 
     // Keep as optional, type changed to number
     dateTime: string;
     fileNumber?: string;
     selectedDriver?: string;
-    approved?: boolean;
+    approve?: boolean;
     driver?: string;
     updatedTotalSalary?: number;
     disabled?: boolean;
     userName?: string;
-    selectedCompany:string;
-
+    selectedCompany: string;
+    companyBooking?: boolean;
 }
-
+// ------------------------------------------------------------------------
 const CashCollectionReport: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const uid = sessionStorage.getItem('uid') || '';
@@ -41,7 +42,7 @@ const CashCollectionReport: React.FC = () => {
     const [editingAmount, setEditingAmount] = useState<string>('');
     const [receivedAmount, setReceivedAmount] = useState<string>('');
     const [receivedAmountCompany, setReceivedAmountCompany] = useState<string>('');
-const [password, setPassword] = useState<string>('');
+    const [password, setPassword] = useState<string>('');
     const [modalIsOpen, setModalIsOpen] = useState<boolean>(false);
     const [bookingToApprove, setBookingToApprove] = useState<Booking | null>(null);
     const [selectedMonth, setSelectedMonth] = useState<string>('');
@@ -61,6 +62,7 @@ const [password, setPassword] = useState<string>('');
     const userName = sessionStorage.getItem('username');
     // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     console.log('role', userName);
+
     useEffect(() => {
         const fetchDriver = async () => {
             if (!uid || !id) {
@@ -88,44 +90,35 @@ const [password, setPassword] = useState<string>('');
         const fetchBookings = async () => {
             try {
                 const bookingsRef = collection(db, `user/${uid}/bookings`);
-                
+
                 // Query bookings where selectedCompany is equal to id
                 const companyQuery = query(
                     bookingsRef,
                     where('selectedCompany', '==', id),
-                    where('status', '==', 'Order Completed'),
+                    where('status', '==', 'Order Completed')
                     // orderBy('createdAt', 'desc')
                 );
                 const companySnapshot = await getDocs(companyQuery);
                 const bookingsWithCompany = companySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Booking[];
-    
+
                 // Query bookings where selectedDriver is equal to id (fallback if selectedCompany does not exist)
-                const driverQuery = query(
-                    bookingsRef,
-                    where('selectedDriver', '==', id),
-                    where('status', '==', 'Order Completed'),
-                    orderBy('createdAt', 'desc')
-                );
+                const driverQuery = query(bookingsRef, where('selectedDriver', '==', id), where('status', '==', 'Order Completed'), orderBy('createdAt', 'desc'));
                 const driverSnapshot = await getDocs(driverQuery);
                 const bookingsWithDriver = driverSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Booking[];
-    
+
                 // Combine both queries, filtering out duplicates if any
-                const combinedBookings = [
-                    ...bookingsWithCompany,
-                    ...bookingsWithDriver.filter(booking => !booking.selectedCompany || booking.selectedCompany !== id),
-                ];
-    
+                const combinedBookings = [...bookingsWithCompany, ...bookingsWithDriver.filter((booking) => !booking.selectedCompany || booking.selectedCompany !== id)];
+
                 setBookings(combinedBookings);
                 setFilteredBookings(combinedBookings); // Initially set filtered bookings to all fetched bookings
             } catch (error) {
                 console.error('Error fetching bookings:', error);
             }
         };
-    
+
         fetchBookings();
         updateTotalBalance();
     }, [db, id, uid]);
-    
 
     useEffect(() => {
         filterBookingsByMonthAndYear();
@@ -137,7 +130,8 @@ const [password, setPassword] = useState<string>('');
 
     useEffect(() => {
         calculateTotalSelectedBalance();
-    }, [selectedBookings, bookings]); // Update whenever selected bookings change
+    }, [selectedBookings, bookings]);
+
     const updateBookingAmount = async (bookingId: string, newAmount: string) => {
         const parsedAmount = parseFloat(newAmount); // Convert string to number
         if (isNaN(parsedAmount)) {
@@ -146,6 +140,8 @@ const [password, setPassword] = useState<string>('');
         }
         try {
             const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
+            // const bookingToUpdate = bookings.find((booking) => booking.id === bookingId);
+            // console.log('bookingToUpdate', bookingToUpdate);
             await updateDoc(bookingRef, { amount: parsedAmount }); // Save as number
             setBookings((prevBookings) => prevBookings.map((booking) => (booking.id === bookingId ? { ...booking, amount: parsedAmount } : booking)));
             updateTotalBalance();
@@ -166,8 +162,8 @@ const [password, setPassword] = useState<string>('');
             setEditingBooking(null);
         }
     };
-// -----------------------------------------------------------------------------------------------
-   const calculateBalance = (amount: string | number, receivedAmount: string | number) => {
+
+    const calculateBalance = (amount: string | number, receivedAmount: string | number) => {
         return (parseFloat(amount.toString()) - parseFloat(receivedAmount.toString())).toFixed(2);
     };
 
@@ -185,7 +181,7 @@ const [password, setPassword] = useState<string>('');
                 console.log(`Booking ID: ${booking.id}, Invalid amount:`, booking.amount);
                 return acc;
             }
-
+// -------------------------------------------------------------------------------------
             const balance = calculateBalance(booking.amount.toString(), booking.receivedAmount || 0);
             console.log(`Booking IDV: ${booking.id}, Amount: ${booking.amount}, Received Amount: ${booking.receivedAmount}, Balance: ${balance}`);
             return acc + parseFloat(balance);
@@ -264,8 +260,8 @@ const [password, setPassword] = useState<string>('');
         if (password === correctPassword) {
             try {
                 const bookingRef = doc(db, `user/${uid}/bookings`, bookingToApprove!.id); // Use non-null assertion as we checked for null earlier
-                await updateDoc(bookingRef, { approved: true });
-                setBookings((prevBookings) => prevBookings.map((booking) => (booking.id === bookingToApprove!.id ? { ...booking, approved: true, disabled: true } : booking)));
+                await updateDoc(bookingRef, { approve: true });
+                setBookings((prevBookings) => prevBookings.map((booking) => (booking.id === bookingToApprove!.id ? { ...booking, approve: true, disabled: true } : booking)));
                 setModalIsOpen(false);
                 setPassword('');
             } catch (error) {
@@ -370,7 +366,7 @@ const [password, setPassword] = useState<string>('');
 
     const handleCheckboxChange = (bookingId: any) => {
         const booking = bookings.find((b) => b.id === bookingId);
-        if (booking && (booking.approved || booking.disabled)) {
+        if (booking && (booking.approve || booking.disabled)) {
             return; // Prevent selection of approved or disabled bookings.
         }
 
@@ -384,7 +380,7 @@ const [password, setPassword] = useState<string>('');
         if (selectAll) {
             setSelectedBookings([]);
         } else {
-            const allBookingIds = filteredBookings.filter((booking) => !booking.approved && !booking.disabled).map((booking) => booking.id);
+            const allBookingIds = filteredBookings.filter((booking) => !booking.approve && !booking.disabled).map((booking) => booking.id);
             setSelectedBookings(allBookingIds);
         }
         setSelectAll(!selectAll);
@@ -418,21 +414,35 @@ const [password, setPassword] = useState<string>('');
             const updatedBookings = distributeReceivedAmount(receivedAmount, bookings);
             setBookings(updatedBookings); // Update state with new bookings
 
-            // Now, update the Firestore with the new received amounts
             const batch = writeBatch(db);
 
             updatedBookings.forEach((booking) => {
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
-                // const receivedAmt = typeof booking.receivedAmount === 'number' ? booking.receivedAmount : 0;
 
                 batch.update(bookingRef, {
-// receivedAmount: receivedAmt,
-receivedAmount: booking.receivedAmount,
-
-balance: String(calculateBalance(booking.amount, booking.receivedAmount || 0)), // Ensure it's stored as a string
-role: role || 'unknown', // Add role to the update
-                    userName: userName || 'unknown',
+                    receivedAmount: booking.receivedAmount,
+                    balance: String(calculateBalance(booking.amount, booking.receivedAmount || 0)),
+                    role: role || 'unknown',
                 });
+            });
+
+            // Step 1: Fetch the user document in `users` collection where userName matches
+            const usersQuery = query(collection(db, `user/${uid}/users`), where('userName', '==', userName));
+            const querySnapshot = await getDocs(usersQuery);
+
+            // Step 2: Update the `staffReceived` field for the matching user document
+            querySnapshot.forEach((userDoc) => {
+                const staffReceivedEntry = {
+                    amount: receivedAmount,
+                    date: new Date().toISOString(),
+                };
+
+                // Access the `staffReceived` subcollection within the user document
+                const staffReceivedRef = collection(db, `user/${uid}/users/${userDoc.id}/staffReceived`);
+
+                // Add the new entry as a document in the `staffReceived` subcollection
+                const newStaffReceivedDocRef = doc(staffReceivedRef); // Firestore generates an ID for the new document
+                batch.set(newStaffReceivedDocRef, staffReceivedEntry);
             });
 
             await batch.commit();
@@ -453,16 +463,26 @@ role: role || 'unknown', // Add role to the update
                     <div className="container-fluid mb-5">
                         <div className="flex flex-wrap text-center md:text-left">
                             <div className="w-full md:w-1/2 mb-4 p-6 bg-white shadow-lg rounded-lg transition-transform duration-300 hover:scale-105">
-                                <h2 className="text-2xl font-bold text-gray-800 mb-2 border-b-2 border-gray-200 pb-2">
-                                    🚗 Driver: <span className="text-indigo-600">{driver.driverName}</span>
-                                </h2>
+                                {driver && driver.companyName !== 'Company' && (
+                                    <h2 className="text-2xl font-bold text-gray-800 mb-2 border-b-2 border-gray-200 pb-2">
+                                        🚗 Company: <span className="text-indigo-600">{driver.driverName}</span>
+                                    </h2>
+                                )}
+                                {driver && driver.companyName === 'Company' && (
+                                    <h2 className="text-2xl font-bold text-gray-800 mb-2 border-b-2 border-gray-200 pb-2">
+                                        🏢 Company: <span className="text-indigo-600">{driver.driverName}</span>
+                                    </h2>
+                                )}
+
                                 <div className="mt-4">
                                     <p className="text-lg text-gray-700">
                                         📞 <span className="font-medium">Phone:</span> {driver.personalphone}
                                     </p>
+                                    {/* {driver?.selectedCompany !== "Company" && (  */}
                                     <p className="text-lg text-gray-700 mt-2">
-                                        💰 <span className="font-medium">Advance Payment:</span> {driver.advance}
+                                        💰 <span className="font-medium">Advance Payment:</span> {driver?.advance}
                                     </p>
+                                    {/* )} */}
                                 </div>
                             </div>
 
@@ -564,8 +584,7 @@ role: role || 'unknown', // Add role to the update
                         </div>
                     </div>
 
-                    {/* Total Balance Fixed Card */}
-                    {selectedBookings.length > 0 && showAmountDiv && (
+                    {selectedBookings.length > 0 && totalSelectedBalance !== '0.00' && showAmountDiv && (
                         <div className="fixed top-40 left-1/2 transform -translate-x-1/2 bg-yellow-100 border-2 border-gray-300 shadow-lg rounded-lg p-6 z-10">
                             <div className="flex flex-col space-y-4">
                                 <div className="flex items-center space-x-4">
@@ -615,68 +634,76 @@ role: role || 'unknown', // Add role to the update
                                         </div>
                                     </th>
                                     <th className={styles.tableCell}>Date</th>
-                                    <th className={styles.tableCell}>PayableAmount By Customer</th>
-
-                                    <th className={styles.tableCell}>Amount Received From The Customer</th>
-                                    {/* <th className={styles.tableCell}>Received Amount From Driver</th> */}
-                                    <th className={styles.tableCell}>Balance</th>
-                                    {role !== 'staff' && (
-
-                                    <th className={styles.tableCell}>Edit</th>
-                                    )}
+                                    {driver.companyName !== 'Company' && <th className={styles.tableCell}>PayableAmount By Customer</th>}
+                                    {driver.companyName === 'Company' && <th className={styles.tableCell}>PayableAmount By Company</th>}
+                                    {driver.companyName === 'Company' && <th className={styles.tableCell}>Amount Received From The Company</th>}
+                                    {driver.companyName !== 'Company' && <th className={styles.tableCell}>Amount Received From The Customer</th>} <th className={styles.tableCell}>Balance</th>
+                                    {role !== 'staff' && <th className={styles.tableCell}>Edit</th>}
                                     <th className={styles.tableCell}>Approve</th>
                                 </tr>
                             </thead>
                             <tbody className={styles.tableBody}>
                                 {filteredBookings.map((booking) => (
-                                    <tr key={booking.id} className={`${styles.tableRow} ${booking.approved ? 'bg-gray-200 text-gray-500' : 'bg-white'}`}>
+                                    <tr key={booking.id} className={`${styles.tableRow} ${booking.approve ? 'bg-gray-200 text-gray-500' : 'bg-white'}`}>
                                         <td className={`${styles.tableCell} text-center`}>
                                             <input
                                                 type="checkbox"
                                                 checked={selectedBookings.includes(booking.id)}
                                                 onChange={() => handleCheckboxChange(booking.id)}
-                                                disabled={booking.approved} // Optionally disable checkbox visually
+                                                disabled={booking.approve} // Optionally disable checkbox visually
                                             />
                                         </td>
                                         <td className={styles.responsiveCell}>{format(parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date()), 'dd/MM/yyyy, h:mm:ss a')}</td>
                                         <td className={styles.responsiveCell}>{booking.updatedTotalSalary}</td>
-
-                                        <td className={styles.responsiveCell}>{booking.amount}</td>
-                                        
-
-                                        <td
-                                            className={styles.responsiveCell}
-                                            style={{
-                                                backgroundColor:
-                                                    Number(calculateBalance(booking.amount, booking.receivedAmount || 0)) === 0
-                                                        ? '#e6ffe6' // Light green for zero balance
-                                                        : '#ffe6e6', // Light red for non-zero balance
-                                            }}
-                                        >
-                                            {calculateBalance(booking.amount, booking.receivedAmount || 0)}
-                                        </td>
+                                        {driver.companyName === 'Company' && <td className={styles.responsiveCell}>{booking.updatedTotalSalary}</td>}
+                                        {driver.companyName !== 'Company' && <td className={styles.responsiveCell}>{booking.amount}</td>}
+                                        {driver.companyName !== 'Company' && (
+                                            <td
+                                                className={styles.responsiveCell}
+                                                style={{
+                                                    backgroundColor:
+                                                        Number(calculateBalance(booking.amount, booking.receivedAmount || 0)) === 0
+                                                            ? '#e6ffe6' // Light green for zero balance
+                                                            : '#ffe6e6', // Light red for non-zero balance
+                                                }}
+                                            >
+                                                {calculateBalance(booking.amount, booking.receivedAmount || 0)}
+                                            </td>
+                                        )}
+                                        {driver.companyName === 'Company' && (
+                                            <td
+                                                className={styles.responsiveCell}
+                                                style={{
+                                                    backgroundColor:
+                                                        Number(calculateBalance(booking.amount, booking.receivedAmount || 0)) === 0
+                                                            ? '#e6ffe6' // Light green for zero balance
+                                                            : '#ffe6e6', // Light red for non-zero balance
+                                                }}
+                                            >
+                                                {calculateBalance(booking.amount, booking.receivedAmount || 0)}
+                                            </td>
+                                        )}
                                         {role !== 'staff' && (
-  <td className={styles.responsiveCell}>
-    <button
-      onClick={() => handleEditClick(booking)}
-      className={`text-blue-500 hover:text-blue-700 ${booking.approved ? 'cursor-not-allowed opacity-50' : ''}`}
-      disabled={booking.approved}
-    >
-      <IconEdit />
-    </button>
-  </td>
-)}
+                                            <td className={styles.responsiveCell}>
+                                                <button
+                                                    onClick={() => handleEditClick(booking)}
+                                                    className={`text-blue-500 hover:text-blue-700 ${booking.approve ? 'cursor-not-allowed opacity-50' : ''}`}
+                                                    disabled={booking.approve}
+                                                >
+                                                    <IconEdit />
+                                                </button>
+                                            </td>
+                                        )}
 
-                                      
                                         <td>
                                             <button
                                                 onClick={() => handleApproveClick(booking)}
-                                                className={`${booking.approved ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-700'} hover:${booking.approved ? 'bg-green-300' : 'bg-red-300'} ${
-                                                    booking.approved ? 'cursor-not-allowed' : 'cursor-pointer'
+                                                className={`${booking.approve ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-700'} hover:${booking.approve ? 'bg-green-300' : 'bg-red-300'} ${
+                                                    booking.approve ? 'cursor-not-allowed' : 'cursor-pointer'
                                                 } px-4 py-2 rounded`}
-                                                disabled={booking.approved}
+                                                disabled={booking.approve}
                                             >
-                                                {booking.approved ? 'Approved' : 'Approve'}
+                                                {booking.approve ? 'Approved' : 'Approve'}
                                             </button>
                                         </td>
                                     </tr>
@@ -792,4 +819,4 @@ role: role || 'unknown', // Add role to the update
 };
 
 export default CashCollectionReport;
-// ----------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------------

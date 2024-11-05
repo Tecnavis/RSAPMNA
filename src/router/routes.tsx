@@ -54,6 +54,7 @@ import SelectiveReportInvoice from '../pages/DriverReport/SelectiveReportInvoice
 import RsaStaffReport from '../pages/DriverReport/RsaStaffReport';
 import StaffDetailsReport from '../pages/DriverReport/StaffDetailsReport';
 import ExpenseDetails from '../pages/DriverReport/ExpenseDetails';
+import StaffInvice from '../pages/DriverReport/StaffInvice';
 
 
 
@@ -620,7 +621,10 @@ const routes = [
         path: '/users/driver/driverdetails/cashcollection/selectiveReportInvoice',
         element: <SelectiveReportInvoice />,
     },
-    
+    {
+        path: '/rsastaffReport/userdetails/satffinvoice',
+        element: <StaffInvice />,
+    },
     {
         path: '/showroomreport',
         element: <ShowroomReports />,
