@@ -265,7 +265,7 @@ const CardLayout = () => {
                             <option value="Showroom">Showroom</option>
                             <option value="Driver">Driver</option>
                             <option value="Staff">Staff</option>
-                            <option value="Customer">Customer</option>
+                            <option value="ShowroomStaff">Showroom Staff</option>
                             <option value="Provider">Provider</option>
                         </select>
                         </div>
@@ -299,7 +299,7 @@ const CardLayout = () => {
                             <option value="Showroom">Showroom</option>
                             <option value="Driver">Driver</option>
                             <option value="Staff">Staff</option>
-                            <option value="Customer">Customer</option>
+                            <option value="ShowroomStaff">Showroom Staff</option>
                             <option value="Provider">Provider</option>
                         </select>
                         <input type="file" name="image" onChange={handleFileChange} />

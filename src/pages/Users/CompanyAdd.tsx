@@ -42,6 +42,7 @@ const CompanyAdd = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [phone, setPhone] = useState('');
     const [companyName, setCompanyName] = useState('');
+    const [provider, setProvider] = useState('true');
 
     const [personalphone, setPersonalPhone] = useState('');
     const [salaryPerKm, setSalaryPerKm] = useState<SalaryDetails>({});
@@ -341,6 +342,7 @@ const CompanyAdd = () => {
                 confirmPassword,
                 profileImageUrl,
                 advance,
+                provider
             };
     
             if (editData) {

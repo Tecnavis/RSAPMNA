@@ -7,6 +7,7 @@ interface User {
     id: string;
     userName: string;
     role: string;
+    name:string;
 }
 
 interface EditUserData {
@@ -118,12 +119,17 @@ const RsaStaffReport: React.FC = () => {
                                             <IconEdit className="inline-block w-5 h-5" />
                                         </button>
                                     )}
-                                    <Link
-                                        to={`/rsastaffReport/userdetails/${user.id}`}
-                                        className="text-blue-500 hover:text-blue-700 bg-blue-100 px-2 py-1 rounded-md shadow-md"
-                                    >
-                                        View Details
-                                    </Link>
+                      <Link
+    to={{
+        pathname: `/rsastaffReport/userdetails/${user.id}`
+    }}
+    state={{ name: user.name }} // Pass 'name' here as a separate prop
+    className="text-blue-500 hover:text-blue-700 bg-blue-100 px-2 py-1 rounded-md shadow-md"
+>
+    View Details
+</Link>
+
+
                                 </td>
                             </tr>
                         ))}

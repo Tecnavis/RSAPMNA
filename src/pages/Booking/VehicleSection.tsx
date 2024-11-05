@@ -1,7 +1,29 @@
 import { collection, getDocs, getFirestore, query, where } from 'firebase/firestore';
 import React, { useState, useEffect, useRef } from 'react';
+interface VehicleSectionProps {
+    showroomLocation: string;
+    totalSalary: number;
+    onUpdateTotalSalary: (newSalary: number) => void;
+    insuranceAmountBody: string;
+    onInsuranceAmountBodyChange: (amount: string) => void;
+    serviceCategory: string;
+    updatedTotalSalary: number;
+    onServiceCategoryChange: (category: string) => void;
+    onAdjustValueChange: (value: string) => void;
+    adjustValue: string;
+    onInsuranceChange: (insurance: string) => void;
+    bodyShope: string;
+}
 
-const VehicleSection = ({
+interface ShowRoomState {
+    availableServices: string;
+    hasInsurance: string;
+    lifting: string;
+    insuranceAmount: string;
+    insurance: string;
+    insuranceAmountBody: string;
+}
+const VehicleSection: React.FC<VehicleSectionProps> = ({
     showroomLocation,
     totalSalary,
     onUpdateTotalSalary,
@@ -15,7 +37,7 @@ const VehicleSection = ({
     onInsuranceChange,
     bodyShope,
 }) => {
-    const [showRoom, setShowRoom] = useState({
+    const [showRoom, setShowRoom] = useState<ShowRoomState>({
         availableServices: serviceCategory || '',
         hasInsurance: '',
         lifting: '',
@@ -23,14 +45,13 @@ const VehicleSection = ({
         insurance: bodyShope || '', // Initialize insurance with bodyShope
         insuranceAmountBody: insuranceAmountBody || '', // Allow insurance amount to be an empty string for manual entry
     });
-    const [changedInsuranceAmountBody, setChangedInsuranceAmountBody] = useState('');
-    console.log("changedInsuranceAmountBody",changedInsuranceAmountBody)
-    const role = sessionStorage.getItem('role');   
-      const adjustmentApplied = useRef(false);
-    const uid = sessionStorage.getItem('uid');
-    //    ------------------------------------------------------------
+    const [changedInsuranceAmountBody, setChangedInsuranceAmountBody] = useState<string>('');
+    const [showNotification, setShowNotification] = useState<boolean>(false);
+    const [isButtonGreen, setIsButtonGreen] = useState(false); // State to change button color
+    const role = sessionStorage.getItem('role');
+    const adjustmentApplied = useRef<boolean>(false);
+    const uid = sessionStorage.getItem('uid') || '';
     const db = getFirestore();
-    
 
     useEffect(() => {
         const fetchInsuranceAmountBody = async () => {
@@ -76,14 +97,12 @@ const VehicleSection = ({
                 ...prevShowRoom,
                 availableServices: serviceCategory,
             }));
-            
         }
-
     }, [serviceCategory]);
 
-    const handleServiceChange = (e: any) => {
+    const handleServiceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { value } = e.target;
-        console.log("valuess",value)
+        console.log('valuess', value);
         setShowRoom((prevShowRoom) => ({
             ...prevShowRoom,
             availableServices: value,
@@ -95,7 +114,7 @@ const VehicleSection = ({
         }
     };
 
-    const handleBodyInsuranceChange = (e: any) => {
+    const handleBodyInsuranceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { value } = e.target;
         setShowRoom((prevShowRoom) => ({
             ...prevShowRoom,
@@ -104,7 +123,7 @@ const VehicleSection = ({
         onInsuranceChange(value);
     };
 
-    const handleInsuranceAmountChange = (e: any) => {
+    const handleInsuranceAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { value } = e.target;
         setShowRoom((prevShowRoom) => ({
             ...prevShowRoom,
@@ -112,42 +131,50 @@ const VehicleSection = ({
         }));
         onInsuranceAmountBodyChange(value);
     };
-    const handleChangedInsuranceChange = (e:any) => {
+    const handleChangedInsuranceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { value } = e.target;
         setChangedInsuranceAmountBody(value);
-console.log("changedInsuranceAmountBodyyy",value)      
-  onInsuranceAmountBodyChange(value); // Notify parent component of the change
+        console.log('changedInsuranceAmountBodyyy', value);
+        onInsuranceAmountBodyChange(value); // Notify parent component of the change
     };
-    const handleAdjustValueChange = (e: any) => {
+    const handleAdjustValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { value } = e.target;
         onAdjustValueChange(value);
+        if (value) {
+            setShowNotification(true); // Show the notification when value is entered
+            setIsButtonGreen(false); // Reset button color to default
+        } else {
+            setShowNotification(false); // Hide notification if input is cleared
+        }
     };
-    const applyAdjustment = (event: any) => {
+    const applyAdjustment = (event?: React.MouseEvent<HTMLButtonElement>) => {
         // Prevent default form behavior if applicable
         if (event) event.preventDefault();
-    
+
         const adjustedSalary = parseFloat(adjustValue);
-    
+
         if (adjustedSalary > updatedTotalSalary) {
             // Call the function to update the total salary
             onUpdateTotalSalary(adjustedSalary);
             adjustmentApplied.current = true;
+            setIsButtonGreen(true); // Change button color to green
+            setShowNotification(false);
         } else {
             // Show confirmation dialog
             const confirmAction = window.confirm('Adjusting salary below the current total. Are you sure?');
-            
+
             if (confirmAction) {
                 // Only show the password prompt depending on the user's role
-                const password = role === "staff" 
-                    ? prompt('Enter password to apply the adjustment') 
-                    : prompt('Enter password to apply the adjustment: Password=RSA@123');
-    
-                const expectedPassword = role === "staff" ? 'Adjust' : 'RSA@123';
-    
+                const password = role === 'staff' ? prompt('Enter password to apply the adjustment') : prompt('Enter password to apply the adjustment: Password=RSA@123');
+
+                const expectedPassword = role === 'staff' ? 'Adjust' : 'RSA@123';
+
                 if (password === expectedPassword) {
                     // Call the function to update the total salary
                     onUpdateTotalSalary(adjustedSalary);
                     adjustmentApplied.current = true;
+                    setIsButtonGreen(true); // Change button color to green
+                    setShowNotification(false);
                 } else {
                     alert('Incorrect password. Adjustment not applied.');
                 }
@@ -156,7 +183,6 @@ console.log("changedInsuranceAmountBodyyy",value)
             }
         }
     };
-    
 
     return (
         <div className="mb-5">
@@ -239,7 +265,7 @@ console.log("changedInsuranceAmountBodyyy",value)
                         )}
                     </div>
                 )}
-                 <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
+                <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
                     <input
                         type="radio"
                         name="availableServices"
@@ -264,28 +290,28 @@ console.log("changedInsuranceAmountBodyyy",value)
                     Lifting
                 </label>
                 <br />
-            <div>
-                <div  className="flex items-center ml-6 ">
-                    <label style={{ fontSize: '1.5em', color: 'red',marginRight:'10px' }}>Adjustment Value:</label>
-                    <input type="number" value={adjustValue} onChange={handleAdjustValueChange} style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }} />
-                    <button
-                        onClick={applyAdjustment}
-                        style={{
-                            padding: '8px 16px',
-                            borderRadius: '5px',
-                            backgroundColor: '#007bff',
-                            color: 'white',
-                            border: 'none',
-                            cursor: 'pointer',
-                            marginLeft: '10px',
-                        }}
-                    >
-                        Apply
-                    </button>
+                <div>
+                    <div className="flex items-center ml-6">
+                        <label style={{ fontSize: '1.5em', color: 'red', marginRight: '10px' }}>Adjustment Value:</label>
+                        <input type="number" value={adjustValue} onChange={handleAdjustValueChange} style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }} />
+                        <button
+                            onClick={applyAdjustment}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '5px',
+                                backgroundColor: isButtonGreen ? 'green' : 'red',
+                                color: 'white',
+                                border: 'none',
+                                cursor: 'pointer',
+                                marginLeft: '10px',
+                            }}
+                        >
+                            Apply
+                        </button>
+                        {showNotification && !isButtonGreen && <span style={{ color: 'red', marginLeft: '10px' }}>Click the apply button</span>}
+                    </div>
                 </div>
             </div>
-            </div>
-          
         </div>
     );
 };

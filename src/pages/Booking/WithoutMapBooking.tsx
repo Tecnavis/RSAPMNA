@@ -275,20 +275,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         setBodyShope(insurance);
     };
 
-    // useEffect(() => {
-    //     if (selectedDriver) {
-    //         const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-
-    //         if (selectedDriverData) {
-    //             if (selectedDriverData.serviceVehicle) {
-    //                 setServiceVehicle(renderServiceVehicle(selectedDriverData.serviceVehicle, serviceType));
-    //             }
-    //         } else {
-    //             console.error('Driver not found:', selectedDriver);
-    //         }
-    //     }
-    // }, [selectedDriver, serviceType, drivers]);
-    useEffect(() => {
+       useEffect(() => {
         console.log('Selected Company ID:', selectedCompany);
         console.log('Companies Data:', companies); // Log the companies array
 
@@ -365,9 +352,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 break;
             case 'insuranceAmountBody':
                 setInsuranceAmountBody(value || 0);
-                // const recalculatedTotalSalary = totalSalary - parseFloat(value);
-                // handleUpdatedTotalSalary(recalculatedTotalSalary);
-                break;
+                 break;
             case 'adjustValue':
                 setAdjustValue(value || 0);
 
@@ -1039,6 +1024,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
                 const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
             const selectedCompanyData = companies.find((company) => company.id === selectedCompany);
+            const companyBooking = selectedCompanyData ? true : false;
 
             if (selectedCompanyData) {
                 const { advancePayment, netTotalAmountInHand, companyName } = selectedCompanyData;
@@ -1124,6 +1110,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     insuranceAmountBody: insuranceAmountBody || '',
                      receivedAmount: receivedAmount || '',
                     pickupDistance: pickupDistance,
+                    companyBooking: companyBooking,
                 };
 
                 if (editData) {
