@@ -425,8 +425,8 @@ console.log("userRole",userRole)
     const handleClose = () => setOpen(false);
 
     const generateShowRoomLink = () => {
-        const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`; // Your actual base URL
-        // const baseUrl = `http://localhost:5174/showrooms/showroom/showroomDetails`; // Your actual base URL
+        // const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`; // Your actual base URL
+        const baseUrl = `http://localhost:5174/showrooms/showroom/showroomDetails`; // Your actual base URL
         const uid = sessionStorage.getItem('uid') || '';
 
         const queryParams = new URLSearchParams({

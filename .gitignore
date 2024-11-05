@@ -15,6 +15,7 @@ config/rsapmna-de966-firebase-adminsdk-5871a-fa63c6fc31.json
 dist
 dist-ssr
 *.local
+.env
 
 # Editor directories and files
 .vscode/*
