@@ -68,7 +68,7 @@ const RewardPage: React.FC = () => {
         { id: 2, image: 'https://via.placeholder.com/150', name: 'Product 2', description: 'Description of product 2', price: 1000, category: 'Home Goods' },
         { id: 3, image: 'https://via.placeholder.com/150', name: 'Product 3', description: 'Description of product 3', price: 700, category: 'Toys' },
     ]);
-
+// 
     const [redemptionHistory, setRedemptionHistory] = useState<RewardItem[]>([]);
     useEffect(() => {
         const fetchRedemptionHistory = async () => {
