@@ -151,6 +151,7 @@ const DriverReport: React.FC = () => {
                                     >
                                         View Cash Collection Report
                                     </Link>
+                                    
                                     <Link
                                         to={`/driverreport/salaryreport/${driver.id}`}
                                         className="text-blue-500 hover:text-blue-700 bg-blue-100 px-2 py-1 rounded-md shadow-md"

@@ -55,6 +55,7 @@ import RsaStaffReport from '../pages/DriverReport/RsaStaffReport';
 import StaffDetailsReport from '../pages/DriverReport/StaffDetailsReport';
 import ExpenseDetails from '../pages/DriverReport/ExpenseDetails';
 import StaffInvice from '../pages/DriverReport/StaffInvice';
+import Leave from '../pages/Leave/Leave';
 
 
 
@@ -198,6 +199,8 @@ const routes = [
     {path :"/rewarditem",element:<RewarItem/>},
     {path :"/rewards",element:<Reward/>},
     {path: "/rewarddetails",element:<RewardDetails/>},
+    {path :"/leave",element:<Leave/>},
+
     // {
     //     path: '/bookings/booking/driversalary',
     //     element: <DriverSalary />,
