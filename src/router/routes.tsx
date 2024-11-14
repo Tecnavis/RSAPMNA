@@ -56,6 +56,7 @@ import StaffDetailsReport from '../pages/DriverReport/StaffDetailsReport';
 import ExpenseDetails from '../pages/DriverReport/ExpenseDetails';
 import StaffInvice from '../pages/DriverReport/StaffInvice';
 import Leave from '../pages/Leave/Leave';
+import Track from '../pages/Booking/Track';
 
 
 
@@ -201,10 +202,10 @@ const routes = [
     {path: "/rewarddetails",element:<RewardDetails/>},
     {path :"/leave",element:<Leave/>},
 
-    // {
-    //     path: '/bookings/booking/driversalary',
-    //     element: <DriverSalary />,
-    // },
+    {
+        path: '/bookings/newbooking/track/:bookingId',
+        element: <Track />,
+    },
     // analytics page
     {
         path: '/analytics',

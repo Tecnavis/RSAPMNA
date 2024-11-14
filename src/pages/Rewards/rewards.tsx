@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import './style.css'; // Add custom styles here
-import { Button } from '@mui/material';
+import { Button, TextField } from '@mui/material';
 import IconEye from '../../components/Icon/IconEye';
 import { collection, doc, getDocs, getFirestore, query, setDoc, where } from 'firebase/firestore';
 
-type ClientCategory = 'Driver' | 'Showroom' | 'ShowroomStaff' | 'Marketing Executive';
+type ClientCategory = 'Driver' | 'Showroom' | 'Marketing Executive' | 'ShowroomStaff';
 interface ClientRewardDetails {
     id: string;
     name: string;
     rewardPoints: number;
     companyName?: string;
-    percentage?: number;
+
+    bookingPoint?:number;
     category?: string;
     staff: Staff[];
 }
@@ -28,6 +29,7 @@ const ClientRewards: React.FC = () => {
     const [selectedShowroomStaff, setSelectedShowroomStaff] = useState<{ [showroomName: string]: string }>({});
     const [showroomVisible, setShowroomVisible] = useState<string | null>(null); // Track the clicked showroom
     const [showroomStaffRewards, setShowroomStaffRewards] = useState<ClientRewardDetails[]>([]);
+    const [bookingPoints, setBookingPoints] = useState<{ [id: string]: number }>({});
 
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
@@ -51,7 +53,7 @@ const ClientRewards: React.FC = () => {
                             ? driverData.rewardPoints || 0 // Fetch from DB for RSA
                             : calculateRewardPoints(driverData), // Calculate for non-RSA drivers
                     companyName: driverData.companyName, // Ensure companyName is a string
-                    percentage: driverData.percentage || 0, // Fetch the percentage
+                    // percentage: driverData.percentage || 0, // Fetch the percentage
                     staff: [], // Initialize with an empty array or fetch actual staff data if needed
                 };
             });
@@ -76,12 +78,16 @@ const ClientRewards: React.FC = () => {
                 id: doc.id, // Get the showroom ID
                 name: doc.data().ShowRoom,
                 rewardPoints: doc.data().rewardPoints || 0,
+                bookingPoint: doc.data().bookingPoint || 0,
+
                 staff:
                     doc.data().staff?.map((staff: any) => ({
                         id: staff.id, // Make sure to fetch the ID for each staff member
                         name: staff.name,
                         phoneNumber: staff.phoneNumber,
                         rewardPoints: staff.rewardPoints || 0,
+                        bookingPoint: doc.data().bookingPoint || 0,
+
                     })) || [], // Default to an empty array if no staff is found
             }));
 
@@ -151,27 +157,134 @@ const ClientRewards: React.FC = () => {
     const handleShowroomClick = (clientName: string) => {
         setShowroomVisible((prev) => (prev === clientName ? null : clientName)); // Toggle dropdown visibility
     };
+    const handleBookingPointChange = (id: string, value: string) => {
+        setBookingPoints((prevPoints) => ({ ...prevPoints, [id]: parseInt(value) || 0 }));
+    };
 
+    const updateBookingPointsInAllShowrooms = async (category:any, bookingPoint:any) => {
+        try {
+            const showroomCollection = collection(db, `user/${uid}/showroom`);
+            const showroomSnapshot = await getDocs(showroomCollection);
+    
+            // Iterate through each showroom document
+            showroomSnapshot.forEach(async (docSnapshot) => {
+                const showroomDocRef = doc(db, `user/${uid}/showroom`, docSnapshot.id);
+    
+                if (category === 'Showroom') {
+                    // If category is 'Showroom', update the bookingPoint in the showroom document
+                    await setDoc(showroomDocRef, { bookingPoint }, { merge: true });
+                } else if (category === 'ShowroomStaff') {
+                    console.log('Category is ShowroomStaff');
+    
+                    // For 'ShowroomStaff', update two fields (PointsForShowroomStaff and PointsForShowroom)
+                    const { bookingPoint1, bookingPoint2 } = bookingPoint;
+                    const staffDocRef = doc(db, `user/${uid}/showroom`, docSnapshot.id);
+                    
+                    try {
+                        await setDoc(
+                            staffDocRef,
+                            { 
+                                bookingPointStaff: bookingPoint1, // Store Points For ShowRoomStaff
+                                bookingPointForShowroom: bookingPoint2 // Store Points For ShowRoom
+                            },
+                            { merge: true }
+                        );
+                    } catch (error) {
+                        console.error('Error updating bookingPointStaff for ShowroomStaff:', error);
+                    }
+                }
+            });
+    
+            console.log('Booking points updated successfully');
+        } catch (error) {
+            console.error('Error updating booking points:', error);
+        }
+    };
+    
+    
+    
+    // -----------------------------------------------------------------------------------11-11-2024--------------------------------------------------------
     return (
         <div className="client-rewards-container">
             <h1>CLIENT REWARDS</h1>
             <br />
-            <div className="cards-container">
-                {[
-                    { category: 'Driver', rewardPoints: driverRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) },
-                    { category: 'Showroom', rewardPoints: showroomRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) },
-                    { category: 'Marketing Executive', rewardPoints: customerRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) },
-                    { category: 'ShowroomStaff', rewardPoints: showroomStaffRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) }, // Display ShowroomStaff reward points
-                ].map((client) => (
-                    <div key={client.category as ClientCategory} className={`client-card ${client.category.toLowerCase()}`}>
-                        <h2>{client.category}</h2>
+            <div className="cards-container"> 
+    {[
+        { category: 'Driver', rewardPoints: driverRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) },
+        { category: 'Showroom', rewardPoints: showroomRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) },
+        { category: 'Marketing Executive', rewardPoints: customerRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) },
+        { category: 'ShowroomStaff', rewardPoints: showroomStaffRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) }, // Display ShowroomStaff reward points
+    ].map((client, index) => (
+        <div key={index} className={`client-card ${client.category.toLowerCase()}`}>
+            <h2>{client.category}</h2>
 
-                        <button onClick={() => handleViewRewards(client.category as ClientCategory)} className="reward-btn">
-                            {visibleCategory === client.category ? 'Hide Rewards' : 'View Rewards'}
-                        </button>
-                    </div>
-                ))}
-            </div>
+            {/* Show input fields for categories other than 'Driver' */}
+            {client.category !== 'Driver' && client.category !== 'ShowroomStaff' && (
+                <>
+                    <TextField
+                        label="Points"
+                        type="number"
+                        value={bookingPoints[client.category] || ''} // Make sure it's initialized properly
+                        onChange={(e) => handleBookingPointChange(client.category, e.target.value)} // Update function
+                        variant="outlined"
+                        fullWidth
+                    />
+
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => updateBookingPointsInAllShowrooms(client.category, bookingPoints[client.category])} // Update points for the category
+                    >
+                        OK
+                    </Button>
+                </>
+            )}
+
+            {/* Show two input fields for 'ShowroomStaff' */}
+            {client.category === 'ShowroomStaff' && (
+                <>
+                    <TextField
+                        label="Points For ShowRoomStaff"
+                        type="number"
+                        value={bookingPoints[`${client.category}_1`] || ''} // For ShowroomStaff, use a different key
+                        onChange={(e) => handleBookingPointChange(`${client.category}_1`, e.target.value)} // Update function
+                        variant="outlined"
+                        fullWidth
+                    />
+
+                    <TextField
+                        label="Points For ShowRoom"
+                        type="number"
+                        value={bookingPoints[`${client.category}_2`] || ''} // For ShowroomStaff, use another key
+                        onChange={(e) => handleBookingPointChange(`${client.category}_2`, e.target.value)} // Update function
+                        variant="outlined"
+                        fullWidth
+                    />
+
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => {
+                            const bookingPoint = {
+                                bookingPoint1: bookingPoints[`${client.category}_1`],
+                                bookingPoint2: bookingPoints[`${client.category}_2`],
+                            };
+                            updateBookingPointsInAllShowrooms(client.category, bookingPoint); // Update points for ShowroomStaff
+                        }}
+                    >
+                        OK
+                    </Button>
+                </>
+            )}
+
+            {/* Button to toggle rewards visibility */}
+            <button onClick={() => handleViewRewards(client.category as ClientCategory)} className="reward-btn ml-2 mt-2">
+                {visibleCategory === client.category ? 'Hide Rewards' : 'View Rewards'}
+            </button>
+        </div>
+    ))}
+</div>
+
 
             <div className="rewards-list">
                 {getRewardsList().map(({ category, rewards }) => (

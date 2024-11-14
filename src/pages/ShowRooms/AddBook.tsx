@@ -158,7 +158,11 @@ const AddBook: React.FC = () => {
                                 claimedDate: Timestamp.now(),
                                 description: item.description,
                                 category: item.category,
-                                price: item.price
+                                price: item.price,
+                                itemImage: item.image,
+                                id: item._id,
+
+
                             }
                         ]
                     };
@@ -186,6 +190,8 @@ const AddBook: React.FC = () => {
                     ? { ...reward, stock: reward.stock - 1 }
                     : reward
             );
+            console.log(updatedRewards)
+
             setRewards(updatedRewards);
 
             setSuccessMessage(`Successfully claimed ${item.name}!`);

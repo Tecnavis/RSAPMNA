@@ -383,9 +383,8 @@ const CashCollectionReport: React.FC = () => {
             if (booking) {
                 // Determine amountToUse based on conditions
                 const amountToUse = booking.companyBooking
-                    ? parseFloat(booking.updatedTotalSalary?.toString() || booking.amount?.toString() || '0')
-                    : parseFloat(booking.amount?.toString() || '0');
-                
+                ? 0  // Set amount to 0 if it's a company booking
+                : parseFloat(booking.amount?.toString() || '0');
                 return acc + parseFloat(calculateBalance(amountToUse, booking.receivedAmount || 0));
             }
             return acc;
@@ -780,6 +779,7 @@ const CashCollectionReport: React.FC = () => {
             )} */}
 
             {/* {driver.companyName === 'Company' && ( */}
+            
                 <td
                     className={styles.responsiveCell}
                     style={{

@@ -84,7 +84,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [company, setCompany] = useState<string>('');
     const [customerName, setCustomerName] = useState<string>('');
     const [mobileNumber, setMobileNumber] = useState<string>('');
-    // const [serviceVehicle, setServiceVehicle] = useState<string>('');
+    const [selectedServiceType, setSelectedServiceType] = useState(null);
     const [vehicleNumber, setVehicleNumber] = useState<string>('');
     const [vehicleModel, setVehicleModel] = useState<string>('');
     const [vehicleSection, setVehicleSection] = useState<string>('');
@@ -146,13 +146,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
 
             setAvailableServices(editData.availableServices || '');
             setMobileNumber(editData.mobileNumber || '');
-            // setDis1(editData.dis1 || '');
-            // setDis2(editData.dis2 || '');
-
-            // setDis3(editData.dis3 || '');
-
             setVehicleNumber(editData.vehicleNumber || '');
-            // setServiceVehicle(editData.serviceVehicle || '');
             setVehicleModel(editData.vehicleModel || '');
             setVehicleSection(editData.vehicleSection || '');
             setShowroomLocation(editData.showroomLocation || '');
@@ -215,7 +209,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const validateForm = () => {
         let tempErrors: { [key: string]: string } = {}; // Allows string keys
         let isValid = true;
-
+    
+        // Phone number validation
         if (!phoneNumber.trim()) {
             tempErrors['phoneNumber'] = 'Phone number is required';
             isValid = false;
@@ -223,19 +218,20 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             tempErrors['phoneNumber'] = 'Phone number is invalid, must be 10 digits';
             isValid = false;
         }
-
-        if (!mobileNumber.trim()) {
-            tempErrors['mobileNumber'] = 'Mobile number is required';
+    
+        // Trapped location validation
+        if (!trappedLocation) {
+            tempErrors['trappedLocation'] = 'Trapped location is required';
             isValid = false;
-        } else if (!/^\d{10}$/.test(mobileNumber)) {
-            // Fix to check mobileNumber instead of phoneNumber
-            tempErrors['mobileNumber'] = 'Mobile number is invalid, must be 10 digits';
+        } else if (trappedLocation === 'outsideOfRoad' && (!updatedTotalSalary || updatedTotalSalary <= 0)) {
+            tempErrors['updatedTotalSalary'] = 'Updated Total Salary is required and must be greater than 0 when Trapped Location is "Outside of Road"';
             isValid = false;
         }
-
+    
         setErrors(tempErrors);
         return isValid;
     };
+    
     // ------------------------------------------
     useEffect(() => {
         if (company === 'rsa') {
@@ -262,7 +258,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     };
 
     const handleInsuranceAmountBodyChange = (amount: any) => {
-        console.log('amount', amount);
+        console.log('amounttt', amount);
         setInsuranceAmountBody(amount);
     };
     const handleAdjustValueChange = (newAdjustValue: any) => {
@@ -406,7 +402,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 const selectedDriverData = drivers.find((driver) => driver.id === value);
                 console.log('firstselectedDriverData', selectedDriverData);
                 if (selectedDriverData) {
-                    const isRSA = selectedDriverData.companyName === 'RSA';
+                    const isRSA = selectedDriverData.companyName !== 'Company';
 
                     // Define the selected service type
                     const selectedService = isRSA
@@ -769,6 +765,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         const fetchServiceDetails = async () => {
             if (!serviceType) {
                 setServiceDetails({});
+                setSelectedServiceType(null); 
                 return;
             }
 
@@ -778,17 +775,20 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 const snapshot = await getDocs(serviceQuery);
                 if (snapshot.empty) {
                     setServiceDetails({});
+                    setSelectedServiceType(null);
                     return;
                 }
 
                 // Get the first document that matches the serviceType
                 const details = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))[0];
                 console.log('Fetched Service Details for selected serviceType:', details);
-                setServiceDetails(details); // Set the fetched details to state
-            } catch (error) {
-                console.error('Error fetching service details:', error);
-                setServiceDetails({});
-            }
+                setServiceDetails(details); 
+setSelectedServiceType(serviceType); 
+} catch (error) {
+    console.error('Error fetching service details:', error);
+    setServiceDetails({});
+    setSelectedServiceType(null);
+}
         };
 
         fetchServiceDetails();
@@ -798,7 +798,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     useEffect(() => {
         if (drivers.length > 0) {
             const totalSalaries = drivers.map((driver) => {
-                const isRSA = driver.companyName === 'RSA';
+                const isRSA = driver.companyName !== 'Company';
 
                 // Declare variables for salary calculation
                 let salary;
@@ -811,8 +811,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         // Filter only the selected serviceType from the selectedServices array
                         selectedService = selectedCompanyData.selectedServices.find((service) => service === serviceType);
 
-                        // Log the selected service type
-                        console.log('Selected Service Typeee:', selectedService);
+                        setSelectedServiceType(selectedService);                        console.log('Selected Service Typeee:', selectedService);
 
                         // Now use this selected service type to calculate the salary
                         salary = selectedCompanyData.basicSalaries[selectedService];
@@ -872,6 +871,9 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         salaryPerKM = parseFloat(salaryPerKM);
         salary = parseFloat(salary);
         console.log('totalDriverDistance', totalDriverDistance);
+        console.log('totalDriverDistancebasicSalaryKM', basicSalaryKM);
+        console.log('totalDriverDistancesalaryPerKM', salaryPerKM);
+        console.log('totalDriverDistancesalary', salary);
 
         if (totalDriverDistance > basicSalaryKM) {
             return salary + (totalDriverDistance - basicSalaryKM) * salaryPerKM;
@@ -883,7 +885,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     useEffect(() => {
         if (selectedDriver && Array.isArray(drivers)) {
             const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-
+console.log("selectedDriverDatabb",selectedDriverData)
             if (selectedDriverData) {
                 // Access the nested properties
                 const { basicSalaryKm, salaryPerKm, basicSalaries } = selectedDriverData;
@@ -894,11 +896,11 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 }
 
                 // Assuming you want to use the selected service from the selectedDriverData
-                const selectedService = selectedDriverData.selectedServices[0]; // Adjust as needed
-                const basicSalaryKM = basicSalaryKm[selectedService];
-                const salaryPerKM = salaryPerKm[selectedService];
-                const salary = basicSalaries[selectedService];
-
+                // const selectedService = selectedDriverData.selectedServices[0]; // Adjust as needed
+                const basicSalaryKM = basicSalaryKm[selectedServiceType];
+                const salaryPerKM = salaryPerKm[selectedServiceType];
+                const salary = basicSalaries[selectedServiceType];
+console.log("selectedServiceeee",selectedServiceType)
                 if (basicSalaryKM === undefined || salaryPerKM === undefined || salary === undefined) {
                     console.error('Selected service does not have all required properties:', {
                         basicSalaryKM,
@@ -918,7 +920,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 console.error('Driver not found:', selectedDriver);
             }
         }
-    }, [selectedDriver, totalDriverDistance, drivers]);
+    }, [selectedDriver, totalDriverDistance, drivers,selectedServiceType]);
 
     useEffect(() => {
         let newTotalSalary = totalSalary;
@@ -1021,10 +1023,24 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const addOrUpdateItem = async (): Promise<void> => {
         if (validateForm()) {
             try {
-                const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-                const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
+                let selectedDriverData;
+                if (selectedDriver === 'dummy') {
+                    selectedDriverData = {
+                        id: 'dummy', // Set the dummy driver ID
+                        driverName: 'DummyDriver',
+                        advancePayment: 0, // Set default values for dummy driver
+                        netTotalAmountInHand: 0,
+                        companyName: 'RSA', // Set a default company name for the dummy driver
+                        fcmToken: null,
+                        pickupDistance: 0
+                    };
+                } else {
+                    // Regular driver lookup
+                    selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
+                }                const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
             const selectedCompanyData = companies.find((company) => company.id === selectedCompany);
             const companyBooking = selectedCompanyData ? true : false;
+            const companyName = selectedCompanyData ? selectedCompanyData.driverName : '';
 
             if (selectedCompanyData) {
                 const { advancePayment, netTotalAmountInHand, companyName } = selectedCompanyData;
@@ -1111,6 +1127,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                      receivedAmount: receivedAmount || '',
                     pickupDistance: pickupDistance,
                     companyBooking: companyBooking,
+                    companyName: companyName,
                 };
 
                 if (editData) {
@@ -1482,6 +1499,12 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                             </label>
                         </div>
                     </div>
+                    {errors.trappedLocation && (
+    <span className="text-red-500 text-sm mt-1">
+        {errors.trappedLocation}
+    </span>
+)}
+
                 </div>
 
                 {trappedLocation === 'outsideOfRoad' && (
@@ -1606,7 +1629,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                         return 0;
                                     })
                                     .map((driver) => {
-                                        const isRSA = driver.companyName === 'RSA';
+                                        const isRSA = driver.companyName !== 'Company';
 
                                         // Determine the selected service based on serviceType for both RSA and non-RSA companies
                                         const selectedService = isRSA
@@ -1858,7 +1881,6 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         value={mobileNumber}
                         placeholder="Enter your Mobile number"
                     />
-                    {errors.mobileNumber && <p className="text-red-500 text-sm mt-1">{errors.mobileNumber}</p>}
                 </div>
 
                 <div className={styles.formGroup}>
@@ -1945,3 +1967,4 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     );
 };
 export default WithoutMapBooking;
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
