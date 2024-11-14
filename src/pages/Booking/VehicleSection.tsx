@@ -109,7 +109,8 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
             insurance: '',
         }));
 
-        if (value === 'Body Shop') {
+        const validServices = ['Body Shop', 'Service Center', 'Showroom', 'lifting'];
+        if (validServices.includes(value)) {
             onServiceCategoryChange(value);
         }
     };
@@ -123,7 +124,7 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
         onInsuranceChange(value);
     };
 
-    const handleInsuranceAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInsuranceAmountBodyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { value } = e.target;
         setShowRoom((prevShowRoom) => ({
             ...prevShowRoom,

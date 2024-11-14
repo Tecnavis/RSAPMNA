@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 interface Booking {
     id: string;
     dateTime: string;
-    customerName: string;
+    driver: string;
     phoneNumber: string;
     serviceType: string;
     vehicleNumber: string;
@@ -274,7 +274,7 @@ const ClosedBooking: React.FC = () => {
                                     <thead className="block md:table-header-group">
                                         <tr className="border border-gray-300 block md:table-row absolute -top-full md:top-auto -left-full md:left-auto md:relative">
                                             <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Date & Time</th>
-                                            <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Customer Name</th>
+                                            <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Driver Name</th>
                                             <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Phone Number</th>
                                             <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Service Type</th>
                                             <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Vehicle Number</th>
@@ -287,7 +287,7 @@ const ClosedBooking: React.FC = () => {
                                             .map((booking) => (
                                                 <tr key={booking.id} className="bg-white border border-gray-300 block md:table-row">
                                                     <td className="p-2 text-sm block md:table-cell">{booking.dateTime} </td>
-                                                    <td className="p-2 text-sm block md:table-cell">{booking.customerName}</td>
+                                                    <td className="p-2 text-sm block md:table-cell">{booking.driver}</td>
                                                     <td className="p-2 text-sm block md:table-cell">{booking.phoneNumber}</td>
                                                     <td className="p-2 text-sm block md:table-cell">{booking.serviceType}</td>
                                                     <td className="p-2 text-sm block md:table-cell">{booking.vehicleNumber}</td>
