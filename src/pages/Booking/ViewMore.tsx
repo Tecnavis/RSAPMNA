@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getFirestore, doc, getDoc, updateDoc, deleteDoc, getDocs, collection } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { CiEdit } from 'react-icons/ci';
+
 import { storage } from '../../config/config';
-import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField } from '@mui/material';
+import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField, ThemeProvider } from '@mui/material';
+import { LoadingIndicator } from 'react-select/dist/declarations/src/components/indicators';
 interface BookingDetails {
     id: string;
     dateTime: string;
@@ -41,11 +44,11 @@ interface BookingDetails {
     pickupTime: string;
     dropoffTime: string;
     remark: string;
-    formAdded:boolean;
+    formAdded: boolean;
 }
 interface FormData {
     pickupTime: string;
-    serviceVehicle:string;
+    serviceVehicle: string;
     dropoffTime: string;
     driverSalary: string;
     companyAmount: string;
@@ -78,6 +81,8 @@ const ViewMore: React.FC = () => {
     const [isEditing, setIsEditing] = useState<boolean>(false);
     const [feedbackVideo, setFeedbackVideo] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
+    const [loadingFileNumber, setLoadingFileNumber] = useState<boolean>(false);
+    const [loadingServiceVehicle, setLoadingServiceVehicle] = useState<boolean>(false);
     const [behavior, setBehavior] = useState<string | null>(null);
     const [docId, setDocId] = useState<string>('');
     const [completedBookings, setCompletedBookings] = useState<BookingDetails[]>([]);
@@ -92,12 +97,18 @@ const ViewMore: React.FC = () => {
     const [showPickupDetails, setShowPickupDetails] = useState(false);
     const [fixedPoint, setFixedPoint] = useState<number | null>(null);
     const [showDropoffDetails, setShowDropoffDetails] = useState(false);
+    const [isEditingSalary, setIsEditingSalary] = useState(false);
+    const [isEditingFileNumber, setIsEditingFileNumber] = useState(false);
+    const [isEditingServiceVehicle, setIsEditingServiceVehicle] = useState(false);
+    const [editedSalary, setEditedSalary] = useState(bookingDetails?.updatedTotalSalary || ''); // Initialize with the initial value
+    const [editedFileNumber, setEditedFileNumber] = useState(bookingDetails?.fileNumber || ''); // Initialize with the initial value
+    const [editedServiceVehicle, setEditedServiceVehicle] = useState(bookingDetails?.fileNumber || ''); // Initialize with the initial value
     const queryParams = new URLSearchParams(search);
     const userName = sessionStorage.getItem('username');
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState<FormData>({
         pickupTime: '',
-        serviceVehicle:'',
+        serviceVehicle: '',
         dropoffTime: '',
         driverSalary: 'No',
         companyAmount: 'No',
@@ -111,8 +122,8 @@ const ViewMore: React.FC = () => {
     });
     const [selectedImage, setSelectedImage] = useState<string | null>(null); // State to hold selected image for modal
 
-    console.log(bookingDetails,'this is the booking details')
-    console.log(allDrivers,'this is the all drivers')
+    console.log(bookingDetails, 'this is the booking details');
+    console.log(allDrivers, 'this is the all drivers');
     const handleImageClick = (url: string) => {
         setSelectedImage(url); // Set selected image for modal
     };
@@ -152,7 +163,7 @@ const ViewMore: React.FC = () => {
         fetchPoints();
         fetchDrivers();
     }, [db, id, uid]);
-    
+
     const fetchDrivers = async () => {
         try {
             const driversCollection = collection(db, `user/${uid}/driver`);
@@ -196,8 +207,9 @@ const ViewMore: React.FC = () => {
 
             if (docSnap.exists()) {
                 const data = docSnap.data();
+                console.log(data, 'this is the data provided');
                 setBookingDetails({
-                    id:data.id || '',
+                    id: data.id || '',
                     dateTime: data.dateTime || '',
                     bookingId: data.bookingId || '',
                     newStatus: data.newStatus || '',
@@ -233,7 +245,7 @@ const ViewMore: React.FC = () => {
                     dropoffTime: data.dropoffTime || '',
                     remark: data.remark || '',
                     selectedDriver: data.selectedDriver || '',
-                    formAdded:data.formAdded || '',
+                    formAdded: data.formAdded || '',
                 });
 
                 // Now fetch the selected company's name using selectedCompany ID
@@ -380,8 +392,6 @@ const ViewMore: React.FC = () => {
         }
     };
 
-
-    
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         let points = 0;
@@ -434,7 +444,7 @@ const ViewMore: React.FC = () => {
 
                 // Call handleApprove to update booking status
                 await handleApprove(bId);
-                window.location.reload()
+                window.location.reload();
 
                 // Close the request
                 onRequestClose();
@@ -448,7 +458,98 @@ const ViewMore: React.FC = () => {
             setLoading(false);
         }
     };
+// salary edit handle click
+    const handleEditClickLast = () => {
+        setIsEditingSalary(true);
+        setEditedSalary(bookingDetails?.updatedTotalSalary);
+    };
 
+    // file number edit handle click 
+    const handleEditClickFileNumber = () => {
+        setIsEditingFileNumber(true);
+        setEditedFileNumber(bookingDetails?.fileNumber);
+    };
+
+    // service vehicle click 
+
+    const handleEditClickServiceVehicle = () => {
+        setIsEditingServiceVehicle(true);
+        setEditedServiceVehicle(bookingDetails?.serviceVehicle);
+    };
+// salary edit 
+    const handleSaveClickLastAmount = async () => {
+        if (bookingDetails && uid && id) {
+            // Ensure uid and id are defined
+            setLoading(true); // Start loading
+            try {
+                const docRef = doc(db, `user/${uid}/bookings`, id);
+                await updateDoc(docRef, { updatedTotalSalary: editedSalary });
+
+                // Update the local state with the new salary value
+                fetchBookingDetails();
+
+                // Exit edit mode and refresh booking details
+                setIsEditingSalary(false);
+            } catch (error) {
+                console.error('Error updating document:', error);
+            } finally {
+                setLoading(false); // End loading
+            }
+        } else {
+            console.error('UID or booking ID is undefined.');
+        }
+    };
+
+    // file number edit 
+
+    const handleSaveClickFileNumber = async () => {
+        if (bookingDetails && uid && id) {
+            // Ensure uid and id are defined
+            setLoadingFileNumber(true); // Start loading
+            try {
+                const docRef = doc(db, `user/${uid}/bookings`, id);
+                await updateDoc(docRef, { fileNumber: editedFileNumber });
+
+                // Update the local state with the new salary value
+                fetchBookingDetails();
+
+                // Exit edit mode and refresh booking details
+                setIsEditingFileNumber(false);
+            } catch (error) {
+                console.error('Error updating document:', error);
+            } finally {
+                setLoadingFileNumber(false); // End loading
+            }
+        } else {
+            console.error('UID or booking ID is undefined.');
+        }
+    };
+
+
+    // vehicle number 
+
+    const handleSaveClickServiceVehicle = async () => {
+        if (bookingDetails && uid && id) {
+            // Ensure uid and id are defined
+            setLoadingServiceVehicle(true); // Start loading
+            try {
+                const docRef = doc(db, `user/${uid}/bookings`, id);
+                await updateDoc(docRef, { serviceVehicle: editedServiceVehicle });
+
+                // Update the local state with the new salary value
+                fetchBookingDetails();
+
+                // Exit edit mode and refresh booking details
+                setIsEditingServiceVehicle(false);
+            } catch (error) {
+                console.error('Error updating document:', error);
+            } finally {
+                setLoadingServiceVehicle(false); // End loading
+            }
+        } else {
+            console.error('UID or booking ID is undefined.');
+        }
+    };
     return (
         <div className="container mx-auto my-8 p-4 bg-white shadow rounded-lg">
             <h5 className="font-semibold text-lg mb-5">Booking Details</h5>
@@ -470,7 +571,11 @@ const ViewMore: React.FC = () => {
                         {bookingDetails.rcBookImageURLs.length > 0 ? (
                             bookingDetails.rcBookImageURLs.map((url, index) => (
                                 <div key={index} className="max-w-xs">
-                                    <a href={url} download className="block mb-2 text-blue-500">
+                                    <a
+                                        href={url}
+                                        download={`Vehicle_Image_${index}.jpg`} // Ensure the file name ends with .jpg
+                                        className="block mb-2 text-blue-500"
+                                    >
                                         Download
                                     </a>
                                     <img
@@ -491,12 +596,16 @@ const ViewMore: React.FC = () => {
                         {bookingDetails.vehicleImageURLs.length > 0 ? (
                             bookingDetails.vehicleImageURLs.map((url, index) => (
                                 <div key={index} className="max-w-xs">
-                                    <a href={url} download className="block mb-2 text-blue-500">
+                                    <a
+                                        href={url}
+                                        download={`Vehicle_Image_${index}.jpg`} // Ensure the file name ends with .jpg
+                                        className="block mb-2 text-blue-500"
+                                    >
                                         Download
                                     </a>
                                     <img
                                         src={url}
-                                        alt={`Vehicle Image ${index}`}
+                                        alt={`RC Book Image ${index}`}
                                         className="w-full h-auto cursor-pointer"
                                         onClick={() => handleImageClick(url)} // Open image in modal
                                     />
@@ -516,12 +625,16 @@ const ViewMore: React.FC = () => {
                         {bookingDetails.fuelBillImageURLs.length > 0 ? (
                             bookingDetails.fuelBillImageURLs.map((url, index) => (
                                 <div key={index} className="max-w-xs">
-                                    <a href={url} download className="block mb-2 text-blue-500">
+                                    <a
+                                        href={url}
+                                        download={`Vehicle_Image_${index}.jpg`} // Ensure the file name ends with .jpg
+                                        className="block mb-2 text-blue-500"
+                                    >
                                         Download
                                     </a>
                                     <img
                                         src={url}
-                                        alt={`Fuel Bill Image ${index}`}
+                                        alt={`RC Book Image ${index}`}
                                         className="w-full h-auto cursor-pointer"
                                         onClick={() => handleImageClick(url)} // Open image in modal
                                     />
@@ -537,12 +650,16 @@ const ViewMore: React.FC = () => {
                         {bookingDetails.vehicleImgURLs.length > 0 ? (
                             bookingDetails.vehicleImgURLs.map((url, index) => (
                                 <div key={index} className="max-w-xs">
-                                    <a href={url} download className="block mb-2 text-blue-500">
+                                    <a
+                                        href={url}
+                                        download={`Vehicle_Image_${index}.jpg`} // Ensure the file name ends with .jpg
+                                        className="block mb-2 text-blue-500"
+                                    >
                                         Download
                                     </a>
                                     <img
                                         src={url}
-                                        alt={`Vehicle Image ${index}`}
+                                        alt={`RC Book Image ${index}`}
                                         className="w-full h-auto cursor-pointer"
                                         onClick={() => handleImageClick(url)} // Open image in modal
                                     />
@@ -600,7 +717,39 @@ const ViewMore: React.FC = () => {
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Payable Amount with insurance:</td>
-                        <td className="p-2">{bookingDetails.updatedTotalSalary}</td>
+                        <td className="p-2">
+                            {' '}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                {isEditingSalary ? (
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <TextField
+                                            value={editedSalary}
+                                            onChange={(e) => setEditedSalary(e.target.value)}
+                                            label="Payable Amount"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    handleSaveClickLastAmount();
+                                                }
+                                            }}
+                                        />
+
+                                        <Button
+                                            variant="contained"
+                                            style={{ marginLeft: '10px' }}
+                                            onClick={handleSaveClickLastAmount}
+                                            disabled={loading} // Disable the button while loading
+                                        >
+                                            {loading ? <CircularProgress size={24} /> : 'Save'}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <span>{bookingDetails.updatedTotalSalary}</span>
+                                        {bookingDetails.status === 'Order Completed' && <CiEdit size={28} className="cursor-pointer" color="blue" onClick={handleEditClickLast} />}
+                                    </>
+                                )}
+                            </div>
+                        </td>
                     </tr>
 
                     <tr>
@@ -624,7 +773,38 @@ const ViewMore: React.FC = () => {
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">File Number :</td>
-                        <td className="p-2">{bookingDetails.fileNumber}</td>
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            {isEditingFileNumber ? (
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <TextField
+                                            value={editedFileNumber}
+                                            onChange={(e) => setEditedFileNumber(e.target.value)}
+                                            label="File Number"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    handleSaveClickFileNumber();
+                                                }
+                                            }}
+                                        />
+
+                                        <Button
+                                            variant="contained"
+                                            style={{ marginLeft: '10px' }}
+                                            onClick={handleSaveClickFileNumber}
+                                            disabled={loadingFileNumber} // Disable the button while loading
+                                        >
+                                            {loadingFileNumber ? <CircularProgress size={24} /> : 'Save'}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <span>{bookingDetails.fileNumber}</span>
+                                        {bookingDetails.status === 'Order Completed' && <CiEdit size={28} className="cursor-pointer" color="blue" onClick={handleEditClickFileNumber} />}
+                                    </>
+                                )}
+                            </div>
+                        </td>
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Customer Name :</td>
@@ -692,7 +872,39 @@ const ViewMore: React.FC = () => {
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Service Vehicle Number :</td>
-                        <td className="p-2">{bookingDetails.serviceVehicle}</td>
+                        <td className="p-2">
+                            {' '}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            {isEditingServiceVehicle ? (
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <TextField
+                                            value={editedServiceVehicle}
+                                            onChange={(e) => setEditedServiceVehicle(e.target.value)}
+                                            label="Vehicle Number"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    handleSaveClickServiceVehicle();
+                                                }
+                                            }}
+                                        />
+
+                                        <Button
+                                            variant="contained"
+                                            style={{ marginLeft: '10px' }}
+                                            onClick={handleSaveClickServiceVehicle}
+                                            disabled={loadingServiceVehicle} // Disable the button while loading
+                                        >
+                                            {loadingServiceVehicle ? <CircularProgress size={24} /> : 'Save'}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <span>{bookingDetails.serviceVehicle}</span>
+                                        {bookingDetails.status === 'Order Completed' && <CiEdit size={28} className="cursor-pointer" color="blue" onClick={handleEditClickServiceVehicle} />}
+                                    </>
+                                )}
+                            </div>
+                        </td>
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Comments :</td>
@@ -811,7 +1023,7 @@ const ViewMore: React.FC = () => {
                             required
                         />
                     </div>
-                  
+
                     <div className="mb-4">
                         <label htmlFor="dropoffTime" className="block text-sm font-medium text-gray-700">
                             Dropoff Time
@@ -828,7 +1040,7 @@ const ViewMore: React.FC = () => {
                     </div>
                     <div className="mb-4">
                         <label htmlFor="serviceVehicle" className="block text-sm font-medium text-gray-700">
-                        Service Vehicle Number
+                            Service Vehicle Number
                         </label>
                         <input
                             type="text"
@@ -844,13 +1056,7 @@ const ViewMore: React.FC = () => {
                         <label htmlFor="driverSalary" className="block text-sm font-medium text-gray-700">
                             Driver Salary
                         </label>
-                        <select
-                            id="driverSalary"
-                            name="driverSalary"
-                            value={formData.driverSalary}
-                            onChange={handleFormChange}
-                            className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-                        >
+                        <select id="driverSalary" name="driverSalary" value={formData.driverSalary} onChange={handleFormChange} className="mt-1 block w-full p-2 border border-gray-300 rounded-md">
                             <option value="Yes">Yes</option>
                             <option value="No">No</option>
                         </select>
@@ -912,28 +1118,26 @@ const ViewMore: React.FC = () => {
                     </div>
                 )}
 
-{!bookingDetails.formAdded && bookingDetails.status === 'Order Completed' &&
-    allDrivers.some(
-        (driver) => driver.id === bookingDetails.selectedDriver && driver.companyName === 'RSA'
-    ) && (
-    <button
-        className="mx-3"
-        style={{
-            backgroundColor: 'green',
-            color: '#fff',
-            border: '1px solid #007bff',
-            padding: '8px 16px',
-            fontSize: '16px',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
-        }}
-        onClick={() => onRequestOpen()}
-    >
-        Open Form
-    </button>
-)}
-
+                {!bookingDetails.formAdded &&
+                    bookingDetails.status === 'Order Completed' &&
+                    allDrivers.some((driver) => driver.id === bookingDetails.selectedDriver && driver.companyName === 'RSA') && (
+                        <button
+                            className="mx-3"
+                            style={{
+                                backgroundColor: 'green',
+                                color: '#fff',
+                                border: '1px solid #007bff',
+                                padding: '8px 16px',
+                                fontSize: '16px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
+                            }}
+                            onClick={() => onRequestOpen()}
+                        >
+                            Open Form
+                        </button>
+                    )}
             </div>
             <Dialog
                 open={isModalOpen}
