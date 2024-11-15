@@ -229,6 +229,8 @@ const NewBooking = () => {
                             <th>Driver</th>
                             <th>View More</th>
                             <th>Edit</th>
+                            <th>Track</th>
+
                         </tr>
                     </thead>
                     <tbody>

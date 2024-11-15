@@ -28,7 +28,9 @@ interface BookingDetails {
   const [vehicleNumber, setVehicleNumber] = useState<string>('');
   const [vehicleImageURLs, setVehicleImageURLs] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<(File | null)[]>([null, null, null,null,null,null]); // for 3 images
-
+  const [imgFiles, setImgFiles] = useState<(File | null)[]>([null, null, null,null,null,null]);
+  const [vehicleImgURLs, setVehicleImgURLs] = useState<string[]>([]);
+  
   // Fetch the booking details from Firestore
   useEffect(() => {
     const fetchBookingDetails = async () => {
@@ -99,7 +101,65 @@ interface BookingDetails {
       console.error('Error updating vehicle number:', error);
     }
   };
+//   ----------------------------------------------dropof image------------------------------------------
 
+const handleImgChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const files = [...imgFiles];
+    files[index] = e.target.files ? e.target.files[0] : null;
+    setImgFiles(files);
+  };
+  const uploadImgs = async () => {
+    const urls: string[] = [];
+    for (let i = 0; i < imgFiles.length; i++) {
+      if (imgFiles[i]) {
+        const storageRef = ref(storage, `images/${imgFiles[i]!.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, imgFiles[i]!);
+
+        await new Promise<void>((resolve, reject) => {
+          uploadTask.on(
+            'state_changed',
+            () => {},
+            (error) => {
+              console.error("Error uploading image", error);
+              reject(error);
+            },
+            async () => {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              urls.push(downloadURL);
+              resolve();
+            }
+          );
+        });
+      }
+    }
+    return urls;
+  };
+  const submitBookingComplete = async () => {
+    
+
+    try {
+      const imgUrls = await uploadImgs();
+      setVehicleImgURLs(imgUrls);
+
+      if (bookingId && uid) {
+        const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
+
+        await updateDoc(bookingRef, {
+         
+          vehicleImageURLs: imgUrls,
+          status: 'Order Completed',
+        });
+
+        alert('Booking details updated successfully!');
+        navigate('/bookings/newbooking');
+      } else {
+        console.error('Booking ID or UID is missing.');
+      }
+    } catch (error) {
+      console.error('Error adding booking details:', error);
+    }
+  };
+// --------------------------------------pickup image--------------------------------------
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const files = [...imageFiles];
     files[index] = e.target.files ? e.target.files[0] : null;
@@ -167,7 +227,23 @@ interface BookingDetails {
   if (loading) {
     return <p>Loading...</p>;
   }
+  const submitBookingDrop = async () => {
+    if (!uid || !bookingId) {
+        console.error('UID or Booking ID is not defined');
+        return;
+      }
+    try {
+      const bookingDocRef = doc(db, `user/${uid}/bookings`, bookingId); // Replace `uid` and `bookingId` with actual variables if they are defined outside
+      await updateDoc(bookingDocRef, {
+        status: 'Vehicle Dropped'
+      });
+      navigate('/bookings/newbooking');
 
+      console.log('Booking status updated to "Vehicle Dropped"');
+    } catch (error) {
+      console.error('Error updating booking status:', error);
+    }
+  };
   return (
     <div className="track-container">
         <>
@@ -221,6 +297,33 @@ interface BookingDetails {
     </div>
   </div>
 )}
+
+{/* -------------------------------dropoff------------ */}
+{(status === 'Vehicle Dropped') && (
+
+<div className="image-upload-container">
+<h2 className="upload-title">Upload Vehicle Images</h2>
+<p className="upload-subtitle">Please upload images for Front, Rear, LeftSide, RightSide, Inventory Sheet and Sticker</p>
+<div className="image-upload-grid">
+  {[ "Front", "Rear","Left Side", "Right Side", "Inventory Sheet", "Sticker"].map((label, index) => (
+    <div key={index} className="image-upload-card">
+      <label className="image-label">{label}</label>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => handleImgChange(e, index)}
+        disabled={imgFiles[index] !== null}
+        className="image-input"
+      />
+      {imgFiles[index] && <p className="uploaded-notice">Image Uploaded</p>}
+    </div>
+  ))}
+</div>
+<button onClick={submitBookingComplete} className="btn-submit">Submit</button>
+
+</div>
+)}
+{/* ---------------------------------------------------end dropoff-------------------------------- */}
       <div className="track-container">
       {(status === 'On the way to pickup location' || status === 'Vehicle Picked') && (
         <div className="track-details">
@@ -288,6 +391,20 @@ interface BookingDetails {
         </div>
       )}
     </div>
+    {(status === 'Vehicle Confirmed' || status === 'To DropOff Location' || status === 'On the way to dropoff location') && (
+
+<div className="track-details">
+<p><strong>Booking Date and Time:</strong> {new Date(bookingDetails.dateTime || '').toLocaleString()}</p>
+<p><strong>File Number:</strong> {bookingDetails.fileNumber}</p>
+  <p><strong>Dropoff Location:</strong> {bookingDetails.dropoffLocation?.name || 'N/A'}</p>
+  <p><strong>Payable Amount From Customer:</strong> {bookingDetails.updatedTotalSalary}</p>
+  <div>
+  <button onClick={submitBookingDrop} className="btn-drop">Vehicle Dropped</button>
+
+  </div>
+</div>
+
+)}
 
     </div>
   );

@@ -270,3 +270,27 @@
         grid-template-columns: 1fr;
     }
 }
+.btn-drop {
+    background: linear-gradient(135deg, #4caf50, #81c784); /* Gradient green */
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  }
+  
+  .btn-drop:hover {
+    background: linear-gradient(135deg, #388e3c, #66bb6a); /* Darker gradient on hover */
+    transform: translateY(-2px); /* Slight raise on hover */
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+  }
+  
+  .btn-drop:active {
+    transform: translateY(0); /* Return to normal position on click */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
