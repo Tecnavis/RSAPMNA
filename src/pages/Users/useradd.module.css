@@ -9,3 +9,45 @@
 .formInput[type="number"] {
   -moz-appearance: textfield;
 }
+.select-container {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.select-container label {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.select-container select {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  background: linear-gradient(to right, #ffffff, #f9f9f9);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  color: #333;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.select-container select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
+  outline: none;
+}
+
+.select-container select option {
+  font-size: 16px;
+  color: #333;
+  padding: 5px 10px;
+}
+
+.select-container p {
+  margin-top: 5px;
+  font-size: 14px;
+  color: #e53e3e; /* Error text color */
+}

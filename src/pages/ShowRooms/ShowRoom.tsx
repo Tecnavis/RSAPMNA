@@ -21,8 +21,7 @@ interface ShowRoomType {
     ShowRoom: string;
     description: string;
     Location: string;
-    locationLatLng: { lat: number; lng: number };
-    lat: string;
+    locationLatLng: { lat: number | null; lng: number | null };    lat: string;
     lng: string;
     userName: string;
     password: string;
@@ -404,20 +403,31 @@ console.log("userRole",userRole)
             setManualLocationName(value);
             setShowRoom((prevShowRoom) => ({
                 ...prevShowRoom,
-                manualLocationName: value, // Update state here
+                manualLocationName: value,
                 Location: value,
             }));
-        } else if (name === 'manualLatLng') { // Update for combined input
-            const [lat, lng] = value.split(',').map((coord) => parseFloat(coord.trim())); // Split and parse
+        } else if (name === 'manualLatLng') {
+            // Split the input into latitude and longitude
+            const [lat, lng] = value.split(',').map((coord) => parseFloat(coord.trim()));
+            
+            // Update the state regardless of validity
+            setManualLatLng(value);
+    
+            // Update showRoom only if valid latitude and longitude are present
             if (!isNaN(lat) && !isNaN(lng)) {
-                setManualLatLng(value); // Set the full comma-separated string
                 setShowRoom((prevShowRoom) => ({
                     ...prevShowRoom,
-                    locationLatLng: { lat, lng }, // Update latitude and longitude
+                    locationLatLng: { lat, lng },
+                }));
+            } else {
+                setShowRoom((prevShowRoom) => ({
+                    ...prevShowRoom,
+                    locationLatLng: { lat: null, lng: null },
                 }));
             }
         }
     };
+    
     
     // -----------------------------------------------------------------
 

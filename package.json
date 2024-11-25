@@ -39,6 +39,7 @@
         "apexcharts": "^3.37.1",
         "axios": "^1.7.2",
         "bootstrap": "^5.3.3",
+        "browser-image-compression": "^2.0.2",
         "caniuse-lite": "^1.0.30001591",
         "date-fns": "^3.6.0",
         "dayjs": "^1.11.11",
