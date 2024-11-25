@@ -142,6 +142,7 @@ const Company: React.FC = () => {
                     <table>
                         <thead>
                             <tr>
+                                <th>#</th>
                                 <th>Photo</th>
                                 <th>Provider Name</th>
                                 <th>ID Number</th>
@@ -155,6 +156,7 @@ const Company: React.FC = () => {
                             {items.map((item, index) => {
                                 return (
                                     <tr key={item.id}>
+                                        <td>{index+1}</td>
                                         <td>  <div className="w-14 h-14 rounded-full overflow-hidden">
                                             <img src={item.profileImageUrl || defaultImage} className="w-full h-full object-cover" alt="Profile" />
                                         </div></td>

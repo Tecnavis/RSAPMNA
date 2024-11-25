@@ -21,6 +21,7 @@ import IconCalendar from '../Icon/IconCalendar';
 import IconMenuCalendar from '../Icon/Menu/IconMenuCalendar';
 import IconMenuTodo from '../Icon/Menu/IconMenuTodo';
 import IconTrashLines from '../Icon/IconTrashLines';
+import IconMenuDocumentation from '../Icon/Menu/IconMenuDocumentation';
 
 
 const Sidebar = () => {
@@ -248,7 +249,39 @@ console.log("role",role)
                                     </ul>
                                 </AnimateHeight>
                             </li>
+{/* =------------------------------------------------------*/}
+<li className="menu nav-item ">
+                                <button type="button" className={`${currentMenu } nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('vehicle')}>
+                                    <div className="flex items-center">
+                                    {/* <i className="fas fa-truck-pickup"></i> */}
+                                        <IconMenuDocumentation className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark"> &nbsp;  Vehicle List &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+                                    </div>
 
+                                    <div className={currentMenu !== 'vehicle' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                        <IconCaretDown />
+                                    </div>
+                                </button>
+
+                                <AnimateHeight duration={300} height={currentMenu === 'vehicle' ? 'auto' : 0}>
+                                    <ul className="sub-menu text-gray-500">
+                                        <li>
+                                            <NavLink to="/vehicle">RSA Vehicle</NavLink>
+                                        </li>
+                                       
+                                    </ul>
+                                </AnimateHeight>
+                            </li>
+                             <li className="menu nav-item">
+                                <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
+                                    <IconMinus className="w-4 h-5 flex-none hidden" />
+                                    <span>
+                                       <Link to="/baselocation/location"> Base Location</Link>
+                                        {/* {t('user_and_pages')} */}
+                                    </span>
+                                </h2>
+                            </li>
+{/* -------------------------------------------------------- */}
                             <li className="menu nav-item ">
                                 <button type="button" className={`${currentMenu === 'driverreport' ? 'active' : ''} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('driverreport')}>
                                     <div className="flex items-center">

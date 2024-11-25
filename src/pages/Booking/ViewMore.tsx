@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { getFirestore, doc, getDoc, updateDoc, deleteDoc, getDocs, collection } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, deleteDoc, getDocs, collection, Timestamp } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { CiEdit } from 'react-icons/ci';
 
 import { storage } from '../../config/config';
 import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField, ThemeProvider } from '@mui/material';
 import { LoadingIndicator } from 'react-select/dist/declarations/src/components/indicators';
+import EditableField from './EditableField';
 interface BookingDetails {
     id: string;
     dateTime: string;
@@ -41,13 +42,17 @@ interface BookingDetails {
     fuelBillImageURLs: string[];
     comments: string;
     status: string;
-    pickupTime: string;
+    pickedTime: Timestamp | null | undefined;
     dropoffTime: string;
     remark: string;
     formAdded: boolean;
+    bookingChecked: boolean;
+    companyName?: string;
+        vehicleModal:string;
+    droppedTime: Timestamp | null | undefined;
 }
 interface FormData {
-    pickupTime: string;
+    pickedTime: string;
     serviceVehicle: string;
     dropoffTime: string;
     driverSalary: string;
@@ -67,47 +72,34 @@ interface Driver {
     companyName: string;
     // Add other relevant driver fields here
 }
+type RenderImagesProps = {
+    images: string[]; // Array of image URLs (strings)
+    type: string; // Type of images (e.g., 'rcBook', 'vehiclePickup', etc.)
+  };
 const ViewMore: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
+    const [bookingChecked, setBookingChecked] = useState(false);
     const [dId, setDId] = useState<string | null>(null);
     const [allDrivers, setALLDrivers] = useState<Driver[]>([]);
-    const [bId, setBid] = useState<string | null>(null);
-    const [uniform, setUniform] = useState<string | null>(null);
-    const [inventory, setInventory] = useState<string | null>(null);
-    const [isEditing, setIsEditing] = useState<boolean>(false);
-    const [feedbackVideo, setFeedbackVideo] = useState<string | null>(null);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [loadingFileNumber, setLoadingFileNumber] = useState<boolean>(false);
-    const [loadingServiceVehicle, setLoadingServiceVehicle] = useState<boolean>(false);
-    const [behavior, setBehavior] = useState<string | null>(null);
-    const [docId, setDocId] = useState<string>('');
-    const [completedBookings, setCompletedBookings] = useState<BookingDetails[]>([]);
-    const [loadingBookings, setLoadingBookings] = useState<Set<string>>(new Set());
-    const [idCard, setIdCard] = useState<string | null>(null);
+   const [docId, setDocId] = useState<string>('');
     const [loadingId, setLoadingId] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const role = sessionStorage.getItem('role');
-    const [selectedCompanyName, setSelectedCompanyName] = useState<string | null>(null);
+    const [replacementImage, setReplacementImage] = useState<string | null>(null);
     // --------------------------------------------------------------------------
     const { search } = useLocation();
     const [showPickupDetails, setShowPickupDetails] = useState(false);
     const [fixedPoint, setFixedPoint] = useState<number | null>(null);
     const [showDropoffDetails, setShowDropoffDetails] = useState(false);
-    const [isEditingSalary, setIsEditingSalary] = useState(false);
-    const [isEditingFileNumber, setIsEditingFileNumber] = useState(false);
-    const [isEditingServiceVehicle, setIsEditingServiceVehicle] = useState(false);
-    const [editedSalary, setEditedSalary] = useState(bookingDetails?.updatedTotalSalary || ''); // Initialize with the initial value
-    const [editedFileNumber, setEditedFileNumber] = useState(bookingDetails?.fileNumber || ''); // Initialize with the initial value
-    const [editedServiceVehicle, setEditedServiceVehicle] = useState(bookingDetails?.fileNumber || ''); // Initialize with the initial value
     const queryParams = new URLSearchParams(search);
     const userName = sessionStorage.getItem('username');
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState<FormData>({
-        pickupTime: '',
+        pickedTime: '',
         serviceVehicle: '',
         dropoffTime: '',
         driverSalary: 'No',
@@ -120,8 +112,97 @@ const ViewMore: React.FC = () => {
         rcBookImageURLs: [],
         vehicleImgURLs: [],
     });
-    const [selectedImage, setSelectedImage] = useState<string | null>(null); // State to hold selected image for modal
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [editedFields, setEditedFields] = useState({
+        salary: bookingDetails?.updatedTotalSalary || '',
+        fileNumber: bookingDetails?.fileNumber || '',
+        totalDriverSalary: bookingDetails?.totalDriverSalary || '',
+        serviceVehicle: bookingDetails?.serviceVehicle || '',
+        bookingId: bookingDetails?.bookingId,
+        company: bookingDetails?.company,
+        companyName: bookingDetails?.companyName,
+        trappedLocation: bookingDetails?.trappedLocation,
+        showroomLocation: bookingDetails?.showroomLocation,
+        customerName: bookingDetails?.customerName,
+        driver: bookingDetails?.driver,
+        selectedCompany: bookingDetails?.selectedCompany,
+        totalDriverDistance: bookingDetails?.totalDriverDistance,
+        vehicleNumber: bookingDetails?.vehicleNumber,
+        vehicleModel: bookingDetails?.vehicleModel,
+        baseLocation: bookingDetails?.baseLocation,
+        pickupLocation: bookingDetails?.pickupLocation,
+        dropoffLocation: bookingDetails?.dropoffLocation,
+        distance: bookingDetails?.distance,
+        serviceType: bookingDetails?.serviceType,
+        rcBookImageURLs: bookingDetails?.rcBookImageURLs || [],
+        vehicleImageURLs: bookingDetails?.vehicleImageURLs || [],
+        fuelBillImageURLs: bookingDetails?.fuelBillImageURLs || [],
+        comments: bookingDetails?.comments,
+        pickedTime: bookingDetails?.pickedTime,
+        dropoffTime: bookingDetails?.dropoffTime,
+        remark: bookingDetails?.remark,
+        vehicleModal:bookingDetails?.vehicleModal,
+    });
 
+    const [editStates, setEditStates] = useState({
+        salary: false,
+        fileNumber: false,
+        totalDriverSalary: false,
+        serviceVehicle: false,
+        bookingId: false,
+        company: false,
+        trappedLocation: false,
+        showroomLocation: false,
+        customerName: false,
+        driver: false,
+        selectedCompany: false,
+        totalDriverDistance: false,
+        vehicleNumber: false,
+        vehicleModel: false,
+        baseLocation: false,
+        pickupLocation: false,
+        dropoffLocation: false,
+        distance: false,
+        serviceType: false,
+        rcBookImageURLs: false,
+        vehicleImageURLs: false,
+        fuelBillImageURLs: false,
+        comments: false,
+        pickedTime: false,
+        dropoffTime: false,
+        remark: false,
+        vehicleModal:false,
+    });
+
+    const [loadingStates, setLoadingStates] = useState({
+        salary: false,
+        fileNumber: false,
+        totalDriverSalary: false,
+        serviceVehicle: false,
+        bookingId: false,
+        company: false,
+        trappedLocation: false,
+        showroomLocation: false,
+        customerName: false,
+        driver: false,
+        selectedCompany: false,
+        totalDriverDistance: false,
+        vehicleNumber: false,
+        vehicleModel: false,
+        baseLocation: false,
+        pickupLocation: false,
+        dropoffLocation: false,
+        distance: false,
+        serviceType: false,
+        rcBookImageURLs: false,
+        vehicleImageURLs: false,
+        fuelBillImageURLs: false,
+        comments: false,
+        pickedTime: false,
+        dropoffTime: false,
+        remark: false,
+        vehicleModal:false,
+    });
     console.log(bookingDetails, 'this is the booking details');
     console.log(allDrivers, 'this is the all drivers');
     const handleImageClick = (url: string) => {
@@ -217,7 +298,7 @@ const ViewMore: React.FC = () => {
                     totalSalary: data.totalSalary || '',
                     updatedTotalSalary: data.updatedTotalSalary || '',
                     company: data.company || '',
-                    selectedCompany: data.selectedCompany || '',
+                    companyName: data.companyName || '',
                     trappedLocation: data.trappedLocation || '',
                     showroomLocation: data.showroomLocation || '',
                     fileNumber: data.fileNumber || '',
@@ -241,44 +322,39 @@ const ViewMore: React.FC = () => {
                     fuelBillImageURLs: data.fuelBillImageURLs || [],
                     comments: data.comments || '',
                     status: data.status || '',
-                    pickupTime: data.pickupTime || '',
+                    pickedTime: data.pickedTime || '',
                     dropoffTime: data.dropoffTime || '',
                     remark: data.remark || '',
                     selectedDriver: data.selectedDriver || '',
                     formAdded: data.formAdded || '',
+                    bookingChecked: data.bookingChecked || false,
+                    vehicleModal:data.vehicleModal || '',
+                    droppedTime:data.droppedTime|| ''
                 });
-
-                // Now fetch the selected company's name using selectedCompany ID
-                if (data.selectedCompany) {
-                    const companyDocRef = doc(db, `user/${uid}/driver`, data.selectedCompany);
-                    const companyDocSnap = await getDoc(companyDocRef);
-                    if (companyDocSnap.exists()) {
-                        const companyData = companyDocSnap.data();
-                        console.log('companyData', companyData);
-                        setSelectedCompanyName(companyData.company || null); // Adjust based on your company structure
-                    }
-                }
-            } else {
-                console.log(`Document with ID ${id} does not exist!`);
             }
         } catch (error) {
             console.error('Error fetching data:', error);
         }
     };
+    const handleVerifyClick = async () => {
+        if (!id) {
+            console.error('Error: bookingId is undefined.');
+            return;
+        }
+        try {
+            // Update bookingChecked in Firestore
+            const bookingDocRef = doc(db, `user/${uid}/bookings`, id);
+            await updateDoc(bookingDocRef, { bookingChecked: true });
 
-    // const togglePickupDetails = () => {
-    //     if (bookingDetails?.status === 'Order Completed') {
-    //         setShowPickupDetails(!showPickupDetails);
-    //         setShowDropoffDetails(false);
-    //     }
-    // };
+            // Update local state after successful DB update
+            setBookingChecked(true);
+            console.log('Booking verified successfully!');
+            window.location.reload();
+        } catch (error) {
+            console.error('Error verifying booking: ', error);
+        }
+    };
 
-    // const toggleDropoffDetails = () => {
-    //     if (bookingDetails?.status === 'Order Completed') {
-    //         setShowDropoffDetails(!showDropoffDetails);
-    //         setShowPickupDetails(false);
-    //     }
-    // };
     const togglePickupDetails = () => {
         setShowPickupDetails(!showPickupDetails);
         setShowDropoffDetails(false);
@@ -320,236 +396,111 @@ const ViewMore: React.FC = () => {
         return <div>Loading...</div>;
     }
 
-    const onRequestOpen = () => {
-        const selectedDriver = bookingDetails?.selectedDriver;
-        const bookingId = id ?? null; // Ensure bookingId is either a string or null
-
-        if (selectedDriver) {
-            setDId(selectedDriver); // Assuming setDId updates the driver's ID state
-            setBid(bookingId); // Set bookingId (either string or null)
-            setIsModalOpen(true); // Open the modal
-        } else {
-            console.error('Selected driver is undefined');
-        }
+    const handleEditClick = (field: keyof typeof editedFields) => {
+        setEditStates((prevState) => ({
+            ...prevState,
+            [field]: true,
+        }));
     };
 
-    const onRequestClose = () => {
-        setIsModalOpen(false);
-        setUniform('');
-        setFeedbackVideo('');
-        setInventory('');
-        setIdCard('');
-        setBehavior('');
-    };
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        const parsedValue = value === '' ? null : parseFloat(value); // Convert to number or assign null for empty input
-        setFixedPoint(parsedValue); // Update fixedPoint with the parsed number
-    };
-
-    const handleSaveClick = async () => {
-        try {
-            const docRef = doc(db, `user/${uid}/driverPoint`, docId); // Use the stored document ID
-
-            await updateDoc(docRef, {
-                point: fixedPoint, // Update the field with the new value
-            });
-
-            console.log('Point updated successfully!');
-        } catch (err) {
-            console.error('Error updating point:', err);
-        }
-        setIsEditing(false);
-    };
-
-    const handleEditClick = () => {
-        setIsEditing(true);
-    };
-
-    const handleApprove = async (bookingId: string) => {
-        setLoadingBookings((prev) => new Set(prev).add(bookingId)); // Add booking ID to loading set
-        try {
-            const db = getFirestore();
-            const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
-
-            // Update the document to set approved to true
-            await updateDoc(bookingRef, {
-                approved: true, // Add the approved field
-            });
-
-            // Update the state to reflect the changes immediately
-            setCompletedBookings((prevBookings) => prevBookings.map((booking) => (booking.id === bookingId ? { ...booking, approved: true } : booking)));
-            fetchBookingDetails();
-        } catch (error) {
-            console.error('Error updating booking status:', error);
-        } finally {
-            setLoadingBookings((prev) => {
-                const updatedSet = new Set(prev);
-                updatedSet.delete(bookingId);
-                return updatedSet;
-            });
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        let points = 0;
-        setLoadingId(bId);
-        setLoading(true);
-
-        // Ensure fixedPoint is a number, and set to 0 if null or NaN
-        const validFixedPoint: number = typeof fixedPoint === 'number' ? fixedPoint : typeof fixedPoint === 'string' ? parseFloat(fixedPoint) : 0;
-
-        // Check each field and add points for "yes" answers
-        if (uniform === 'yes') points += validFixedPoint;
-        if (idCard === 'yes') points += validFixedPoint;
-        if (feedbackVideo === 'yes') points += validFixedPoint;
-        if (behavior === 'good') points += validFixedPoint; // Assuming "good" is equivalent to "yes"
-        if (inventory === 'filled') points += validFixedPoint; // Assuming "filled" is equivalent to "yes"
-
-        try {
-            // Ensure that both uid and dId are valid strings
-
-            if (!uid || !dId || !bId) {
-                console.error('Invalid uid, driver ID, or booking ID.');
-                return;
-            }
-
-            // Retrieve the driver document from Firestore
-            const driverDocRef = doc(db, `user/${uid}/driver`, dId);
-            const driverDoc = await getDoc(driverDocRef);
-            console.log(driverDoc, 'this is the driver doc');
-
-            if (driverDoc.exists()) {
-                // Get the current points (if they exist) and add the new points
-                const currentPoints = driverDoc.data().points || 0;
-                console.log(currentPoints, 'this is the current points');
-                const newPoints = currentPoints + points;
-
-                // Update the driver document with the new points
-                await updateDoc(driverDocRef, {
-                    rewardPoints: newPoints,
-                });
-
-                console.log(`Points updated successfully. New total: ${newPoints}`);
-
-                // Now update the booking document
-                const bookingDocRef = doc(db, `user/${uid}/bookings`, bId);
-                await updateDoc(bookingDocRef, {
-                    formAdded: true,
-                });
-
-                console.log(`Booking updated successfully. formAdded set to true.`);
-
-                // Call handleApprove to update booking status
-                await handleApprove(bId);
-                window.location.reload();
-
-                // Close the request
-                onRequestClose();
-            } else {
-                console.log('Driver document not found.');
-            }
-        } catch (error) {
-            console.error('Error updating points:', error);
-        } finally {
-            setLoadingId(null);
-            setLoading(false);
-        }
-    };
-// salary edit handle click
-    const handleEditClickLast = () => {
-        setIsEditingSalary(true);
-        setEditedSalary(bookingDetails?.updatedTotalSalary);
-    };
-
-    // file number edit handle click 
-    const handleEditClickFileNumber = () => {
-        setIsEditingFileNumber(true);
-        setEditedFileNumber(bookingDetails?.fileNumber);
-    };
-
-    // service vehicle click 
-
-    const handleEditClickServiceVehicle = () => {
-        setIsEditingServiceVehicle(true);
-        setEditedServiceVehicle(bookingDetails?.serviceVehicle);
-    };
-// salary edit 
-    const handleSaveClickLastAmount = async () => {
+    const handleSaveClick = async (field: keyof typeof editedFields) => {
         if (bookingDetails && uid && id) {
-            // Ensure uid and id are defined
-            setLoading(true); // Start loading
+            setLoadingStates((prevState) => ({
+                ...prevState,
+                [field]: true,
+            }));
+
             try {
                 const docRef = doc(db, `user/${uid}/bookings`, id);
-                await updateDoc(docRef, { updatedTotalSalary: editedSalary });
+                await updateDoc(docRef, { [field]: editedFields[field] });
 
-                // Update the local state with the new salary value
                 fetchBookingDetails();
-
-                // Exit edit mode and refresh booking details
-                setIsEditingSalary(false);
+                setEditStates((prevState) => ({
+                    ...prevState,
+                    [field]: false,
+                }));
             } catch (error) {
                 console.error('Error updating document:', error);
             } finally {
-                setLoading(false); // End loading
+                setLoadingStates((prevState) => ({
+                    ...prevState,
+                    [field]: false,
+                }));
             }
-        } else {
-            console.error('UID or booking ID is undefined.');
+        }
+    };
+    const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
+        if (!timestamp) return "N/A";
+    
+        // Convert Firestore timestamp to JavaScript Date object
+        const date = timestamp.toDate();
+    
+        // Define the options for formatting
+        const options: Intl.DateTimeFormatOptions = {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            timeZoneName: 'short',
+            hour12: false, // 24-hour format
+        };
+    
+        // Use Intl.DateTimeFormat for proper formatting
+        const formattedDate = new Intl.DateTimeFormat('en-IN', options).format(date);
+    
+        // Replace the "at" position manually since Intl.DateTimeFormat can't add it
+        return formattedDate.replace(', ', ' at ');
+    };
+    const handleReplaceImage = (event: React.ChangeEvent<HTMLInputElement>, index: number, type: string) => {
+        if (event.target.files && event.target.files[0]) {
+            const fileURL = URL.createObjectURL(event.target.files[0]);
+            setReplacementImage(fileURL);
+
+            // Replace logic can update `bookingDetails` state or persist in DB
+            if (type === 'rcBook') {
+                bookingDetails.rcBookImageURLs[index] = fileURL;
+            } else if (type === 'vehiclePickup') {
+                bookingDetails.vehicleImageURLs[index] = fileURL;
+            } else if (type === 'fuelBill') {
+                bookingDetails.fuelBillImageURLs[index] = fileURL;
+            } else if (type === 'vehicleDropoff') {
+                bookingDetails.vehicleImgURLs[index] = fileURL;
+            }
         }
     };
 
-    // file number edit 
-
-    const handleSaveClickFileNumber = async () => {
-        if (bookingDetails && uid && id) {
-            // Ensure uid and id are defined
-            setLoadingFileNumber(true); // Start loading
-            try {
-                const docRef = doc(db, `user/${uid}/bookings`, id);
-                await updateDoc(docRef, { fileNumber: editedFileNumber });
-
-                // Update the local state with the new salary value
-                fetchBookingDetails();
-
-                // Exit edit mode and refresh booking details
-                setIsEditingFileNumber(false);
-            } catch (error) {
-                console.error('Error updating document:', error);
-            } finally {
-                setLoadingFileNumber(false); // End loading
-            }
-        } else {
-            console.error('UID or booking ID is undefined.');
-        }
-    };
-
-
-    // vehicle number 
-
-    const handleSaveClickServiceVehicle = async () => {
-        if (bookingDetails && uid && id) {
-            // Ensure uid and id are defined
-            setLoadingServiceVehicle(true); // Start loading
-            try {
-                const docRef = doc(db, `user/${uid}/bookings`, id);
-                await updateDoc(docRef, { serviceVehicle: editedServiceVehicle });
-
-                // Update the local state with the new salary value
-                fetchBookingDetails();
-
-                // Exit edit mode and refresh booking details
-                setIsEditingServiceVehicle(false);
-            } catch (error) {
-                console.error('Error updating document:', error);
-            } finally {
-                setLoadingServiceVehicle(false); // End loading
-            }
-        } else {
-            console.error('UID or booking ID is undefined.');
-        }
-    };
+    const renderImages = ({ images, type }: RenderImagesProps) => {
+        return images.length > 0 ? (
+          images.map((url: string, index: number) => (
+            <div key={index} className="max-w-xs">
+              <a
+                href={url}
+                download={`Vehicle_Image_${type}_${index}.jpg`} // Use type for file name
+                className="block mb-2 text-blue-500"
+              >
+                Download
+              </a>
+              <img
+                src={url}
+                alt={`${type} Image ${index}`}
+                className="w-full h-auto cursor-pointer"
+                onClick={() => handleImageClick(url)} // Open image in modal
+              />
+              {/* Replace Image Button */}
+              <input
+                type="file"
+                accept="image/*"
+                className="mt-2"
+                onChange={(e) => handleReplaceImage(e, index, type)}
+              />
+            </div>
+          ))
+        ) : (
+          <p className="col-span-full">No {type} Images available.</p>
+        );
+      };
     return (
         <div className="container mx-auto my-8 p-4 bg-white shadow rounded-lg">
             <h5 className="font-semibold text-lg mb-5">Booking Details</h5>
@@ -564,113 +515,36 @@ const ViewMore: React.FC = () => {
             </div>
             {/* )} */}
 
-            {showPickupDetails && (
-                <div>
-                    <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        {bookingDetails.rcBookImageURLs.length > 0 ? (
-                            bookingDetails.rcBookImageURLs.map((url, index) => (
-                                <div key={index} className="max-w-xs">
-                                    <a
-                                        href={url}
-                                        download={`Vehicle_Image_${index}.jpg`} // Ensure the file name ends with .jpg
-                                        className="block mb-2 text-blue-500"
-                                    >
-                                        Download
-                                    </a>
-                                    <img
-                                        src={url}
-                                        alt={`RC Book Image ${index}`}
-                                        className="w-full h-auto cursor-pointer"
-                                        onClick={() => handleImageClick(url)} // Open image in modal
-                                    />
-                                </div>
-                            ))
-                        ) : (
-                            <p className="col-span-3">No RC Book Images available.</p>
-                        )}
-                    </div>
+{showPickupDetails && (
+  <div>
+    <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      {renderImages({ images: bookingDetails.rcBookImageURLs, type: 'rcBook' })}
+    </div>
 
-                    <h2 className="text-xl font-bold mt-5">Vehicle Images (Pickup)</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        {bookingDetails.vehicleImageURLs.length > 0 ? (
-                            bookingDetails.vehicleImageURLs.map((url, index) => (
-                                <div key={index} className="max-w-xs">
-                                    <a
-                                        href={url}
-                                        download={`Vehicle_Image_${index}.jpg`} // Ensure the file name ends with .jpg
-                                        className="block mb-2 text-blue-500"
-                                    >
-                                        Download
-                                    </a>
-                                    <img
-                                        src={url}
-                                        alt={`RC Book Image ${index}`}
-                                        className="w-full h-auto cursor-pointer"
-                                        onClick={() => handleImageClick(url)} // Open image in modal
-                                    />
-                                </div>
-                            ))
-                        ) : (
-                            <p className="col-span-full">No Vehicle Images available.</p>
-                        )}
-                    </div>
-                </div>
-            )}
+    <h2 className="text-xl font-bold mt-5">Vehicle Images (Pickup)</h2>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      {renderImages({ images: bookingDetails.vehicleImageURLs, type: 'vehiclePickup' })}
+    </div>
+  </div>
+)}
 
-            {showDropoffDetails && (
-                <div>
-                    {bookingDetails.status === 'Order Completed' && <h3 className="text-xl font-bold mt-5">Fuel Bill Images</h3>}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        {bookingDetails.fuelBillImageURLs.length > 0 ? (
-                            bookingDetails.fuelBillImageURLs.map((url, index) => (
-                                <div key={index} className="max-w-xs">
-                                    <a
-                                        href={url}
-                                        download={`Vehicle_Image_${index}.jpg`} // Ensure the file name ends with .jpg
-                                        className="block mb-2 text-blue-500"
-                                    >
-                                        Download
-                                    </a>
-                                    <img
-                                        src={url}
-                                        alt={`RC Book Image ${index}`}
-                                        className="w-full h-auto cursor-pointer"
-                                        onClick={() => handleImageClick(url)} // Open image in modal
-                                    />
-                                </div>
-                            ))
-                        ) : (
-                            <p className="col-span-3">No Fuel Bill Images available.</p>
-                        )}
-                    </div>
 
-                    <h2 className="text-xl font-bold mt-5">Vehicle Images (Dropoff)</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        {bookingDetails.vehicleImgURLs.length > 0 ? (
-                            bookingDetails.vehicleImgURLs.map((url, index) => (
-                                <div key={index} className="max-w-xs">
-                                    <a
-                                        href={url}
-                                        download={`Vehicle_Image_${index}.jpg`} // Ensure the file name ends with .jpg
-                                        className="block mb-2 text-blue-500"
-                                    >
-                                        Download
-                                    </a>
-                                    <img
-                                        src={url}
-                                        alt={`RC Book Image ${index}`}
-                                        className="w-full h-auto cursor-pointer"
-                                        onClick={() => handleImageClick(url)} // Open image in modal
-                                    />
-                                </div>
-                            ))
-                        ) : (
-                            <p className="col-span-full">No Vehicle Images available.</p>
-                        )}
-                    </div>
-                </div>
-            )}
+{showDropoffDetails && (
+  <div>
+    {bookingDetails.status === 'Order Completed' && (
+      <h3 className="text-xl font-bold mt-5">Fuel Bill Images</h3>
+    )}
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      {renderImages({ images: bookingDetails.fuelBillImageURLs, type: 'fuelBill' })}
+    </div>
+
+    <h2 className="text-xl font-bold mt-5">Vehicle Images (Dropoff)</h2>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      {renderImages({ images: bookingDetails.vehicleImgURLs, type: 'vehicleDropoff' })}
+    </div>
+  </div>
+)}
 
             {/* Modal for viewing the selected image */}
             {selectedImage && (
@@ -696,7 +570,21 @@ const ViewMore: React.FC = () => {
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Booking ID :</td>
-                        <td className="p-2">{bookingDetails.bookingId}</td>
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <EditableField
+                                    label="Booking Id"
+                                    value={bookingDetails?.bookingId}
+                                    isEditing={editStates.bookingId}
+                                    editedValue={editedFields.bookingId}
+                                    loading={loadingStates.bookingId}
+                                    onEditClick={() => handleEditClick('bookingId')}
+                                    onSaveClick={() => handleSaveClick('bookingId')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, bookingId: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed'}
+                                />
+                            </div>
+                        </td>
                     </tr>
                     {role === 'staff' && (
                         <tr>
@@ -711,125 +599,234 @@ const ViewMore: React.FC = () => {
                             {bookingDetails.newStatus}, {bookingDetails.editedTime}
                         </td>
                     </tr>
-                    <tr>
+                    {/* <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Amount without insurance :</td>
                         <td className="p-2">{bookingDetails.totalSalary}</td>
-                    </tr>
+                    </tr> */}
                     <tr>
-                        <td className="bg-gray-100 p-2 font-semibold">Payable Amount with insurance:</td>
+                        <td className="bg-gray-100 p-2 font-bold">Payable Amount by Customer/Company:</td>
                         <td className="p-2">
-                            {' '}
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                {isEditingSalary ? (
-                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                        <TextField
-                                            value={editedSalary}
-                                            onChange={(e) => setEditedSalary(e.target.value)}
-                                            label="Payable Amount"
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    handleSaveClickLastAmount();
-                                                }
-                                            }}
-                                        />
-
-                                        <Button
-                                            variant="contained"
-                                            style={{ marginLeft: '10px' }}
-                                            onClick={handleSaveClickLastAmount}
-                                            disabled={loading} // Disable the button while loading
-                                        >
-                                            {loading ? <CircularProgress size={24} /> : 'Save'}
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <span>{bookingDetails.updatedTotalSalary}</span>
-                                        {bookingDetails.status === 'Order Completed' && <CiEdit size={28} className="cursor-pointer" color="blue" onClick={handleEditClickLast} />}
-                                    </>
-                                )}
+                                <td
+                                    className="p-2"
+                                    style={{
+                                        color: 'red',
+                                        fontSize: '1.5rem', // Adjust size (1.5rem = larger font)
+                                        fontWeight: 'bold', // Optional: to make it bold
+                                    }}
+                                >
+                                    {bookingDetails.updatedTotalSalary}
+                                </td>
                             </div>
                         </td>
                     </tr>
 
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Company :</td>
-                        <td className="p-2">{bookingDetails.company}</td>
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <EditableField
+                                    label="Company"
+                                    value={bookingDetails?.company}
+                                    isEditing={editStates.company}
+                                    editedValue={editedFields.company}
+                                    loading={loadingStates.company}
+                                    onEditClick={() => handleEditClick('company')}
+                                    onSaveClick={() => handleSaveClick('company')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, company: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed'}
+                                />
+                            </div>
+                        </td>
                     </tr>
-                    {bookingDetails.company.toLowerCase() === 'rsa' && selectedCompanyName && (
+                    {bookingDetails.company.toLowerCase() === 'rsa' && (
                         <tr>
                             <td className="bg-gray-100 p-2 font-semibold">Selected Company :</td>
-                            <td className="p-2">{selectedCompanyName}</td>
+                            <td className="p-2">
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <EditableField
+                                        label="Company Name"
+                                        value={bookingDetails?.companyName}
+                                        isEditing={editStates.companyName}
+                                        editedValue={editedFields.companyName}
+                                        loading={loadingStates.companyName}
+                                        onEditClick={() => handleEditClick('companyName')}
+                                        onSaveClick={() => handleSaveClick('companyName')}
+                                        onChange={(e) => setEditedFields((prev) => ({ ...prev, companyName: e.target.value }))}
+                                        isEditable={bookingDetails?.status === 'Order Completed'}
+                                    />
+                                </div>
+                            </td>
                         </tr>
                     )}
 
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Trapped Location :</td>
-                        <td className="p-2">{bookingDetails.trappedLocation}</td>
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <EditableField
+                                    label="Trapped Location"
+                                    value={bookingDetails?.trappedLocation}
+                                    isEditing={editStates.trappedLocation}
+                                    editedValue={editedFields.trappedLocation}
+                                    loading={loadingStates.trappedLocation}
+                                    onEditClick={() => handleEditClick('trappedLocation')}
+                                    onSaveClick={() => handleSaveClick('trappedLocation')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, trappedLocation: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed'}
+                                />
+                            </div>
+                        </td>{' '}
                     </tr>
                     <tr>
-                        <td className="bg-gray-100 p-2 font-semibold">Showroom :</td>
-                        <td className="p-2">{bookingDetails.showroomLocation}</td>
+                        <td className="bg-gray-100 p-2 font-semibold">Service Center :</td>
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <EditableField
+                                    label="Showroom Location"
+                                    value={bookingDetails?.showroomLocation}
+                                    isEditing={editStates.showroomLocation}
+                                    editedValue={editedFields.showroomLocation}
+                                    loading={loadingStates.showroomLocation}
+                                    onEditClick={() => handleEditClick('showroomLocation')}
+                                    onSaveClick={() => handleSaveClick('showroomLocation')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, showroomLocation: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed'}
+                                />
+                            </div>
+                        </td>{' '}
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">File Number :</td>
                         <td className="p-2">
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            {isEditingFileNumber ? (
-                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                        <TextField
-                                            value={editedFileNumber}
-                                            onChange={(e) => setEditedFileNumber(e.target.value)}
-                                            label="File Number"
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    handleSaveClickFileNumber();
-                                                }
-                                            }}
-                                        />
-
-                                        <Button
-                                            variant="contained"
-                                            style={{ marginLeft: '10px' }}
-                                            onClick={handleSaveClickFileNumber}
-                                            disabled={loadingFileNumber} // Disable the button while loading
-                                        >
-                                            {loadingFileNumber ? <CircularProgress size={24} /> : 'Save'}
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <span>{bookingDetails.fileNumber}</span>
-                                        {bookingDetails.status === 'Order Completed' && <CiEdit size={28} className="cursor-pointer" color="blue" onClick={handleEditClickFileNumber} />}
-                                    </>
-                                )}
+                                <EditableField
+                                    label="File Number"
+                                    value={bookingDetails?.fileNumber}
+                                    isEditing={editStates.fileNumber}
+                                    editedValue={editedFields.fileNumber}
+                                    loading={loadingStates.fileNumber}
+                                    onEditClick={() => handleEditClick('fileNumber')}
+                                    onSaveClick={() => handleSaveClick('fileNumber')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, fileNumber: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed'}
+                                />
                             </div>
                         </td>
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Customer Name :</td>
-                        <td className="p-2">{bookingDetails.customerName}</td>
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <EditableField
+                                    label="Customer Name"
+                                    value={bookingDetails?.customerName}
+                                    isEditing={editStates.customerName}
+                                    editedValue={editedFields.customerName}
+                                    loading={loadingStates.customerName}
+                                    onEditClick={() => handleEditClick('customerName')}
+                                    onSaveClick={() => handleSaveClick('customerName')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, customerName: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed'}
+                                />
+                            </div>
+                        </td>{' '}
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Driver :</td>
-                        <td className="p-2">{bookingDetails.driver}</td>
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <EditableField
+                                    label="Driver"
+                                    value={bookingDetails?.driver}
+                                    isEditing={editStates.driver}
+                                    editedValue={editedFields.driver}
+                                    loading={loadingStates.driver}
+                                    onEditClick={() => handleEditClick('driver')}
+                                    onSaveClick={() => handleSaveClick('driver')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, driver: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed'}
+                                />
+                            </div>
+                        </td>{' '}
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Driver Total Distance:</td>
-                        <td className="p-2">{bookingDetails.totalDriverDistance}</td>
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <EditableField
+                                    label="Total Driver Distance"
+                                    value={bookingDetails?.totalDriverDistance}
+                                    isEditing={editStates.totalDriverDistance}
+                                    editedValue={editedFields.totalDriverDistance}
+                                    loading={loadingStates.totalDriverDistance}
+                                    onEditClick={() => handleEditClick('totalDriverDistance')}
+                                    onSaveClick={() => handleSaveClick('totalDriverDistance')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, totalDriverDistance: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed'}
+                                />
+                            </div>
+                        </td>{' '}
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Driver Salary:</td>
-                        <td className="p-2">{bookingDetails.totalDriverSalary}</td>
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <EditableField
+                                    label="Total Driver Salary"
+                                    value={bookingDetails?.totalDriverSalary}
+                                    isEditing={editStates.totalDriverSalary}
+                                    editedValue={editedFields.totalDriverSalary}
+                                    loading={loadingStates.totalDriverSalary}
+                                    onEditClick={() => handleEditClick('totalDriverSalary')}
+                                    onSaveClick={() => handleSaveClick('totalDriverSalary')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, totalDriverSalary: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed'}
+                                    valueStyle={{
+                                        color: 'red',
+                                        fontSize: '1.5rem',
+                                        fontWeight: 'bold',
+                                    }}
+                                />
+                            </div>
+                        </td>{' '}
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Customer Vehicle Number :</td>
-                        <td className="p-2">{bookingDetails.vehicleNumber}</td>
-                    </tr>
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <EditableField
+                                    label="Customer Vehicle Number"
+                                    value={bookingDetails?.vehicleNumber}
+                                    isEditing={editStates.vehicleNumber}
+                                    editedValue={editedFields.vehicleNumber}
+                                    loading={loadingStates.vehicleNumber}
+                                    onEditClick={() => handleEditClick('vehicleNumber')}
+                                    onSaveClick={() => handleSaveClick('vehicleNumber')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, vehicleNumber: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed'}
+                                  
+                                />
+                            </div>
+                        </td>{' '}                    </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Brand Name :</td>
-                        <td className="p-2">{bookingDetails.vehicleModel}</td>
-                    </tr>
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <EditableField
+                                    label="Vehicle Modal"
+                                    value={bookingDetails?.vehicleModal}
+                                    isEditing={editStates.vehicleModal}
+                                    editedValue={editedFields.vehicleModal}
+                                    loading={loadingStates.vehicleModal}
+                                    onEditClick={() => handleEditClick('vehicleModal')}
+                                    onSaveClick={() => handleSaveClick('vehicleModal')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, vehicleModal: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed'}
+                                   
+                                />
+                            </div>
+                        </td>{' '}                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Phone Number :</td>
                         <td className="p-2">{bookingDetails.phoneNumber}</td>
@@ -864,61 +861,90 @@ const ViewMore: React.FC = () => {
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Distance :</td>
-                        <td className="p-2">{bookingDetails.distance}</td>
-                    </tr>
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <EditableField
+                                    label="Distance"
+                                    value={bookingDetails?.distance}
+                                    isEditing={editStates.distance}
+                                    editedValue={editedFields.distance}
+                                    loading={loadingStates.distance}
+                                    onEditClick={() => handleEditClick('distance')}
+                                    onSaveClick={() => handleSaveClick('distance')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, distance: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed'}
+                                   
+                                />
+                            </div>
+                        </td>{' '}                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Service Type :</td>
-                        <td className="p-2">{bookingDetails.serviceType}</td>
-                    </tr>
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <EditableField
+                                    label="Service Type"
+                                    value={bookingDetails?.serviceType}
+                                    isEditing={editStates.serviceType}
+                                    editedValue={editedFields.serviceType}
+                                    loading={loadingStates.serviceType}
+                                    onEditClick={() => handleEditClick('serviceType')}
+                                    onSaveClick={() => handleSaveClick('serviceType')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, serviceType: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed'}
+                                   
+                                />
+                            </div>
+                        </td>{' '}                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Service Vehicle Number :</td>
-                        <td className="p-2">
-                            {' '}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            {isEditingServiceVehicle ? (
-                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                        <TextField
-                                            value={editedServiceVehicle}
-                                            onChange={(e) => setEditedServiceVehicle(e.target.value)}
-                                            label="Vehicle Number"
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    handleSaveClickServiceVehicle();
-                                                }
-                                            }}
-                                        />
 
-                                        <Button
-                                            variant="contained"
-                                            style={{ marginLeft: '10px' }}
-                                            onClick={handleSaveClickServiceVehicle}
-                                            disabled={loadingServiceVehicle} // Disable the button while loading
-                                        >
-                                            {loadingServiceVehicle ? <CircularProgress size={24} /> : 'Save'}
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <span>{bookingDetails.serviceVehicle}</span>
-                                        {bookingDetails.status === 'Order Completed' && <CiEdit size={28} className="cursor-pointer" color="blue" onClick={handleEditClickServiceVehicle} />}
-                                    </>
-                                )}
-                            </div>
-                        </td>
+                            <td className="p-2">
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <EditableField
+                                        label="Service Vehicle Number"
+                                        value={bookingDetails?.serviceVehicle}
+                                        isEditing={editStates.serviceVehicle}
+                                        editedValue={editedFields.serviceVehicle}
+                                        loading={loadingStates.serviceVehicle}
+                                        onEditClick={() => handleEditClick('serviceVehicle')}
+                                        onSaveClick={() => handleSaveClick('serviceVehicle')}
+                                        onChange={(e) => setEditedFields((prev) => ({ ...prev, serviceVehicle: e.target.value }))}
+                                        isEditable={bookingDetails?.status === 'Order Completed'}
+                                      
+                                    />
+                                </div>
+                            </td> 
+                     
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Comments :</td>
-                        <td className="p-2">{bookingDetails.comments}</td>
-                    </tr>
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <EditableField
+                                    label="Comments"
+                                    value={bookingDetails?.comments}
+                                    isEditing={editStates.comments}
+                                    editedValue={editedFields.comments}
+                                    loading={loadingStates.comments}
+                                    onEditClick={() => handleEditClick('comments')}
+                                    onSaveClick={() => handleSaveClick('comments')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, comments: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed'}
+                                   
+                                />
+                            </div>
+                        </td>{' '}                     </tr>
                     {bookingDetails.status === 'Order Completed' && (
                         <>
                             <tr>
                                 <td className="bg-gray-100 p-2 font-semibold">Pickup Time :</td>
-                                <td className="p-2">{bookingDetails.pickupTime}</td>
+                                <td className="p-2">{formatTimestamp(bookingDetails?.pickedTime)}</td>
                             </tr>
                             <tr>
                                 <td className="bg-gray-100 p-2 font-semibold">Dropoff Time :</td>
-                                <td className="p-2">{bookingDetails.dropoffTime}</td>
+                                <td className="p-2"><td>{formatTimestamp(bookingDetails?.droppedTime)}</td>
+
+                                </td>
                             </tr>
                             <tr>
                                 <td className="bg-gray-100 p-2 font-semibold">Remark :</td>
@@ -928,6 +954,21 @@ const ViewMore: React.FC = () => {
                     )}
                 </tbody>
             </table>
+            <br />
+            <div className="w-full">
+                {bookingDetails?.bookingChecked === false && bookingDetails?.status === 'Order Completed' && (
+                    <button
+                        onClick={handleVerifyClick}
+                        className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-lg hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-300 ease-in-out"
+                    >
+                        Verify
+                    </button>
+                )}
+
+                {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && (
+                    <p className="text-green-600 font-medium text-center mt-2">Booking verified successfully!</p>
+                )}
+            </div>
 
             {showForm && (
                 <form onSubmit={handleFormSubmit} className="mt-8">
@@ -1010,14 +1051,14 @@ const ViewMore: React.FC = () => {
                         </div>
                     )}
                     <div className="mb-4">
-                        <label htmlFor="pickupTime" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="pickedTime" className="block text-sm font-medium text-gray-700">
                             Pickup Time
                         </label>
                         <input
                             type="datetime-local"
-                            id="pickupTime"
-                            name="pickupTime"
-                            value={formData.pickupTime}
+                            id="pickedTime"
+                            name="pickedTime"
+                            value={formData.pickedTime}
                             onChange={handleFormChange}
                             className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
                             required
@@ -1117,115 +1158,7 @@ const ViewMore: React.FC = () => {
                         </button>
                     </div>
                 )}
-
-                {!bookingDetails.formAdded &&
-                    bookingDetails.status === 'Order Completed' &&
-                    allDrivers.some((driver) => driver.id === bookingDetails.selectedDriver && driver.companyName === 'RSA') && (
-                        <button
-                            className="mx-3"
-                            style={{
-                                backgroundColor: 'green',
-                                color: '#fff',
-                                border: '1px solid #007bff',
-                                padding: '8px 16px',
-                                fontSize: '16px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                transition: 'background-color 0.3s, color 0.3s, border-color 0.3s',
-                            }}
-                            onClick={() => onRequestOpen()}
-                        >
-                            Open Form
-                        </button>
-                    )}
             </div>
-            <Dialog
-                open={isModalOpen}
-                onClose={onRequestClose}
-                maxWidth="sm" // Optional: controls the maximum width of the dialog
-                fullWidth // Optional: forces the dialog to take full width
-                scroll="paper" // Makes the modal content scrollable
-            >
-                <DialogTitle>
-                    {isEditing ? (
-                        <div>
-                            <TextField value={fixedPoint} onChange={handleInputChange} variant="outlined" size="small" />
-                            <Button variant="contained" color="primary" onClick={handleSaveClick}>
-                                Save
-                            </Button>
-                        </div>
-                    ) : (
-                        <div>
-                            <p>Point for each question</p>
-                            <Button variant="contained" color="primary" onClick={handleEditClick}>
-                                {fixedPoint}
-                            </Button>
-                        </div>
-                    )}
-                </DialogTitle>
-
-                <DialogContent dividers={true} style={{ maxHeight: '400px' }}>
-                    {' '}
-                    {/* Add maxHeight for scrollable content */}
-                    <form onSubmit={handleSubmit}>
-                        <FormControl component="fieldset" fullWidth>
-                            <FormLabel component="legend">Uniform:</FormLabel>
-                            <RadioGroup value={uniform} onChange={(e) => setUniform(e.target.value)}>
-                                <FormControlLabel value="yes" control={<Radio />} label="Yes" />
-                                <FormControlLabel value="no" control={<Radio />} label="No" />
-                            </RadioGroup>
-                        </FormControl>
-
-                        <FormControl component="fieldset" fullWidth>
-                            <FormLabel component="legend">Behavior:</FormLabel>
-                            <RadioGroup value={behavior} onChange={(e) => setBehavior(e.target.value)}>
-                                <FormControlLabel value="good" control={<Radio />} label="Good" />
-                                <FormControlLabel value="bad" control={<Radio />} label="Bad" />
-                            </RadioGroup>
-                        </FormControl>
-
-                        <FormControl component="fieldset" fullWidth>
-                            <FormLabel component="legend">ID Card:</FormLabel>
-                            <RadioGroup value={idCard} onChange={(e) => setIdCard(e.target.value)}>
-                                <FormControlLabel value="yes" control={<Radio />} label="Yes" />
-                                <FormControlLabel value="no" control={<Radio />} label="No" />
-                            </RadioGroup>
-                        </FormControl>
-
-                        <FormControl component="fieldset" fullWidth>
-                            <FormLabel component="legend">Inventory Sheet:</FormLabel>
-                            <RadioGroup value={inventory} onChange={(e) => setInventory(e.target.value)}>
-                                <FormControlLabel value="filled" control={<Radio />} label="Filled" />
-                                <FormControlLabel value="unfilled" control={<Radio />} label="Unfilled" />
-                            </RadioGroup>
-                        </FormControl>
-
-                        <FormControl component="fieldset" fullWidth>
-                            <FormLabel component="legend">Feedback Video:</FormLabel>
-                            <RadioGroup value={feedbackVideo} onChange={(e) => setFeedbackVideo(e.target.value)}>
-                                <FormControlLabel value="yes" control={<Radio />} label="Yes" />
-                                <FormControlLabel value="no" control={<Radio />} label="No" />
-                            </RadioGroup>
-                        </FormControl>
-                        <DialogActions>
-                            {loading ? (
-                                <Button variant="contained" color="primary">
-                                    <CircularProgress size={24} color="inherit" />
-                                </Button>
-                            ) : (
-                                <div>
-                                    <Button type="submit" variant="contained" color="primary">
-                                        Submit
-                                    </Button>
-                                    <Button onClick={onRequestClose} color="secondary">
-                                        Close
-                                    </Button>
-                                </div>
-                            )}
-                        </DialogActions>
-                    </form>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 };

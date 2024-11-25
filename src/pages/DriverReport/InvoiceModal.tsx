@@ -5,7 +5,7 @@ interface Booking {
   fileNumber: string;
   dateTime: string;
   serviceType: string;
-  serviceVehicle: string;
+  vehicleNumber: string;
   totalDriverSalary: number;
   transferedSalary: number;
   balanceSalary: number;
@@ -53,7 +53,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({
                     {new Date(booking.dateTime).toLocaleDateString()}
                   </td>
                   <td className="border px-4 py-2">{booking.serviceType}</td>
-                  <td className="border px-4 py-2">{booking.serviceVehicle}</td>
+                  <td className="border px-4 py-2">{booking.vehicleNumber}</td>
                   <td className="border px-4 py-2">{booking.totalDriverSalary}</td>
                   <td className="border px-4 py-2">{booking.transferedSalary}</td>
                   <td className="border px-4 py-2">{booking.balanceSalary}</td>

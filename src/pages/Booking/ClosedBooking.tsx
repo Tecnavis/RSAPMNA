@@ -1,5 +1,5 @@
 import React, { useEffect, useState, ChangeEvent } from 'react';
-import { getFirestore, collection, getDocs, query, where, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where, doc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
@@ -17,6 +17,8 @@ interface Booking {
     selectedDriver: string;
     formAdded: string;
     approved: boolean;
+    createdAt:Timestamp;
+    fileNumber:string;
 }
 
 interface Driver {
@@ -145,7 +147,9 @@ const ClosedBooking: React.FC = () => {
     console.log(completedBookings, 'this is the completed bookings');
 
     const filteredBookings = completedBookings.filter((booking) => Object.values(booking).some((value) => value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())));
-
+    const sortedBookings = [...filteredBookings].sort((a, b) => {
+        return b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime();
+      });
     // opening feedback modal -----
     const onRequestOpen = (selectedDriver: string | undefined, id: string) => {
         if (selectedDriver) {
@@ -273,7 +277,11 @@ const ClosedBooking: React.FC = () => {
                                 <table className="table-hover min-w-full border-collapse block md:table">
                                     <thead className="block md:table-header-group">
                                         <tr className="border border-gray-300 block md:table-row absolute -top-full md:top-auto -left-full md:left-auto md:relative">
+                                        <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">#</th>
+
                                             <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Date & Time</th>
+                                            <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">File Number</th>
+
                                             <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Driver Name</th>
                                             <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Phone Number</th>
                                             <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Service Type</th>
@@ -282,11 +290,15 @@ const ClosedBooking: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="block md:table-row-group">
-                                        {filteredBookings
+                                        {sortedBookings
                                             .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()) // Sort by dateTime descending
-                                            .map((booking) => (
+                                            .map((booking,index) => (
                                                 <tr key={booking.id} className="bg-white border border-gray-300 block md:table-row">
+                                                    <td className="p-2 text-sm block md:table-cell">{index+1} </td>
+
                                                     <td className="p-2 text-sm block md:table-cell">{booking.dateTime} </td>
+                                                    <td className="p-2 text-sm block md:table-cell">{booking.fileNumber} </td>
+
                                                     <td className="p-2 text-sm block md:table-cell">{booking.driver}</td>
                                                     <td className="p-2 text-sm block md:table-cell">{booking.phoneNumber}</td>
                                                     <td className="p-2 text-sm block md:table-cell">{booking.serviceType}</td>

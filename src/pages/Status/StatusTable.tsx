@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import { collection, getDocs, getFirestore, onSnapshot, doc, getDoc, query, orderBy, updateDoc, where } from 'firebase/firestore';
+import { collection, getDocs, getFirestore, onSnapshot, doc, getDoc, query, orderBy, updateDoc, where, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import IconArrowLeft from '../../components/Icon/IconArrowLeft';
@@ -29,6 +29,8 @@ interface TabButtonProps {
     company: string;
     companyName: string;
     updatedTotalSalary: number;
+    paymentStatus?:string;
+    fileNumber:string;
 }
 
 interface Driver {
@@ -216,12 +218,25 @@ const StatusTable: React.FC = () => {
     const handleSavePayment = async () => {
         if (selectedBooking && paymentAmount) {
             try {
-                // Update booking with the entered payment amount and mark status as 'Order Completed'
+                // Assuming `updatedTotalSalary` is available as part of `selectedBooking`
+                const updatedTotalSalary = selectedBooking.updatedTotalSalary;
+    
+                // Convert paymentAmount to a number
+                const paymentAmountNumber = Number(paymentAmount); // This will convert paymentAmount to a number
+    
+                let paymentStatus = 'Not Paid';  // Default status
+                if (paymentAmountNumber >= updatedTotalSalary) {
+                    paymentStatus = 'Paid';
+                } 
+    
+                // Update booking with the entered payment amount and payment status
                 const bookingRef = doc(db, `user/${uid}/bookings`, selectedBooking.id);
                 await updateDoc(bookingRef, {
-                    amount: Number(paymentAmount),
+                    amount: paymentAmountNumber,
                     status: 'Order Completed',
+                    paymentStatus: paymentStatus, // Set payment status based on the condition
                     unPaidReceivedUser: userName,
+                    selectedBookingId: selectedBooking.id,
                 });
     
                 // Update user collection with new amount and date based on userName
@@ -231,11 +246,28 @@ const StatusTable: React.FC = () => {
                 if (!userSnapshot.empty) {
                     const userDoc = userSnapshot.docs[0]; // Assume `userName` is unique, so take the first document
                     const userRef = doc(db, `user/${uid}/users/${userDoc.id}/staffReceived`, userDoc.id);
-                    
-                    await updateDoc(userRef, {
-                        amount: Number(paymentAmount),
-                        date: new Date().toISOString(),
-                    });
+    
+                    // Check if the document exists
+                    const docSnapshot = await getDoc(userRef);
+    
+                    if (docSnapshot.exists()) {
+                        // If document exists, update it
+                        await updateDoc(userRef, {
+                            amount: paymentAmountNumber,
+                            date: new Date().toISOString(),
+                            selectedBookingId: selectedBooking.id,
+
+
+                        });
+                    } else {
+                        // If document doesn't exist, create it
+                        await setDoc(userRef, {
+                            amount: paymentAmountNumber,
+                            date: new Date().toISOString(),
+                            selectedBookingId: selectedBooking.id,
+
+                        });
+                    }
                 }
     
                 // Hide the modal and reset states
@@ -247,6 +279,7 @@ const StatusTable: React.FC = () => {
             }
         }
     };
+    
     
     // const handleSavePayment = async () => {
     //     if (selectedBooking && paymentAmount) {
@@ -329,7 +362,7 @@ const StatusTable: React.FC = () => {
 
     const completedBookings = sortedRecordsData.filter((record) => record.status === 'Order Completed');
     const ongoingBookings = sortedRecordsData.filter((record) => record.status !== 'Order Completed');
-    const pendingBookings = sortedRecordsData.filter((record) => record.status === "Not Paid");
+    const pendingBookings = sortedRecordsData.filter((record) => record.paymentStatus === "Not Paid");
 
     const fetchDrivers = async () => {
         try {
@@ -417,6 +450,10 @@ const StatusTable: React.FC = () => {
                         <Value>{record.dateTime}</Value>
                     </DataItem>
                     <DataItem>
+                        <Label>File Number:</Label>
+                        <Value style={{color:'red'}}>{record.fileNumber}</Value>
+                    </DataItem>
+                    <DataItem>
                         <Label>Driver Name:</Label>
                         <Value>{record.driver}</Value>
                     </DataItem>
@@ -449,7 +486,7 @@ const StatusTable: React.FC = () => {
                         </Value>
                     </DataItem>
                
-                    {record.status === 'Not Paid' && (
+                    {record.paymentStatus === 'Not Paid' && (
                           <button
                           className="bg-blue-500 text-white py-2 px-4 rounded mt-4"
                           onClick={() => handlePaymentSettlement(record)}
@@ -495,6 +532,7 @@ const StatusTable: React.FC = () => {
                         <Label>Date & Time:</Label>
                         <Value>{record.dateTime}</Value>
                     </DataItem>
+                    
                     <DataItem>
                         <Label>Driver Name:</Label>
                         <Value>{record.driver}</Value>
@@ -597,6 +635,7 @@ const StatusTable: React.FC = () => {
                         <Label>Date & Time:</Label>
                         <Value>{record.dateTime}</Value>
                     </DataItem>
+                    
                     <DataItem>
                         <Label>Driver Name:</Label>
                         <Value>{record.driver}</Value>

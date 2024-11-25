@@ -100,14 +100,16 @@ const DriverReport: React.FC = () => {
                 <table className="min-w-full bg-white">
                     <thead>
                         <tr className="bg-gray-100">
+                        <th className="py-2 px-4">#</th>
                             <th className="py-2 px-4">{header}</th>
                             <th className="py-2 px-4">Driver ID</th>
                             <th className="py-2 px-4">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {driversList.map(driver => (
+                    {driversList.map((driver, index) => (
                             <tr key={driver.id} className="hover:bg-gray-50">
+                                 <td className="border px-4 py-2">{index + 1}</td> 
                                 <td className="border px-4 py-2">
                                     {header === 'Company Name'
                                         ? driver.driverName
@@ -152,12 +154,15 @@ const DriverReport: React.FC = () => {
                                         View Cash Collection Report
                                     </Link>
                                     
+                                     {/* Conditionally render "View Salary Details" */}
+                                {title !== 'Company Details' && (
                                     <Link
                                         to={`/driverreport/salaryreport/${driver.id}`}
                                         className="text-blue-500 hover:text-blue-700 bg-blue-100 px-2 py-1 rounded-md shadow-md"
                                     >
                                         View Salary Details
                                     </Link>
+                                )}
                                     {(title === 'PMNA Drivers' || title === 'Providers Details') && (
     <Link
         to={`/driverreport/expensedetails/${driver.id}`}

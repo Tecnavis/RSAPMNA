@@ -1,9 +1,8 @@
 // new code
 
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, writeBatch, arrayUnion } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, writeBatch, arrayUnion, Timestamp } from 'firebase/firestore';
 import Modal from 'react-modal';
 import { parse, format } from 'date-fns';
 import styles from './cashCollectionReport.module.css';
@@ -22,8 +21,8 @@ interface Booking {
     receivedAmount?: number;
     receivedAmountCompany?: number;
 
-    // Keep as optional, type changed to number
-    dateTime: string;
+    vehicleNumber:string;
+        dateTime: string;
     fileNumber?: string;
     selectedDriver?: string;
     approve?: boolean;
@@ -34,6 +33,7 @@ interface Booking {
     selectedCompany: string;
     companyBooking?: boolean;
     amountToUse?: number;
+    createdAt:Timestamp;
 }
 // ------------------------------------------------------------------------
 const CashCollectionReport: React.FC = () => {
@@ -66,7 +66,11 @@ const CashCollectionReport: React.FC = () => {
     const userName = sessionStorage.getItem('username');
     // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     console.log('role', userName);
+console.log(filteredBookings,'this is the filtered bookings')
 
+const sortedBookings = [...filteredBookings].sort((a, b) => {
+    return b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime();
+  });
     useEffect(() => {
         const fetchDriver = async () => {
             if (!uid || !id) {
@@ -96,12 +100,13 @@ const CashCollectionReport: React.FC = () => {
                 const bookingsRef = collection(db, `user/${uid}/bookings`);
 
                 // Query bookings where selectedCompany is equal to id
-                const companyQuery = query(
-                    bookingsRef,
-                    where('selectedCompany', '==', id),
-                    where('status', '==', 'Order Completed')
-                    // orderBy('createdAt', 'desc')
-                );
+               const companyQuery = query(
+    bookingsRef,
+    where('selectedCompany', '==', id),
+    where('status', '==', 'Order Completed'),
+    // orderBy('createdAt', 'desc')
+);
+
                 const companySnapshot = await getDocs(companyQuery);
                 const bookingsWithCompany = companySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Booking[];
 
@@ -144,15 +149,15 @@ const CashCollectionReport: React.FC = () => {
         try {
             const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
             const bookingSnap = await getDoc(bookingRef);
-    
+
             if (!bookingSnap.exists()) {
                 console.error('Booking not found');
                 return;
             }
-    
+
             const booking = bookingSnap.data();
             let amountToUse = parseFloat(newAmount); // Default to newAmount if not a company booking
-    
+
             // Check if it's a company booking and calculate amountToUse accordingly
             if (booking.companyBooking === true) {
                 amountToUse = parseFloat(booking.updatedTotalSalary?.toString() || booking.amount?.toString() || '0');
@@ -179,11 +184,19 @@ const CashCollectionReport: React.FC = () => {
             setEditingBooking(null);
         }
     };
-// ====================================================
-    const calculateBalance = (amount: string | number, receivedAmount: string | number) => {
+    // ----------------------------------------------------------------------------------------------------------------------------------
+   
+    const calculateBalance = (amount: string | number, receivedAmount: string | number, companyBooking: boolean) => {
+        if (companyBooking) {
+            // If it's a company booking, calculate balance based on receivedAmountCompany
+            return (parseFloat(amount.toString()) - parseFloat(receivedAmount.toString())).toFixed(2);
+        }
+        // If it's not a company booking, calculate balance based on receivedAmount
         return (parseFloat(amount.toString()) - parseFloat(receivedAmount.toString())).toFixed(2);
     };
-
+    
+    
+    
     const calculateNetTotalAmountInHand = () => {
         if (!driver || bookings.length === 0) {
             console.log('Driver or bookings are not available yet.');
@@ -194,24 +207,35 @@ const CashCollectionReport: React.FC = () => {
         console.log('Bookings:', bookings);
     
         const totalBalances = bookings.reduce((acc, booking) => {
-            let amountToUse = booking.amount;
-            let receivedAmount = booking.receivedAmount || 0;
+            let amountToUse = 0;
+            let receivedAmount = 0;
     
-            if (booking.companyBooking) {
+            if (driver?.companyName === 'Company' && booking.companyBooking) {
+                // For companyBooking
+                console.log("Driver company is 'Company' and booking is companyBooking.");
                 amountToUse = parseFloat(booking.updatedTotalSalary?.toString() || booking.amount?.toString() || '0');
-                receivedAmount = booking.receivedAmountCompany || 0; // Use receivedAmountCompany for companyBooking
-                console.log('Amount to use (companyBooking):', amountToUse);
+                receivedAmount = parseFloat(booking.receivedAmountCompany?.toString() || '0');
+            } else if (driver?.companyName !== 'Company' && !booking.companyBooking) {
+                // For non-companyBooking
+                console.log("Driver company is NOT 'Company' and booking is NOT companyBooking.");
+                amountToUse = parseFloat(booking.amount?.toString() || '0');
+                receivedAmount = parseFloat(booking.receivedAmount?.toString() || '0');
             }
-    
-            const balance = calculateBalance(amountToUse.toString(), receivedAmount);
+            receivedAmount = isNaN(receivedAmount) ? 0 : receivedAmount;
+
+            // Calculate balance
+            const balance = calculateBalance(amountToUse, receivedAmount, booking.companyBooking ?? false);
             console.log(`Booking ID: ${booking.id}, Amount: ${amountToUse}, Received Amount: ${receivedAmount}, Balance: ${balance}`);
             return acc + parseFloat(balance);
         }, 0);
     
+        // Calculate net total amount in hand
         const netTotal = (parseFloat(driver.advance?.toString() || '0') + totalBalances).toFixed(2);
         console.log('Net Total Amount in Hand:', netTotal);
         return netTotal;
     };
+    
+    
     const updateTotalBalance = async () => {
         try {
             if (!uid || typeof uid !== 'string') {
@@ -232,13 +256,15 @@ const CashCollectionReport: React.FC = () => {
             }
     
             const totalBalances = bookings.reduce((acc, booking) => {
-                const amount = parseFloat(booking.amount?.toString() || '0');
+                let amount = parseFloat(booking.amount?.toString() || '0');
                 let receivedAmount = parseFloat(booking.receivedAmount?.toString() || '0');
     
                 if (booking.companyBooking) {
-                    receivedAmount = parseFloat(booking.receivedAmountCompany?.toString() || '0'); // Use receivedAmountCompany
+                    // If it's a companyBooking, use receivedAmountCompany instead of receivedAmount
+                    receivedAmount = parseFloat(booking.receivedAmountCompany?.toString() || '0');
                 }
     
+                // Calculate the balance based on amount and receivedAmount
                 const newAcc = acc + (amount - receivedAmount);
                 console.log(`Accumulated Total Balance So Far: ${newAcc}`);
     
@@ -268,33 +294,25 @@ const CashCollectionReport: React.FC = () => {
         }
     };
     
-    const handleApproveClick = (booking: Booking) => {
-        const balance = calculateBalance(booking.amount.toString(), booking.receivedAmount || 0);
 
+    const handleApproveClick = async (booking: Booking) => {
+        const balance = calculateBalance(booking.amount.toString(), booking.receivedAmount || 0, booking.companyBooking ?? false);
+    
         if (balance !== '0.00') {
             alert('Approval not allowed. The balance must be zero before approving.');
         } else {
-            setBookingToApprove(booking);
-            setModalIsOpen(true); // Open the modal to prompt for password
-        }
-    };
-
-    const handlePasswordSubmit = async () => {
-        const correctPassword = 'RSA@123'; // Replace with your desired password
-        if (password === correctPassword) {
             try {
-                const bookingRef = doc(db, `user/${uid}/bookings`, bookingToApprove!.id); // Use non-null assertion as we checked for null earlier
-                await updateDoc(bookingRef, { approve: true });
-                setBookings((prevBookings) => prevBookings.map((booking) => (booking.id === bookingToApprove!.id ? { ...booking, approve: true, disabled: true } : booking)));
-                setModalIsOpen(false);
-                setPassword('');
+                const bookingRef = doc(db, `user/${uid}/bookings`, booking.id); // Use the booking ID to reference the correct booking
+                await updateDoc(bookingRef, { approve: true }); // Directly approve the booking
+                setBookings((prevBookings) => prevBookings.map((bookingItem) => 
+                    bookingItem.id === booking.id ? { ...bookingItem, approve: true, disabled: true } : bookingItem
+                ));
             } catch (error) {
                 console.error('Error approving booking:', error);
             }
-        } else {
-            alert('Incorrect password. Please try again.');
         }
     };
+    
 
     const filterBookingsByMonthAndYear = () => {
         let filtered: Booking[] = bookings;
@@ -327,46 +345,68 @@ const CashCollectionReport: React.FC = () => {
         const totalAmount = filteredBookings.reduce((acc, booking) => {
             // Determine amountToUse based on companyBooking condition
             const amountToUse = booking.companyBooking
-                ? (booking.updatedTotalSalary || 0)
-                : (typeof booking.amount === 'number' ? booking.amount : parseFloat(booking.amount || '0'));
+                ? booking.updatedTotalSalary || 0
+                : typeof booking.amount === 'number'
+                ? booking.amount
+                : parseFloat(booking.amount || '0');
     
             return acc + (isNaN(amountToUse) ? 0 : amountToUse);
         }, 0);
     
         const totalReceived = filteredBookings.reduce((acc, booking) => {
-            // Use receivedAmountCompany if companyBooking is true, otherwise use receivedAmount
-            const receivedAmount = booking.companyBooking
-                ? (booking.receivedAmountCompany
-                    ? (typeof booking.receivedAmountCompany === 'number' ? booking.receivedAmountCompany : parseFloat(booking.receivedAmountCompany))
-                    : 0)
-                : (booking.receivedAmount
-                    ? (typeof booking.receivedAmount === 'number' ? booking.receivedAmount : parseFloat(booking.receivedAmount))
-                    : 0);
-        
+            let receivedAmount = 0;
+    
+            if (driver?.companyName === 'Company' && booking.companyBooking) {
+                // Calculate only for companyBooking cases
+                receivedAmount = booking.receivedAmountCompany
+                    ? typeof booking.receivedAmountCompany === 'number'
+                        ? booking.receivedAmountCompany
+                        : parseFloat(booking.receivedAmountCompany)
+                    : 0;
+            } else if (driver?.companyName !== 'Company' && !booking.companyBooking) {
+                // Calculate only for non-companyBooking cases
+                receivedAmount = booking.receivedAmount
+                    ? typeof booking.receivedAmount === 'number'
+                        ? booking.receivedAmount
+                        : parseFloat(booking.receivedAmount)
+                    : 0;
+            }
+    
             return acc + (isNaN(receivedAmount) ? 0 : receivedAmount);
         }, 0);
     
         const totalBalances = filteredBookings.reduce((acc, booking) => {
             // Determine amountToUse based on companyBooking condition
             const amountToUse = booking.companyBooking
-                ? (booking.updatedTotalSalary || 0)
-                : (typeof booking.amount === 'number' ? booking.amount : parseFloat(booking.amount || '0'));
-        
-            // Use receivedAmountCompany if companyBooking is true, otherwise use receivedAmount
+                ? booking.updatedTotalSalary || 0
+                : typeof booking.amount === 'number'
+                ? booking.amount
+                : parseFloat(booking.amount || '0');
+    
+            // Handle balance calculation based on driver and booking conditions
             const receivedAmount = booking.companyBooking
-                ? (booking.receivedAmountCompany
-                    ? (typeof booking.receivedAmountCompany === 'number' ? booking.receivedAmountCompany : parseFloat(booking.receivedAmountCompany))
-                    : 0)
-                : (booking.receivedAmount
-                    ? (typeof booking.receivedAmount === 'number' ? booking.receivedAmount : parseFloat(booking.receivedAmount))
-                    : 0);
-        
-            return acc + (isNaN(amountToUse - receivedAmount) ? 0 : (amountToUse - receivedAmount));
+                ? booking.receivedAmountCompany
+                    ? typeof booking.receivedAmountCompany === 'number'
+                        ? booking.receivedAmountCompany
+                        : parseFloat(booking.receivedAmountCompany)
+                    : 0
+                : booking.receivedAmount
+                ? typeof booking.receivedAmount === 'number'
+                    ? booking.receivedAmount
+                    : parseFloat(booking.receivedAmount)
+                : 0;
+    
+            // If companyBooking is true and driver is not from 'Company', set balance to 0
+            const balance =
+                booking.companyBooking && driver?.companyName !== 'Company'
+                    ? 0
+                    : amountToUse - receivedAmount;
+    
+            return acc + (isNaN(balance) ? 0 : balance);
         }, 0);
     
         // Ensure results are valid numbers and coerce if necessary
         const safeTotalAmount = !isNaN(totalAmount) ? Number(totalAmount) : 0;
-    
         const safeTotalReceived = !isNaN(totalReceived) ? Number(totalReceived) : 0;
         const safeTotalBalances = !isNaN(totalBalances) ? Number(totalBalances) : 0;
     
@@ -377,21 +417,23 @@ const CashCollectionReport: React.FC = () => {
         });
     };
     
+    
+
     const calculateTotalSelectedBalance = () => {
         const totalBalances = selectedBookings.reduce((acc, bookingId) => {
             const booking = bookings.find((b) => b.id === bookingId);
             if (booking) {
                 // Determine amountToUse based on conditions
                 const amountToUse = booking.companyBooking
-                ? 0  // Set amount to 0 if it's a company booking
-                : parseFloat(booking.amount?.toString() || '0');
-                return acc + parseFloat(calculateBalance(amountToUse, booking.receivedAmount || 0));
+                    ? 0 // Set amount to 0 if it's a company booking
+                    : parseFloat(booking.amount?.toString() || '0');
+                return acc + parseFloat(calculateBalance(amountToUse, booking.receivedAmount || 0, booking.companyBooking ?? false));
             }
             return acc;
         }, 0);
         setTotalSelectedBalance(totalBalances.toFixed(2));
     };
-    
+
     const generateInvoice = () => {
         const selectedBookingDetails = selectedBookings
             .map((bookingId) => {
@@ -406,7 +448,7 @@ const CashCollectionReport: React.FC = () => {
                     id: booking.id,
                     amount: booking.amount,
                     receivedAmount: booking.receivedAmount || 0,
-                    balance: calculateBalance(booking.amount, booking.receivedAmount || 0),
+                    balance: calculateBalance(booking.amount, booking.receivedAmount || 0, booking.companyBooking ?? false),
                     dateTime: booking.dateTime,
                     fileNumber: booking.fileNumber,
                     driver: booking.driver,
@@ -453,19 +495,17 @@ const CashCollectionReport: React.FC = () => {
     const distributeReceivedAmount = (receivedAmount: number, bookings: Booking[]) => {
         let remainingAmount = receivedAmount;
         const sortedBookings = [...bookings].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
-    
+
         const updatedBookings = sortedBookings.map((booking) => {
             // Determine amountToUse based on the companyBooking condition
-            const amountToUse = booking.companyBooking
-                ? parseFloat(booking.updatedTotalSalary?.toString() || booking.amount?.toString() || '0')
-                : parseFloat(booking.amount?.toString() || '0');
-    
+            const amountToUse = booking.companyBooking ? parseFloat(booking.updatedTotalSalary?.toString() || booking.amount?.toString() || '0') : parseFloat(booking.amount?.toString() || '0');
+
             // Calculate booking balance using amountToUse
-            const bookingBalance = amountToUse - (booking.companyBooking ? (booking.receivedAmountCompany || 0) : (booking.receivedAmount || 0));
-    
+            const bookingBalance = amountToUse - (booking.companyBooking ? booking.receivedAmountCompany || 0 : booking.receivedAmount || 0);
+
             if (remainingAmount > 0) {
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);
-    
+
                 // Update the appropriate receivedAmount field
                 if (booking.companyBooking) {
                     booking.receivedAmountCompany = (booking.receivedAmountCompany || 0) + appliedAmount;
@@ -474,68 +514,64 @@ const CashCollectionReport: React.FC = () => {
                 } else {
                     booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
                 }
-    
+
                 remainingAmount -= appliedAmount;
             }
-    
+
             // Add amountToUse as a property for further use
             booking.amountToUse = amountToUse;
             return booking;
         });
-    
+
         return updatedBookings;
     };
-    
 
-    
-    
     const handleAmountReceiveChange = async (receivedAmount: number) => {
         try {
             const updatedBookings = distributeReceivedAmount(receivedAmount, bookings);
             setBookings(updatedBookings); // Update state with new bookings
-    
+
             const batch = writeBatch(db);
-    
+
             updatedBookings.forEach((booking) => {
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
-            
+
                 if (booking.companyBooking) {
                     // Ensure `receivedAmountCompany` is not undefined
                     batch.update(bookingRef, {
                         receivedAmountCompany: booking.receivedAmountCompany ?? 0, // Add fallback to 0 if undefined
-                        balanceCompany: String(calculateBalance(booking.amountToUse ?? 0, booking.receivedAmountCompany ?? 0)),
+                        balanceCompany: String(calculateBalance(booking.amountToUse ?? 0, booking.receivedAmountCompany ?? 0, booking.companyBooking ?? false)),
                         role: role || 'unknown',
                     });
                 } else {
                     // Ensure `receivedAmount` is not undefined
                     batch.update(bookingRef, {
                         receivedAmount: booking.receivedAmount ?? 0, // Add fallback to 0 if undefined
-                        balance: String(calculateBalance(booking.amountToUse ?? 0, booking.receivedAmount ?? 0)),
+                        balance: String(calculateBalance(booking.amountToUse ?? 0, booking.receivedAmount ?? 0, booking.companyBooking ?? false)),
                         role: role || 'unknown',
                     });
                 }
             });
-            
-    
+
             // Step 1: Fetch the user document in `users` collection where userName matches
             const usersQuery = query(collection(db, `user/${uid}/users`), where('userName', '==', userName));
             const querySnapshot = await getDocs(usersQuery);
-    
+
             // Step 2: Update the `staffReceived` field for the matching user document
             querySnapshot.forEach((userDoc) => {
                 const staffReceivedEntry = {
                     amount: receivedAmount,
                     date: new Date().toISOString(),
                 };
-    
+
                 // Access the `staffReceived` subcollection within the user document
                 const staffReceivedRef = collection(db, `user/${uid}/users/${userDoc.id}/staffReceived`);
-    
+
                 // Add the new entry as a document in the `staffReceived` subcollection
                 const newStaffReceivedDocRef = doc(staffReceivedRef); // Firestore generates an ID for the new document
                 batch.set(newStaffReceivedDocRef, staffReceivedEntry);
             });
-    
+
             await batch.commit();
             updateTotalBalance();
             setShowAmountDiv(false);
@@ -544,8 +580,66 @@ const CashCollectionReport: React.FC = () => {
             console.error('Error distributing received amount:', error);
         }
     };
+    const handleAmountReceivedChange = async (bookingId: string, receivedAmount: string) => {
+        try {
+            if (!uid || typeof uid !== 'string') {
+                throw new Error('User ID (uid) is not defined or is not a string.');
+            }
+            if (!bookingId || typeof bookingId !== 'string') {
+                throw new Error('Booking ID is not defined or is not a string.');
+            }
     
-
+            const booking = bookings.find((booking) => booking.id === bookingId);
+            if (!booking) {
+                throw new Error('Booking not found.');
+            }
+    
+            // Ensure `driver` is available and handle the "Not Need" case
+            if (booking.companyBooking && driver?.companyName !== 'Company') {
+                console.warn('Received Amount not needed for this booking.');
+                return; // Prevent updates for "Not Need" case
+            }
+    
+            const amountToUse = booking.companyBooking ? 0 : booking.amount || 0; // Set amount to 0 if companyBooking is true
+            
+            const receivedAmountToUse = booking.companyBooking
+                ? parseFloat(receivedAmount) // Use receivedAmountCompany for companyBooking
+                : parseFloat(receivedAmount); // Use receivedAmount otherwise
+    
+            // Update the booking's receivedAmount or receivedAmountCompany and balance
+            const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
+            await updateDoc(bookingRef, {
+                [booking.companyBooking ? 'receivedAmountCompany' : 'receivedAmount']: receivedAmountToUse,
+                balance: calculateBalance(amountToUse.toString(), receivedAmountToUse, booking.companyBooking || false), // Pass companyBooking as third arg
+            });
+    
+            // Update local state with the new receivedAmount or receivedAmountCompany
+            setBookings(bookings.map((booking) =>
+                booking.id === bookingId
+                    ? {
+                          ...booking,
+                          [booking.companyBooking ? 'receivedAmountCompany' : 'receivedAmount']: receivedAmountToUse,
+                      }
+                    : booking
+            ));
+    
+            await updateTotalBalance();
+    
+            if (!id || typeof id !== 'string') {
+                throw new Error('Driver ID (id) is not defined or is not a string.');
+            }
+    
+            // Update netTotalAmountInHand in the driver's document if required
+    
+            setClickedButtons((prevState) => ({
+                ...prevState,
+                [bookingId]: true,
+            }));
+        } catch (error) {
+            console.error('Error updating received amount:', error);
+        }
+    };
+    
     
 
     return (
@@ -572,11 +666,11 @@ const CashCollectionReport: React.FC = () => {
                                     <p className="text-lg text-gray-700">
                                         📞 <span className="font-medium">Phone:</span> {driver.personalphone}
                                     </p>
-                                    {/* {driver?.selectedCompany !== "Company" && (  */}
+                                    {driver && driver.companyName !== 'Company' && (
                                     <p className="text-lg text-gray-700 mt-2">
                                         💰 <span className="font-medium">Advance Payment:</span> {driver?.advance}
                                     </p>
-                                    {/* )} */}
+                                    )}
                                 </div>
                             </div>
 
@@ -641,7 +735,7 @@ const CashCollectionReport: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                        <div className="bg-gradient-to-r from-blue-100 to-blue-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
+                        {/* <div className="bg-gradient-to-r from-blue-100 to-blue-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
                             <div className="flex items-center space-x-4">
                                 <div className="text-4xl text-blue-600">
                                     <i className="fas fa-dollar-sign"></i>
@@ -651,7 +745,7 @@ const CashCollectionReport: React.FC = () => {
                                     <p className="text-gray-700 text-lg">{monthlyTotals.totalAmount}</p>
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
 
                         <div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
                             <div className="flex items-center space-x-4">
@@ -720,6 +814,7 @@ const CashCollectionReport: React.FC = () => {
                         <table className={styles.table}>
                             <thead className={styles.tableHead}>
                                 <tr>
+                                    <th>#</th>
                                     <th className={styles.tableCell}>
                                         <div className={styles.selectAllContainer}>
                                             <label>Select All</label>
@@ -728,37 +823,104 @@ const CashCollectionReport: React.FC = () => {
                                         </div>
                                     </th>
                                     <th className={styles.tableCell}>Date</th>
+                                    <th className={styles.tableCell}>File Number</th>
+                                    <th className={styles.tableCell}>Customer Vehicle Number</th>
+
+
+                                    {/* ----------PayableAmount By Customer----------- */}
                                     {driver.companyName !== 'Company' && <th className={styles.tableCell}>PayableAmount By Customer</th>}
                                     {driver.companyName === 'Company' && <th className={styles.tableCell}>PayableAmount By Company</th>}
-                                    {driver.companyName === 'Company' && <th className={styles.tableCell}>Amount Received From The Company</th>}
-                                    {driver.companyName !== 'Company' && <th className={styles.tableCell}>Amount Received From The Customer</th>} 
+                                    {/* ------------------end PayableAmount By Customer------------------ */}
+                                    {/* {driver.companyName === 'Company' && <th className={styles.tableCell}>Amount Received From The Company</th>} */}
+                                    {driver.companyName !== 'Company' && <th className={styles.tableCell}>Amount Received From The Customer</th>}
+                                    <th className={styles.tableCell}>Received Amount</th>
+
                                     <th className={styles.tableCell}>Balance</th>
-                                    {role !== 'staff' && <th className={styles.tableCell}>Edit</th>}
+                                    {/* {role !== 'staff' && <th className={styles.tableCell}>Edit</th>} */}
                                     <th className={styles.tableCell}>Approve</th>
                                 </tr>
                             </thead>
                             <tbody className={styles.tableBody}>
                                 {/* ----------------------------------------------------- */}
-                                
-                                {filteredBookings.map((booking) => {
-        // Determine which receivedAmount to use
-        const effectiveReceivedAmount = booking.companyBooking ? booking.receivedAmountCompany : booking.receivedAmount;
 
-        return (
-                                                <tr key={booking.id} className={`${styles.tableRow} ${booking.approve ? 'bg-gray-200 text-gray-500' : 'bg-white'}`}>
-                                        <td className={`${styles.tableCell} text-center`}>
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedBookings.includes(booking.id)}
-                                                onChange={() => handleCheckboxChange(booking.id)}
-                                                disabled={booking.approve} // Optionally disable checkbox visually
-                                            />
-                                        </td>
-                                        <td className={styles.responsiveCell}>{format(parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date()), 'dd/MM/yyyy, h:mm:ss a')}</td>
-                                        <td className={styles.responsiveCell}>{booking.updatedTotalSalary}</td>
-                                        {driver.companyName === 'Company' && <td className={styles.responsiveCell}>{booking.updatedTotalSalary}</td>}
-                                        {driver.companyName !== 'Company' && <td className={styles.responsiveCell}>{booking.amount}</td>}
-                                        {/* {driver.companyName !== 'Company' && (
+                                {sortedBookings.map((booking,index) => {
+                                    // Determine which receivedAmount to use
+                                    const effectiveReceivedAmount = booking.companyBooking ? booking.receivedAmountCompany : booking.receivedAmount;
+
+                                    return (
+                                        <tr key={booking.id} className={`${styles.tableRow} ${booking.approve ? 'bg-gray-200 text-gray-500' : 'bg-white'}`}>
+                                            <td>{index+1}</td>
+                                            <td className={`${styles.tableCell} text-center`}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedBookings.includes(booking.id)}
+                                                    onChange={() => handleCheckboxChange(booking.id)}
+                                                    disabled={booking.approve} // Optionally disable checkbox visually
+                                                />
+                                            </td>
+                                            <td className={styles.responsiveCell}>{format(parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date()), 'dd/MM/yyyy, h:mm:ss a')}</td>
+                                            <td className={styles.responsiveCell}>{booking.fileNumber}</td>
+                                            <td className={styles.responsiveCell}>{booking.vehicleNumber}</td>
+
+                                            {/* --------------PayableAmount By Customer------------------ */}
+                                            {driver.companyName !== 'Company' && <td className={styles.responsiveCell}>{booking.companyBooking ? 0 : booking.updatedTotalSalary}</td>}
+                                            {driver.companyName === 'Company' && <td className={styles.responsiveCell}>{booking.updatedTotalSalary}</td>}
+                                             {/* -----------------end PayableAmount By Customer--------------- */}
+{/* -----------------------------------------------------------------------------Amount Received From The Customer--------------------------------- */}
+                                            {driver.companyName !== 'Company' && <td className={styles.responsiveCell}>{booking.amount}</td>}
+                                            {/* -----------------------------------------------------------------------------end Amount Received From The Customer--------------------------------- */}
+ {/* ---------------------------------------Received Amount--------------------------------- */}
+                                            <td key={booking.id} className={styles.responsiveCell}>
+    <div style={{ display: 'flex', alignItems: 'center' }}>
+        {booking.companyBooking && driver?.companyName !== 'Company' ? (
+            <span style={{ color: 'red', fontWeight: 'bold' }}>Not Need</span>
+        ) : (
+            <>
+               <input
+    type="number"
+    value={booking.companyBooking ? booking.receivedAmountCompany ?? 0 : booking.receivedAmount ?? 0}
+    onChange={(e) => handleAmountReceivedChange(booking.id, e.target.value)}
+    style={{
+        border: '1px solid #d1d5db',
+        borderRadius: '0.25rem',
+        padding: '0.25rem 0.5rem',
+        marginRight: '0.5rem',
+    }}
+    disabled={booking.approve}
+    min="0"
+/>
+
+                {/* <button
+                    onClick={() =>
+                        handleAmountReceivedChange(
+                            booking.id,
+                            (booking.companyBooking
+                                ? booking.receivedAmountCompany ?? 0
+                                : booking.receivedAmount ?? 0
+                            ).toString()
+                        )
+                    }
+                    style={{
+                        backgroundColor: booking.receivedAmount && booking.receivedAmount > 0 ? '#4CAF50' : '#d1d5db',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.25rem',
+                        padding: '0.25rem 0.5rem',
+                        cursor: booking.receivedAmount && booking.receivedAmount > 0 ? 'pointer' : 'not-allowed',
+                    }}
+                    disabled={booking.approve || (booking.receivedAmount ?? 0) <= 0}
+                >
+                    OK
+                </button> */}
+            </>
+        )}
+    </div>
+</td>
+
+
+{/* ------------------------------------------------17-11-2024--------------------- */}
+
+                                         {/* {driver.companyName !== 'Company' && (
                   <td
                     className={styles.responsiveCell}
                     style={{
@@ -778,81 +940,136 @@ const CashCollectionReport: React.FC = () => {
                 </td>
             )} */}
 
-            {/* {driver.companyName === 'Company' && ( */}
-            
-                <td
-                    className={styles.responsiveCell}
-                    style={{
-                        backgroundColor:
-                            Number(calculateBalance(
-                                parseFloat(booking.updatedTotalSalary?.toString() || booking.amount?.toString() || '0'), 
-                                effectiveReceivedAmount || 0
-                            )) === 0
-                                ? '#e6ffe6' // Light green for zero balance
-                                : '#ffe6e6', // Light red for non-zero balance
-                    }}
-                >
-                    {calculateBalance(
-                        parseFloat(booking.updatedTotalSalary?.toString() || booking.amount?.toString() || '0'), 
-                        effectiveReceivedAmount || 0
-                    )}
-                </td>
+{driver.companyName !== 'Company' && (
+    <td
+        className={styles.responsiveCell}
+        style={{
+            backgroundColor:
+                booking.companyBooking && driver?.companyName !== 'Company'
+                    ? '#e6ffe6' // Light green for zero balance
+                    : Number(
+                          calculateBalance(
+                              parseFloat(booking.updatedTotalSalary?.toString() || booking.amount?.toString() || '0'),
+                              effectiveReceivedAmount || 0,
+                              booking.companyBooking ?? false // Default to false if undefined
+                          )
+                      ) === 0
+                    ? '#e6ffe6' // Light green for zero balance
+                    : '#ffe6e6', // Light red for non-zero balance
+        }}
+    >
+        {booking.companyBooking && driver?.companyName !== 'Company'
+            ? 0 // Show balance as zero
+            : calculateBalance(
+                  parseFloat(booking.updatedTotalSalary?.toString() || booking.amount?.toString() || '0'),
+                  effectiveReceivedAmount || 0,
+                  booking.companyBooking ?? false // Default to false if undefined
+              )}
+    </td>
+)}
 
+                                            {driver.companyName === 'Company' && (
+                                                <td
+                                                    className={styles.responsiveCell}
+                                                    style={{
+                                                        backgroundColor:
+                                                        Number(
+                                                            calculateBalance(
+                                                                parseFloat(booking.updatedTotalSalary?.toString() || booking.amount?.toString() || '0'),
+                                                                effectiveReceivedAmount || 0,
+                                                                booking.companyBooking ?? false                                                            )
+                                                        ) === 0
+                                                            ? '#e6ffe6' // Light green for zero balance
+                                                            : '#ffe6e6', // Light red for non-zero balance
+                                                }}
+                                                >
+   {calculateBalance(
+            parseFloat(booking.updatedTotalSalary?.toString() || booking.amount?.toString() || '0'),
+            effectiveReceivedAmount || 0,
+            booking.companyBooking ?? false
+                )}                                                </td>
+                                            )}
+{/* 
+                                            {role !== 'staff' && (
+                                                <td className={styles.responsiveCell}>
+                                                    <button
+                                                        onClick={() => handleEditClick(booking)}
+                                                        className={`text-blue-500 hover:text-blue-700 ${booking.approve ? 'cursor-not-allowed opacity-50' : ''}`}
+                                                        disabled={booking.approve}
+                                                    >
+                                                        <IconEdit />
+                                                    </button>
+                                                </td>
+                                            )} */}
 
-                                        {role !== 'staff' && (
-                                            <td className={styles.responsiveCell}>
+                                            <td>
                                                 <button
-                                                    onClick={() => handleEditClick(booking)}
-                                                    className={`text-blue-500 hover:text-blue-700 ${booking.approve ? 'cursor-not-allowed opacity-50' : ''}`}
+                                                    onClick={() => handleApproveClick(booking)}
+                                                    className={`${booking.approve ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-700'} hover:${
+                                                        booking.approve ? 'bg-green-300' : 'bg-red-300'
+                                                    } ${booking.approve ? 'cursor-not-allowed' : 'cursor-pointer'} px-4 py-2 rounded`}
                                                     disabled={booking.approve}
                                                 >
-                                                    <IconEdit />
+                                                    {booking.approve ? 'Approved' : 'Approve'}
                                                 </button>
                                             </td>
-                                        )}
-
-                                        <td>
-                                            <button
-                                                onClick={() => handleApproveClick(booking)}
-                                                className={`${booking.approve ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-700'} hover:${booking.approve ? 'bg-green-300' : 'bg-red-300'} ${
-                                                    booking.approve ? 'cursor-not-allowed' : 'cursor-pointer'
-                                                } px-4 py-2 rounded`}
-                                                disabled={booking.approve}
-                                            >
-                                                {booking.approve ? 'Approved' : 'Approve'}
-                                            </button>
-                                        </td>
-                                    </tr>
-                               );
-                            })}
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                             <tfoot>
                                 <tr>
                                     <td className={styles.tableCell}></td>
                                     <td className={styles.tableCell}></td>
                                     <td className={styles.tableCell}></td>
+                                    <td className={styles.tableCell}></td>
+                                    <td className={styles.tableCell}></td>
+                                    <td className={styles.tableCell}></td>
+
+                                    {driver.companyName !== 'Company' && (
+
+                                    <td className={styles.tableCell}></td>
+                                    )}
                                     <td className={styles.tableCell} style={{ color: 'blue', fontSize: '18px' }}>
                                         Totals{' '}
                                     </td>
                                     <td className={styles.tableCell} style={{ color: 'blue', fontSize: '18px' }}>
     {Number(
         filteredBookings.reduce((total, booking) => {
-            // Determine the amount to use based on the companyBooking condition
-            const amountToUse = booking.companyBooking
-                ? parseFloat(booking.updatedTotalSalary?.toString() || booking.amount?.toString() || '0')
-                : parseFloat(booking.amount?.toString() || '0');
+            let amountToUse = 0;
+            let receivedAmountt = 0;
 
-            // Use receivedAmountCompany if companyBooking is true; otherwise, use receivedAmount
-            const receivedAmountt = booking.companyBooking
-                ? (booking.receivedAmountCompany || 0)
-                : (booking.receivedAmount || 0);
+            if (driver?.companyName === 'Company' && booking.companyBooking) {
+                // Apply condition if driver is in 'Company' and the booking is a companyBooking
+                console.log("Driver company is 'Company' and booking is companyBooking.");
 
-            // Calculate the balance using the appropriate received amount
-            return total + parseFloat(calculateBalance(amountToUse, receivedAmountt));
+                // Use updatedTotalSalary or amount for the calculation
+                amountToUse = parseFloat(booking.updatedTotalSalary?.toString() || '0');
+                receivedAmountt = parseFloat(booking.receivedAmountCompany?.toString() || '0');
+
+                console.log("Amount to use (updatedTotalSalary):", amountToUse);
+                console.log("Received amount (receivedAmountCompany):", receivedAmountt);
+
+            } else if (driver?.companyName !== 'Company' && !booking.companyBooking) {
+                // Apply condition for drivers not in 'Company' and non-companyBooking cases
+                console.log("Driver company is NOT 'Company' and booking is NOT companyBooking.");
+
+                amountToUse = parseFloat(booking.amount?.toString() || '0');
+                receivedAmountt = parseFloat(booking.receivedAmount?.toString() || '0');
+
+                console.log("Amount to use (amount):", amountToUse);
+                console.log("Received amount (receivedAmount):", receivedAmountt);
+            }
+
+            // Calculate the balance for this booking
+            const balance = amountToUse - receivedAmountt;
+            console.log("Balance for this booking:", balance);
+
+            // Return the accumulated total balance
+            return total + (isNaN(balance) ? 0 : balance);
         }, 0)
     ).toFixed(2)}
 </td>
-
 
 
                                     <td className={styles.tableCell}></td>
@@ -868,7 +1085,7 @@ const CashCollectionReport: React.FC = () => {
                                 <div className="relative flex flex-col w-full bg-white shadow-lg rounded-lg outline-none focus:outline-none">
                                     <div className="flex items-start justify-between p-5 border-b border-solid rounded-t border-blueGray-200">
                                         <h3 className="text-lg font-semibold text-gray-800">Edit Booking Amount</h3>
-                                                                           </div>
+                                    </div>
                                     <div className="relative p-6 flex-auto">
                                         <input
                                             type="number"
@@ -898,45 +1115,7 @@ const CashCollectionReport: React.FC = () => {
                             </div>
                         </div>
                     )}
-                    <Modal
-                        isOpen={modalIsOpen}
-                        onRequestClose={() => setModalIsOpen(false)}
-                        contentLabel="Approve Booking"
-                        style={{
-                            content: {
-                                width: '300px', // Set the width of the modal
-                                height: '200px', // Set the height of the modal
-                                margin: 'auto', // Center the modal
-                                padding: '20px', // Reduce padding for a smaller modal
-                                borderRadius: '10px', // Add border radius for rounded corners
-                            },
-                        }}
-                    >
-                        <h2 className="text-lg font-semibold mb-4">Approve Booking</h2>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Enter password to approve"
-                            className="border border-gray-300 rounded px-3 py-2 w-full"
-                        />
-                        <div className="flex items-center justify-end mt-4">
-                            <button
-                                className="bg-green-500 text-white active:bg-green-600 font-bold uppercase text-sm px-4 py-2 rounded shadow hover:shadow-md outline-none focus:outline-none mr-2 ease-linear transition-all duration-150"
-                                type="button"
-                                onClick={handlePasswordSubmit}
-                            >
-                                Submit
-                            </button>
-                            <button
-                                className="bg-red-500 text-white active:bg-red-600 font-bold uppercase text-sm px-4 py-2 rounded shadow hover:shadow-md outline-none focus:outline-none ease-linear transition-all duration-150"
-                                type="button"
-                                onClick={() => setModalIsOpen(false)}
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </Modal>
+                  
                 </>
             ) : (
                 <p>Loading...</p>

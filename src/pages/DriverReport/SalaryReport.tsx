@@ -9,13 +9,14 @@ interface Booking {
     fileNumber: string;
     dateTime: string;
     serviceType: string;
-    serviceVehicle: string;
+    vehicleNumber: string;
     totalDriverSalary: number;
     transferedSalary?: number;
     balanceSalary: number;
     selectedDriver?: string;
     advance?: number; // New property
     advancePaymentDate?: string;
+    totalDriverDistance: string;
 }
 
 interface Driver {
@@ -35,12 +36,15 @@ const SalaryReport: React.FC = () => {
     const [showInvoiceModal, setShowInvoiceModal] = useState<boolean>(false);
     const [selectedYear, setSelectedYear] = useState<string>('');
     const [showAdvanceDetails, setShowAdvanceDetails] = useState<boolean>(false);
-
+    const [adjustedBookingIds, setAdjustedBookingIds] = useState<string[]>([]);
+    const [adjustedFileNumbers, setAdjustedFileNumbers] = useState<string[]>([]);
+    
     const [editFormData, setEditFormData] = useState({
         fileNumber: '',
         dateTime: '',
         serviceType: '',
-        serviceVehicle: '',
+        vehicleNumber: '',
+        totalDriverDistance: '',
         totalDriverSalary: 0,
         transferedSalary: 0,
         balanceSalary: 0,
@@ -69,7 +73,8 @@ const SalaryReport: React.FC = () => {
 
                     setDriver({
                         ...driverData,
-                        advance: parseFloat((driverData.advance || 0).toFixed(2)),                        advancePaymentDate: driverData.advancePaymentDate || '',
+                        advance: parseFloat((driverData.advance || 0).toFixed(2)),
+                        advancePaymentDate: driverData.advancePaymentDate || '',
                     });
                 } else {
                     console.log('No such document!');
@@ -100,7 +105,9 @@ const SalaryReport: React.FC = () => {
                         fileNumber: data.fileNumber || '',
                         dateTime: data.dateTime || '',
                         serviceType: data.serviceType || '',
-                        serviceVehicle: data.serviceVehicle || '',
+                        vehicleNumber: data.vehicleNumber || '',
+                        totalDriverDistance: data.totalDriverDistance || '',
+
                         totalDriverSalary: data.totalDriverSalary || 0,
                         transferedSalary: data.transferedSalary || 0,
                         balanceSalary,
@@ -188,7 +195,9 @@ const SalaryReport: React.FC = () => {
                 fileNumber: bookingToEdit.fileNumber,
                 dateTime: bookingToEdit.dateTime,
                 serviceType: bookingToEdit.serviceType,
-                serviceVehicle: bookingToEdit.serviceVehicle,
+                vehicleNumber: bookingToEdit.vehicleNumber,
+                totalDriverDistance: bookingToEdit.totalDriverDistance,
+
                 totalDriverSalary: bookingToEdit.totalDriverSalary,
                 transferedSalary: bookingToEdit.transferedSalary || 0,
                 balanceSalary: bookingToEdit.balanceSalary,
@@ -278,7 +287,8 @@ const SalaryReport: React.FC = () => {
             fileNumber: '',
             dateTime: '',
             serviceType: '',
-            serviceVehicle: '',
+            vehicleNumber: '',
+            totalDriverDistance: '',
             totalDriverSalary: 0,
             transferedSalary: 0,
             balanceSalary: 0,
@@ -289,7 +299,7 @@ const SalaryReport: React.FC = () => {
 
     const handleSaveEdit = async () => {
         try {
-            const { fileNumber, dateTime, serviceType, serviceVehicle, totalDriverSalary, transferedSalary, advance, advancePaymentDate,balanceSalary } = editFormData;
+            const { fileNumber, dateTime, serviceType, vehicleNumber, totalDriverDistance, totalDriverSalary, transferedSalary, advance, advancePaymentDate, balanceSalary } = editFormData;
 
             // Check if editingBookingId is null before proceeding
             if (!editingBookingId) {
@@ -299,17 +309,19 @@ const SalaryReport: React.FC = () => {
 
             const bookingRef = doc(db, `user/${uid}/bookings`, editingBookingId);
 
+            const formattedDate = advancePaymentDate ? new Date(advancePaymentDate).toLocaleDateString() : '';
+console.log("formattedDate",formattedDate)
             await updateDoc(bookingRef, {
                 fileNumber,
                 dateTime,
                 serviceType,
-                serviceVehicle,
+                vehicleNumber,
+                totalDriverDistance,
                 totalDriverSalary,
                 transferedSalary,
                 balanceSalary: totalDriverSalary - transferedSalary,
                 advance, // Update advance payment
-                advancePaymentDate, // Update advance payment date
-            });
+                advancePaymentDate: formattedDate,            });
 
             // Update local state
             setBookings((prevBookings) =>
@@ -320,13 +332,13 @@ const SalaryReport: React.FC = () => {
                               fileNumber,
                               dateTime,
                               serviceType,
-                              serviceVehicle,
+                              vehicleNumber,
                               totalDriverSalary,
+                              totalDriverDistance,
                               transferedSalary,
                               balanceSalary: totalDriverSalary - transferedSalary,
                               advance,
-                              advancePaymentDate,
-                          }
+                              advancePaymentDate: formattedDate,                           }
                         : booking
                 )
             );
@@ -336,9 +348,10 @@ const SalaryReport: React.FC = () => {
                 fileNumber: '',
                 dateTime: '',
                 serviceType: '',
-                serviceVehicle: '',
+                vehicleNumber: '',
                 totalDriverSalary: 0,
                 transferedSalary: 0,
+                totalDriverDistance: '',
                 balanceSalary: 0,
                 advance: 0,
                 advancePaymentDate: '',
@@ -347,171 +360,243 @@ const SalaryReport: React.FC = () => {
             console.error('Error saving edit:', error);
         }
     };
-    const handleAdjustWithSalary = async () => {
-        // Check if driver exists and advance is valid
-        if (!driver || editFormData.advance <= 0 || !editFormData.advancePaymentDate) {
-            alert('Please enter a valid advance payment and date.');
+    const handleAdvance = async () => {
+        // Check if advance is valid
+        if (!editFormData.advance || editFormData.advance <= 0) {
+            alert('Please enter a valid advance.');
             return;
         }
-
+    
         try {
             if (!uid || !id) {
                 throw new Error('User ID or Driver ID is undefined');
             }
             const driverRef = doc(db, `user/${uid}/driver`, id);
-
-            // Fetch the current advance amount from the driver document
+    
             const driverSnap = await getDoc(driverRef);
             const currentAdvance = driverSnap.exists() ? driverSnap.data().advance || 0 : 0;
-
+    
             console.log('Current advance:', currentAdvance);
-
+    
+            // Ensure currentAdvance is a valid number
             const currentAdvanceNumber = typeof currentAdvance === 'number' ? currentAdvance : parseFloat(currentAdvance);
-            const editAdvanceNumber = typeof editFormData.advance === 'number' ? editFormData.advance : parseFloat(editFormData.advance);
-               
-        // Calculate the total salary amount
-        const totalSalaryAmount = filteredBookings.reduce((acc, booking) => acc + (booking.balanceSalary || 0), 0);
+            const newAdvanceNumber = typeof editFormData.advance === 'number' ? editFormData.advance : parseFloat(editFormData.advance);
+    
+            // Calculate the new total advance
+            const newTotalAdvance = currentAdvanceNumber + newAdvanceNumber;
 
-        // If totalSalaryAmount is 0, sum the previous and newly entered advance
-        if (totalSalaryAmount === 0) {
-            const newAdvanceTotal = currentAdvanceNumber + editAdvanceNumber;
-
-            // Update the driver document with the new summed advance
             await updateDoc(driverRef, {
-                advance: newAdvanceTotal,
+                advance: newTotalAdvance,
                 advancePaymentDate: editFormData.advancePaymentDate, // Optionally update the payment date
             });
-
-                console.log(`Advance updated to ${newAdvanceTotal}`);
-            } else {
-                // Proceed with the normal flow if total salary isn't 0
-                let remainingAdvance = editFormData.advance; // Start with the total advance payment
-                console.log('Advance to be updated:', remainingAdvance);
-
-                // Clone the bookings and sort by earliest date
-                const sortedBookings = [...filteredBookings].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
-
-                const updatedBookings = [];
-
-                for (let booking of sortedBookings) {
-                    if (remainingAdvance <= 0) break; // Stop if all advance payment is used
-
-                    const currentTransferredSalary = booking.transferedSalary || 0;
-                    const maxTransferableAmount = booking.totalDriverSalary - currentTransferredSalary;
-                    console.log('maxTransferableAmount', maxTransferableAmount);
-                    console.log('currentTransferredSalary', currentTransferredSalary);
-
-                    if (maxTransferableAmount > 0) {
-                        // Calculate how much we can transfer for this booking
-                        const transferAmount = Math.min(remainingAdvance, maxTransferableAmount);
-
-                        const newTransferredSalary = currentTransferredSalary + transferAmount;
-                        const newBalanceSalary = booking.totalDriverSalary - newTransferredSalary;
-
-                        // Deduct the transfer amount from the remaining advance
-                        remainingAdvance -= transferAmount;
-
-                        // Update this booking locally
-                        updatedBookings.push({
-                            ...booking,
-                            transferedSalary: newTransferredSalary,
-                            balanceSalary: newBalanceSalary,
-                        });
-
-                        // Check if booking.id is defined before calling doc
-                        if (booking.id) {
-                            // Update this booking in Firestore
-                            const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
-                            await updateDoc(bookingRef, {
-                                transferedSalary: newTransferredSalary,
-                                balanceSalary: newBalanceSalary,
-                            });
-                        } else {
-                            console.error('Booking ID is undefined for booking:', booking);
-                        }
-                    } else {
-                        updatedBookings.push(booking); // No update needed, just push the current booking
-                    }
+    
+            console.log(`Advance updated to ${newTotalAdvance}`);
+            alert('Advance updated successfully.');
+        } catch (error) {
+            console.error('Error updating advance:', error);
+            alert('Error adding advance.');
+        }
+    };
+    let alertShown = false;
+    const handleAdjustWithSalary = async () => {
+        try {
+            if (!uid || !id) {
+                console.error('User ID or Driver ID is undefined');
+                alert('Please ensure the user and driver IDs are set.');
+                return;
+            }
+    
+            const driverRef = doc(db, `user/${uid}/driver`, id);
+    
+            // Step 1: Fetch driver data
+            const driverSnap = await getDoc(driverRef);
+    
+            if (!driverSnap.exists()) {
+                console.error('Driver document does not exist.');
+                alert('Driver data not found.');
+                return;
+            }
+    
+            const driverData = driverSnap.data();
+            const fetchedAdvance = driverData.advance || 0;
+            const fetchedAdvancePaymentDate = driverData.advancePaymentDate || null;
+    
+            console.log('Fetched Advance Amount:', fetchedAdvance);
+            console.log('Fetched Advance Payment Date:', fetchedAdvancePaymentDate);
+    
+            // Step 2: Update editFormData with fetched values
+            editFormData.advance = fetchedAdvance;
+            editFormData.advancePaymentDate = fetchedAdvancePaymentDate;
+    
+            console.log('Updated Edit Form Data:', editFormData);
+    
+            // Step 3: Validate input
+            if (!driver || editFormData.advance <= 0 || !editFormData.advancePaymentDate) {
+                console.warn('Validation failed. Missing or invalid fields.');
+                alert('Please enter a valid advance payment and date.');
+                return;
+            }
+    
+            // Step 4: Fetch current advance in real-time
+            onSnapshot(driverRef, async (driverSnap) => {
+                if (!driverSnap.exists()) {
+                    console.error('Driver document no longer exists.');
+                    return;
                 }
+    
+                const currentAdvance = driverSnap.data().advance || 0;
+                console.log('Current Advance in Real-Time:', currentAdvance);
+    
+                const totalSalaryAmount = filteredBookings.reduce(
+                    (acc, booking) => acc + (booking.balanceSalary || 0),
+                    0
+                );
+    
+                // Case 1: Total Salary is 0, update advance
+                if (totalSalaryAmount === 0) {
+                    const newAdvanceTotal = currentAdvance + editFormData.advance;
+    
+                    await updateDoc(driverRef, {
+                        advance: newAdvanceTotal,
+                        advancePaymentDate: editFormData.advancePaymentDate,
+                    });
+                    console.log(`Advance updated to ${newAdvanceTotal}`);
+                    if (!alertShown) {
+                        alert('Advance updated successfully.');
+                        alertShown = true; // Set the flag to true to avoid multiple alerts
+                    }
+                } else {
+                    // Case 2: Adjust advance with salary
+                    let remainingAdvance = editFormData.advance;
+                    console.log('Remaining Advance for Adjustment:', remainingAdvance);
+    
+                    const sortedBookings = [...filteredBookings].sort(
+                        (a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
+                    );
+    
+                    const updatedBookings = [];
+                    let adjustedIds: string[] = [];
+                    let fileNumbers: string[] = [];
 
-                // Update the remaining advance if any is left
-                if (remainingAdvance !== editFormData.advance) {
-                    console.log('remainingAdvance:', remainingAdvance);
+                    for (let booking of sortedBookings) {
+                        if (remainingAdvance <= 0) break;
+    
+                        const maxTransferableAmount =
+                            (booking.totalDriverSalary || 0) - (booking.transferedSalary || 0);
+    
+                        if (maxTransferableAmount > 0) {
+                            const transferAmount = Math.min(remainingAdvance, maxTransferableAmount);
+    
+                            remainingAdvance -= transferAmount;
+    
+                            updatedBookings.push({
+                                ...booking,
+                                transferedSalary: (booking.transferedSalary || 0) + transferAmount,
+                                balanceSalary:
+                                    (booking.totalDriverSalary || 0) -
+                                    (booking.transferedSalary || 0) -
+                                    transferAmount,
+                            });
+    
+                            if (booking.id) {
+                                adjustedIds.push(booking.id);
 
-                    // Check if id is defined before calling doc
-                    if (id) {
+                                const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
+                                const bookingSnap = await getDoc(bookingRef);
+                                if (bookingSnap.exists()) {
+                                    const fileNumber = bookingSnap.data().fileNumber || 'N/A';
+                                    fileNumbers.push(fileNumber);
+                                }
+    
+                                await updateDoc(bookingRef, {
+                                    transferedSalary: (booking.transferedSalary || 0) + transferAmount,
+                                    balanceSalary:
+                                        (booking.totalDriverSalary || 0) -
+                                        (booking.transferedSalary || 0) -
+                                        transferAmount,
+                                });
+                            }
+                        } else {
+                            updatedBookings.push(booking);
+                        }
+                    }
+    
+                    if (remainingAdvance !== editFormData.advance) {
                         await updateDoc(driverRef, {
                             advance: remainingAdvance,
                         });
-
-                        console.log('Document updated with remainingAdvance:', remainingAdvance);
-                    } else {
-                        console.error('Driver ID is undefined');
+    
+                        console.log('Remaining Advance updated:', remainingAdvance);
                     }
-                }
+                    setAdjustedBookingIds(adjustedIds);
+                    setAdjustedFileNumbers(fileNumbers);
 
-                // Update the local bookings state with the modified bookings
-                setBookings(updatedBookings);
-            }
 
-            alert('Salary adjusted successfully.');
+                    setBookings(updatedBookings);
+                    if (!alertShown) {
+                        alert('Salary adjusted successfully.');
+                        alertShown = true; // Set the flag to true to avoid multiple alerts
+                    }                }
+            });
         } catch (error) {
-            console.error('Error updating advance payment and salary adjustment:', error);
+            console.error('Error during salary adjustment:', error);
+            alert('An error occurred while adjusting the salary. Please try again.');
         }
     };
+    
+    
     return (
         <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg sm:p-8 lg:p-10">
             {driver && (
-              
-                            <h1 className="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300"> Salary Report <span className="text-red-500">{driver.driverName}</span>
-</h1>
-
+                <h1 className="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">
+                    {' '}
+                    Salary Report <span className="text-red-500">{driver.driverName}</span>
+                </h1>
             )}
-           <div className="flex justify-center mb-4">
-    {/* Month Selection */}
-    <div className="flex flex-col items-center mr-4">
-        <label htmlFor="monthSelect" className="text-lg font-semibold mb-1">
-            Select Month:
-        </label>
-        <select
-            id="monthSelect"
-            className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-        >
-            <option value="">All</option>
-            {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((month) => (
-                <option key={month} value={month}>
-                    {month}
-                </option>
-            ))}
-        </select>
-    </div>
+            <div className="flex justify-center mb-4">
+                {/* Month Selection */}
+                <div className="flex flex-col items-center mr-4">
+                    <label htmlFor="monthSelect" className="text-lg font-semibold mb-1">
+                        Select Month:
+                    </label>
+                    <select
+                        id="monthSelect"
+                        className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(e.target.value)}
+                    >
+                        <option value="">All</option>
+                        {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((month) => (
+                            <option key={month} value={month}>
+                                {month}
+                            </option>
+                        ))}
+                    </select>
+                </div>
 
-    {/* Year Selection */}
-    <div className="flex flex-col items-center">
-        <label htmlFor="yearSelect" className="text-lg font-semibold mb-1">
-            Select Year:
-        </label>
-        <select
-            id="yearSelect"
-            className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-        >
-            <option value="">All</option>
-            {Array.from({ length: 10 }, (_, i) => {
-                const year = new Date().getFullYear() - i; // Generate the last 10 years
-                return (
-                    <option key={year} value={year}>
-                        {year}
-                    </option>
-                );
-            })}
-        </select>
-    </div>
-</div>
-
+                {/* Year Selection */}
+                <div className="flex flex-col items-center">
+                    <label htmlFor="yearSelect" className="text-lg font-semibold mb-1">
+                        Select Year:
+                    </label>
+                    <select
+                        id="yearSelect"
+                        className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(e.target.value)}
+                    >
+                        <option value="">All</option>
+                        {Array.from({ length: 10 }, (_, i) => {
+                            const year = new Date().getFullYear() - i; // Generate the last 10 years
+                            return (
+                                <option key={year} value={year}>
+                                    {year}
+                                </option>
+                            );
+                        })}
+                    </select>
+                </div>
+            </div>
 
             {/* ------------------------------------------------- */}
             <div className="mb-4 flex flex-col items-center">
@@ -533,35 +618,55 @@ const SalaryReport: React.FC = () => {
                     />
                 </div>
             </div>
-
             <div className="mb-4 flex justify-center space-x-0 md:space-x-4 flex-col md:flex-row">
-                <button onClick={handleAdjustWithSalary} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-2 md:mb-0">
-                    Advance Adjust with Salary
-                </button>
-                <button onClick={() => setShowAdvanceDetails(!showAdvanceDetails)} className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
-                    {showAdvanceDetails ? 'Hide Advance Details' : 'Advance Details'}
-                </button>
-            </div>
+    <button onClick={handleAdvance} className="bg-blue-900 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded mb-2 md:mb-0">
+      Add Advance
+    </button>
+    <button onClick={handleAdjustWithSalary} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-2 md:mb-0">
+        Advance Adjust with Salary
+    </button>
+    <button onClick={() => setShowAdvanceDetails(!showAdvanceDetails)} className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+        {showAdvanceDetails ? 'Hide Advance Details' : 'Advance Details'}
+    </button>
+</div>
 
-            {driver && showAdvanceDetails && (
-                <div className="bg-white shadow-md rounded-lg p-6 mt-4">
-                    <h2 className="text-xl font-semibold mb-4">Advance Payment Details</h2>
-                    <table className="min-w-full bg-gray-100 rounded-lg overflow-hidden">
-                        <thead>
-                            <tr className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
-                                <th className="py-3 px-4 text-left">Advance Amount</th>
-                                <th className="py-3 px-4 text-left">Advance Payment Date</th>
-                            </tr>
-                        </thead>
-                        <tbody className="text-gray-600 text-sm font-light">
-                            <tr className="border-b border-gray-200 hover:bg-gray-100">
-                                <td className="py-3 px-4">{driver.advance}</td>
-                                <td className="py-3 px-4">{driver.advancePaymentDate || 'N/A'}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            )}
+
+{driver && showAdvanceDetails && (
+    <div className="bg-white shadow-md rounded-lg p-6 mt-4">
+        <h2 className="text-xl font-semibold mb-4">Advance Payment Details</h2>
+        <table className="min-w-full bg-gray-100 rounded-lg overflow-hidden">
+            <thead>
+                <tr className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                    <th className="py-3 px-4 text-left">Advance Amount</th>
+                    <th className="py-3 px-4 text-left">Advance Payment Date</th>
+                    {/* <th className="py-3 px-4 text-left">Booking IDs</th>  */}
+                    <th className="py-3 px-4 text-left">File Numbers</th> {/* Added File Number column */}
+                </tr>
+            </thead>
+            <tbody className="text-gray-600 text-sm font-light">
+                <tr className="border-b border-gray-200 hover:bg-gray-100">
+                    <td className="py-3 px-4">{driver.advance}</td>
+                    <td className="py-3 px-4">{driver.advancePaymentDate || 'N/A'}</td>
+                    {/* <td className="py-3 px-4">
+                        {adjustedBookingIds.length > 0 ? (
+                            adjustedBookingIds.join(', ') // Join the array of booking IDs into a string
+                        ) : (
+                            'N/A'
+                        )}
+                    </td> */}
+                    <td className="py-3 px-4">
+                        {adjustedFileNumbers.length > 0 ? (
+                            adjustedFileNumbers.join(', ') // Join the array of file numbers into a string
+                        ) : (
+                            'N/A' // If no adjusted file numbers, show 'N/A'
+                        )}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+)}
+
 
             {selectedBookings.length > 0 && (
                 <div className="mt-5">
@@ -617,7 +722,7 @@ const SalaryReport: React.FC = () => {
                     {showInvoiceModal && (
                         <InvoiceModal
                             selectedBookings={selectedBookings}
-                            bookings={bookings.map(booking => ({
+                            bookings={bookings.map((booking) => ({
                                 ...booking,
                                 transferedSalary: booking.transferedSalary ?? 0, // Fallback to 0 if undefined
                             }))}
@@ -632,6 +737,38 @@ const SalaryReport: React.FC = () => {
                 </div>
             )}
 
+
+
+            <div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
+                            <div className="flex items-center space-x-4">
+                                <div className="text-4xl text-green-600">
+                                    <i className="fas fa-receipt"></i>
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-800">Total Salary Amount:</h3>
+                                    <p className="text-gray-700 text-lg">{totalSalaryAmount}</p>
+                                </div>
+                            </div>
+                        
+
+                            <div className="bg-gradient-to-r from-red-100 to-red-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
+    <div className="flex items-center space-x-4">
+        <div className="text-4xl text-red-600">
+            <i className="fas fa-hand-holding-usd"></i>
+        </div>
+        <div>
+            <h3 className="text-xl font-bold text-gray-800">Advance Amount</h3>
+            <p className="text-gray-700 text-lg">
+                {driver?.advance ? driver.advance : 'No advance payment made'}
+            </p>
+        </div>
+    </div>
+</div>
+
+                    </div>
+
+
+
             <div className="mt-5">
                 <h2 className="text-xl font-bold mb-3 text-center text-gray-800">Driver Salary Details</h2>
                 <div className="overflow-x-auto">
@@ -640,10 +777,14 @@ const SalaryReport: React.FC = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead>
                             <tr className="bg-gray-100">
+                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">#</th>
+
                                 <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">File Number</th>
                                 <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Date</th>
                                 <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Service Type</th>
-                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Service Vehicle Number</th>
+                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Customer Vehicle Number</th>
+                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Covered Distance</th>
+
                                 <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Total Driver Salary</th>
                                 <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Transferred Salary</th>
                                 <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Balance Salary</th>
@@ -657,12 +798,16 @@ const SalaryReport: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredBookings.map((booking) => (
+                            {filteredBookings.map((booking, index) => (
                                 <tr key={booking.id}>
+                                    <td className="border px-4 py-2">{index + 1}</td>
+
                                     <td className="border px-4 py-2">{booking.fileNumber}</td>
                                     <td>{format(parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date()), 'dd/MM/yyyy, h:mm:ss a')}</td>
                                     <td className="border px-4 py-2">{booking.serviceType}</td>
-                                    <td className="border px-4 py-2">{booking.serviceVehicle}</td>
+                                    <td className="border px-4 py-2">{booking.vehicleNumber}</td>
+                                    <td className="border px-4 py-2">{booking.totalDriverDistance}</td>
+
                                     <td className="border px-4 py-2">{booking.totalDriverSalary}</td>
                                     <td className="border px-4 py-2">
                                         {editingBookingId === booking.id ? (
@@ -677,14 +822,14 @@ const SalaryReport: React.FC = () => {
                                         )}
                                     </td>
                                     <td
-    className="border px-4 py-2"
-    style={{
-        backgroundColor: booking.balanceSalary === 0 ? '#e6ffe6' : '#ffe6e6', // Light green and light red
-        color: booking.balanceSalary === 0 ? 'black' : 'black' // Adjust text color as needed
-    }}
->
-    {booking.balanceSalary}
-</td>
+                                        className="border px-4 py-2"
+                                        style={{
+                                            backgroundColor: booking.balanceSalary === 0 ? '#e6ffe6' : '#ffe6e6', // Light green and light red
+                                            color: booking.balanceSalary === 0 ? 'black' : 'black', // Adjust text color as needed
+                                        }}
+                                    >
+                                        {booking.balanceSalary}
+                                    </td>
 
                                     <td className="border px-4 py-2">
                                         {editingBookingId === booking.id ? (
@@ -719,10 +864,7 @@ const SalaryReport: React.FC = () => {
                 </div>
             </div>
 
-            <div className="mt-5 text-center">
-                <label className="font-bold">Total Salary Amount:</label>
-                <span className="ml-2">{totalSalaryAmount}</span>
-            </div>
+         
         </div>
     );
 };

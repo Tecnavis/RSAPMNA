@@ -57,6 +57,7 @@ import ExpenseDetails from '../pages/DriverReport/ExpenseDetails';
 import StaffInvice from '../pages/DriverReport/StaffInvice';
 import Leave from '../pages/Leave/Leave';
 import Track from '../pages/Booking/Track';
+import Vehicle from '../pages/Vehicles/Vehicle';
 
 
 
@@ -201,6 +202,7 @@ const routes = [
     {path :"/rewards",element:<Reward/>},
     {path: "/rewarddetails",element:<RewardDetails/>},
     {path :"/leave",element:<Leave/>},
+    {path :"/vehicle",element:<Vehicle/>},
 
     {
         path: '/bookings/newbooking/track/:bookingId',

@@ -64,8 +64,15 @@ const Leave: React.FC = () => {
           id: doc.id,
           ...doc.data(),
         })) as LeaveData[];
-        setLeaves(leaveData);
-      }
+          // Sort the leave data by `createdAt` in descending order
+          const sortedLeaves = leaveData.sort((a, b) => {
+            const aTime = a.createdAt?.seconds || 0;
+            const bTime = b.createdAt?.seconds || 0;
+            return bTime - aTime;
+          });
+    
+          setLeaves(sortedLeaves);
+        }
     } catch (error) {
       console.error('Error fetching leave details:', error);
     }
@@ -92,23 +99,27 @@ const Leave: React.FC = () => {
     fetchDriverDetails();
   }, [db, uid]);
   useEffect(() => {
-    const filtered = leaves.filter((leave) => {
-      const leaveDate = new Date(leave.date.seconds * 1000);
-      const leaveYear = leaveDate.getFullYear().toString();
-      const leaveMonth = (leaveDate.getMonth() + 1).toString().padStart(2, '0');
-      
-      const matchesSearchTerm =
-        leave.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        leaveDate.toLocaleDateString().includes(searchTerm);
-
-      return (
-        (selectedYear === '' || leaveYear === selectedYear) &&
-        (selectedMonth === '' || leaveMonth === selectedMonth) &&
-        matchesSearchTerm
-      );
-    });
+    const filtered = leaves
+      .filter((leave) => {
+        const leaveDate = new Date(leave.date.seconds * 1000);
+        const leaveYear = leaveDate.getFullYear().toString();
+        const leaveMonth = (leaveDate.getMonth() + 1).toString().padStart(2, '0');
+        
+        const matchesSearchTerm =
+          leave.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          leaveDate.toLocaleDateString().includes(searchTerm);
+  
+        return (
+          (selectedYear === '' || leaveYear === selectedYear) &&
+          (selectedMonth === '' || leaveMonth === selectedMonth) &&
+          matchesSearchTerm
+        );
+      })
+      .sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
+  
     setFilteredLeaves(filtered);
-  }, [leaves, selectedYear, selectedMonth, searchTerm]); 
+  }, [leaves, selectedYear, selectedMonth, searchTerm]);
+  
 
 
   const leaveDatesMap: { [key: string]: string } = leaves.reduce((acc, leave) => {
@@ -186,6 +197,7 @@ const Leave: React.FC = () => {
         window.location.reload();
     }
 };
+// ------------------------------------
   return (
     <div className="container mx-auto p-4">
       <h2 className="text-2xl font-bold mb-4">Driver Leave Details</h2>

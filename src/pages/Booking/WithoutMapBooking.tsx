@@ -56,6 +56,7 @@ const customStyles = {
         border: 'none',
     },
 };
+
 const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => {
     const db = getFirestore();
     const navigate = useNavigate();
@@ -68,9 +69,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [updatedTotalSalary, setUpdatedTotalSalary] = useState<number>(0);
     const [companies, setCompanies] = useState<Driver[]>([]);
     const [totalDriverDistance, setTotalDriverDistance] = useState<string>('');
-    
     const [receivedAmount, setReceivedAmount] = useState<string>('');
-
     const { state } = useLocation();
     const [isModalOpen1, setIsModalOpen1] = useState<boolean>(false);
     const openModal1 = () => setIsModalOpen1(true);
@@ -84,7 +83,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [company, setCompany] = useState<string>('');
     const [customerName, setCustomerName] = useState<string>('');
     const [mobileNumber, setMobileNumber] = useState<string>('');
-    const [selectedServiceType, setSelectedServiceType] = useState(null);
+    const [selectedServiceType, setSelectedServiceType] = useState<string | null>(null);
     const [vehicleNumber, setVehicleNumber] = useState<string>('');
     const [vehicleModel, setVehicleModel] = useState<string>('');
     const [vehicleSection, setVehicleSection] = useState<string>('');
@@ -98,7 +97,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [dropoffLocation, setDropoffLocation] = useState<{ lat: string; lng: string; name: string } | null>(null);
     const [deliveryDateTime, setDeliveryDateTime] = useState<string>('');
     const [baseLocation, setBaseLocation] = useState<{ lat: string; lng: string; name: string } | null>(null);
-    const [selectedCompanyData, setSelectedCompanyData] = useState(null);
+    const [selectedCompanyData, setSelectedCompanyData] = useState<Driver | null>(null);
     const [trappedLocation, setTrappedLocation] = useState<string>('');
     const [totalSalary, setTotalSalary] = useState<number>(0);
     const [showroomLocation, setShowroomLocation] = useState<string>('');
@@ -109,7 +108,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [editData, setEditData] = useState<any>(null);
     const [serviceTypes, setServiceTypes] = useState<any[]>([]);
     const [showRooms, setShowRooms] = useState<any[]>([]);
-    const [selectedCompany, setSelectedCompany] = useState<any[]>([]);
+    const [selectedCompany, setSelectedCompany] = useState<string>(''); // or any default value
     const [currentDateTime, setCurrentDateTime] = useState<string>('');
     const [manualInput, setManualInput] = useState<string>('');
     const [manualInput1, setManualInput1] = useState<string>(dropoffLocation ? dropoffLocation.name : '');
@@ -117,7 +116,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [errors, setErrors] = useState<any>({});
     const [adjustValue, setAdjustValue] = useState<string>('');
     const [bodyShope, setBodyShope] = useState<string>('');
-
+//    -------------------------------------------------------------------------------------------------------------
     const uid = sessionStorage.getItem('uid');
     const userName = sessionStorage.getItem('username');
     const role = sessionStorage.getItem('role');
@@ -165,6 +164,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             setDisableFields(false);
         }
     }, [state]);
+    
 
     useEffect(() => {
         const formatDate = (date: Date) => {
@@ -209,7 +209,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const validateForm = () => {
         let tempErrors: { [key: string]: string } = {}; // Allows string keys
         let isValid = true;
-    
+
         // Phone number validation
         if (!phoneNumber.trim()) {
             tempErrors['phoneNumber'] = 'Phone number is required';
@@ -218,7 +218,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             tempErrors['phoneNumber'] = 'Phone number is invalid, must be 10 digits';
             isValid = false;
         }
-    
+
         // Trapped location validation
         if (!trappedLocation) {
             tempErrors['trappedLocation'] = 'Trapped location is required';
@@ -227,11 +227,11 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             tempErrors['updatedTotalSalary'] = 'Updated Total Salary is required and must be greater than 0 when Trapped Location is "Outside of Road"';
             isValid = false;
         }
-    
+
         setErrors(tempErrors);
         return isValid;
     };
-    
+
     // ------------------------------------------
     useEffect(() => {
         if (company === 'rsa') {
@@ -271,7 +271,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         setBodyShope(insurance);
     };
 
-       useEffect(() => {
+    useEffect(() => {
         console.log('Selected Company ID:', selectedCompany);
         console.log('Companies Data:', companies); // Log the companies array
 
@@ -348,7 +348,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 break;
             case 'insuranceAmountBody':
                 setInsuranceAmountBody(value || 0);
-                 break;
+                break;
             case 'adjustValue':
                 setAdjustValue(value || 0);
 
@@ -765,7 +765,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         const fetchServiceDetails = async () => {
             if (!serviceType) {
                 setServiceDetails({});
-                setSelectedServiceType(null); 
+                setSelectedServiceType(null);
                 return;
             }
 
@@ -782,13 +782,13 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 // Get the first document that matches the serviceType
                 const details = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))[0];
                 console.log('Fetched Service Details for selected serviceType:', details);
-                setServiceDetails(details); 
-setSelectedServiceType(serviceType); 
-} catch (error) {
-    console.error('Error fetching service details:', error);
-    setServiceDetails({});
-    setSelectedServiceType(null);
-}
+                setServiceDetails(details);
+                setSelectedServiceType(serviceType);
+            } catch (error) {
+                console.error('Error fetching service details:', error);
+                setServiceDetails({});
+                setSelectedServiceType(null);
+            }
         };
 
         fetchServiceDetails();
@@ -809,9 +809,10 @@ setSelectedServiceType(serviceType);
                 if (selectedCompanyData) {
                     if (selectedCompanyData.basicSalaries && selectedCompanyData.selectedServices && selectedCompanyData.basicSalaryKm && selectedCompanyData.salaryPerKm) {
                         // Filter only the selected serviceType from the selectedServices array
-                        selectedService = selectedCompanyData.selectedServices.find((service) => service === serviceType);
+                        selectedService = selectedCompanyData.selectedServices.find((service:any) => service === serviceType);
 
-                        setSelectedServiceType(selectedService);                        console.log('Selected Service Typeee:', selectedService);
+                        setSelectedServiceType(selectedService);
+                        console.log('Selected Service Typeee:', selectedService);
 
                         // Now use this selected service type to calculate the salary
                         salary = selectedCompanyData.basicSalaries[selectedService];
@@ -827,7 +828,7 @@ setSelectedServiceType(serviceType);
                     }
                 } else if (isRSA) {
                     // Fallback for RSA scenario or when selectedCompanyData is unavailable
-                    selectedService = driver.selectedServices.find((service) => service === serviceType);
+                    selectedService = driver.selectedServices.find((service:any) => service === serviceType);
 
                     salary = isRSA ? serviceDetails.salary : driver.basicSalaries[selectedService];
                     basicSalaryKM = isRSA ? serviceDetails.basicSalaryKM : driver.basicSalaryKm[selectedService];
@@ -863,7 +864,7 @@ setSelectedServiceType(serviceType);
             // Do something with totalSalaries (like setting state or logging it)
             console.log('Total Salaries for Drivers:', totalSalaries);
         }
-    }, [drivers, serviceDetails, distance, selectedCompanyData, calculateTotalSalary]);
+    }, [distance, selectedCompany,selectedDriver,drivers, serviceDetails, selectedCompanyData,calculateTotalSalary]);
 
     const calculateTotalDriverSalary = (totalDriverDistance: any, basicSalaryKM: any, salaryPerKM: any, salary: any) => {
         totalDriverDistance = parseFloat(totalDriverDistance);
@@ -885,43 +886,46 @@ setSelectedServiceType(serviceType);
     useEffect(() => {
         if (selectedDriver && Array.isArray(drivers)) {
             const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-console.log("selectedDriverDatabb",selectedDriverData)
+            console.log('selectedDriverData', selectedDriverData);
             if (selectedDriverData) {
                 // Access the nested properties
                 const { basicSalaryKm, salaryPerKm, basicSalaries } = selectedDriverData;
-
+    
                 if (!basicSalaryKm || !salaryPerKm || !basicSalaries) {
                     console.error('Selected driver does not have all required properties:', selectedDriverData);
                     return;
                 }
-
-                // Assuming you want to use the selected service from the selectedDriverData
-                // const selectedService = selectedDriverData.selectedServices[0]; // Adjust as needed
-                const basicSalaryKM = basicSalaryKm[selectedServiceType];
-                const salaryPerKM = salaryPerKm[selectedServiceType];
-                const salary = basicSalaries[selectedServiceType];
-console.log("selectedServiceeee",selectedServiceType)
-                if (basicSalaryKM === undefined || salaryPerKM === undefined || salary === undefined) {
-                    console.error('Selected service does not have all required properties:', {
-                        basicSalaryKM,
-                        salaryPerKM,
-                        salary,
-                    });
-                    return;
+    
+                if (selectedServiceType) {
+                    // Now that we know selectedServiceType is not null, use it as an index
+                    const basicSalaryKM = basicSalaryKm[selectedServiceType];
+                    const salaryPerKM = salaryPerKm[selectedServiceType];
+                    const salary = basicSalaries[selectedServiceType];
+                    console.log('selectedServiceType', selectedServiceType);
+    
+                    if (basicSalaryKM === undefined || salaryPerKM === undefined || salary === undefined) {
+                        console.error('Selected service does not have all required properties:', {
+                            basicSalaryKM,
+                            salaryPerKM,
+                            salary,
+                        });
+                        return;
+                    }
+    
+                    if (totalDriverDistance < basicSalaryKM) {
+                        setTotalDriverSalary(salary); // If distance is less than basicSalaryKM, return the base salary
+                    }
+                    const calculatedSalary = calculateTotalDriverSalary(totalDriverDistance, basicSalaryKM, salaryPerKM, salary);
+                    setTotalDriverSalary(calculatedSalary);
+                } else {
+                    console.error('No selectedServiceType provided.');
                 }
-
-                if (totalDriverDistance < basicSalaryKM) {
-                    setTotalDriverSalary(salary); // If distance is less than basicSalaryKM, return the base salary
-                }
-                const calculatedSalary = calculateTotalDriverSalary(totalDriverDistance, basicSalaryKM, salaryPerKM, salary);
-
-                setTotalDriverSalary(calculatedSalary);
             } else {
                 console.error('Driver not found:', selectedDriver);
             }
         }
-    }, [selectedDriver, totalDriverDistance, drivers,selectedServiceType]);
-
+    }, [selectedDriver, totalDriverDistance, drivers, selectedServiceType,totalSalary]);
+    
     useEffect(() => {
         let newTotalSalary = totalSalary;
         if (serviceCategory === 'Body Shop' && bodyShope === 'insurance') {
@@ -1032,41 +1036,42 @@ console.log("selectedServiceeee",selectedServiceType)
                         netTotalAmountInHand: 0,
                         companyName: 'RSA', // Set a default company name for the dummy driver
                         fcmToken: null,
-                        pickupDistance: 0
+                        pickupDistance: 0,
                     };
                 } else {
                     // Regular driver lookup
                     selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-                }                const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
-            const selectedCompanyData = companies.find((company) => company.id === selectedCompany);
-            const companyBooking = selectedCompanyData ? true : false;
-            const companyName = selectedCompanyData ? selectedCompanyData.driverName : '';
-
-            if (selectedCompanyData) {
-                const { advancePayment, netTotalAmountInHand, companyName } = selectedCompanyData;
-                console.log('advancePayment', advancePayment);
-                console.log('netTotalAmountInHand', netTotalAmountInHand);
-
-                // Check if the condition applies based on the company's name
-                if (companyName === 'Company' && advancePayment < netTotalAmountInHand) {
-                    alert('Exceeds Credit Limit Amount');
-                    return; // Stop execution if condition is not met
                 }
-            } else if (selectedDriverData) {
-                // const driverName = selectedDriverData.driverName || 'DummyDriver';
-                const { advancePayment, netTotalAmountInHand, companyName } = selectedDriverData;
-                console.log('advancePayment', advancePayment);
-                console.log('netTotalAmountInHand', netTotalAmountInHand);
+                const driverName = selectedDriverData ? selectedDriverData.driverName : 'DummyDriver';
+                const selectedCompanyData = companies.find((company) => company.id === selectedCompany);
+                const companyBooking = selectedCompanyData ? true : false;
+                const companyName = selectedCompanyData ? selectedCompanyData.driverName : '';
 
-                // Check if the condition applies based on the driver's company name
-                if (companyName !== 'RSA' && advancePayment < netTotalAmountInHand) {
-                    alert('Exceeds Credit Limit Amount');
-                    return; // Stop execution if condition is not met
+                if (selectedCompanyData) {
+                    const { advancePayment, netTotalAmountInHand, companyName } = selectedCompanyData;
+                    console.log('advancePayment', advancePayment);
+                    console.log('netTotalAmountInHand', netTotalAmountInHand);
+
+                    // Check if the condition applies based on the company's name
+                    if (companyName === 'Company' && advancePayment < netTotalAmountInHand) {
+                        alert('Exceeds Credit Limit Amount');
+                        return; // Stop execution if condition is not met
+                    }
+                } else if (selectedDriverData) {
+                    // const driverName = selectedDriverData.driverName || 'DummyDriver';
+                    const { advancePayment, netTotalAmountInHand, companyName } = selectedDriverData;
+                    console.log('advancePayment', advancePayment);
+                    console.log('netTotalAmountInHand', netTotalAmountInHand);
+
+                    // Check if the condition applies based on the driver's company name
+                    if (companyName !== 'RSA' && advancePayment < netTotalAmountInHand) {
+                        alert('Exceeds Credit Limit Amount');
+                        return; // Stop execution if condition is not met
+                    }
+                } else {
+                    console.error('No matching company or driver found');
+                    return;
                 }
-            } else {
-                console.error('No matching company or driver found');
-                return;
-            }
                 const fcmToken = selectedDriverData ? selectedDriverData.fcmToken : null;
                 const pickupDistance = selectedDriverData ? selectedDriverData.pickupDistance || 0 : 0;
 
@@ -1114,8 +1119,7 @@ console.log("selectedServiceeee",selectedServiceType)
                     statusEdit: activeForm === 'withoutMap' ? 'mapbooking' : 'withoutmapbooking',
                     selectedCompany: selectedCompany || '',
                     serviceType: serviceType || '',
-                    // serviceVehicle: serviceVehicle || '',
-                    serviceCategory: serviceCategory || '',
+                   serviceCategory: serviceCategory || '',
                     vehicleModel: vehicleModel || '',
                     vehicleSection: vehicleSection || '',
                     vehicleNumber: vehicleNumber || '',
@@ -1124,7 +1128,7 @@ console.log("selectedServiceeee",selectedServiceType)
                     trappedLocation: trappedLocation || '',
                     updatedTotalSalary: updatedTotalSalary || 0,
                     insuranceAmountBody: insuranceAmountBody || '',
-                     receivedAmount: receivedAmount || '',
+                    receivedAmount: receivedAmount || '',
                     pickupDistance: pickupDistance,
                     companyBooking: companyBooking,
                     companyName: companyName,
@@ -1135,7 +1139,13 @@ console.log("selectedServiceeee",selectedServiceType)
                     const existingBooking = await getDoc(existingDocRef);
                     if (existingBooking.exists()) {
                         const existingData = existingBooking.data();
-                        bookingData.status = existingData.status; // Keep the old status
+                        
+                        // Check if the current status is 'Rejected'
+                        if (existingData.status === 'Rejected') {
+                            bookingData.status = 'booking added'; // Override with 'booking added'
+                        } else {
+                            bookingData.status = existingData.status; // Keep the old status
+                        }
                     }
                     if (role === 'admin') {
                         bookingData.newStatus = `Edited by ${role}`;
@@ -1149,10 +1159,23 @@ console.log("selectedServiceeee",selectedServiceType)
                 }
                 // Schedule the booking at deliveryDateTime if provided
                 if (deliveryDateTime) {
+                    console.log('Delivery DateTime (Raw Input):', deliveryDateTime); // Log raw deliveryDateTime value
+
                     const deliveryDate = new Date(deliveryDateTime);
+                    console.log('Delivery DateTime (Parsed as Date):', deliveryDate.toString()); // Log parsed date
+
+                    const currentDate = new Date();
+                    console.log('Current DateTime:', currentDate.toString()); // Log current date
+
                     const timeToCreateBooking = deliveryDate.getTime() - currentDate.getTime();
 
                     if (timeToCreateBooking > 0) {
+                        // Convert timeToCreateBooking into a date-time format
+                        const bookingScheduledTime = new Date(currentDate.getTime() + timeToCreateBooking);
+                        console.log('timeToCreateBooking in DateTime:', bookingScheduledTime.toString());
+                        console.log('Delivery Date:', deliveryDate.toString());
+                        console.log('Current Date:', currentDate.toString());
+
                         setTimeout(async () => {
                             if (editData) {
                                 const docRef = doc(db, `user/${uid}/bookings`, editData.id);
@@ -1170,7 +1193,7 @@ console.log("selectedServiceeee",selectedServiceType)
                             }
                         }, timeToCreateBooking);
 
-                        // Schedule the notification as well at the same time
+                        // Schedule the notification
                         setTimeout(async () => {
                             await sendAlert(fcmToken, 'Delivery Reminder', `Your booking is scheduled for delivery on ${formatDate(deliveryDate)}`);
                         }, timeToCreateBooking);
@@ -1499,12 +1522,7 @@ console.log("selectedServiceeee",selectedServiceType)
                             </label>
                         </div>
                     </div>
-                    {errors.trappedLocation && (
-    <span className="text-red-500 text-sm mt-1">
-        {errors.trappedLocation}
-    </span>
-)}
-
+                    {errors.trappedLocation && <span className="text-red-500 text-sm mt-1">{errors.trappedLocation}</span>}
                 </div>
 
                 {trappedLocation === 'outsideOfRoad' && (
