@@ -1,14 +1,46 @@
 import React, { useEffect, useState } from 'react';
 import { DataTable } from 'mantine-datatable';
 import { Link, useNavigate } from 'react-router-dom';
-import { getFirestore, collection, getDocs, orderBy, query, where, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, orderBy, query, where, onSnapshot, getDoc, doc, updateDoc } from 'firebase/firestore';
 import styles from './newbooking.module.css';
 import { Modal, Pagination } from '@mantine/core'; // Import Pagination from Mantine
+import axios from 'axios';
+const modalContainerStyle = {
+    padding: '20px',
+    backgroundColor: '#f9f9f9',
+    borderRadius: '10px',
+    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)',
+    maxWidth: '600px',
+    margin: '0 auto',
+};
+
+const locationCardStyle = {
+    marginBottom: '15px',
+    padding: '15px',
+    backgroundColor: '#ffffff',
+    borderRadius: '8px',
+    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
+    borderLeft: '5px solid #4CAF50',
+};
+
+const locationTitleStyle = {
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: '5px',
+};
+
+const locationTextStyle = {
+    fontSize: '14px',
+    color: '#555',
+    lineHeight: '1.5',
+};
 
 type RecordData = {
     index: number;
     customerName: string;
     fileNumber: string;
+    selectedDriver: string;
     phoneNumber: string;
     driver: string;
     totalSalary: string;
@@ -22,6 +54,30 @@ type RecordData = {
     requestBool1: boolean;
     currentLocation?: string;
 };
+interface Location {
+    name?: string;
+    lat?: string;
+    lng?: string;
+}
+
+interface ModalData {
+    pickupLocation?: {
+        name?: string;
+        lat?: number;
+        lng?: number;
+    };
+    currentLocation?: {
+        lat?: number;
+        lng?: number;
+    };
+    dropoffLocation?: {
+        name?: string;
+        lat?: number;
+        lng?: number;
+    };
+    pickupDistance?: string; // Add this line to include the new property
+}
+
 const statuses = [
     'booking added',
     'called to customer',
@@ -43,6 +99,11 @@ const NewBooking = () => {
     const [pageSize, setPageSize] = useState(10);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRecord, setSelectedRecord] = useState<RecordData | null>(null);
+    const [modalData, setModalData] = useState<ModalData>({
+        pickupLocation: undefined,
+        dropoffLocation: undefined,
+        currentLocation: undefined,
+    });
 
     const PAGE_SIZES = [10, 25, 'All'];
     const db = getFirestore();
@@ -50,6 +111,8 @@ const NewBooking = () => {
     const uid = sessionStorage.getItem('uid');
     const currentDate = new Date().toISOString().split('T')[0];
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isModalOpen1, setIsModalOpen1] = useState(false);
+
     useEffect(() => {
         // Set up real-time listener with onSnapshot
         const q = query(
@@ -69,7 +132,6 @@ const NewBooking = () => {
                 // Filter out records where the status is 'Order Completed'
                 const filteredData = data.filter((record) => record.status !== 'Order Completed');
 
-                console.log('Filtered Data:', filteredData);
                 setRecordsData(filteredData);
                 setFilteredRecords(data);
             },
@@ -127,14 +189,130 @@ const NewBooking = () => {
     const handleStatusClick = (bookingId: string) => {
         navigate(`/bookings/newbooking/track/${bookingId}`);
     };
-    const handlePickChange = (rowData: RecordData): void => {
-    // Process rowData
-    console.log(rowData);
-};
-const handleDropChange = (rowData: RecordData): void => {
-    // Process rowData
-    console.log(rowData);
-};    return (
+
+    const handlePickChange = async (rowData: RecordData) => {
+        try {
+            // Fetch pickup location from booking document
+            const bookingDoc = await getDoc(doc(db, `user/${uid}/bookings`, rowData.id));
+            const pickupLocation = bookingDoc.exists() ? bookingDoc.data().pickupLocation : null;
+
+            // Real-time listener for currentLocation of the driver
+            const driverDocRef = doc(db, `user/${uid}/driver`, rowData.selectedDriver);
+
+            // Listen for changes in currentLocation in real-time
+            onSnapshot(driverDocRef, async (driverDoc) => {
+                if (driverDoc.exists()) {
+                    const driverData = driverDoc.data();
+                    const currentLocation = driverData?.currentLocation;
+                    if (pickupLocation?.lat && pickupLocation?.lng && currentLocation?.latitude && currentLocation?.longitude) {
+                        try {
+                            const response = await axios.post('https://api.olamaps.io/routing/v1/directions', null, {
+                                params: {
+                                    origin: `${currentLocation.latitude},${currentLocation.longitude}`,
+                                    destination: `${pickupLocation.lat},${pickupLocation.lng}`,
+                                    api_key: import.meta.env.VITE_REACT_APP_API_KEY,
+                                },
+                                headers: {
+                                    'X-Request-Id': `${rowData.id}-${Date.now()}`,
+                                },
+                            });
+
+                            let distance = 'Distance not available';
+                            const routes = response.data.routes;
+                            // Check if routes are returned and calculate distance
+                            if (routes?.length > 0 && routes[0]?.legs?.length > 0) {
+                                distance = routes[0].legs[0].readable_distance || 'Distance not available';
+                            }
+
+                            // Update modal data with the latest currentLocation and calculated distance
+                            setModalData({
+                                pickupLocation: pickupLocation || {},
+                                currentLocation: {
+                                    lat: currentLocation.latitude,
+                                    lng: currentLocation.longitude,
+                                },
+                                pickupDistance: distance, // Update with the calculated distance
+                            });
+                        } catch (distanceError) {
+                            console.error('Error calculating distance:', distanceError);
+
+                            // If error, show appropriate message in modalData
+                            setModalData({
+                                pickupLocation: pickupLocation || {},
+                                currentLocation: {
+                                    lat: currentLocation.latitude,
+                                    lng: currentLocation.longitude,
+                                },
+                                pickupDistance: 'Error fetching distance',
+                            });
+                        }
+                    } else {
+                        console.error('Invalid locations for distance calculation.');
+                        // If locations are invalid
+                        setModalData({
+                            pickupLocation: pickupLocation || {},
+                            currentLocation: currentLocation ? { lat: currentLocation.latitude, lng: currentLocation.longitude } : {},
+                            pickupDistance: 'Invalid location data',
+                        });
+                    }
+                } else {
+                    console.error('Driver document does not exist.');
+                }
+            });
+
+            // Set selected record and open modal
+            setSelectedRecord(rowData);
+            setIsModalOpen1(true);
+        } catch (error) {
+            console.error('Error fetching location data:', error);
+        }
+    };
+    const handleApproveRequest = async () => {
+        if (!modalData.currentLocation || !modalData.pickupLocation) {
+            console.error("Missing location data.");
+            return;
+        }    
+        try {
+            const bookingRef = doc(db, `user/${uid}/bookings`, selectedRecord.id);
+    
+            // Update the pickupLocation in Firestore with the currentLocation
+            await updateDoc(bookingRef, {
+                pickupLocation: {
+                    lat: modalData.currentLocation.lat.toString(), // Convert to string
+                    lng: modalData.currentLocation.lng.toString(), // Convert to string
+                    name: modalData.pickupLocation.name, // Keep the same name
+                },
+            });
+    
+            console.log("Pickup location updated successfully.");
+            alert("Pickup location updated successfully.");
+        } catch (error) {
+            console.error("Error updating pickup location:", error);
+            alert("Failed to update pickup location.");
+        }
+    };
+    const handleDropChange = async (rowData: RecordData) => {
+        try {
+            const bookingDoc = await getDoc(doc(db, `user/${uid}/bookings`, rowData.id));
+            const dropoffLocation = bookingDoc.exists() ? bookingDoc.data().dropoffLocation : null;
+            const driverDoc = await getDoc(doc(db, `user/${uid}/driver`, rowData.driver));
+            const currentLocation = driverDoc.exists() ? driverDoc.data().currentLocation : null;
+            setModalData({
+                dropoffLocation: dropoffLocation || {},
+                currentLocation: currentLocation ? { lat: currentLocation.latitude, lng: currentLocation.longitude } : {},
+            });
+            setSelectedRecord(rowData);
+            setIsModalOpen1(true);
+        } catch (error) {
+            console.error('Error fetching location data:', error);
+        }
+    };
+
+    const closeModal1 = () => {
+        setIsModalOpen1(false);
+        setSelectedRecord(null);
+    };
+    return (
         <div style={{ fontFamily: 'Arial, sans-serif', color: '#333' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h5 style={{ fontSize: '24px', fontWeight: '600', color: '#333' }}>New Bookings</h5>
@@ -261,12 +439,7 @@ const handleDropChange = (rowData: RecordData): void => {
                             <th>View More</th>
                             <th>Edit</th>
                             <th>Tracking</th>
-                            {displayedRecords.some(row => row.requestBool || row.requestBool1) && (
-            <th colSpan={3}>Change Location</th>
-        )}
-
-
-
+                            {displayedRecords.some((row) => row.requestBool || row.requestBool1) && <th colSpan={3}>Change Location</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -425,6 +598,49 @@ const handleDropChange = (rowData: RecordData): void => {
                     </Modal>
                 </table>
             </div>
+            <Modal
+                opened={isModalOpen1}
+                onClose={closeModal1}
+                title="Change Location"
+                overlayOpacity={0.8} // Adjust overlay darkness
+                overlayBlur={2} // Add a blur effect to the background
+                centered // Center the modal
+            >
+                <div style={modalContainerStyle}>
+                    {selectedRecord?.requestBool && (
+                        <div style={locationCardStyle}>
+                            <h5 style={locationTitleStyle}>Pickup Location:</h5>
+                            <p style={locationTextStyle}>
+                                {modalData.pickupLocation?.name ? `${modalData.pickupLocation.name} (Lat: ${modalData.pickupLocation.lat}, Lng: ${modalData.pickupLocation.lng})` : 'Not Available'}
+                            </p>
+                        </div>
+                    )}
+                    {selectedRecord?.requestBool1 && (
+                        <div style={locationCardStyle}>
+                            <h5 style={locationTitleStyle}>Dropoff Location:</h5>
+                            <p style={locationTextStyle}>
+                                {modalData.dropoffLocation?.name ? `${modalData.dropoffLocation.name} (Lat: ${modalData.dropoffLocation.lat}, Lng: ${modalData.dropoffLocation.lng})` : 'Not Available'}
+                            </p>
+                        </div>
+                    )}
+                    <div style={locationCardStyle}>
+                        <h5 style={locationTitleStyle}>Driver's Current Location:</h5>
+                        <p style={locationTextStyle}>
+                            {typeof modalData.currentLocation === 'object' && modalData.currentLocation?.lat && modalData.currentLocation?.lng
+                                ? `Lat: ${modalData.currentLocation.lat}, Lng: ${modalData.currentLocation.lng}`
+                                : 'Not Available'}
+                        </p>
+                    </div>
+                    <div className="my-4 p-4 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300">
+                        <h5 className="text-xl font-semibold text-gray-700 mb-2">Pickup Distance:</h5>
+                        <p className={`text-lg ${modalData.pickupDistance ? 'text-green-600' : 'text-red-500'} font-medium`}>{modalData.pickupDistance || 'Not Available'}</p>
+               
+                    </div>
+                    {parseFloat(modalData.pickupDistance) > 5 && (
+                <button onClick={handleApproveRequest}>Approve Request</button>
+            )}
+                </div>
+            </Modal>
 
             <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Pagination

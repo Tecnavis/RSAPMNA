@@ -12,7 +12,8 @@ type EditableFieldProps = {
   onSaveClick: () => Promise<void>; // Async function for saving
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isEditable: boolean;
-  valueStyle?: React.CSSProperties; // Optional style property
+  valueStyle?: React.CSSProperties;
+  bookingCheck?: boolean;
 };
 
 
@@ -27,9 +28,11 @@ const EditableField: React.FC<EditableFieldProps> = ({
   onChange,
   isEditable,
   valueStyle, // Optional style prop
+  bookingCheck,
 }) => {
   return isEditing ? (
     <div style={{ display: 'flex', alignItems: 'center' }}>
+      
       <TextField
         value={editedValue}
         onChange={onChange}
@@ -61,7 +64,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
       >
         {value}
       </span>
-      {isEditable && (
+      {isEditable && !(bookingCheck === true || bookingCheck === null) && (
         <CiEdit
           size={28}
           className="cursor-pointer"

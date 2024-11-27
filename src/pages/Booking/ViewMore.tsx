@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getFirestore, doc, getDoc, updateDoc, deleteDoc, getDocs, collection, Timestamp } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 import { CiEdit } from 'react-icons/ci';
 
 import { storage } from '../../config/config';
@@ -86,18 +86,16 @@ const ViewMore: React.FC = () => {
     const [dId, setDId] = useState<string | null>(null);
     const [allDrivers, setALLDrivers] = useState<Driver[]>([]);
    const [docId, setDocId] = useState<string>('');
-    const [loadingId, setLoadingId] = useState<string | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const role = sessionStorage.getItem('role');
     const [replacementImage, setReplacementImage] = useState<string | null>(null);
-    // --------------------------------------------------------------------------
-    const { search } = useLocation();
+    const bookingCheck = bookingDetails?.bookingChecked ?? false;    const { search } = useLocation();
     const [showPickupDetails, setShowPickupDetails] = useState(false);
     const [fixedPoint, setFixedPoint] = useState<number | null>(null);
     const [showDropoffDetails, setShowDropoffDetails] = useState(false);
     const queryParams = new URLSearchParams(search);
     const userName = sessionStorage.getItem('username');
     const [showForm, setShowForm] = useState(false);
+
     const [formData, setFormData] = useState<FormData>({
         pickedTime: '',
         serviceVehicle: '',
@@ -172,6 +170,8 @@ const ViewMore: React.FC = () => {
         dropoffTime: false,
         remark: false,
         vehicleModal:false,
+        companyName:false,
+
     });
 
     const [loadingStates, setLoadingStates] = useState({
@@ -202,9 +202,10 @@ const ViewMore: React.FC = () => {
         dropoffTime: false,
         remark: false,
         vehicleModal:false,
+        companyName:false,
+
     });
-    console.log(bookingDetails, 'this is the booking details');
-    console.log(allDrivers, 'this is the all drivers');
+
     const handleImageClick = (url: string) => {
         setSelectedImage(url); // Set selected image for modal
     };
@@ -212,32 +213,31 @@ const ViewMore: React.FC = () => {
     const closeModal = () => {
         setSelectedImage(null); // Clear selected image
     };
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>, field: keyof typeof formData) => {
+    const handleFileChange = async (
+        event: React.ChangeEvent<HTMLInputElement>,
+        field: keyof typeof formData
+      ) => {
         const files = event.target.files;
         if (files) {
-            const updatedImageURLs: string[] = [];
-
-            // Loop over each file and upload to Firebase
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const storageRef = ref(storage, `images/${file.name}-${Date.now()}`);
-
-                // Upload the file to Firebase
-                await uploadBytes(storageRef, file);
-
-                // Get the HTTPS URL for the uploaded file
-                const downloadURL = await getDownloadURL(storageRef);
-
-                updatedImageURLs.push(downloadURL);
-            }
-
-            // Update the formData state with the correct field type
-            setFormData((prevState) => ({
-                ...prevState,
-                [field]: [...(prevState[field] as string[]), ...updatedImageURLs],
-            }));
+          const updatedImageURLs: string[] = [];
+      
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const fileExtension = file.name.split('.').pop(); // Get file extension
+            const storageRef = ref(storage, `images/${file.name}-${Date.now()}.${fileExtension}`);
+      
+            await uploadBytes(storageRef, file); // Upload the file
+            const downloadURL = await getDownloadURL(storageRef); // Get public URL
+            updatedImageURLs.push(downloadURL);
+          }
+      
+          setFormData((prevState) => ({
+            ...prevState,
+            [field]: [...(prevState[field] as string[]), ...updatedImageURLs],
+          }));
         }
-    };
+      };
+      
     // ------------------------------------------------------------
     useEffect(() => {
         fetchBookingDetails();
@@ -429,6 +429,33 @@ const ViewMore: React.FC = () => {
             }
         }
     };
+    const downloadImage = async (filePath:any, filename:any) => {
+        const storage = getStorage();
+        const fileRef = ref(storage, filePath);
+      
+        try {
+          const url = await getDownloadURL(fileRef); // Get the public URL for the image
+      
+          // Fetch the image file
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch image: ${response.statusText}`);
+          }
+          const blob = await response.blob();
+      
+          // Create a link and trigger the download
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = `${filename}.jpg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } catch (error) {
+          console.error("Error downloading image:", error);
+        }
+      };
+      
+
     const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
         if (!timestamp) return "N/A";
     
@@ -475,20 +502,18 @@ const ViewMore: React.FC = () => {
         return images.length > 0 ? (
           images.map((url: string, index: number) => (
             <div key={index} className="max-w-xs">
-              <a
-                href={url}
-                download={`Vehicle_Image_${type}_${index}.jpg`} // Use type for file name
-                className="block mb-2 text-blue-500"
-              >
-                Download
-              </a>
+             <a
+  onClick={() => downloadImage(url, `Vehicle_Image_${type}_${index}`)}
+  className="block mb-2 text-blue-500 cursor-pointer"
+>
+  Download
+</a>
               <img
                 src={url}
                 alt={`${type} Image ${index}`}
                 className="w-full h-auto cursor-pointer"
                 onClick={() => handleImageClick(url)} // Open image in modal
               />
-              {/* Replace Image Button */}
               <input
                 type="file"
                 accept="image/*"
@@ -501,6 +526,7 @@ const ViewMore: React.FC = () => {
           <p className="col-span-full">No {type} Images available.</p>
         );
       };
+      
     return (
         <div className="container mx-auto my-8 p-4 bg-white shadow rounded-lg">
             <h5 className="font-semibold text-lg mb-5">Booking Details</h5>
@@ -517,10 +543,10 @@ const ViewMore: React.FC = () => {
 
 {showPickupDetails && (
   <div>
-    <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
+    {/* <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
       {renderImages({ images: bookingDetails.rcBookImageURLs, type: 'rcBook' })}
-    </div>
+    </div> */}
 
     <h2 className="text-xl font-bold mt-5">Vehicle Images (Pickup)</h2>
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -532,12 +558,12 @@ const ViewMore: React.FC = () => {
 
 {showDropoffDetails && (
   <div>
-    {bookingDetails.status === 'Order Completed' && (
+    {/* {bookingDetails.status === 'Order Completed' && (
       <h3 className="text-xl font-bold mt-5">Fuel Bill Images</h3>
     )}
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
       {renderImages({ images: bookingDetails.fuelBillImageURLs, type: 'fuelBill' })}
-    </div>
+    </div> */}
 
     <h2 className="text-xl font-bold mt-5">Vehicle Images (Dropoff)</h2>
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -581,8 +607,8 @@ const ViewMore: React.FC = () => {
                                     onEditClick={() => handleEditClick('bookingId')}
                                     onSaveClick={() => handleSaveClick('bookingId')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, bookingId: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed'}
-                                />
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                    bookingCheck={bookingCheck}                                />
                             </div>
                         </td>
                     </tr>
@@ -634,8 +660,8 @@ const ViewMore: React.FC = () => {
                                     onEditClick={() => handleEditClick('company')}
                                     onSaveClick={() => handleSaveClick('company')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, company: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed'}
-                                />
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                    bookingCheck={bookingChecked}                                   />
                             </div>
                         </td>
                     </tr>
@@ -653,8 +679,8 @@ const ViewMore: React.FC = () => {
                                         onEditClick={() => handleEditClick('companyName')}
                                         onSaveClick={() => handleSaveClick('companyName')}
                                         onChange={(e) => setEditedFields((prev) => ({ ...prev, companyName: e.target.value }))}
-                                        isEditable={bookingDetails?.status === 'Order Completed'}
-                                    />
+                                        isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                        bookingCheck={bookingCheck}                                       />
                                 </div>
                             </td>
                         </tr>
@@ -673,8 +699,8 @@ const ViewMore: React.FC = () => {
                                     onEditClick={() => handleEditClick('trappedLocation')}
                                     onSaveClick={() => handleSaveClick('trappedLocation')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, trappedLocation: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed'}
-                                />
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                    bookingCheck={bookingCheck}                                   />
                             </div>
                         </td>{' '}
                     </tr>
@@ -691,8 +717,8 @@ const ViewMore: React.FC = () => {
                                     onEditClick={() => handleEditClick('showroomLocation')}
                                     onSaveClick={() => handleSaveClick('showroomLocation')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, showroomLocation: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed'}
-                                />
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                    bookingCheck={bookingCheck}                                   />
                             </div>
                         </td>{' '}
                     </tr>
@@ -709,8 +735,8 @@ const ViewMore: React.FC = () => {
                                     onEditClick={() => handleEditClick('fileNumber')}
                                     onSaveClick={() => handleSaveClick('fileNumber')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, fileNumber: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed'}
-                                />
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                    bookingCheck={bookingCheck}                                   />
                             </div>
                         </td>
                     </tr>
@@ -727,8 +753,8 @@ const ViewMore: React.FC = () => {
                                     onEditClick={() => handleEditClick('customerName')}
                                     onSaveClick={() => handleSaveClick('customerName')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, customerName: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed'}
-                                />
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingChecked === true || bookingChecked === null)}
+                                    bookingCheck={bookingCheck}                                   />
                             </div>
                         </td>{' '}
                     </tr>
@@ -745,8 +771,8 @@ const ViewMore: React.FC = () => {
                                     onEditClick={() => handleEditClick('driver')}
                                     onSaveClick={() => handleSaveClick('driver')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, driver: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed'}
-                                />
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                    bookingCheck={bookingCheck}                                   />
                             </div>
                         </td>{' '}
                     </tr>
@@ -763,8 +789,8 @@ const ViewMore: React.FC = () => {
                                     onEditClick={() => handleEditClick('totalDriverDistance')}
                                     onSaveClick={() => handleSaveClick('totalDriverDistance')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, totalDriverDistance: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed'}
-                                />
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                    bookingCheck={bookingCheck}                                   />
                             </div>
                         </td>{' '}
                     </tr>
@@ -781,8 +807,8 @@ const ViewMore: React.FC = () => {
                                     onEditClick={() => handleEditClick('totalDriverSalary')}
                                     onSaveClick={() => handleSaveClick('totalDriverSalary')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, totalDriverSalary: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed'}
-                                    valueStyle={{
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                    bookingCheck={bookingCheck}                                       valueStyle={{
                                         color: 'red',
                                         fontSize: '1.5rem',
                                         fontWeight: 'bold',
@@ -804,8 +830,8 @@ const ViewMore: React.FC = () => {
                                     onEditClick={() => handleEditClick('vehicleNumber')}
                                     onSaveClick={() => handleSaveClick('vehicleNumber')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, vehicleNumber: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed'}
-                                  
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                    bookingCheck={bookingCheck}                                     
                                 />
                             </div>
                         </td>{' '}                    </tr>
@@ -822,8 +848,8 @@ const ViewMore: React.FC = () => {
                                     onEditClick={() => handleEditClick('vehicleModal')}
                                     onSaveClick={() => handleSaveClick('vehicleModal')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, vehicleModal: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed'}
-                                   
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                    bookingCheck={bookingCheck}                                      
                                 />
                             </div>
                         </td>{' '}                     </tr>
@@ -839,7 +865,7 @@ const ViewMore: React.FC = () => {
                         <td className="bg-gray-100 p-2 font-semibold">Start Location:</td>
                         <td className="p-2">
                             {bookingDetails.baseLocation
-                                ? `${bookingDetails.baseLocation.name}, Lat: ${bookingDetails.baseLocation.lat}, Lng: ${bookingDetails.baseLocation.lng}`
+                                ? `${bookingDetails.baseLocation.name}`
                                 : 'Location not selected'}
                         </td>
                     </tr>
@@ -847,7 +873,7 @@ const ViewMore: React.FC = () => {
                         <td className="bg-gray-100 p-2 font-semibold">Pickup Location:</td>
                         <td className="p-2">
                             {bookingDetails.pickupLocation
-                                ? `${bookingDetails.pickupLocation.name}, Lat: ${bookingDetails.pickupLocation.lat}, Lng: ${bookingDetails.pickupLocation.lng}`
+                                ? `${bookingDetails.pickupLocation.name}`
                                 : 'Location not selected'}
                         </td>
                     </tr>
@@ -855,7 +881,7 @@ const ViewMore: React.FC = () => {
                         <td className="bg-gray-100 p-2 font-semibold">Dropoff Location:</td>
                         <td className="p-2">
                             {bookingDetails.dropoffLocation
-                                ? `${bookingDetails.dropoffLocation.name}, Lat: ${bookingDetails.dropoffLocation.lat}, Lng: ${bookingDetails.dropoffLocation.lng}`
+                                ? `${bookingDetails.dropoffLocation.name}`
                                 : 'Location not selected'}
                         </td>
                     </tr>
@@ -872,8 +898,8 @@ const ViewMore: React.FC = () => {
                                     onEditClick={() => handleEditClick('distance')}
                                     onSaveClick={() => handleSaveClick('distance')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, distance: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed'}
-                                   
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                    bookingCheck={bookingCheck}                                      
                                 />
                             </div>
                         </td>{' '}                     </tr>
@@ -890,8 +916,8 @@ const ViewMore: React.FC = () => {
                                     onEditClick={() => handleEditClick('serviceType')}
                                     onSaveClick={() => handleSaveClick('serviceType')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, serviceType: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed'}
-                                   
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                    bookingCheck={bookingCheck}                                      
                                 />
                             </div>
                         </td>{' '}                     </tr>
@@ -909,8 +935,8 @@ const ViewMore: React.FC = () => {
                                         onEditClick={() => handleEditClick('serviceVehicle')}
                                         onSaveClick={() => handleSaveClick('serviceVehicle')}
                                         onChange={(e) => setEditedFields((prev) => ({ ...prev, serviceVehicle: e.target.value }))}
-                                        isEditable={bookingDetails?.status === 'Order Completed'}
-                                      
+                                        isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                        bookingCheck={bookingCheck}                                         
                                     />
                                 </div>
                             </td> 
@@ -929,8 +955,8 @@ const ViewMore: React.FC = () => {
                                     onEditClick={() => handleEditClick('comments')}
                                     onSaveClick={() => handleSaveClick('comments')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, comments: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed'}
-                                   
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                    bookingCheck={bookingCheck}                                      
                                 />
                             </div>
                         </td>{' '}                     </tr>
