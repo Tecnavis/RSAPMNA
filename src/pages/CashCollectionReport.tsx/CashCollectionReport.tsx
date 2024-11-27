@@ -34,6 +34,7 @@ interface Booking {
     companyBooking?: boolean;
     amountToUse?: number;
     createdAt:Timestamp;
+    receivedUser:string;
 }
 // ------------------------------------------------------------------------
 const CashCollectionReport: React.FC = () => {
@@ -595,7 +596,7 @@ const sortedBookings = [...filteredBookings].sort((a, b) => {
             }
     
             // Ensure `driver` is available and handle the "Not Need" case
-            if (booking.companyBooking && driver?.companyName !== 'Company') {
+            if (booking.companyBooking && driver?.companyName !== 'Company' || booking.receivedUser === "Staff") {
                 console.warn('Received Amount not needed for this booking.');
                 return; // Prevent updates for "Not Need" case
             }
@@ -872,7 +873,7 @@ const sortedBookings = [...filteredBookings].sort((a, b) => {
  {/* ---------------------------------------Received Amount--------------------------------- */}
                                             <td key={booking.id} className={styles.responsiveCell}>
     <div style={{ display: 'flex', alignItems: 'center' }}>
-        {booking.companyBooking && driver?.companyName !== 'Company' ? (
+    {booking.companyBooking && driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
             <span style={{ color: 'red', fontWeight: 'bold' }}>Not Need</span>
         ) : (
             <>

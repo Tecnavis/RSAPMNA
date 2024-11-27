@@ -21,7 +21,8 @@ interface ShowRoomType {
     ShowRoom: string;
     description: string;
     Location: string;
-    locationLatLng: { lat: number | null; lng: number | null };    lat: string;
+    locationLatLng: { lat: number | null; lng: number | null };
+        lat: string;
     lng: string;
     userName: string;
     password: string;
@@ -514,6 +515,8 @@ console.log("userRole",userRole)
                 <table className="tableContainer">
                     <thead className="tableHeader">
                         <tr>
+                        <th className="tableCell">#</th>
+
                             <th className="tableCell">Image</th>
                             <th className="tableCell">Showroom Name</th>
                             <th className="tableCell">Showroom Id</th>
@@ -544,12 +547,13 @@ console.log("userRole",userRole)
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredRecords.map((room) => (
+                        {filteredRecords.map((room,index) => (
                             <tr
                                 key={room.id}
                                 className="tableRow"
                                 style={{ backgroundColor: room.status === 'admin added showroom' ? '#e6f7ff' : room.status === 'new showroom' ? '#f2f9ff' : 'transparent' }}
                             >
+                                <td>{index+1}</td>
                                 <td className="tableCell" data-label="Image">
                                     {/* Ensure room.img is properly defined */}
                                     {room.img ? (

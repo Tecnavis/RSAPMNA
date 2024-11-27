@@ -152,13 +152,16 @@ const UserAdd: React.FC = () => {
                     userName,
                     password,
                     role: "staff" ,
-                    staffRole: staffRole,
+                    staffRole,
                     confirmPassword,
                     profileImage: profileImageUrl,
                 };
 
                 if (editData?.id) {
                     const docRef = doc(db, `user/${uid}/users`, editData.id);
+                    console.log('Document ID:', editData?.id);
+console.log('Document Path:', `user/${uid}/users/${editData?.id}`);
+
                     await updateDoc(docRef, itemData);
                     console.log('Document updated');
                 } else {
