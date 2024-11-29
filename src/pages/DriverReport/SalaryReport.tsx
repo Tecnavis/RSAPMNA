@@ -1,24 +1,42 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, onSnapshot, addDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import IconEdit from '../../components/Icon/IconEdit'; // Import your IconEdit component here
 import InvoiceModal from './InvoiceModal';
 import { parse, format } from 'date-fns';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import SalaryDetailsTable from './SalaryDetailsTable';
+import ConfirmationModal from './ConfirmationModal';
+import ConfirmationModal1 from './ConfirmationModal1';
+import IconPrinter from '../../components/Icon/IconPrinter';
+import './Print.css'
 interface Booking {
     id: string;
     fileNumber: string;
     dateTime: string;
     serviceType: string;
     vehicleNumber: string;
-    totalDriverSalary: number;
+    totalDriverSalary: any;
     transferedSalary?: number;
     balanceSalary: number;
     selectedDriver?: string;
     advance?: number; // New property
     advancePaymentDate?: string;
     totalDriverDistance: string;
+    status: string;
+    bookingChecked: boolean;
+    // createdAt:Timestamp;
+    createdAt: Date | null;
+}
+interface SalaryDetail {
+    id: string;
+    [key: string]: any; // Adjust this based on the actual fields in the salary document
 }
 
+interface BookingSalary {
+    bookingId: string;
+    details: SalaryDetail[];
+}
 interface Driver {
     // Define driver fields based on your Firestore data structure
     [key: string]: any;
@@ -38,7 +56,13 @@ const SalaryReport: React.FC = () => {
     const [showAdvanceDetails, setShowAdvanceDetails] = useState<boolean>(false);
     const [adjustedBookingIds, setAdjustedBookingIds] = useState<string[]>([]);
     const [adjustedFileNumbers, setAdjustedFileNumbers] = useState<string[]>([]);
-    
+    const [totalCalculatedUpdatedTotalSalary, setTotalCalculatedUpdatedTotalSalary] = useState(0);
+    const [salaryReports, setSalaryReports] = useState<BookingSalary[]>([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isModalOpen1, setIsModalOpen1] = useState(false); // State to control modal visibility
+    const printRef = useRef<HTMLDivElement>(null);
+
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     const [editFormData, setEditFormData] = useState({
         fileNumber: '',
         dateTime: '',
@@ -55,6 +79,17 @@ const SalaryReport: React.FC = () => {
     const navigate = useNavigate();
     const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
     const [selectAll, setSelectAll] = useState<boolean>(false); // State for "Select All" checkbox
+    const saveSalaryDetails = async (bookingId: string, initialAdvance: number, transferAmount: number, fileNumbers: string[]) => {
+        const salaryDetailsRef = collection(db, `user/${uid}/driver/${id}/salaryAdjustments`);
+        await addDoc(salaryDetailsRef, {
+            bookingId,
+            initialAdvance,
+            transferAmount,
+            fileNumbers,
+            timestamp: serverTimestamp(),
+        });
+        console.log('Salary adjustment details saved.');
+    };
 
     useEffect(() => {
         if (!id) {
@@ -94,11 +129,10 @@ const SalaryReport: React.FC = () => {
         const fetchBookings = async () => {
             try {
                 const bookingsRef = collection(db, `user/${uid}/bookings`);
-                const q = query(bookingsRef, where('selectedDriver', '==', id), where('status', '==', 'Order Completed'), orderBy('createdAt', 'desc'));
-                const querySnapshot = await getDocs(q);
-                const fetchedBookings: Booking[] = querySnapshot.docs.map((doc) => {
+                const querySnapshot = await getDocs(bookingsRef);
+
+                const allBookings: Booking[] = querySnapshot.docs.map((doc) => {
                     const data = doc.data();
-                    console.log('data', data);
                     const balanceSalary = data.totalDriverSalary - (data.transferedSalary || 0);
                     return {
                         id: doc.id,
@@ -107,16 +141,28 @@ const SalaryReport: React.FC = () => {
                         serviceType: data.serviceType || '',
                         vehicleNumber: data.vehicleNumber || '',
                         totalDriverDistance: data.totalDriverDistance || '',
-
                         totalDriverSalary: data.totalDriverSalary || 0,
                         transferedSalary: data.transferedSalary || 0,
                         balanceSalary,
                         selectedDriver: data.selectedDriver || '',
                         advance: data.advance || 0,
                         advancePaymentDate: data.advancePaymentDate || '',
+                        status: data.status || '',
+                        bookingChecked: data.bookingChecked || false,
+                        createdAt: data.createdAt ? data.createdAt.toDate() : null, // Convert Firestore Timestamp to Date
                     };
                 });
-                setBookings(fetchedBookings);
+
+                // Filter and sort bookings
+                const filteredAndSortedBookings = allBookings
+                    .filter((booking) => booking.selectedDriver === id && booking.status === 'Order Completed' && booking.bookingChecked === true)
+                    .sort((a, b) => {
+                        // Explicit type check to ensure createdAt is a Date object before calling getTime
+                        if (!a.createdAt || !b.createdAt) return 0; // Null safety
+                        return b.createdAt.getTime() - a.createdAt.getTime(); // Now works with Date objects
+                    });
+
+                setBookings(filteredAndSortedBookings); // Update state with sorted bookings
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
@@ -176,7 +222,15 @@ const SalaryReport: React.FC = () => {
             updateTotalSalaryInFirestore(id, total);
         }
     }, [filteredBookings]);
+    useEffect(() => {
+        const calculatedTotal = filteredBookings.reduce((acc, booking) => {
+            const driverSalary = parseFloat(booking.totalDriverSalary) || 0; // Ensure it's a valid number
+            return acc + driverSalary;
+        }, 0);
+        setTotalCalculatedUpdatedTotalSalary(calculatedTotal);
+    }, [filteredBookings]);
 
+    // ----------------------------------------------
     // Function to update total salary in Firestore
     const updateTotalSalaryInFirestore = async (driverId: string, total: number) => {
         try {
@@ -310,7 +364,7 @@ const SalaryReport: React.FC = () => {
             const bookingRef = doc(db, `user/${uid}/bookings`, editingBookingId);
 
             const formattedDate = advancePaymentDate ? new Date(advancePaymentDate).toLocaleDateString() : '';
-console.log("formattedDate",formattedDate)
+            console.log('formattedDate', formattedDate);
             await updateDoc(bookingRef, {
                 fileNumber,
                 dateTime,
@@ -321,7 +375,8 @@ console.log("formattedDate",formattedDate)
                 transferedSalary,
                 balanceSalary: totalDriverSalary - transferedSalary,
                 advance, // Update advance payment
-                advancePaymentDate: formattedDate,            });
+                advancePaymentDate: formattedDate,
+            });
 
             // Update local state
             setBookings((prevBookings) =>
@@ -338,7 +393,8 @@ console.log("formattedDate",formattedDate)
                               transferedSalary,
                               balanceSalary: totalDriverSalary - transferedSalary,
                               advance,
-                              advancePaymentDate: formattedDate,                           }
+                              advancePaymentDate: formattedDate,
+                          }
                         : booking
                 )
             );
@@ -366,22 +422,24 @@ console.log("formattedDate",formattedDate)
             alert('Please enter a valid advance.');
             return;
         }
-    
+        setIsModalOpen1(true);
+    };
+    const confirmAdvanceUpdate = async () => {
         try {
             if (!uid || !id) {
                 throw new Error('User ID or Driver ID is undefined');
             }
             const driverRef = doc(db, `user/${uid}/driver`, id);
-    
+
             const driverSnap = await getDoc(driverRef);
             const currentAdvance = driverSnap.exists() ? driverSnap.data().advance || 0 : 0;
-    
+
             console.log('Current advance:', currentAdvance);
-    
+
             // Ensure currentAdvance is a valid number
             const currentAdvanceNumber = typeof currentAdvance === 'number' ? currentAdvance : parseFloat(currentAdvance);
             const newAdvanceNumber = typeof editFormData.advance === 'number' ? editFormData.advance : parseFloat(editFormData.advance);
-    
+
             // Calculate the new total advance
             const newTotalAdvance = currentAdvanceNumber + newAdvanceNumber;
 
@@ -389,162 +447,174 @@ console.log("formattedDate",formattedDate)
                 advance: newTotalAdvance,
                 advancePaymentDate: editFormData.advancePaymentDate, // Optionally update the payment date
             });
-    
-            console.log(`Advance updated to ${newTotalAdvance}`);
+
+            // filteredBookings.forEach(async (booking) => {
+            //     await saveSalaryDetails(
+            //       booking.id,
+            //       editFormData.advance,
+            //       0, // No adjustment yet
+            //       [] // No file numbers yet
+            //     );
+            //   });
             alert('Advance updated successfully.');
+            setIsModalOpen1(false);
         } catch (error) {
             console.error('Error updating advance:', error);
             alert('Error adding advance.');
         }
     };
-    let alertShown = false;
     const handleAdjustWithSalary = async () => {
+        setIsModalOpen(true);
+    };
+    let isAlertShown = false;
+
+    const confirmSalaryAdjustment = async () => {
+        if (!uid || !id) {
+            throw new Error('User ID or Driver ID is undefined');
+        }
         try {
-            if (!uid || !id) {
-                console.error('User ID or Driver ID is undefined');
-                alert('Please ensure the user and driver IDs are set.');
-                return;
-            }
-    
             const driverRef = doc(db, `user/${uid}/driver`, id);
-    
-            // Step 1: Fetch driver data
-            const driverSnap = await getDoc(driverRef);
-    
-            if (!driverSnap.exists()) {
-                console.error('Driver document does not exist.');
-                alert('Driver data not found.');
-                return;
-            }
-    
-            const driverData = driverSnap.data();
-            const fetchedAdvance = driverData.advance || 0;
-            const fetchedAdvancePaymentDate = driverData.advancePaymentDate || null;
-    
-            console.log('Fetched Advance Amount:', fetchedAdvance);
-            console.log('Fetched Advance Payment Date:', fetchedAdvancePaymentDate);
-    
-            // Step 2: Update editFormData with fetched values
-            editFormData.advance = fetchedAdvance;
-            editFormData.advancePaymentDate = fetchedAdvancePaymentDate;
-    
-            console.log('Updated Edit Form Data:', editFormData);
-    
-            // Step 3: Validate input
-            if (!driver || editFormData.advance <= 0 || !editFormData.advancePaymentDate) {
-                console.warn('Validation failed. Missing or invalid fields.');
-                alert('Please enter a valid advance payment and date.');
-                return;
-            }
-    
-            // Step 4: Fetch current advance in real-time
+
+            // Listen to real-time updates for advance amount
             onSnapshot(driverRef, async (driverSnap) => {
                 if (!driverSnap.exists()) {
-                    console.error('Driver document no longer exists.');
+                    alert('Driver data not found.');
                     return;
                 }
-    
-                const currentAdvance = driverSnap.data().advance || 0;
-                console.log('Current Advance in Real-Time:', currentAdvance);
-    
-                const totalSalaryAmount = filteredBookings.reduce(
-                    (acc, booking) => acc + (booking.balanceSalary || 0),
-                    0
-                );
-    
-                // Case 1: Total Salary is 0, update advance
+
+                const driverData = driverSnap.data();
+                const fetchedAdvance = driverData.advance || 0;
+                let remainingAdvance = fetchedAdvance;
+
+                console.log('Fetched Advance (Real-time):', fetchedAdvance);
+
+                const totalSalaryAmount = filteredBookings.reduce((acc, booking) => acc + (booking.balanceSalary || 0), 0);
+
                 if (totalSalaryAmount === 0) {
-                    const newAdvanceTotal = currentAdvance + editFormData.advance;
-    
-                    await updateDoc(driverRef, {
-                        advance: newAdvanceTotal,
-                        advancePaymentDate: editFormData.advancePaymentDate,
-                    });
-                    console.log(`Advance updated to ${newAdvanceTotal}`);
-                    if (!alertShown) {
-                        alert('Advance updated successfully.');
-                        alertShown = true; // Set the flag to true to avoid multiple alerts
+                    // Case 1: No pending salary to adjust, update the advance amount directly
+                    if (remainingAdvance > 0) {
+                        await updateDoc(driverRef, { advance: 0 });
+                        console.log('Advance reset to 0 as no salary is pending.');
+                        alert('Advance reset successfully.');
                     }
-                } else {
-                    // Case 2: Adjust advance with salary
-                    let remainingAdvance = editFormData.advance;
-                    console.log('Remaining Advance for Adjustment:', remainingAdvance);
-    
-                    const sortedBookings = [...filteredBookings].sort(
-                        (a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
-                    );
-    
-                    const updatedBookings = [];
-                    let adjustedIds: string[] = [];
-                    let fileNumbers: string[] = [];
+                    return;
+                }
 
-                    for (let booking of sortedBookings) {
-                        if (remainingAdvance <= 0) break;
-    
-                        const maxTransferableAmount =
-                            (booking.totalDriverSalary || 0) - (booking.transferedSalary || 0);
-    
-                        if (maxTransferableAmount > 0) {
-                            const transferAmount = Math.min(remainingAdvance, maxTransferableAmount);
-    
-                            remainingAdvance -= transferAmount;
-    
-                            updatedBookings.push({
-                                ...booking,
-                                transferedSalary: (booking.transferedSalary || 0) + transferAmount,
-                                balanceSalary:
-                                    (booking.totalDriverSalary || 0) -
-                                    (booking.transferedSalary || 0) -
-                                    transferAmount,
-                            });
-    
-                            if (booking.id) {
-                                adjustedIds.push(booking.id);
+                // Case 2: Adjust advance with bookings
+                const updatedBookings = [];
+                const adjustedIds: string[] = [];
+                const fileNumbers: string[] = [];
+                const sortedBookings = [...filteredBookings].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
 
-                                const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
-                                const bookingSnap = await getDoc(bookingRef);
-                                if (bookingSnap.exists()) {
-                                    const fileNumber = bookingSnap.data().fileNumber || 'N/A';
-                                    fileNumbers.push(fileNumber);
-                                }
-    
-                                await updateDoc(bookingRef, {
-                                    transferedSalary: (booking.transferedSalary || 0) + transferAmount,
-                                    balanceSalary:
-                                        (booking.totalDriverSalary || 0) -
-                                        (booking.transferedSalary || 0) -
-                                        transferAmount,
-                                });
-                            }
-                        } else {
-                            updatedBookings.push(booking);
-                        }
-                    }
-    
-                    if (remainingAdvance !== editFormData.advance) {
-                        await updateDoc(driverRef, {
-                            advance: remainingAdvance,
+                for (let booking of sortedBookings) {
+                    if (remainingAdvance <= 0) break;
+
+                    const maxTransferableAmount = (booking.totalDriverSalary || 0) - (booking.transferedSalary || 0);
+
+                    if (maxTransferableAmount > 0) {
+                        const transferAmount = Math.min(remainingAdvance, maxTransferableAmount);
+
+                        remainingAdvance -= transferAmount;
+
+                        updatedBookings.push({
+                            ...booking,
+                            transferedSalary: (booking.transferedSalary || 0) + transferAmount,
+                            balanceSalary: (booking.totalDriverSalary || 0) - (booking.transferedSalary || 0) - transferAmount,
                         });
-    
-                        console.log('Remaining Advance updated:', remainingAdvance);
+
+                        adjustedIds.push(booking.id);
+                        fileNumbers.push(booking.fileNumber || 'N/A');
+
+                        const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
+                        await updateDoc(bookingRef, {
+                            transferedSalary: (booking.transferedSalary || 0) + transferAmount,
+                            balanceSalary: (booking.totalDriverSalary || 0) - (booking.transferedSalary || 0) - transferAmount,
+                        });
+
+                        // Optionally save details to a subcollection for records
+                        await saveSalaryDetails(booking.id, fetchedAdvance, transferAmount, [booking.fileNumber]);
                     }
-                    setAdjustedBookingIds(adjustedIds);
-                    setAdjustedFileNumbers(fileNumbers);
+                }
 
+                if (remainingAdvance !== fetchedAdvance) {
+                    // Update the remaining advance in the driver's document
+                    await updateDoc(driverRef, { advance: remainingAdvance });
+                    console.log('Updated Remaining Advance:', remainingAdvance);
+                }
 
-                    setBookings(updatedBookings);
-                    if (!alertShown) {
-                        alert('Salary adjusted successfully.');
-                        alertShown = true; // Set the flag to true to avoid multiple alerts
-                    }                }
+                setBookings(updatedBookings);
+                setAdjustedBookingIds(adjustedIds);
+                setAdjustedFileNumbers(fileNumbers);
+
+                if (!isAlertShown) {
+                    alert('Salary adjusted successfully.');
+                    isAlertShown = true;
+                }
+                window.location.reload();
             });
         } catch (error) {
             console.error('Error during salary adjustment:', error);
-            alert('An error occurred while adjusting the salary. Please try again.');
+            alert('An error occurred while adjusting the salary.');
         }
     };
-    
-    
+
+    //   const fetchSalaryDetails = async (bookingId: string) => {
+    //     try {
+    //       const salaryRef = collection(db, `user/${uid}/bookings/${bookingId}/salary`);
+    //       const querySnapshot = await getDocs(salaryRef);
+
+    //       return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    //     } catch (error) {
+    //       console.error('Error fetching salary details:', error);
+    //       return [];
+    //     }
+    //   };
+
+    //   useEffect(() => {
+    //     const loadReports = async () => {
+    //       const reports = await Promise.all(
+    //         bookings.map(async (booking) => {
+    //           const details = await fetchSalaryDetails(booking.id);
+    //           return { bookingId: booking.id, details };
+    //         })
+    //       );
+    //       setSalaryReports(reports);
+    //     };
+
+    //     loadReports();
+    //   }, [bookings, uid]);
+    const handlePrint = () => {
+        const printContent = printRef.current; // Get the content to print
+        const printWindow = window.open('', '', 'height=800,width=1200'); // Create a print window
+      
+        if (printWindow && printContent) {
+          printWindow.document.write('<html><head><title>Print</title></head><body>');
+          printWindow.document.write(`
+            <style>
+              table { width: 100%; border: 1px solid black; }
+              .no-print { display: none !important; } /* Hides elements with the 'no-print' class */
+            </style>
+          `);
+          printWindow.document.write(printContent.innerHTML); // Write the content into the print window
+          printWindow.document.write('</body></html>');
+          printWindow.document.close(); // Close the document to trigger printing
+          printWindow.print(); // Trigger the print dialog
+        } else {
+          console.error('Print window or content is null');
+        }
+      };
+      
+    // const handlePrint = () => {
+    //     const printContent = pendingRef.current?.innerHTML;
+    //     const originalContent = document.body.innerHTML;
+
+    //     if (printContent) {
+    //         document.body.innerHTML = printContent;
+    //         window.print();
+    //         document.body.innerHTML = originalContent;
+    //         window.location.reload();
+    //     }
+    // };
     return (
         <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg sm:p-8 lg:p-10">
             {driver && (
@@ -603,7 +673,7 @@ console.log("formattedDate",formattedDate)
                 <h2 className="text-xl font-bold mb-2">Add Advance Payment</h2>
                 <div className="flex flex-col md:flex-row items-center">
                     <input
-                        type="number"
+                        type="text"
                         placeholder="Advance Payment"
                         value={editFormData.advance}
                         onChange={(e) => setEditFormData({ ...editFormData, advance: Number(e.target.value) })}
@@ -619,54 +689,37 @@ console.log("formattedDate",formattedDate)
                 </div>
             </div>
             <div className="mb-4 flex justify-center space-x-0 md:space-x-4 flex-col md:flex-row">
-    <button onClick={handleAdvance} className="bg-blue-900 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded mb-2 md:mb-0">
-      Add Advance
-    </button>
-    <button onClick={handleAdjustWithSalary} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-2 md:mb-0">
-        Advance Adjust with Salary
-    </button>
-    <button onClick={() => setShowAdvanceDetails(!showAdvanceDetails)} className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
-        {showAdvanceDetails ? 'Hide Advance Details' : 'Advance Details'}
-    </button>
-</div>
+                <button onClick={handleAdvance} className="bg-blue-900 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded mb-2 md:mb-0">
+                    Add Advance
+                </button>
 
+                <ConfirmationModal1
+                    isOpen={isModalOpen1}
+                    onClose={() => setIsModalOpen1(false)} // Close modal on cancel
+                    onConfirm={confirmAdvanceUpdate} // Confirm advance update on OK
+                />
+                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={handleAdjustWithSalary}>
+                    Adjust Salary
+                </button>
 
-{driver && showAdvanceDetails && (
-    <div className="bg-white shadow-md rounded-lg p-6 mt-4">
-        <h2 className="text-xl font-semibold mb-4">Advance Payment Details</h2>
-        <table className="min-w-full bg-gray-100 rounded-lg overflow-hidden">
-            <thead>
-                <tr className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
-                    <th className="py-3 px-4 text-left">Advance Amount</th>
-                    <th className="py-3 px-4 text-left">Advance Payment Date</th>
-                    {/* <th className="py-3 px-4 text-left">Booking IDs</th>  */}
-                    <th className="py-3 px-4 text-left">File Numbers</th> {/* Added File Number column */}
-                </tr>
-            </thead>
-            <tbody className="text-gray-600 text-sm font-light">
-                <tr className="border-b border-gray-200 hover:bg-gray-100">
-                    <td className="py-3 px-4">{driver.advance}</td>
-                    <td className="py-3 px-4">{driver.advancePaymentDate || 'N/A'}</td>
-                    {/* <td className="py-3 px-4">
-                        {adjustedBookingIds.length > 0 ? (
-                            adjustedBookingIds.join(', ') // Join the array of booking IDs into a string
-                        ) : (
-                            'N/A'
-                        )}
-                    </td> */}
-                    <td className="py-3 px-4">
-                        {adjustedFileNumbers.length > 0 ? (
-                            adjustedFileNumbers.join(', ') // Join the array of file numbers into a string
-                        ) : (
-                            'N/A' // If no adjusted file numbers, show 'N/A'
-                        )}
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-)}
+                <ConfirmationModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onConfirm={confirmSalaryAdjustment} />
+                <button onClick={() => setShowAdvanceDetails(!showAdvanceDetails)} className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                    {showAdvanceDetails ? 'Hide Advance Details' : 'Advance Details'}
+                </button>
+            </div>
 
+            <SalaryDetailsTable uid={uid} id={id || ''} showAdvanceDetails={showAdvanceDetails} />
+
+            <div className="flex justify-end">
+        <button
+          type="button"
+          className="p-2 rounded-full bg-gray-500 text-white hover:bg-blue-600 mt-2 mb-2"
+          onClick={handlePrint}
+          aria-label="Print"
+        >
+          <IconPrinter />
+        </button>
+      </div>
 
             {selectedBookings.length > 0 && (
                 <div className="mt-5">
@@ -737,134 +790,147 @@ console.log("formattedDate",formattedDate)
                 </div>
             )}
 
-
-
-            <div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
-                            <div className="flex items-center space-x-4">
-                                <div className="text-4xl text-green-600">
-                                    <i className="fas fa-receipt"></i>
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-800">Total Salary Amount:</h3>
-                                    <p className="text-gray-700 text-lg">{totalSalaryAmount}</p>
-                                </div>
+<div ref={printRef}>
+<div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform ">
+                    <div className="flex items-center space-x-4">
+                        <div className="text-4xl text-green-600">
+                            <i className="fas fa-receipt"></i>
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-800">Total Balance Salary Amount:</h3>
+                            <p className="text-gray-700 text-lg">{totalSalaryAmount}</p>
+                        </div>
+                    </div>
+                    </div>
+<br />
+                    <div className="bg-gradient-to-r from-red-100 to-red-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
+                        <div className="flex items-center space-x-4">
+                            <div className="text-4xl text-red-600">
+                                <i className="fas fa-hand-holding-usd"></i>
                             </div>
-                        
-
-                            <div className="bg-gradient-to-r from-red-100 to-red-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
-    <div className="flex items-center space-x-4">
-        <div className="text-4xl text-red-600">
-            <i className="fas fa-hand-holding-usd"></i>
-        </div>
-        <div>
-            <h3 className="text-xl font-bold text-gray-800">Advance Amount</h3>
-            <p className="text-gray-700 text-lg">
-                {driver?.advance ? driver.advance : 'No advance payment made'}
-            </p>
-        </div>
-    </div>
-</div>
-
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-800">Advance Amount</h3>
+                                <p className="text-gray-700 text-lg">{driver?.advance ? driver.advance : 'No advance payment made'}</p>
+                            </div>
+                        </div>
                     </div>
 
+                <div className="mt-5">
+                    <h2 className="text-xl font-bold mb-3 text-center text-gray-800">Driver Salary Details</h2>
+                    <div className="overflow-x-auto">
+                        {' '}
+                        {/* Added scrollable container */}
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr className="bg-gray-100">
+                                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">#</th>
 
+                                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">File Number</th>
+                                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Date</th>
+                                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Service Type</th>
+                                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Customer Vehicle Number</th>
+                                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Covered Distance</th>
 
-            <div className="mt-5">
-                <h2 className="text-xl font-bold mb-3 text-center text-gray-800">Driver Salary Details</h2>
-                <div className="overflow-x-auto">
-                    {' '}
-                    {/* Added scrollable container */}
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead>
-                            <tr className="bg-gray-100">
-                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">#</th>
+                                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Total Driver Salary</th>
+                                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Transferred Salary</th>
+                                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Balance Salary</th>
+                                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 no-print" >
+                                        Actions
+                                        <span className="flex items-center">
+                                            <input type="checkbox" checked={selectAll} onChange={(e) => setSelectAll(e.target.checked)} />
+                                            <span className="ml-2">Select All</span>
+                                        </span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {filteredBookings.map((booking, index) => (
+                                    <tr key={booking.id}>
+                                        <td className="border px-4 py-2">{index + 1}</td>
 
-                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">File Number</th>
-                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Date</th>
-                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Service Type</th>
-                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Customer Vehicle Number</th>
-                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Covered Distance</th>
+                                        <td className="border px-4 py-2">{booking.fileNumber}</td>
+                                        <td>{format(parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date()), 'dd/MM/yyyy, h:mm:ss a')}</td>
+                                        <td className="border px-4 py-2">{booking.serviceType}</td>
+                                        <td className="border px-4 py-2">{booking.vehicleNumber}</td>
+                                        <td className="border px-4 py-2">{booking.totalDriverDistance}</td>
 
-                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Total Driver Salary</th>
-                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Transferred Salary</th>
-                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Balance Salary</th>
-                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                                    Actions
-                                    <span className="flex items-center">
-                                        <input type="checkbox" checked={selectAll} onChange={(e) => setSelectAll(e.target.checked)} />
-                                        <span className="ml-2">Select All</span>
-                                    </span>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredBookings.map((booking, index) => (
-                                <tr key={booking.id}>
-                                    <td className="border px-4 py-2">{index + 1}</td>
+                                        <td className="border px-4 py-2">{booking.totalDriverSalary}</td>
+                                        <td className="border px-4 py-2">
+                                            {editingBookingId === booking.id ? (
+                                                <input
+                                                    type="number"
+                                                    className="border px-2 py-1 rounded-md"
+                                                    value={editFormData.transferedSalary}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, transferedSalary: Number(e.target.value) })}
+                                                />
+                                            ) : (
+                                                booking.transferedSalary || 0
+                                            )}
+                                        </td>
+                                        <td
+                                            className="border px-4 py-2"
+                                            style={{
+                                                backgroundColor: booking.balanceSalary === 0 ? '#e6ffe6' : '#ffe6e6', // Light green and light red
+                                                color: booking.balanceSalary === 0 ? 'black' : 'black', // Adjust text color as needed
+                                            }}
+                                        >
+                                            {booking.balanceSalary}
+                                        </td>
 
-                                    <td className="border px-4 py-2">{booking.fileNumber}</td>
-                                    <td>{format(parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date()), 'dd/MM/yyyy, h:mm:ss a')}</td>
-                                    <td className="border px-4 py-2">{booking.serviceType}</td>
-                                    <td className="border px-4 py-2">{booking.vehicleNumber}</td>
-                                    <td className="border px-4 py-2">{booking.totalDriverDistance}</td>
+                                        <td className="border px-4 py-2">
+                                            {editingBookingId === booking.id ? (
+                                                <>
+                                                    <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded-lg mr-2" onClick={handleSaveEdit}>
+                                                        Save
+                                                    </button>
+                                                    <button className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded-lg" onClick={handleCancelEdit}>
+                                                        Cancel
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <div className="flex justify-center space-x-2 no-print">
+  <button
+    className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-2 py-1 rounded-lg shadow-lg hover:shadow-xl transform transition-all duration-300 hover:scale-105"
+    onClick={() => handleEditBooking(booking.id)}
+  >
+    Settle Salary
+  </button>
 
-                                    <td className="border px-4 py-2">{booking.totalDriverSalary}</td>
-                                    <td className="border px-4 py-2">
-                                        {editingBookingId === booking.id ? (
-                                            <input
-                                                type="number"
-                                                className="border px-2 py-1 rounded-md"
-                                                value={editFormData.transferedSalary}
-                                                onChange={(e) => setEditFormData({ ...editFormData, transferedSalary: Number(e.target.value) })}
-                                            />
-                                        ) : (
-                                            booking.transferedSalary || 0
-                                        )}
-                                    </td>
-                                    <td
-                                        className="border px-4 py-2"
-                                        style={{
-                                            backgroundColor: booking.balanceSalary === 0 ? '#e6ffe6' : '#ffe6e6', // Light green and light red
-                                            color: booking.balanceSalary === 0 ? 'black' : 'black', // Adjust text color as needed
-                                        }}
+  <label className="inline-flex items-center">
+    <input
+      type="checkbox"
+      className="form-checkbox h-5 w-5 text-blue-600"
+      checked={selectedBookings.includes(booking.id)}
+      onChange={() => handleCheckboxChange(booking.id)}
+    />
+  </label>
+</div>
+
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600" colSpan={2}></th>
+                                    <th
+                                        className="px-4 py-2 text-left text-2xl font-bold text-red-600" // Enlarged and red color
+                                        colSpan={4}
                                     >
-                                        {booking.balanceSalary}
-                                    </td>
-
-                                    <td className="border px-4 py-2">
-                                        {editingBookingId === booking.id ? (
-                                            <>
-                                                <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded-lg mr-2" onClick={handleSaveEdit}>
-                                                    Save
-                                                </button>
-                                                <button className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded-lg" onClick={handleCancelEdit}>
-                                                    Cancel
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <div className="flex justify-center space-x-2">
-                                                <button className="hover:text-blue-500 text-blue px-4 py-1 rounded-lg" onClick={() => handleEditBooking(booking.id)}>
-                                                    <IconEdit />
-                                                </button>
-                                                <label className="inline-flex items-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="form-checkbox h-5 w-5 text-blue-600"
-                                                        checked={selectedBookings.includes(booking.id)}
-                                                        onChange={() => handleCheckboxChange(booking.id)}
-                                                    />
-                                                </label>
-                                            </div>
-                                        )}
+                                        Total Salary
+                                    </th>
+                                    <td
+                                        className="border px-4 py-2 text-2xl font-bold text-red-600" // Enlarged and red color
+                                    >
+                                        {typeof totalCalculatedUpdatedTotalSalary === 'number' ? totalCalculatedUpdatedTotalSalary.toFixed(2) : 'N/A'}
                                     </td>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </tfoot>
+                        </table>
+                    </div>
                 </div>
             </div>
-
-         
         </div>
     );
 };

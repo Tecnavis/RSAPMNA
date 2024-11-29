@@ -76,6 +76,8 @@ interface ModalData {
         lng?: number;
     };
     pickupDistance?: string; // Add this line to include the new property
+    dropoffDistance?: string; // Add this line to include the new property
+
 }
 
 const statuses = [
@@ -112,6 +114,7 @@ const NewBooking = () => {
     const currentDate = new Date().toISOString().split('T')[0];
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isModalOpen1, setIsModalOpen1] = useState(false);
+    const [changeRequestType, setChangeRequestType] = useState<"pickup" | "dropoff" | null>(null);
 
     useEffect(() => {
         // Set up real-time listener with onSnapshot
@@ -191,6 +194,8 @@ const NewBooking = () => {
     };
 
     const handlePickChange = async (rowData: RecordData) => {
+        setChangeRequestType("pickup");
+
         try {
             // Fetch pickup location from booking document
             const bookingDoc = await getDoc(doc(db, `user/${uid}/bookings`, rowData.id));
@@ -268,10 +273,16 @@ const NewBooking = () => {
         }
     };
     const handleApproveRequest = async () => {
-        if (!modalData.currentLocation || !modalData.pickupLocation) {
+        if (
+            !modalData.currentLocation?.lat ||
+            !modalData.currentLocation?.lng ||
+            !modalData.pickupLocation?.name ||
+            !selectedRecord
+
+        ) {
             console.error("Missing location data.");
             return;
-        }    
+        }   
         try {
             const bookingRef = doc(db, `user/${uid}/bookings`, selectedRecord.id);
     
@@ -292,22 +303,114 @@ const NewBooking = () => {
         }
     };
     const handleDropChange = async (rowData: RecordData) => {
+        setChangeRequestType("dropoff");
+
         try {
+            // Fetch pickup location from booking document
             const bookingDoc = await getDoc(doc(db, `user/${uid}/bookings`, rowData.id));
             const dropoffLocation = bookingDoc.exists() ? bookingDoc.data().dropoffLocation : null;
-            const driverDoc = await getDoc(doc(db, `user/${uid}/driver`, rowData.driver));
-            const currentLocation = driverDoc.exists() ? driverDoc.data().currentLocation : null;
-            setModalData({
-                dropoffLocation: dropoffLocation || {},
-                currentLocation: currentLocation ? { lat: currentLocation.latitude, lng: currentLocation.longitude } : {},
+
+            // Real-time listener for currentLocation of the driver
+            const driverDocRef = doc(db, `user/${uid}/driver`, rowData.selectedDriver);
+
+            // Listen for changes in currentLocation in real-time
+            onSnapshot(driverDocRef, async (driverDoc) => {
+                if (driverDoc.exists()) {
+                    const driverData = driverDoc.data();
+                    const currentLocation = driverData?.currentLocation;
+                    if (dropoffLocation?.lat && dropoffLocation?.lng && currentLocation?.latitude && currentLocation?.longitude) {
+                        try {
+                            const response = await axios.post('https://api.olamaps.io/routing/v1/directions', null, {
+                                params: {
+                                    origin: `${currentLocation.latitude},${currentLocation.longitude}`,
+                                    destination: `${dropoffLocation.lat},${dropoffLocation.lng}`,
+                                    api_key: import.meta.env.VITE_REACT_APP_API_KEY,
+                                },
+                                headers: {
+                                    'X-Request-Id': `${rowData.id}-${Date.now()}`,
+                                },
+                            });
+
+                            let distance = 'Distance not available';
+                            const routes = response.data.routes;
+                            // Check if routes are returned and calculate distance
+                            if (routes?.length > 0 && routes[0]?.legs?.length > 0) {
+                                distance = routes[0].legs[0].readable_distance || 'Distance not available';
+                            }
+
+                            // Update modal data with the latest currentLocation and calculated distance
+                            setModalData({
+                                dropoffLocation: dropoffLocation || {},
+                                currentLocation: {
+                                    lat: currentLocation.latitude,
+                                    lng: currentLocation.longitude,
+                                },
+                                dropoffDistance: distance, // Update with the calculated distance
+                            });
+                        } catch (distanceError) {
+                            console.error('Error calculating distance:', distanceError);
+
+                            // If error, show appropriate message in modalData
+                            setModalData({
+                                dropoffLocation: dropoffLocation || {},
+                                currentLocation: {
+                                    lat: currentLocation.latitude,
+                                    lng: currentLocation.longitude,
+                                },
+                                dropoffDistance: 'Error fetching distance',
+                            });
+                        }
+                    } else {
+                        console.error('Invalid locations for distance calculation.');
+                        // If locations are invalid
+                        setModalData({
+                            dropoffLocation: dropoffLocation || {},
+                            currentLocation: currentLocation ? { lat: currentLocation.latitude, lng: currentLocation.longitude } : {},
+                            dropoffDistance: 'Invalid location data',
+                        });
+                    }
+                } else {
+                    console.error('Driver document does not exist.');
+                }
             });
+
+            // Set selected record and open modal
             setSelectedRecord(rowData);
             setIsModalOpen1(true);
         } catch (error) {
             console.error('Error fetching location data:', error);
         }
     };
+    const handleApproveDropRequest = async () => {
+        if (
+            !modalData.currentLocation?.lat ||
+            !modalData.currentLocation?.lng ||
+            !modalData.dropoffLocation?.name ||
+            !selectedRecord
 
+        ) {
+            console.error("Missing location data.");
+            return;
+        }   
+        try {
+            const bookingRef = doc(db, `user/${uid}/bookings`, selectedRecord.id);
+    
+            // Update the pickupLocation in Firestore with the currentLocation
+            await updateDoc(bookingRef, {
+                dropoffLocation: {
+                    lat: modalData.currentLocation.lat.toString(), // Convert to string
+                    lng: modalData.currentLocation.lng.toString(), // Convert to string
+                    name: modalData.dropoffLocation.name.split(',')[0], // Keep only the name
+                },
+            });
+    
+            console.log("dropoffLocation location updated successfully.");
+            alert("dropoffLocation updated successfully.");
+        } catch (error) {
+            console.error("Error updating dropoffLocation location:", error);
+            alert("Failed to update dropoffLocation location.");
+        }
+    };
     const closeModal1 = () => {
         setIsModalOpen1(false);
         setSelectedRecord(null);
@@ -606,6 +709,8 @@ const NewBooking = () => {
                 overlayBlur={2} // Add a blur effect to the background
                 centered // Center the modal
             >
+                    {modalData && changeRequestType === "pickup" && (
+
                 <div style={modalContainerStyle}>
                     {selectedRecord?.requestBool && (
                         <div style={locationCardStyle}>
@@ -615,14 +720,7 @@ const NewBooking = () => {
                             </p>
                         </div>
                     )}
-                    {selectedRecord?.requestBool1 && (
-                        <div style={locationCardStyle}>
-                            <h5 style={locationTitleStyle}>Dropoff Location:</h5>
-                            <p style={locationTextStyle}>
-                                {modalData.dropoffLocation?.name ? `${modalData.dropoffLocation.name} (Lat: ${modalData.dropoffLocation.lat}, Lng: ${modalData.dropoffLocation.lng})` : 'Not Available'}
-                            </p>
-                        </div>
-                    )}
+                   
                     <div style={locationCardStyle}>
                         <h5 style={locationTitleStyle}>Driver's Current Location:</h5>
                         <p style={locationTextStyle}>
@@ -636,10 +734,46 @@ const NewBooking = () => {
                         <p className={`text-lg ${modalData.pickupDistance ? 'text-green-600' : 'text-red-500'} font-medium`}>{modalData.pickupDistance || 'Not Available'}</p>
                
                     </div>
-                    {parseFloat(modalData.pickupDistance) > 5 && (
-                <button onClick={handleApproveRequest}>Approve Request</button>
-            )}
+                    {parseFloat(modalData.pickupDistance ?? "0") > 5 && (
+    <button onClick={handleApproveRequest}>Approve Request</button>
+)}
+
+                   
                 </div>
+                    )}
+                        {modalData && changeRequestType === "dropoff" && (
+ <div style={modalContainerStyle}>
+ 
+ {selectedRecord?.requestBool1 && (
+     <div style={locationCardStyle}>
+         <h5 style={locationTitleStyle}>Dropoff Location:</h5>
+         <p style={locationTextStyle}>
+             {modalData.dropoffLocation?.name ? `${modalData.dropoffLocation.name} (Lat: ${modalData.dropoffLocation.lat}, Lng: ${modalData.dropoffLocation.lng})` : 'Not Available'}
+         </p>
+     </div>
+ )}
+  
+ <div style={locationCardStyle}>
+     <h5 style={locationTitleStyle}>Driver's Current Location:</h5>
+     <p style={locationTextStyle}>
+         {typeof modalData.currentLocation === 'object' && modalData.currentLocation?.lat && modalData.currentLocation?.lng
+             ? `Lat: ${modalData.currentLocation.lat}, Lng: ${modalData.currentLocation.lng}`
+             : 'Not Available'}
+     </p>
+ </div>
+
+<div className="my-4 p-4 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300">
+     <h5 className="text-xl font-semibold text-gray-700 mb-2">Dropoffup Distance:</h5>
+     <p className={`text-lg ${modalData.dropoffDistance ? 'text-green-600' : 'text-red-500'} font-medium`}>{modalData.dropoffDistance || 'Not Available'}</p>
+
+ </div>
+ {parseFloat(modalData.dropoffDistance ?? "0") > 5 && (
+    <button onClick={handleApproveDropRequest}>Approve Request</button>
+)}
+
+
+</div>
+                        )}
             </Modal>
 
             <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
