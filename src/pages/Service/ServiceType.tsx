@@ -25,7 +25,7 @@ interface ServiceType {
     salary: string;
     basicSalaryKM: string;
     salaryPerKM: string;
-    expensePerKM: string;  // New field
+    expensePerKM: string;  
 }
 
 interface Errors {
@@ -33,7 +33,7 @@ interface Errors {
     newSalary?: string;
     newBasicSalaryKM?: string;
     newSalaryPerKM?: string;
-    newExpensePerKM?: string;  // New field
+    newExpensePerKM?: string;  
 }
 const ServiceType: React.FC = () => {
     const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
@@ -50,10 +50,10 @@ const ServiceType: React.FC = () => {
     const [isModalVisible, setModalVisible] = useState<boolean>(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
     const uid = sessionStorage.getItem('uid');
-    const navigate = useNavigate(); // Initialize useNavigate
+    const navigate = useNavigate(); 
     useEffect(() => {
         const fetchServices = async () => {
-            if (!uid) return; // Ensure UID exists before fetching
+            if (!uid) return; 
 
             const db = getFirestore();
             const serviceRef = collection(db, `user/${uid}/service`);

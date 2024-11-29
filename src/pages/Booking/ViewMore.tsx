@@ -526,7 +526,9 @@ const ViewMore: React.FC = () => {
           <p className="col-span-full">No {type} Images available.</p>
         );
       };
-      
+      const handleFeedbackClick = () => {
+        navigate('/bookings/newbooking/viewmore/feedback', { state: { bookingId: id } }); // Navigate with bookingId
+    };
     return (
         <div className="container mx-auto my-8 p-4 bg-white shadow rounded-lg">
             <h5 className="font-semibold text-lg mb-5">Booking Details</h5>
@@ -994,6 +996,14 @@ const ViewMore: React.FC = () => {
                 {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && (
                     <p className="text-green-600 font-medium text-center mt-2">Booking verified successfully!</p>
                 )}
+                {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && (
+                <button
+                    className="bg-green-500 text-white px-4 py-2 rounded mt-4"
+                    onClick={handleFeedbackClick}
+                >
+                    Feedback Form
+                </button>
+            )}
             </div>
 
             {showForm && (
