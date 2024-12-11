@@ -391,7 +391,7 @@ advance,
                                 </div>
                                 <div>
                                     <label htmlFor="phone">Phone</label>
-                                    <input id="phone" type="number" placeholder="phone number" className={`${styles.formInput} form-input`} value={phone} onChange={(e) => setPhone(e.target.value)} />
+                                    <input id="phone" type="phone" placeholder="phone number" className={`${styles.formInput} form-input`} value={phone} onChange={(e) => setPhone(e.target.value)} />
                                     {phoneError && <span className={`${styles.error}`}>{phoneError}</span>}
                                 </div>
                                 

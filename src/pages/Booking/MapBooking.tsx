@@ -2011,3 +2011,12 @@
 //     );
 // };
 // export default MapBooking;
+import React from 'react'
+
+const MapBooking = () => {
+  return (
+    <div>MapBooking</div>
+  )
+}
+
+export default MapBooking

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, ChangeEvent } from 'react';
 import { getFirestore, collection, getDocs, query, where, doc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
-import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField } from '@mui/material';
+import { Button} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
 // Define the shape of a booking record
@@ -19,6 +19,9 @@ interface Booking {
     approved: boolean;
     createdAt:Timestamp;
     fileNumber:string;
+    bookingChecked?: boolean;
+    feedback?: boolean;
+    accountingStaffVerified?: boolean;
 }
 
 interface Driver {
@@ -33,39 +36,14 @@ const ClosedBooking: React.FC = () => {
     const [completedBookings, setCompletedBookings] = useState<Booking[]>([]);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [allDrivers, setALLDrivers] = useState<Driver[]>([]);
-    const [loadingId, setLoadingId] = useState<string | null>(null);
-    const [uniform, setUniform] = useState<string | null>(null);
-    const [inventory, setInventory] = useState<string | null>(null);
-    const [feedbackVideo, setFeedbackVideo] = useState<string | null>(null);
-    const [fixedPoint, setFixedPoint] = useState<number | null>(null);
-    const [loading, setLoading] = useState<boolean>(false);
     const [docId, setDocId] = useState<string>('');
-    const [isEditing, setIsEditing] = useState<boolean>(false);
-    const [behavior, setBehavior] = useState<string | null>(null);
-    const [idCard, setIdCard] = useState<string | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [dId, setDId] = useState<string | null>(null);
-    const [bId, setBid] = useState<string | null>(null);
     const [loadingBookings, setLoadingBookings] = useState<Set<string>>(new Set());
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
     const navigate = useNavigate();
-    
-    const fetchPoints = async () => {
-        try {
-            const querySnapshot = await getDocs(collection(db, `user/${uid}/driverPoint`));
+    const [tab, setTab] = useState<'verified' | 'unverified'>('unverified');
 
-            if (!querySnapshot.empty) {
-                const docData = querySnapshot.docs[0].data();
-                setFixedPoint(docData.point); // Set the point value
-                setDocId(querySnapshot.docs[0].id); // Set the document ID
-            } else {
-                console.log('No documents found in the collection!');
-            }
-        } catch (err) {
-            console.error('Error fetching point:', err);
-        }
-    };
+    
 
     const fetchDrivers = async () => {
         try {
@@ -110,33 +88,27 @@ const ClosedBooking: React.FC = () => {
     useEffect(() => {
         fetchCompletedBookings();
         fetchDrivers();
-        fetchPoints();
     }, [uid]);
     const handleViewMore = (id: string) => {
         navigate(`/bookings/newbooking/viewmore/${id}`);
     };
-    const handleApprove = async (bookingId: string) => {
-        setLoadingBookings((prev) => new Set(prev).add(bookingId)); // Add booking ID to loading set
+    const handleAccountingVerify = async (bookingId: string) => {
         try {
-            const db = getFirestore();
             const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
 
-            // Update the document to set approved to true
+            // Update the document to set accountingStaffVerified to true
             await updateDoc(bookingRef, {
-                approved: true, // Add the approved field
+                accountingStaffVerified: true,
             });
 
             // Update the state to reflect the changes immediately
-            setCompletedBookings((prevBookings) => prevBookings.map((booking) => (booking.id === bookingId ? { ...booking, approved: true } : booking)));
-            fetchCompletedBookings();
+            setCompletedBookings((prevBookings) => 
+                prevBookings.map((booking) =>
+                    booking.id === bookingId ? { ...booking, accountingStaffVerified: true } : booking
+                )
+            );
         } catch (error) {
-            console.error('Error updating booking status:', error);
-        } finally {
-            setLoadingBookings((prev) => {
-                const updatedSet = new Set(prev);
-                updatedSet.delete(bookingId);
-                return updatedSet;
-            });
+            console.error('Error updating accounting staff verification:', error);
         }
     };
 
@@ -146,131 +118,86 @@ const ClosedBooking: React.FC = () => {
 
     console.log(completedBookings, 'this is the completed bookings');
 
-    const filteredBookings = completedBookings.filter((booking) => Object.values(booking).some((value) => value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())));
-    const sortedBookings = [...filteredBookings].sort((a, b) => {
-        return b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime();
-      });
-    // opening feedback modal -----
-    const onRequestOpen = (selectedDriver: string | undefined, id: string) => {
-        if (selectedDriver) {
-            setDId(selectedDriver); // Assuming setDId expects a driver's ID
-            setBid(id);
-            setIsModalOpen(true);
-        } else {
-            // Handle the case when selectedDriver is undefined
-            console.error('Selected driver is undefined');
-        }
-    };
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        const parsedValue = value === '' ? null : parseFloat(value); // Convert to number or assign null for empty input
-        setFixedPoint(parsedValue); // Update fixedPoint with the parsed number
-    };
-
-    const onRequestClose = () => {
-        setIsModalOpen(false);
-        setUniform('');
-        setFeedbackVideo('');
-        setInventory('');
-        setIdCard('');
-        setBehavior('');
-    };
-
-    const handleSaveClick = async () => {
-        try {
-            const docRef = doc(db, `user/${uid}/driverPoint`, docId); // Use the stored document ID
-
-            await updateDoc(docRef, {
-                point: fixedPoint, // Update the field with the new value
-            });
-
-            console.log('Point updated successfully!');
-        } catch (err) {
-            console.error('Error updating point:', err);
-        }
-        setIsEditing(false);
-    };
-
-    const handleEditClick = () => {
-        setIsEditing(true);
-    };
-
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        let points = 0;
-        setLoadingId(bId);
-        setLoading(true);
-
-        // Ensure fixedPoint is a number, and set to 0 if null or NaN
-        const validFixedPoint: number = typeof fixedPoint === 'number' ? fixedPoint : typeof fixedPoint === 'string' ? parseFloat(fixedPoint) : 0;
-
-        // Check each field and add points for "yes" answers
-        if (uniform === 'yes') points += validFixedPoint;
-        if (idCard === 'yes') points += validFixedPoint;
-        if (feedbackVideo === 'yes') points += validFixedPoint;
-        if (behavior === 'good') points += validFixedPoint; // Assuming "good" is equivalent to "yes"
-        if (inventory === 'filled') points += validFixedPoint; // Assuming "filled" is equivalent to "yes"
-
-        try {
-            // Ensure that both uid and dId are valid strings
-
-            if (!uid || !dId || !bId) {
-                console.error('Invalid uid, driver ID, or booking ID.');
-                return;
-            }
-
-            // Retrieve the driver document from Firestore
-            const driverDocRef = doc(db, `user/${uid}/driver`, dId);
-            const driverDoc = await getDoc(driverDocRef);
-            console.log(driverDoc, 'this is the driver doc');
-
-            if (driverDoc.exists()) {
-                // Get the current points (if they exist) and add the new points
-                const currentPoints = driverDoc.data().points || 0;
-                console.log(currentPoints, 'this is the current points');
-                const newPoints = currentPoints + points;
-
-                // Update the driver document with the new points
-                await updateDoc(driverDocRef, {
-                    rewardPoints: newPoints,
-                });
-
-                console.log(`Points updated successfully. New total: ${newPoints}`);
-
-                // Now update the booking document
-                const bookingDocRef = doc(db, `user/${uid}/bookings`, bId);
-                await updateDoc(bookingDocRef, {
-                    formAdded: true,
-                });
-
-                console.log(`Booking updated successfully. formAdded set to true.`);
-
-                // Call handleApprove to update booking status
-                await handleApprove(bId);
-                fetchCompletedBookings();
-
-                // Close the request
-                onRequestClose();
-            } else {
-                console.log('Driver document not found.');
-            }
-        } catch (error) {
-            console.error('Error updating points:', error);
-        } finally {
-            setLoadingId(null);
-            setLoading(false);
-        }
-    };
-
+    const filteredBookings = completedBookings.filter((booking) => 
+        Object.values(booking).some((value) => value && value.toString().toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+    
+    const sortedBookings = [...filteredBookings].sort(
+        (a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime() // Sort by 'createdAt' in descending order
+    );
+    
+    const filteredTabBookings = tab === 'verified' 
+        ? sortedBookings.filter((booking) => booking.accountingStaffVerified)
+        : sortedBookings.filter((booking) => !booking.accountingStaffVerified);
+    
     return (
         <div className="panel mt-6">
             <h5 className="font-semibold text-lg dark:text-white-light mb-5">Completed Bookings</h5>
             <div className="mb-5">
                 <input type="text" value={searchQuery} onChange={handleSearchChange} placeholder="Search..." className="w-full p-2 border border-gray-300 rounded" />
+                <div className="tabs mt-4 w-full flex">
+                <Button
+        className="flex-1" // Makes the button take equal space
+        variant={tab === 'verified' ? 'contained' : 'outlined'}
+        onClick={() => setTab('verified')}
+        color="primary"
+    >
+        Verified
+    </Button>
+    <Button
+        className="flex-1" // Makes the button take equal space
+        variant={tab === 'unverified' ? 'contained' : 'outlined'}
+        onClick={() => setTab('unverified')}
+        color="primary"
+    >
+        Unverified
+    </Button>
+                </div>
                 <div className="mt-4">
+                <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px' }}>
+                    <span
+                        style={{
+                            width: '20px',
+                            height: '20px',
+                            backgroundColor: '#90EE90',
+                            borderRadius: '50%',
+                            display: 'inline-block',
+                            marginRight: '8px',
+                            border: '2px solid #a3a3a3',
+                        }}
+                    ></span>
+                    <span>FeedBack & verify Completed</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px' }}>
+                    <span
+                        style={{
+                            width: '20px',
+                            height: '20px',
+                            backgroundColor: '#FFC0CB',
+                            borderRadius: '50%',
+                            display: 'inline-block',
+                            marginRight: '8px',
+                            border: '2px solid #d6d6d6',
+                        }}
+                    ></span>
+                    <span>Verify Completed</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span
+                        style={{
+                            width: '20px',
+                            height: '20px',
+                            backgroundColor: 'white',
+                            borderRadius: '50%',
+                            display: 'inline-block',
+                            marginRight: '8px',
+                            border: '2px solid #c3c3c3',
+                        }}
+                    ></span>
+                    <span>Other Bookings</span>
+                </div>
                     <div className="datatables">
-                        {filteredBookings.length === 0 ? (
+                        {filteredTabBookings.length === 0 ? (
                             <p>No completed bookings found.</p>
                         ) : (
                             <div className="table-responsive">
@@ -290,10 +217,16 @@ const ClosedBooking: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="block md:table-row-group">
-                                        {sortedBookings
-                                            .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()) // Sort by dateTime descending
-                                            .map((booking,index) => (
-                                                <tr key={booking.id} className="bg-white border border-gray-300 block md:table-row">
+                                    {filteredTabBookings.map((booking, index) => {
+const rowStyle = booking.feedback
+? { backgroundColor: '#90EE90', color: 'black' } // Light green
+: booking.bookingChecked
+? { backgroundColor: '#FFC0CB', color: 'black' } // Light red
+: {};
+
+
+                                                return (
+                                                    <tr key={booking.id} className={`border border-gray-300 block md:table-row `} style={rowStyle}>
                                                     <td className="p-2 text-sm block md:table-cell">{index+1} </td>
 
                                                     <td className="p-2 text-sm block md:table-cell">{booking.dateTime} </td>
@@ -311,11 +244,32 @@ const ClosedBooking: React.FC = () => {
                                                         >
                                                             View More
                                                         </Button>
+                                                          {/* Show "Accounting staff verified" button if feedback and bookingChecked are true */}
+                                                          {booking.feedback && booking.bookingChecked && !booking.accountingStaffVerified && (
+                                                            <Button
+                                                                variant="contained"
+                                                                color="secondary"
+                                                                style={{ marginLeft: '10px' }}
+                                                                onClick={() => handleAccountingVerify(booking.id)}
+                                                            >
+                                                                Accounting staff verify
+                                                            </Button>
+                                                        )}
+                                                        {booking.accountingStaffVerified && (
+                                                            <Button
+                                                                variant="contained"
+                                                                color="secondary"
+                                                                style={{ marginLeft: '10px' }}
+                                                            >
+                                                                Accounting staff verified
+                                                            </Button>
+                                                        )}
                                                     </td>
                                                     <td className="p-2 text-sm block md:table-cell">
                                                     </td>
                                                 </tr>
-                                            ))}
+                                             );
+                                            })}
                                     </tbody>
                                 </table>
                             </div>
@@ -323,93 +277,7 @@ const ClosedBooking: React.FC = () => {
                     </div>
                 </div>
             </div>
-            <Dialog
-                open={isModalOpen}
-                onClose={onRequestClose}
-                maxWidth="sm" // Optional: controls the maximum width of the dialog
-                fullWidth // Optional: forces the dialog to take full width
-                scroll="paper" // Makes the modal content scrollable
-            >
-                <DialogTitle>
-                    {isEditing ? (
-                        <div>
-                            <TextField value={fixedPoint} onChange={handleInputChange} variant="outlined" size="small" />
-                            <Button variant="contained" color="primary" onClick={handleSaveClick}>
-                                Save
-                            </Button>
-                        </div>
-                    ) : (
-                        <div>
-                            <p>Point for each question</p>
-                            <Button variant="contained" color="primary" onClick={handleEditClick}>
-                                {fixedPoint}
-                            </Button>
-                        </div>
-                    )}
-                </DialogTitle>
-
-                <DialogContent dividers={true} style={{ maxHeight: '400px' }}>
-                    {' '}
-                    {/* Add maxHeight for scrollable content */}
-                    <form onSubmit={handleSubmit}>
-                        <FormControl component="fieldset" fullWidth>
-                            <FormLabel component="legend">Uniform:</FormLabel>
-                            <RadioGroup value={uniform} onChange={(e) => setUniform(e.target.value)}>
-                                <FormControlLabel value="yes" control={<Radio />} label="Yes" />
-                                <FormControlLabel value="no" control={<Radio />} label="No" />
-                            </RadioGroup>
-                        </FormControl>
-
-                        <FormControl component="fieldset" fullWidth>
-                            <FormLabel component="legend">Behavior:</FormLabel>
-                            <RadioGroup value={behavior} onChange={(e) => setBehavior(e.target.value)}>
-                                <FormControlLabel value="good" control={<Radio />} label="Good" />
-                                <FormControlLabel value="bad" control={<Radio />} label="Bad" />
-                            </RadioGroup>
-                        </FormControl>
-
-                        <FormControl component="fieldset" fullWidth>
-                            <FormLabel component="legend">ID Card:</FormLabel>
-                            <RadioGroup value={idCard} onChange={(e) => setIdCard(e.target.value)}>
-                                <FormControlLabel value="yes" control={<Radio />} label="Yes" />
-                                <FormControlLabel value="no" control={<Radio />} label="No" />
-                            </RadioGroup>
-                        </FormControl>
-
-                        <FormControl component="fieldset" fullWidth>
-                            <FormLabel component="legend">Inventory Sheet:</FormLabel>
-                            <RadioGroup value={inventory} onChange={(e) => setInventory(e.target.value)}>
-                                <FormControlLabel value="filled" control={<Radio />} label="Filled" />
-                                <FormControlLabel value="unfilled" control={<Radio />} label="Unfilled" />
-                            </RadioGroup>
-                        </FormControl>
-
-                        <FormControl component="fieldset" fullWidth>
-                            <FormLabel component="legend">Feedback Video:</FormLabel>
-                            <RadioGroup value={feedbackVideo} onChange={(e) => setFeedbackVideo(e.target.value)}>
-                                <FormControlLabel value="yes" control={<Radio />} label="Yes" />
-                                <FormControlLabel value="no" control={<Radio />} label="No" />
-                            </RadioGroup>
-                        </FormControl>
-                        <DialogActions>
-                            {loading ? (
-                                <Button variant="contained" color="primary">
-                                    <CircularProgress size={24} color="inherit" />
-                                </Button>
-                            ) : (
-                                <div>
-                                    <Button type="submit" variant="contained" color="primary">
-                                        Submit
-                                    </Button>
-                                    <Button onClick={onRequestClose} color="secondary">
-                                        Close
-                                    </Button>
-                                </div>
-                            )}
-                        </DialogActions>
-                    </form>
-                </DialogContent>
-            </Dialog>
+          
         </div>
     );
 };

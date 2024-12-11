@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { DataTable } from 'mantine-datatable';
 import { Link, useNavigate } from 'react-router-dom';
-import { getFirestore, collection, getDocs, orderBy, query, where, onSnapshot, getDoc, doc, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, orderBy, query, where, onSnapshot, getDoc, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import styles from './newbooking.module.css';
 import { Modal, Pagination } from '@mantine/core'; // Import Pagination from Mantine
 import axios from 'axios';
@@ -115,37 +115,61 @@ const NewBooking = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isModalOpen1, setIsModalOpen1] = useState(false);
     const [changeRequestType, setChangeRequestType] = useState<"pickup" | "dropoff" | null>(null);
-
+console.log("currentDate",currentDate)
     useEffect(() => {
-        // Set up real-time listener with onSnapshot
-        const q = query(
-            collection(db, `user/${uid}/bookings`),
-            orderBy('createdAt', 'desc') // Sort by creation date
-        );
-
-        // Listen for changes to the collection
-        const unsubscribe = onSnapshot(
-            q,
-            (querySnapshot) => {
-                let data: RecordData[] = querySnapshot.docs.map((doc) => ({
-                    ...doc.data(),
-                    id: doc.id,
-                })) as RecordData[];
-
-                // Filter out records where the status is 'Order Completed'
-                const filteredData = data.filter((record) => record.status !== 'Order Completed');
-
-                setRecordsData(filteredData);
-                setFilteredRecords(data);
-            },
-            (error) => {
-                console.error('Error fetching data: ', error);
+        const fetchData = async () => {
+            try {
+                const bookingsQuery = query(
+                    collection(db, `user/${uid}/bookings`),
+                    orderBy('createdAt', 'desc')
+                );
+    
+                const driverQuery = collection(db, `user/${uid}/driver`);
+                
+                const [bookingSnapshot, driverSnapshot] = await Promise.all([
+                    getDocs(bookingsQuery),
+                    getDocs(driverQuery),
+                ]);
+    
+                // Map driver IDs to phone numbers
+                const driverPhoneMap: Record<string, string> = {};
+                driverSnapshot.forEach((doc) => {
+                    const driverData = doc.data();
+                    if (driverData) {
+                        driverPhoneMap[doc.id] = driverData.phone || 'N/A';
+                    }
+                });
+    
+                // Process booking data
+                const bookings: RecordData[] = bookingSnapshot.docs.map((doc) => {
+                    const docData = doc.data();
+                    return {
+                        ...docData,
+                        id: doc.id,
+                        createdAt: docData.createdAt instanceof Timestamp
+                        ? docData.createdAt.toDate().toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                          })
+                        : docData.createdAt,
+                    
+                        phone: driverPhoneMap[docData.selectedDriver] || 'N/A', // Fetch phone number
+                    } as RecordData;
+                });
+    
+                const filteredBookings = bookings.filter((record) => record.status !== 'Order Completed');
+    
+                setRecordsData(filteredBookings);
+                setFilteredRecords(filteredBookings);
+            } catch (error) {
+                console.error('Error fetching data:', error);
             }
-        );
-
-        // Clean up the listener when the component is unmounted
-        return () => unsubscribe();
+        };
+    
+        fetchData();
     }, [uid]);
+    
 
     useEffect(() => {
         const term = searchTerm.toLowerCase();
@@ -535,10 +559,12 @@ const NewBooking = () => {
                         <tr>
                             <th>#</th>
                             <th>Date & Time</th>
-                            <th>Name</th>
                             <th>File Number</th>
-                            <th>Phone Number</th>
+                            <th>Customer Name</th>
+
+                            <th>Customer Phone Number</th>
                             <th>Driver</th>
+                            <th>Driver PhoneNumber</th>
                             <th>View More</th>
                             <th>Edit</th>
                             <th>Tracking</th>
@@ -546,25 +572,31 @@ const NewBooking = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {displayedRecords.map((rowData, index) => {
-                            // Convert dateTime (e.g., "24/09/2024, 02:21:48 pm") to YYYY-MM-DD format
-                            const dateTimeFormatted = rowData.dateTime
-                                ? rowData.dateTime.split(',')[0].split('/').reverse().join('-') // Converts to "2024-09-24"
-                                : '';
+                    {displayedRecords.map((rowData, index) => {
+        // Format currentDate to 'DD/MM/YYYY'
+        const currentDateFormatted = new Date(currentDate);
+        const formattedCurrentDate = `${currentDateFormatted.getDate().toString().padStart(2, '0')}/${(currentDateFormatted.getMonth() + 1).toString().padStart(2, '0')}/${currentDateFormatted.getFullYear()}`;
 
-                            let rowBackgroundColor = '#ffffff'; // Default background color
+        // Format dateTimeFormatted from rowData.createdAt to 'DD/MM/YYYY'
+        const dateTimeFormatted = rowData.createdAt
+       
 
-                            // Check conditions for setting the row color
-                            if (rowData.status === 'Rejected') {
-                                rowBackgroundColor = '#f1807e'; // Light red color for 'Rejected' status
-                            } else if (rowData.bookingStatus === 'ShowRoom Booking' && dateTimeFormatted !== currentDate) {
-                                rowBackgroundColor = '#ffffe0'; // Yellow color if condition matches
-                            } else if (rowData.bookingStatus === 'ShowRoom Booking') {
-                                rowBackgroundColor = '#e0f7fa'; // Light blue color for "ShowRoom Booking"
-                            } else if (dateTimeFormatted !== currentDate) {
-                                rowBackgroundColor = '#f8d7da'; // Light red color for other date mismatch cases
-                            }
+        // Log both dates to verify
+        console.log('currentDateFormatted:', formattedCurrentDate);
+        console.log('dateTimeFormatted:', rowData.createdAt);
 
+        let rowBackgroundColor = '#ffffff'; // Default background color
+
+        // Check conditions for setting the row color
+        if (rowData.status === 'Rejected') {
+            rowBackgroundColor = '#f1807e'; // Light red color for 'Rejected' status
+        } else if (rowData.bookingStatus === 'ShowRoom Booking' && dateTimeFormatted !== formattedCurrentDate) {
+            rowBackgroundColor = '#ffffe0'; // Yellow color if condition matches
+        } else if (rowData.bookingStatus === 'ShowRoom Booking') {
+            rowBackgroundColor = '#e0f7fa'; // Light blue color for "ShowRoom Booking"
+        } else if (dateTimeFormatted !== formattedCurrentDate) {
+            rowBackgroundColor = '#f8d7da'; // Light red color for other date mismatch cases
+        }
                             return (
                                 <tr
                                     key={rowData.id}
@@ -573,11 +605,14 @@ const NewBooking = () => {
                                     }}
                                 >
                                     <td data-label="#"> {index + 1} </td>
-                                    <td data-label="Date & Time">{rowData.dateTime}</td>
-                                    <td data-label="Name">{rowData.customerName}</td>
+                                    <td data-label="Date & Time">{rowData.createdAt}</td>
                                     <td data-label="File Number">{rowData.fileNumber}</td>
-                                    <td data-label="Phone Number">{rowData.phoneNumber}</td>
+                                    <td data-label="Customer Name">{rowData.customerName}</td>
+
+                                    <td data-label="Customer Phone Number">{rowData.phoneNumber}</td>
                                     <td data-label="Driver">{rowData.driver}</td>
+                                    <td data-label="Driver PhoneNumber">{rowData.phone || 'N/A'}</td>
+
                                     <td data-label="View More">
                                         <Link
                                             to={`/bookings/newbooking/viewmore/${rowData.id}`}

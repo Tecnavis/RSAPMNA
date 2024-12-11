@@ -1,12 +1,39 @@
 import React, { useState } from 'react';
-import { updateDoc, addDoc, collection } from 'firebase/firestore';
+import { updateDoc, addDoc, collection, doc } from 'firebase/firestore';
+import { Firestore } from 'firebase/firestore'; // Import this if you are using Firestore types
 
-const CashCollectionModal = ({ netTotalAmountInHand, setNetTotalAmountInHand, driverId, driver, bookings, setBookings, db }) => {
-    const [receivedAmount, setReceivedAmount] = useState('');
-    const uid = sessionStorage.getItem('uid')
+// Define types for the props
+interface CashCollectionModalProps {
+    netTotalAmountInHand: number;
+    setNetTotalAmountInHand: React.Dispatch<React.SetStateAction<number>>;
+    driverId: string;
+    driver: any; // You can replace 'any' with a more specific type for the driver object
+    bookings: Array<{ dateTime: string; fileNumber: string; amount: number; selectedDriver: string }>;
+    setBookings: React.Dispatch<React.SetStateAction<any[]>>;
+    db: Firestore;
+}
+
+const CashCollectionModal: React.FC<CashCollectionModalProps> = ({ 
+    netTotalAmountInHand, 
+    setNetTotalAmountInHand, 
+    driverId, 
+    driver, 
+    bookings, 
+    setBookings, 
+    db 
+}) => {
+    const [receivedAmount, setReceivedAmount] = useState<string>(''); // receivedAmount is a string
+
+    const uid = sessionStorage.getItem('uid'); // sessionStorage may return 'string | null'
+
     const handleSubmit = async () => {
         try {
             const received = parseFloat(receivedAmount);
+            if (isNaN(received)) {
+                console.error('Invalid received amount');
+                return;
+            }
+
             const updatedNetTotal = netTotalAmountInHand - received;
 
             // Update driver's netTotalAmountInHand

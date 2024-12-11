@@ -8,6 +8,8 @@ interface Driver {
     driverName: string;
     idnumber: string;
     companyName: string;
+    netTotalAmountInHand: number;
+    totalSalaryAmount?:number;
 }
 
 interface EditDriverData {
@@ -37,7 +39,9 @@ const DriverReport: React.FC = () => {
                 const querySnapshot = await getDocs(collection(db, `user/${uid}/driver`));
                 const driverList = querySnapshot.docs.map(doc => ({
                     id: doc.id,
-                    ...doc.data()
+                    ...doc.data(),
+                    netTotalAmountInHand: doc.data().netTotalAmountInHand ?? 0, // Default to 0 if undefined
+
                 })) as Driver[];
                 setDrivers(driverList);
             } catch (error) {
@@ -103,6 +107,10 @@ const DriverReport: React.FC = () => {
                         <th className="py-2 px-4">#</th>
                             <th className="py-2 px-4">{header}</th>
                             <th className="py-2 px-4">Driver ID</th>
+                            <th className="py-2 px-4">Total Amount in Hand</th>
+                            {(title === 'PMNA Drivers' || title === 'Providers Details') && (
+                            <th className="py-2 px-4">Total Salary Amount</th>
+                        )}
                             <th className="py-2 px-4">Actions</th>
                         </tr>
                     </thead>
@@ -137,8 +145,17 @@ const DriverReport: React.FC = () => {
                                         driver.idnumber
                                     )}
                                 </td>
+                                <td className="border px-4 py-2">
+    {driver.netTotalAmountInHand.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
+</td>
+
+{(title === 'PMNA Drivers' || title === 'Providers Details') && (
+                                <td className="border px-4 py-2">
+                                    {driver.totalSalaryAmount?.toLocaleString('en-IN', { style: 'currency', currency: 'INR' }) ?? 'N/A'}
+                                </td>
+                            )}
                                 <td className="border px-4 py-2 flex gap-2 items-center">
-                                    {editDriverId === driver.id ? (
+                                    {/* {editDriverId === driver.id ? (
                                         <button onClick={handleSaveDriverClick} className="text-green-500 hover:text-green-700">
                                             Save
                                         </button>
@@ -146,14 +163,30 @@ const DriverReport: React.FC = () => {
                                         <button onClick={() => handleEditDriverClick(driver)} className="text-green-500 hover:text-blue-700">
                                             <IconEdit className="inline-block w-5 h-5" />
                                         </button>
-                                    )}
-                                    <Link
-                                        to={`/users/driver/driverdetails/cashcollection/${driver.id}`}
-                                        className="text-blue-500 hover:text-blue-700 bg-blue-100 px-2 py-1 rounded-md shadow-md"
-                                    >
-                                        View Cash Collection Report
-                                    </Link>
-                                    
+                                    )} */}
+                                   
+                                    {(title === 'PMNA Drivers' || title === 'Providers Details') && (
+ <Link
+ to={`/users/driver/driverdetails/cashcollection/${driver.id}`}
+ className="text-blue-500 hover:text-blue-700 bg-blue-100 px-2 py-1 rounded-md shadow-md"
+>
+ View Cash Collection Report
+</Link>
+
+
+
+)}
+            {(title === 'Company Details' ) && (
+ <Link
+ to={`/users/driver/driverdetails/cashcollectioncompany/${driver.id}`}
+ className="text-blue-500 hover:text-blue-700 bg-blue-100 px-2 py-1 rounded-md shadow-md"
+>
+ View Cash Collection Report
+</Link>
+
+
+
+)}
                                      {/* Conditionally render "View Salary Details" */}
                                 {title !== 'Company Details' && (
                                     <Link

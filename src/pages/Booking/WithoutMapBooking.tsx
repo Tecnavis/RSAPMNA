@@ -11,8 +11,8 @@ import IconMapPin from '../../components/Icon/IconMapPin';
 import ShowroomModalWithout from './ShowroomModalWithout';
 import styles from './withoutMap.module.css';
 import ReactSelect from 'react-select';
-import BaseLocationWithout from '../BaseLocation/BaseLocationWithout';
 import axios from 'axios';
+import BaseLocationModal from '../BaseLocation/BaseLocationModal';
 interface Showroom {
     value: string;
     label: string;
@@ -56,7 +56,10 @@ const customStyles = {
         border: 'none',
     },
 };
-
+const showrooms: { value: string; label: string }[] = [
+    { value: 'lifting', label: 'Lifting' },
+    // Add more showroom options here
+];
 const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => {
     const db = getFirestore();
     const navigate = useNavigate();
@@ -116,7 +119,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [errors, setErrors] = useState<any>({});
     const [adjustValue, setAdjustValue] = useState<string>('');
     const [bodyShope, setBodyShope] = useState<string>('');
-//    -------------------------------------------------------------------------------------------------------------
+//   ----------------------------------------------------------------------------------
+
     const uid = sessionStorage.getItem('uid');
     const userName = sessionStorage.getItem('username');
     const role = sessionStorage.getItem('role');
@@ -227,11 +231,27 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             tempErrors['updatedTotalSalary'] = 'Updated Total Salary is required and must be greater than 0 when Trapped Location is "Outside of Road"';
             isValid = false;
         }
+  // Company validation
+  if (!company) {
+    tempErrors['company'] = 'Company is required';
+    isValid = false;
+} else if (company === 'rsa' && !selectedCompany) {
+    tempErrors['selectedCompany'] = 'Please select a company for RSA work';
+    isValid = false;
+} else if (company === 'rsa') {
+    // File number validation for "self"
+    if (!fileNumber.trim()) {
+        tempErrors['fileNumber'] = 'File number is required for rsa work';
+        isValid = false;
+    } else if (!fileNumber.trim()) {
+        tempErrors['fileNumber'] = 'File number is required for payment work';
+        isValid = false;
+    }
+}
 
-        setErrors(tempErrors);
-        return isValid;
-    };
-
+setErrors(tempErrors);
+return isValid;
+};
     // ------------------------------------------
     useEffect(() => {
         if (company === 'rsa') {
@@ -655,7 +675,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         const currentLng = currentLocation?.longitude ?? null;
 
                         // Log the current driver's location
-                        console.log(`Driver ${doc.id} location:`, { currentLat, currentLng });
+                        console.log(`Driver currentLocation${doc.id} location:`, { currentLat, currentLng });
 
                         if (typeof currentLat === 'number' && typeof currentLng === 'number' && pickupLocation.lat && pickupLocation.lng) {
                             console.log(`Valid location data for driver ${doc.id}. Proceeding with distance calculation.`);
@@ -1132,6 +1152,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     pickupDistance: pickupDistance,
                     companyBooking: companyBooking,
                     companyName: companyName,
+                    newStatus: '',
+                    editedTime: '', 
                 };
 
                 if (editData) {
@@ -1139,7 +1161,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     const existingBooking = await getDoc(existingDocRef);
                     if (existingBooking.exists()) {
                         const existingData = existingBooking.data();
-                        
+                        bookingData.createdAt = existingData.createdAt;
+
                         // Check if the current status is 'Rejected'
                         if (existingData.status === 'Rejected') {
                             bookingData.status = 'booking added'; // Override with 'booking added'
@@ -1268,6 +1291,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         <option value="rsa">RSA Work</option>
                         <option value="self">Payment Work</option>
                     </select>
+                    {errors.company && <p className={styles.errorMessage}>{errors.company}</p>}
+
                 </div>
 
                 {company === 'rsa' && (
@@ -1281,6 +1306,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                             name="selectedCompany"
                             className={styles.formControl}
                             onChange={(e) => handleInputChange('selectedCompany', e.target.value)}
+                        
                         >
                             <option value="">Select Company</option>
                             {companies.map((driver) => (
@@ -1289,8 +1315,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                 </option>
                             ))}
                         </select>
-                        {companies.length === 0 && <p className={styles.errorMessage}>No drivers available</p>}
-                    </div>
+                        {errors.selectedCompany && <p className={styles.errorMessage}>{errors.selectedCompany}</p>}
+                        {companies.length === 0 && <p className={styles.errorMessage}>No drivers available</p>}                    </div>
                 )}
 
                 {company === 'self' ? (
@@ -1301,6 +1327,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         <div className={styles.inputContainer}>
                             <input id="fileNumber" type="text" name="fileNumber" placeholder="Enter File Number" className={styles.formControl} value={`PMNA${bookingId}`} readOnly />
                         </div>
+                        {errors.fileNumber && <p className="text-red-500 text-sm mt-1">{errors.fileNumber}</p>}
+
                     </div>
                 ) : (
                     <div className={styles.flexRow}>
@@ -1317,6 +1345,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                 value={fileNumber}
                                 onChange={(e) => handleInputChange('fileNumber', e.target.value)}
                             />
+                                {errors.fileNumber && <p className="text-red-500 text-sm mt-1">{errors.fileNumber}</p>}
+
                         </div>
                     </div>
                 )}
@@ -1347,6 +1377,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                 handleManualChange('lat', parseFloat(lat));
                                 handleManualChange('lng', parseFloat(lng));
                             }}
+                            autoComplete="off" 
                         />
                         <a href={`https://www.google.com/maps/search/?api=1&query=${pickupLocation.lat},${pickupLocation.lng}`} target="_blank" rel="noopener noreferrer" className={styles.mapButton}>
                             <IconMapPin />
@@ -1385,7 +1416,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         }}
                     >
                         <div className="modal-body">
-                            <BaseLocationWithout onClose={closeModal1} setBaseLocation={setBaseLocation} />
+                            <BaseLocationModal onClose={closeModal1} setBaseLocation={setBaseLocation} pickupLocation={pickupLocation}/>
                         </div>
                     </div>
                 )}
@@ -1396,24 +1427,28 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     </label>
                     <div className={styles.inputContainer}>
                         {showrooms.length > 0 && (
-                            <ReactSelect
-                                id="showrooms"
-                                name="showrooms"
-                                className="w-full"
-                                value={showrooms.find((option) => option.value === showroomLocation) || null}
-                                options={[{ value: 'lifting', label: 'Lifting' }, ...showrooms]}
-                                placeholder="Select showroom"
-                                onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
-                                isSearchable={true}
-                                getOptionLabel={(option) => (option.value === 'lifting' ? <span style={{ color: 'red', fontSize: '20px', fontWeight: 'bold' }}>{option.label}</span> : option.label)}
-                                styles={{
-                                    option: (provided: any, state: any) => ({
-                                        ...provided,
-                                        color: state.data.value === 'lifting' ? 'red' : provided.color,
-                                        fontSize: state.data.value === 'lifting' ? '20px' : provided.fontSize,
-                                    }),
-                                }}
-                            />
+                         <ReactSelect
+                         id="showrooms"
+                         name="showrooms"
+                         className="w-full"
+                         value={showrooms.find((option) => option.value === showroomLocation) || null}
+                         options={showrooms}
+                         placeholder="Select showroom"
+                         onChange={(selectedOption) =>
+                             handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')
+                         }
+                         isSearchable={true}
+                         getOptionLabel={(option) => option.label} // Ensure this always returns a string
+                         styles={{
+                             option: (provided: any, state: any) => ({
+                                 ...provided,
+                                 color: state.data.value === 'lifting' ? 'red' : provided.color,
+                                 fontSize: state.data.value === 'lifting' ? '20px' : provided.fontSize,
+                                 fontWeight: state.data.value === 'lifting' ? 'bold' : provided.fontWeight,
+                             }),
+                         }}
+                     />
+                     
                         )}
                         <button onClick={handleButtonClick} className={styles.addButton}>
                             <IconPlus />
@@ -1455,7 +1490,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                             <input
                                 style={{ color: 'red' }}
                                 id="distance"
-                                type="number"
+                                type="text"
                                 name="distance"
                                 placeholder="Total Distance"
                                 value={distance}
@@ -1652,7 +1687,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                         // Determine the selected service based on serviceType for both RSA and non-RSA companies
                                         const selectedService = isRSA
                                             ? serviceType // Use the provided serviceType for RSA companies
-                                            : driver.selectedServices.find((service) => service === serviceType); // Use the selected service type for non-RSA drivers
+                                            : driver.selectedServices.find((service:any) => service === serviceType); // Use the selected service type for non-RSA drivers
 
                                         // Fallback handling in case no service matches
                                         if (!selectedService) {
@@ -1678,12 +1713,12 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                         const salaryPerKM =
                                             isRSA && selectedCompanyData ? selectedCompanyData.salaryPerKm[selectedService] : !isRSA ? driver.salaryPerKm[selectedService] : serviceDetails.salaryPerKM;
 
-                                        // Calculate the total salary based on the selected service
-                                        const calculatedSalary = calculateTotalSalary(salary, distance, basicSalaryKM, salaryPerKM, isRSA);
+                                            const parsedDistance = parseFloat(distance) || 0; // Ensure distance is a number
+                                            const calculatedSalary = calculateTotalSalary(salary, parsedDistance, basicSalaryKM, salaryPerKM, isRSA);
 
                                         // Calculate profit based on expenses per KM
                                         const expensePerKM = serviceDetails.expensePerKM || 0;
-                                        const profit = calculatedSalary - distance * expensePerKM;
+                                        const profit = calculatedSalary - parsedDistance * expensePerKM;
 
                                         return (
                                             <div key={driver.id} className="border border-gray-300 p-4 rounded-lg shadow-sm bg-white">
@@ -1736,7 +1771,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                 totalSalary={totalSalary}
                                 updatedTotalSalary={updatedTotalSalary}
                                 onUpdateTotalSalary={handleUpdateTotalSalary}
-                                insuranceAmountBody={insuranceAmountBody}
+                                insuranceAmountBody={String(insuranceAmountBody)}
                                 serviceCategory={serviceCategory}
                                 onInsuranceAmountBodyChange={handleInsuranceAmountBodyChange}
                                 onServiceCategoryChange={handleServiceCategoryChange}
@@ -1774,7 +1809,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                 </div>
 
                                 {/* Insurance Amount Body */}
-                                <div className="flex items-center w-1/3">
+                                <div className="flex items-center w-1/4">
                                     <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 mb-0">
                                         Insurance Amount Body
                                     </label>
@@ -1783,7 +1818,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
 
                                 {/* Payable Amount (with insurance) */}
                                 <div className="flex items-center w-1/3">
-                                    <label htmlFor="updatedTotalSalary" className="ltr:mr-2 rtl:ml-2 mb-0">
+                                    <label htmlFor="updatedTotalSalary" className=" mb-0">
                                         Payable Amount (with insurance)
                                     </label>
                                     <div className="form-input flex-1">
@@ -1831,7 +1866,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     </label>
                     <input
                         id="totalDriverDistance"
-                        type="number"
+                        type="text"
                         name="totalDriverDistance"
                         placeholder="Enter Driver Distance"
                         onChange={(e) => handleInputChange('totalDriverDistance', e.target.value)}

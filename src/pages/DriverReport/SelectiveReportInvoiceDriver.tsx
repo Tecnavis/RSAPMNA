@@ -10,13 +10,13 @@ interface Booking {
     id: string;
     dateTime: string;
     fileNumber: string;
-    updatedTotalSalary: number;
+    amount: number;
     receivedAmount: number;
     balance: number;
     companyName: string;
 }
 
-const SelectiveReportInvoice = () => {
+const SelectiveReportInvoiceDriver = () => {
     const location = useLocation();
     const { bookings } = location.state || { bookings: [] as Booking[] };
     const invoiceRef = useRef<HTMLDivElement>(null);
@@ -71,15 +71,17 @@ const SelectiveReportInvoice = () => {
     };
 
     // Calculate total payable amount
-    const totalPayableAmount = bookings.reduce((total:any, booking:any) => total + Number(booking.updatedTotalSalary), 0);
+    const totalPayableAmount = bookings.reduce((total:any, booking:any) => total + Number(booking.amount), 0);
     const totalBalanceAmount = bookings.reduce((total:any, booking:any) => total + Number(booking.balance), 0);
     
     const columns = [
-        { key: 'id', label: 'S.NO' },
-        { key: 'serviceType', label: 'Service Type' },
-        { key: 'vehicleNumber', label: 'Vehicle Number', class: 'text-center' },
-        { key: 'updatedTotalSalary', label: 'Amount of Bookings', class: 'text-center' },
-        { key: 'receivedAmount', label: 'Amount Received from Company', class: 'text-center' },
+        { key: 'id', label: 'SI.NO' },
+        { key: 'createdAt', label: 'Date and Time' },
+
+        // { key: 'serviceType', label: 'Service Type' },
+        { key: 'fileNumber', label: 'File Number', class: 'text-center' },
+        { key: 'amount', label: 'Amount of Bookings', class: 'text-center' },
+        { key: 'receivedAmount', label: 'Amount Received from Customer', class: 'text-center' },
         { key: 'balance', label: 'Balance' },
     ];
 
@@ -152,7 +154,7 @@ const SelectiveReportInvoice = () => {
                                     <td>{index + 1}</td>
                                     <td>{booking.dateTime}</td>
                                     <td className="text-center">{booking.fileNumber}</td>
-                                    <td className="text-center">{booking.updatedTotalSalary}</td>
+                                    <td className="text-center">{booking.amount}</td>
                                     <td className="text-center">{booking.receivedAmount}</td>
                                     <td className="text-center">{booking.balance}</td>
                                 </tr>
@@ -174,4 +176,4 @@ const SelectiveReportInvoice = () => {
     );
 };
 
-export default SelectiveReportInvoice;
+export default SelectiveReportInvoiceDriver;

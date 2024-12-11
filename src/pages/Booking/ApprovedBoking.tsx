@@ -25,7 +25,7 @@ const ApprovedBooking: React.FC = () => {
             try {
                 const db = getFirestore();
                 // Query to fetch bookings where status is 'Approved'
-                const q = query(collection(db, `user/${uid}/bookings`), where('approve', '==', true));
+                const q = query(collection(db, `user/${uid}/bookings`), where('feedback', '==', true), where('bookingChecked', '==', true), where('accountingStaffVerified', '==', true));
                 const querySnapshot = await getDocs(q);
                 const bookingsData = querySnapshot.docs.map((doc) => ({
                     id: doc.id,

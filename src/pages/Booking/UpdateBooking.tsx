@@ -25,7 +25,7 @@ const UpdateBooking = () => {
 
     const db = getFirestore();
 
-    const handleInputChange = (name, value) => {
+    const handleInputChange = (name:any, value:any) => {
         setBookingDetails({
             ...bookingDetails,
             [name]: value,
