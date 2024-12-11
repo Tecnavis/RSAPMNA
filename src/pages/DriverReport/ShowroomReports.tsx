@@ -8,7 +8,7 @@ interface Showroom {
     location: string;
     manager: string;
     contactNumber: string;
-    
+    wholeBalance: number;
 }
 
 const ShowroomReports: React.FC = () => {

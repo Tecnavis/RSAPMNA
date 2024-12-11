@@ -33,6 +33,9 @@ interface Item {
 const Company: React.FC = () => {
     const [items, setItems] = useState<Item[]>([]);
     const db = getFirestore();
+      const [searchTerm, setSearchTerm] = useState('');
+      const [filteredItems, setFilteredItems] = useState<Item[]>([]);
+
     const navigate = useNavigate();
     const uid = sessionStorage.getItem('uid');
     const [isModalVisible, setModalVisible] = useState(false);
@@ -99,6 +102,18 @@ const Company: React.FC = () => {
         console.log('useEffect triggered to fetch data.');
         fetchData().catch(console.error); // Correctly call fetchData inside useEffect
     }, [uid]); // Add 'uid' as a dependency to refetch data when 'uid' changes
+    useEffect(() => {
+        const filtered = items.filter((item) => {
+            const searchTermLower = searchTerm.toLowerCase();
+            return (
+                item.driverName.toLowerCase().includes(searchTermLower) ||
+                item.idnumber.toLowerCase().includes(searchTermLower) ||
+                item.phone.toLowerCase().includes(searchTermLower) ||
+                (item.companyName?.toLowerCase().includes(searchTermLower) ?? false)
+            );
+        });
+        setFilteredItems(filtered);
+    }, [searchTerm, items]);
     
     const handleDelete = async (userId: string) => {
         try {
@@ -138,6 +153,15 @@ const Company: React.FC = () => {
                         </span>
                     </Link>
                 </div>
+                <div className="mb-5">
+                    <input
+                        type="text"
+                        placeholder="Search by provider name"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full p-2 border rounded"
+                    />
+                </div>
                 <div className="table-responsive mb-5 ">
                     <table>
                         <thead>
@@ -148,12 +172,12 @@ const Company: React.FC = () => {
                                 <th>ID Number</th>
                                 <th>Phone Number</th>
                                 <th>Service Types</th>
-                                <th>Basic Amount</th>
+                                <th>Company Name</th>
                                 <th className="!text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {items.map((item, index) => {
+                            {filteredItems.map((item, index) => {
                                 return (
                                     <tr key={item.id}>
                                         <td>{index+1}</td>
@@ -173,11 +197,7 @@ const Company: React.FC = () => {
                                             </ul>
                                         </td>
                                         <td>
-                                            <ul>
-                                                {Object.entries(item.basicSalaries).map(([key, value]) => (
-                                                    <li key={key}>{key}: {value}</li>
-                                                ))}
-                                            </ul>
+                                        {item.companyName}
                                         </td>
                                         <td className="text-center">
                                             <ul className="flex items-center justify-center gap-2">

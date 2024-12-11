@@ -8,7 +8,7 @@ import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import { useNavigate } from 'react-router-dom';
 import IconMapPin from '../../components/Icon/IconMapPin';
-
+// ---------------------------=====================-
 interface BaseLocationItem {
     id: string;
     name: string;
@@ -36,6 +36,7 @@ const BaseLocation: React.FC = () => {
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid') || '';
     const navigate = useNavigate();
+    const [latLng, setLatLng] = useState('');
 
     // const handleMapClick = (location) => {
     //     setLat(location.lat);
@@ -72,7 +73,7 @@ const BaseLocation: React.FC = () => {
             return;
         }
         const baseLocationDetails: BaseLocationItem = {
-            id: '', // If adding a new location, id will be assigned later
+            id: editing && currentItemId ? currentItemId : '', // Use existing ID if editing
             name: baseLocationName,
             lat,
             lng,
@@ -100,8 +101,8 @@ const BaseLocation: React.FC = () => {
     
         setSavedBaseLocation(baseLocationDetails);
         setBaseLocationName('');
-        setLat('');
-        setLng('');
+        setLatLng('');
+
     };
     
     const handleDelete = async (id: string) => {
@@ -128,6 +129,8 @@ const BaseLocation: React.FC = () => {
             setBaseLocationName(item.name);
             setLat(item.lat);
             setLng(item.lng);
+            setLatLng(`${item.lat}, ${item.lng}`);  // Combine latitude and longitude into the latLng state for manual input
+
         } else {
             alert('Incorrect password. Edit cancelled.');
         }
@@ -193,23 +196,23 @@ const BaseLocation: React.FC = () => {
         }
         setBaseOptions([]);
     };
-    // const handleMapIconClick = () => {
-    //     if (baseLocation && baseLocation.lat && baseLocation.lng) {
-    //         const { lat, lng } = baseLocation;
-    //         console.log(`Opening map at: ${lat}, ${lng}`); // Log coordinates
-
-    //         window.open(`https://www.google.com/maps/search/?api=1&query=${newValue.lat},${newValue.lng}`, '_blank');
-    //     } else {
-    //         alert('Please select a base location first.');
-    //     }
-    // };
+    const handleLatLngChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const { value } = event.target;
+        setLatLng(value);
     
-
+        const [inputLat, inputLng] = value.split(',').map(coord => coord.trim());
     
+        // Validate and parse latitude and longitude
+        const parsedLat = parseFloat(inputLat);
+        const parsedLng = parseFloat(inputLng);
     
+        if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+            setLat(parsedLat.toString());
+            setLng(parsedLng.toString());
+        } 
+    };
     
-    
-    return (
+  return (
         <div className="base-location-form-container">
             <form onSubmit={handleFormSubmit} className="base-location-form">
                 <div className="form-group">
@@ -255,15 +258,16 @@ const BaseLocation: React.FC = () => {
                 <div className="form-group">
                     <label htmlFor="lat">Latitude:</label>
                     <TextField
-                        id="lat"
-                        variant="outlined"
+                        label="Latitude, Longitude"
+                        value={latLng}
+                        onChange={handleLatLngChange}
+                        placeholder="e.g., 40.7128, -74.0060"
                         fullWidth
-                        value={lat}
-                        onChange={(e) => setLat(e.target.value)}
+                        variant="outlined"
                     />
                 </div>
 
-                <div className="form-group">
+                {/* <div className="form-group">
                     <label htmlFor="lng">Longitude:</label>
                     <TextField
                         id="lng"
@@ -272,7 +276,7 @@ const BaseLocation: React.FC = () => {
                         value={lng}
                         onChange={(e) => setLng(e.target.value)}
                     />
-                </div>
+                </div> */}
 
                 <button type="submit" className="btn btn-primary">
                     {editing ? 'Update Base Location' : 'Save Base Location'}

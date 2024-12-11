@@ -1,0 +1,221 @@
+/* General Container */
+.containerk {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 30px;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    font-family: 'Roboto', sans-serif;
+}
+
+/* Title */
+.title {
+    text-align: center;
+    font-size: 2.5rem;
+    color: #333;
+    margin-bottom: 30px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* Form Group */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #555;
+}
+
+.input-field {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background-color: #fff;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.input-field:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+    outline: none;
+}
+
+/* Dropdown Styling */
+input[type="date"], .input-field {
+    background-color: #fafafa;
+    transition: 0.3s;
+}
+
+/* Button Styling */
+.add-button {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.2rem;
+    background: linear-gradient(135deg, #4CAF50, #81C784);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.add-button:hover {
+    background: linear-gradient(135deg, #81C784, #4CAF50);
+    transform: translateY(-2px);
+}
+
+/* Focus Effect */
+.add-button:focus {
+    outline: none;
+}
+
+
+@media (max-width: 768px) {
+    .container {
+        padding: 20px;
+    }
+
+    .title {
+        font-size: 2rem;
+    }
+
+    .add-button {
+        font-size: 1rem;
+    }
+}
+/* Advanced Details Section */
+.advance-details {
+    max-width: 900px;
+    margin: 30px auto;
+    padding: 30px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    font-family: 'Roboto', sans-serif;
+}
+
+/* Title for Advance Details */
+.advance-h2 {
+    font-size: 2rem;
+    color: #333;
+    text-align: center;
+    font-weight: 600;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #4CAF50;
+}
+
+/* Table Styling */
+.advance-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 1.1rem;
+}
+
+.advance-table th,
+.advance-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    color: #555;
+}
+
+.advance-table th {
+    background-color: #4CAF50;
+    color: #fff;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.advance-table tbody tr:hover {
+    background-color: #f9f9f9;
+    transform: translateX(5px);
+    transition: all 0.3s ease;
+}
+
+.advance-table td {
+    font-size: 1rem;
+}
+
+/* No Data Available Styling */
+.advance-details p {
+    font-size: 1.2rem;
+    color: #888;
+    text-align: center;
+    font-weight: 400;
+}
+
+/* Responsive Styling */
+@media (max-width: 768px) {
+    .advance-h2 {
+        font-size: 1.5rem;
+    }
+
+    .advance-table th,
+    .advance-table td {
+        font-size: 1rem;
+        padding: 8px;
+    }
+}
+.save-button {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.save-button:hover {
+    background-color: #45a049;
+}
+
+/* Edit button */
+.edit-button {
+    background-color: #ffa500;
+    color: white;
+}
+
+.edit-button:hover {
+    background-color: #e59400;
+}
+
+/* Focus and active states for buttons */
+button:focus, button:active {
+    outline: none;
+    transform: scale(1.05);
+}
+
+/* Optional: Add some spacing between the buttons if needed */
+td button + button {
+    margin-left: 10px;
+}
+.driver-data-table {
+    margin-top: 20px;
+}
+
+.driver-data-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.driver-data-table th, .driver-data-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+.driver-data-table th {
+    background-color: #f2f2f2;
+    text-align: left;
+}

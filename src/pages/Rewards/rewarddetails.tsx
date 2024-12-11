@@ -379,6 +379,10 @@ const RewardPage: React.FC = () => {
     useEffect(() => {
         const fetchBookings = async () => {
             try {
+                if (!id) {
+                    console.error('Error: Showroom ID is null');
+                    return;
+                }
                 const bookingsRef = collection(db, `user/${uid}/bookings`);
     
                 // Fetch showroom document to get the bookingPoint
@@ -467,6 +471,10 @@ console.log("staffRewardPoints",staffRewardPoints)
                 return; // Exit if phoneNumber is null
             }
             try {
+                if (!id) {
+                    console.error('Error: Showroom ID is null');
+                    return;
+                }
                 const bookingsRef = collection(db, `user/${uid}/bookings`);
     
                 // Fetch showroom document to get the bookingPointForShowroom

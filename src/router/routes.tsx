@@ -59,6 +59,10 @@ import Leave from '../pages/Leave/Leave';
 import Track from '../pages/Booking/Track';
 import Vehicle from '../pages/Vehicles/Vehicle';
 import Feedback from '../pages/Booking/Feedback';
+import FeedbackTable from '../pages/FeedBack/FeedbackTable';
+import Advance from '../pages/Report/Advance/Advance';
+import CashCollectionCompany from '../pages/CashCollectionReport.tsx/CashCollectionCompany';
+import SelectiveReportInvoiceDriver from '../pages/DriverReport/SelectiveReportInvoiceDriver';
 
 
 
@@ -83,7 +87,7 @@ const Cards = lazy(() => import('../pages/Components/Cards'));
 const Carousel = lazy(() => import('../pages/Components/Carousel'));
 const Countdown = lazy(() => import('../pages/Components/Countdown'));
 const Counter = lazy(() => import('../pages/Components/Counter'));
-const SweetAlert = lazy(() => import('../pages/Components/SweetAlert'));
+// const SweetAlert = lazy(() => import('../pages/Components/SweetAlert'));
 const Timeline = lazy(() => import('../pages/Components/Timeline'));
 const Notification = lazy(() => import('../pages/Components/Notification'));
 const MediaObject = lazy(() => import('../pages/Components/MediaObject'));
@@ -205,6 +209,7 @@ const routes = [
     {path :"/leave",element:<Leave/>},
     {path :"/vehicle",element:<Vehicle/>},
     {path :"/bookings/newbooking/viewmore/feedback",element:<Feedback/>},
+    {path :"/feedbacktable",element:<FeedbackTable/>},
 
     {
         path: '/bookings/newbooking/track/:bookingId',
@@ -319,10 +324,10 @@ const routes = [
         path: '/components/counter',
         element: <Counter />,
     },
-    {
-        path: '/components/sweetalert',
-        element: <SweetAlert />,
-    },
+    // {
+    //     path: '/components/sweetalert',
+    //     element: <SweetAlert />,
+    // },
     {
         path: '/components/timeline',
         element: <Timeline />,
@@ -599,6 +604,11 @@ const routes = [
         
     },
     {
+        path: '/users/driver/driverdetails/cashcollectioncompany/:id',
+        element: <CashCollectionCompany />,
+        
+    },
+    {
         path: '/users/driver/driverdetails/cashcollection/driverInvoice/:id',
         element: <DriverInvoice />,
         
@@ -626,8 +636,12 @@ const routes = [
     },
     
     {
-        path: '/users/driver/driverdetails/cashcollection/selectiveReportInvoice',
+        path: '/users/driver/driverdetails/cashcollectioncompany/selectiveReportInvoice',
         element: <SelectiveReportInvoice />,
+    },
+    {
+        path: '/users/driver/driverdetails/cashcollection/selectiveReportInvoiceDriver',
+        element: <SelectiveReportInvoiceDriver />,
     },
     {
         path: '/rsastaffReport/userdetails/satffinvoice',
@@ -662,6 +676,10 @@ const routes = [
     {
         path: '/baselocation/location',
         element: <BaseLocation />,
+    },
+    {
+        path: '/advance',
+        element: <Advance />,
     },
     //Booking pages
     {

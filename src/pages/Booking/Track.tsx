@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { collection, doc, getDoc, getFirestore, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getFirestore, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import './Track.css';
 import { ref, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { storage } from '../../config/config';
@@ -246,12 +246,16 @@ const submitBookingComplete = async () => {
 
       if (bookingId && uid) {
           const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
+          const totalDriverSalaryString = String(bookingDetails.totalDriverSalary || '0');
+          const updatedTotalSalaryString = String(bookingDetails.updatedTotalSalary || '0');
 
           await updateDoc(bookingRef, {
               paymentStatus,
               amount,
               vehicleImgURLs: uploadedImgURLs,
               status: 'Order Completed',
+              totalDriverSalary: totalDriverSalaryString,
+              updatedTotalSalary: updatedTotalSalaryString,
           });
 
           alert('Booking details updated successfully!');
@@ -368,6 +372,12 @@ const submitBookingComplete = async () => {
             const bookingDocRef = doc(db, `user/${uid}/bookings`, bookingId); // Replace `uid` and `bookingId` with actual variables if they are defined outside
             await updateDoc(bookingDocRef, {
                 status: 'Vehicle Dropped',
+                droppedTime: serverTimestamp(),
+                advancePayment:"",
+                balance:"",
+                balanceSalary:"",
+                transferedSalary:"",
+                
             });
             navigate('/bookings/newbooking');
 

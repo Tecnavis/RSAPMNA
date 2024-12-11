@@ -52,7 +52,7 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
     const adjustmentApplied = useRef<boolean>(false);
     const uid = sessionStorage.getItem('uid') || '';
     const db = getFirestore();
-
+// --------------------------------------------------------------------------------------
     useEffect(() => {
         const fetchInsuranceAmountBody = async () => {
             const showroomRef = collection(db, `user/${uid}/showroom`);
@@ -68,7 +68,7 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
 
                     setShowRoom((prevShowRoom) => ({
                         ...prevShowRoom,
-                        insuranceAmountBody: showroomData.insuranceAmountBody,
+                        insuranceAmountBody: String(showroomData.insuranceAmountBody),
                     }));
                     onInsuranceAmountBodyChange(showroomData.insuranceAmountBody);
                 } else {
@@ -294,7 +294,7 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
                 <div>
                     <div className="flex items-center ml-6">
                         <label style={{ fontSize: '1.5em', color: 'red', marginRight: '10px' }}>Adjustment Value:</label>
-                        <input type="number" value={adjustValue} onChange={handleAdjustValueChange} style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }} />
+                        <input type="text" value={adjustValue} onChange={handleAdjustValueChange} style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }} />
                         <button
                             onClick={applyAdjustment}
                             style={{

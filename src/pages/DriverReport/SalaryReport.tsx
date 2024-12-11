@@ -32,6 +32,10 @@ interface SalaryDetail {
     id: string;
     [key: string]: any; // Adjust this based on the actual fields in the salary document
 }
+interface AdvanceRecord {
+    advance: number;
+    advancePaymentDate: string;
+}
 
 interface BookingSalary {
     bookingId: string;
@@ -61,6 +65,7 @@ const SalaryReport: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isModalOpen1, setIsModalOpen1] = useState(false); // State to control modal visibility
     const printRef = useRef<HTMLDivElement>(null);
+    const [showAdvanceTable, setShowAdvanceTable] = useState<boolean>(false);
 
     // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     const [editFormData, setEditFormData] = useState({
@@ -78,7 +83,10 @@ const SalaryReport: React.FC = () => {
     const db = getFirestore();
     const navigate = useNavigate();
     const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
-    const [selectAll, setSelectAll] = useState<boolean>(false); // State for "Select All" checkbox
+    const [selectAll, setSelectAll] = useState<boolean>(false); 
+    const [advances, setAdvances] = useState<AdvanceRecord[]>([]); // Explicitly typed
+  
+
     const saveSalaryDetails = async (bookingId: string, initialAdvance: number, transferAmount: number, fileNumbers: string[]) => {
         const salaryDetailsRef = collection(db, `user/${uid}/driver/${id}/salaryAdjustments`);
         await addDoc(salaryDetailsRef, {
@@ -422,6 +430,13 @@ const SalaryReport: React.FC = () => {
             alert('Please enter a valid advance.');
             return;
         }
+        setAdvances((prevAdvances) => [
+            ...prevAdvances,
+            {
+                advance: editFormData.advance,
+                advancePaymentDate: editFormData.advancePaymentDate,
+            },
+        ]);
         setIsModalOpen1(true);
     };
     const confirmAdvanceUpdate = async () => {
@@ -445,24 +460,62 @@ const SalaryReport: React.FC = () => {
 
             await updateDoc(driverRef, {
                 advance: newTotalAdvance,
-                advancePaymentDate: editFormData.advancePaymentDate, // Optionally update the payment date
+                advancePaymentDate: editFormData.advancePaymentDate || serverTimestamp(), // Use serverTimestamp if no date is provided
             });
+            const advanceDataRef = collection(driverRef, 'advanceData'); // Reference to subcollection
 
-            // filteredBookings.forEach(async (booking) => {
-            //     await saveSalaryDetails(
-            //       booking.id,
-            //       editFormData.advance,
-            //       0, // No adjustment yet
-            //       [] // No file numbers yet
-            //     );
-            //   });
-            alert('Advance updated successfully.');
+            // Add the new advance to the subcollection
+            await addDoc(advanceDataRef, {
+                advance: editFormData.advance,
+                advancePaymentDate: editFormData.advancePaymentDate || serverTimestamp(), // Default to server timestamp if empty
+            });
+          
+            // alert('Advance updated successfully.');
+            setEditFormData({ ...editFormData, advance: 0, advancePaymentDate: "" }); // Reset input fields
+
             setIsModalOpen1(false);
+            await fetchAdvanceData();
+
         } catch (error) {
             console.error('Error updating advance:', error);
             alert('Error adding advance.');
         }
     };
+    
+    const fetchAdvanceData = async () => {
+        try {
+            if (!uid || !id) {
+                throw new Error('User ID or Driver ID is undefined');
+            }
+            const driverRef = doc(db, `user/${uid}/driver`, id);
+            const advanceDataRef = collection(driverRef, 'advanceData'); // Reference to subcollection
+    
+            const querySnapshot = await getDocs(advanceDataRef);
+            const fetchedAdvances = querySnapshot.docs.map((doc) => {
+                const data = doc.data();
+                
+                // Handle the Timestamp conversion for advancePaymentDate
+                const advancePaymentDate = data.advancePaymentDate instanceof Timestamp 
+                    ? data.advancePaymentDate.toDate().toLocaleString() // Convert to Date and format as string
+                    : '';
+    
+                // Return the formatted data with necessary fields
+                return {
+                    id: doc.id, // Document ID (optional if needed)
+                    advance: data.advance || 0, // Default to 0 if advance is undefined
+                    advancePaymentDate: advancePaymentDate, // Converted Timestamp or empty string
+                };
+            }) as AdvanceRecord[];
+            setAdvances(fetchedAdvances);
+        } catch (error) {
+            console.error('Error fetching advance data:', error);
+            alert('Error fetching advances.');
+        }
+    };
+    useEffect(() => {
+        fetchAdvanceData();
+    }, [uid, id]); // Dependency array to re-fetch if UID or ID changes
+    
     const handleAdjustWithSalary = async () => {
         setIsModalOpen(true);
     };
@@ -558,31 +611,6 @@ const SalaryReport: React.FC = () => {
         }
     };
 
-    //   const fetchSalaryDetails = async (bookingId: string) => {
-    //     try {
-    //       const salaryRef = collection(db, `user/${uid}/bookings/${bookingId}/salary`);
-    //       const querySnapshot = await getDocs(salaryRef);
-
-    //       return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    //     } catch (error) {
-    //       console.error('Error fetching salary details:', error);
-    //       return [];
-    //     }
-    //   };
-
-    //   useEffect(() => {
-    //     const loadReports = async () => {
-    //       const reports = await Promise.all(
-    //         bookings.map(async (booking) => {
-    //           const details = await fetchSalaryDetails(booking.id);
-    //           return { bookingId: booking.id, details };
-    //         })
-    //       );
-    //       setSalaryReports(reports);
-    //     };
-
-    //     loadReports();
-    //   }, [bookings, uid]);
     const handlePrint = () => {
         const printContent = printRef.current; // Get the content to print
         const printWindow = window.open('', '', 'height=800,width=1200'); // Create a print window
@@ -604,17 +632,7 @@ const SalaryReport: React.FC = () => {
         }
       };
       
-    // const handlePrint = () => {
-    //     const printContent = pendingRef.current?.innerHTML;
-    //     const originalContent = document.body.innerHTML;
-
-    //     if (printContent) {
-    //         document.body.innerHTML = printContent;
-    //         window.print();
-    //         document.body.innerHTML = originalContent;
-    //         window.location.reload();
-    //     }
-    // };
+    
     return (
         <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg sm:p-8 lg:p-10">
             {driver && (
@@ -678,20 +696,52 @@ const SalaryReport: React.FC = () => {
                         value={editFormData.advance}
                         onChange={(e) => setEditFormData({ ...editFormData, advance: Number(e.target.value) })}
                         className="border rounded p-2 mb-2 md:mb-0 md:mr-2 w-full md:w-auto"
-                    />
-                    <input
+                    />   {/* <input
                         type="date"
                         placeholder="Advance Payment Date"
                         value={editFormData.advancePaymentDate}
                         onChange={(e) => setEditFormData({ ...editFormData, advancePaymentDate: e.target.value })}
                         className="border rounded p-2 mb-2 md:mb-0 w-full md:w-auto"
                     />
+                  */}
                 </div>
             </div>
             <div className="mb-4 flex justify-center space-x-0 md:space-x-4 flex-col md:flex-row">
                 <button onClick={handleAdvance} className="bg-blue-900 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded mb-2 md:mb-0">
                     Add Advance
                 </button>
+                <button
+          onClick={() => setShowAdvanceTable(!showAdvanceTable)}
+          className="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"
+        >
+          {showAdvanceTable ? "Hide Table" : "View Advance Table"}
+        </button>
+        {showAdvanceTable && advances.length > 0 && (
+    <table className="table-auto border-collapse border border-gray-300 w-full mt-4">
+        <thead>
+            <tr>
+                <th className="border border-gray-300 px-4 py-2">Advance</th>
+                <th className="border border-gray-300 px-4 py-2">Payment Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {advances.map((record, index) => (
+                <tr key={index}>
+                    <td className="border border-gray-300 px-4 py-2">
+                        {record.advance}
+                    </td>
+                    <td className="border border-gray-300 px-4 py-2">
+    {record.advancePaymentDate
+        ? new Date(record.advancePaymentDate).toLocaleDateString() // Date object formatting
+        : ''}
+</td>
+
+                </tr>
+            ))}
+        </tbody>
+    </table>
+)}
+
 
                 <ConfirmationModal1
                     isOpen={isModalOpen1}

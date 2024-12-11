@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import { collection, getDocs, getFirestore, onSnapshot, doc, getDoc, query, orderBy, updateDoc, where, setDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, getFirestore, onSnapshot, doc, getDoc, query, orderBy, updateDoc, where, setDoc, addDoc, Timestamp } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import IconArrowLeft from '../../components/Icon/IconArrowLeft';
@@ -31,6 +31,9 @@ interface TabButtonProps {
     updatedTotalSalary: number;
     paymentStatus?:string;
     fileNumber:string;
+    pickedTime: Timestamp | null | undefined;
+    droppedTime: Timestamp | null | undefined;
+
 }
 
 interface Driver {
@@ -38,6 +41,7 @@ interface Driver {
     name: string;
     phone: string;
     companyName:string;
+    selectedDriver: string;
     // Add other relevant driver fields here
 }
 
@@ -188,6 +192,7 @@ const TabButton = styled.button<TabButtonProps>`
         color: #fff;
     }
 `;
+
 const StatusTable: React.FC = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -388,8 +393,19 @@ const StatusTable: React.FC = () => {
         navigate(`/bookings/newbooking/viewmore/${record.id}`);
     };
 
-    const filteredRecordsData = recordsData.filter((record) => Object.values(record).some((value) => value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())));
+    const filteredRecordsData = recordsData.filter((record) => {
+        const matchesSearch = Object.values(record).some((value) =>
+            value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())
+        );
 
+        // Tab filtering logic
+        const matchesTab =
+            (activeTab === 'ongoing' && record.status !== 'Order Completed') ||
+            (activeTab === 'completed' && record.status === 'Order Completed') ||
+            (activeTab === 'pending' && record.paymentStatus === "Not Paid");
+
+        return matchesSearch && matchesTab;
+    });// ----------------------------------------------------------------------------
     const sortedRecordsData = filteredRecordsData.slice().sort((a, b) => {
         const dateA = new Date(a.dateTime);
         const dateB = new Date(b.dateTime);
@@ -430,6 +446,27 @@ const StatusTable: React.FC = () => {
             window.location.reload();
         }
     };
+    const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
+        if (!timestamp) return "--";
+    
+        // Convert Firestore timestamp to JavaScript Date object
+        const date = timestamp.toDate();
+    
+        // Define the options for formatting
+        const options: Intl.DateTimeFormatOptions = {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true, // 12-hour format with AM/PM
+        };
+    
+        // Use Intl.DateTimeFormat for proper formatting
+        return new Intl.DateTimeFormat('en-IN', options).format(date);
+    };
+    
     return (
         <Container>
             <Header>
@@ -494,6 +531,11 @@ const StatusTable: React.FC = () => {
                         <Value>{record.driver}</Value>
                     </DataItem>
                     <DataItem>
+    <Label>Driver Phone Number:</Label>
+    <Value>{record.selectedDriver ? drivers[record.selectedDriver]?.phone : 'N/A'}</Value>
+    </DataItem>
+
+                    <DataItem>
                         <Label>Vehicle Number:</Label>
                         <Value>{record.vehicleNumber}</Value>
                     </DataItem>
@@ -514,6 +556,14 @@ const StatusTable: React.FC = () => {
                     <DataItem>
                         <Label>DropOff Location:</Label>
                         <Value>{record.dropoffLocation ? record.dropoffLocation.name : 'N/A'}</Value>
+                    </DataItem>
+                    <DataItem>
+                        <Label>Pickup Time:</Label>
+                        <Value>{formatTimestamp(record?.pickedTime)}</Value>
+                    </DataItem>
+                    <DataItem>
+                        <Label>Dropoff Time:</Label>
+                        <Value>{formatTimestamp(record?.droppedTime)}</Value>
                     </DataItem>
                     <DataItem>
                         <Label>Status:</Label>
@@ -588,6 +638,14 @@ const StatusTable: React.FC = () => {
                     <DataItem>
                         <Label>Customer Contact Number:</Label>
                         <Value>{record.phoneNumber}</Value>
+                    </DataItem>
+                    <DataItem>
+                        <Label>Pickup Time:</Label>
+                        <Value>{formatTimestamp(record?.pickedTime)}</Value>
+                    </DataItem>
+                    <DataItem>
+                        <Label>Dropoff Time:</Label>
+                        <Value>{formatTimestamp(record?.droppedTime)}</Value>
                     </DataItem>
                     <DataItem>
                         <Label>Status:</Label>
@@ -684,7 +742,10 @@ const StatusTable: React.FC = () => {
                         <Label>Date & Time:</Label>
                         <Value>{record.dateTime}</Value>
                     </DataItem>
-                    
+                    <DataItem>
+                        <Label>File Number:</Label>
+                        <Value style={{color:"red"}}>{record.fileNumber}</Value>
+                    </DataItem>
                     <DataItem>
                         <Label>Driver Name:</Label>
                         <Value>{record.driver}</Value>
@@ -711,7 +772,14 @@ const StatusTable: React.FC = () => {
                         <Label>DropOff Location:</Label>
                         <Value>{record.dropoffLocation ? record.dropoffLocation.name : 'N/A'}</Value>
                     </DataItem>
-
+                    <DataItem>
+                        <Label>Pickup Time:</Label>
+                        <Value>{formatTimestamp(record?.pickedTime)}</Value>
+                    </DataItem>
+                    <DataItem>
+                        <Label>Dropoff Time:</Label>
+                        <Value>{formatTimestamp(record?.droppedTime)}</Value>
+                    </DataItem>
                     <DataItem>
                         <Label>Status:</Label>
                         <Value>

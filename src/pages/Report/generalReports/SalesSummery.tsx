@@ -8,7 +8,7 @@ import IconTrashLines from '../../../components/Icon/IconTrashLines';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconEdit from '../../../components/Icon/IconEdit';
 import IconEye from '../../../components/Icon/IconEye';
-import { collection, getDocs, getFirestore, query, updateDoc, doc, where, orderBy, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
+import { collection, getDocs, getFirestore, query, updateDoc, doc, where, orderBy, DocumentData, QueryDocumentSnapshot, Timestamp } from 'firebase/firestore';
 import dayjs from 'dayjs';
 
 const generateInvoiceId = (): string => {
@@ -28,6 +28,8 @@ interface Booking {
     invoice?: string;
     driverName?: string;
     driverImg?: string;
+    createdAt?: Timestamp;
+    fileNumber:string;
 }
 
 interface Driver {
@@ -39,7 +41,7 @@ interface ExtendedBooking extends Booking {
 }
 const SalesSummary = () => {
     const dispatch = useDispatch();
-    
+
     useEffect(() => {
         dispatch(setPageTitle('Invoice List'));
     }, [dispatch]);
@@ -61,6 +63,7 @@ const SalesSummary = () => {
     const [totalAmount, setTotalAmount] = useState<number>(0);
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid') || '';
+    const [searchQuery, setSearchQuery] = useState<string>('');
 
     useEffect(() => {
         const from = (page - 1) * pageSize;
@@ -73,8 +76,7 @@ const SalesSummary = () => {
             try {
                 const bookingsQuery = query(
                     collection(db, `user/${uid}/bookings`),
-                    where('status', '==', 'Order Completed'),
-                    orderBy('createdAt', 'desc')
+                    where('status', '==', 'Order Completed')
                 );
                 const driversQuery = query(collection(db, `user/${uid}/driver`));
     
@@ -97,21 +99,35 @@ const SalesSummary = () => {
                         booking.invoice = invoiceId;
                         await updateDoc(doc(db, `user/${uid}/bookings`, docSnapshot.id), { invoice: invoiceId });
                     }
-                
+    
                     const driverId = booking.selectedDriver;
                     const driver = driversData[driverId || ''];
                     if (driver) {
                         booking.driverName = driver.driverName;
                         booking.driverImg = driver.profileImageUrl;
                     }
-                
+    
                     // Add bookingId to each booking item
                     bookingsData.push({ bookingId: docSnapshot.id, ...booking });
                 }
     
-                const sortedBookingsData = sortBy(bookingsData, (booking) => -dayjs(booking.dateTime).valueOf());
-                setItems(sortedBookingsData);
-                setInitialRecords(sortedBookingsData);
+                // Filter bookings based on the search query (as in `filteredBookings`)
+                const filteredBookings = bookingsData.filter((booking) =>
+                    Object.values(booking).some((value) =>
+                        value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                );
+    
+                const sortedBookings = [...filteredBookings].sort((a, b) => {
+                    const aCreatedAt = a.createdAt ? a.createdAt.toDate().getTime() : 0;
+                    const bCreatedAt = b.createdAt ? b.createdAt.toDate().getTime() : 0;
+                    
+                    return bCreatedAt - aCreatedAt;
+                  });
+                  
+    
+                setItems(sortedBookings);
+                setInitialRecords(sortedBookings);
                 setLoading(false);
             } catch (error) {
                 console.error('Error fetching bookings or drivers:', error);
@@ -120,7 +136,9 @@ const SalesSummary = () => {
         };
     
         fetchBookingsAndDrivers();
-    }, [db, uid]);
+    }, [db, uid, searchQuery]);  // Added searchQuery as a dependency
+    
+    
 
     useEffect(() => {
         const filterRecordsByDate = (records: Booking[]) => {
@@ -134,9 +152,7 @@ const SalesSummary = () => {
                 } else if (historyRange === '90') {
                     dateRange = currentDate.subtract(3, 'months');
                 }
-                filteredRecords = records.filter((item) =>
-                    dayjs(item.dateTime).isAfter(dateRange)
-                );
+                filteredRecords = records.filter((item) => dayjs(item.dateTime).isAfter(dateRange));
             }
 
             return filteredRecords;
@@ -177,14 +193,14 @@ const SalesSummary = () => {
 
     const deleteRow = (id: string) => {
         if (window.confirm('Are you sure want to delete selected row?')) {
-            const updatedRecords = items.filter(item => item.id !== id);
+            const updatedRecords = items.filter((item) => item.id !== id);
             setItems(updatedRecords);
             setInitialRecords(updatedRecords);
             setRecords(updatedRecords.slice((page - 1) * pageSize, page * pageSize));
             setSelectedRecords([]);
         }
     };
-
+   
     return (
         <div className="panel px-0 border-white-light dark:border-[#1b2e4b]">
             <div className="invoice-table">
@@ -193,25 +209,14 @@ const SalesSummary = () => {
                         <label htmlFor="historyRange" className="text-gray-700 dark:text-gray-300">
                             History:
                         </label>
-                        <select
-                            id="historyRange"
-                            className="form-select w-auto"
-                            value={historyRange}
-                            onChange={(e) => setHistoryRange(e.target.value)}
-                        >
+                        <select id="historyRange" className="form-select w-auto" value={historyRange} onChange={(e) => setHistoryRange(e.target.value)}>
                             <option value="10">Last 10 Days</option>
                             <option value="30">Last 1 Month</option>
                             <option value="90">Last 3 Months</option>
                         </select>
                     </div>
                     <div className="ltr:ml-auto rtl:mr-auto">
-                        <input 
-                            type="text" 
-                            className="form-input w-auto" 
-                            placeholder="Search..." 
-                            value={search} 
-                            onChange={(e) => setSearch(e.target.value)} 
-                        />
+                        <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
                     </div>
                 </div>
 
@@ -224,14 +229,20 @@ const SalesSummary = () => {
                                 accessor: 'invoice',
                                 sortable: true,
                                 render: ({ invoice, id }) => (
-                                    <NavLink
-                                        to={{
-                                            pathname: `/general/sales/preview/${id}`, // Ensure `${id}` is correctly interpolated
-                                        }}
-                                    >
-                                        <div className="text-primary underline hover:no-underline font-semibold">{`#${invoice}`}</div>
-                                    </NavLink>
+                                  <NavLink
+  to={{
+    pathname: `/general/sales/preview/${id}`, // Use the correct ID dynamically
+  }}
+>
+  <div className="text-primary underline hover:no-underline font-semibold">{`#${invoice}`}</div>
+</NavLink>
+
                                 ),
+                            },
+                            {
+                                accessor: 'File Number',
+                                sortable: true,
+                                render: ({ fileNumber }) => <div>{fileNumber}</div>,
                             },
                             {
                                 accessor: 'driver',
@@ -248,7 +259,7 @@ const SalesSummary = () => {
                             {
                                 accessor: 'customerName',
                                 sortable: true,
-                                render: ({ customerName }) => <div>{customerName}</div>
+                                render: ({ customerName }) => <div>{customerName}</div>,
                             },
                             {
                                 accessor: 'dateTime',
@@ -260,7 +271,7 @@ const SalesSummary = () => {
                                 titleClassName: 'text-right',
                                 render: ({ updatedTotalSalary }) => <div className="text-right font-semibold">{`${updatedTotalSalary}`}</div>,
                             },
-                            
+
                             {
                                 accessor: 'status',
                                 sortable: true,
@@ -272,13 +283,13 @@ const SalesSummary = () => {
                                 render: (item) => (
                                     <div className="flex gap-4 items-center">
                                         <NavLink to={`/general/sales/preview/${item.id}`} className="btn btn-sm btn-outline-primary">
-                                            <IconEye />
+                                            <IconEye  className='text-primary'/>
                                         </NavLink>
                                         <NavLink to={`/general/sales/preview/edit/${item.id}`} className="btn btn-sm btn-outline-success">
-                                            <IconEdit />
+                                            <IconEdit className='text-success'/>
                                         </NavLink>
                                         <button className="btn btn-sm btn-outline-danger" onClick={() => deleteRow(item.id)}>
-                                            <IconTrashLines />
+                                            <IconTrashLines className='text-danger'/>
                                         </button>
                                     </div>
                                 ),
@@ -298,10 +309,9 @@ const SalesSummary = () => {
                 </div>
 
                 <div className="mb-4.5 px-5 mt-4">
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-    Total Amount: <span className="text-primary">{(typeof totalAmount === 'number' ? totalAmount.toFixed(2) : '0.00')}</span>
-</h2>
-
+                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+                        Total Amount: <span className="text-primary">{typeof totalAmount === 'number' ? totalAmount.toFixed(2) : '0.00'}</span>
+                    </h2>
                 </div>
             </div>
         </div>

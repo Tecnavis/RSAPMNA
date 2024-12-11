@@ -27,7 +27,6 @@ interface BookingDetails {
     totalDriverDistance: string;
     totalDriverSalary: string;
     vehicleNumber: string;
-    vehicleModel: string;
     phoneNumber: string;
     mobileNumber: string;
     baseLocation: { name: string; lat: number; lng: number } | null;
@@ -43,18 +42,25 @@ interface BookingDetails {
     comments: string;
     status: string;
     pickedTime: Timestamp | null | undefined;
-    dropoffTime: string;
     remark: string;
     formAdded: boolean;
     bookingChecked: boolean;
+    paymentStatus: string;
+    feedback?: boolean;
+  
     companyName?: string;
-        vehicleModal:string;
+    vehicleModel: string;
     droppedTime: Timestamp | null | undefined;
+  
+    // Add missing properties here
+    driverSalary?: string;
+    companyAmount?: string;
+    amount?: string;
 }
 interface FormData {
-    pickedTime: string;
+    pickedTime: Timestamp | null | undefined;
     serviceVehicle: string;
-    dropoffTime: string;
+    droppedTime: Timestamp | null | undefined;
     driverSalary: string;
     companyAmount: string;
     amount: string;
@@ -88,18 +94,20 @@ const ViewMore: React.FC = () => {
    const [docId, setDocId] = useState<string>('');
     const role = sessionStorage.getItem('role');
     const [replacementImage, setReplacementImage] = useState<string | null>(null);
-    const bookingCheck = bookingDetails?.bookingChecked ?? false;    const { search } = useLocation();
+    const bookingCheck = bookingDetails?.bookingChecked ?? false;  
+      const { search } = useLocation();
     const [showPickupDetails, setShowPickupDetails] = useState(false);
     const [fixedPoint, setFixedPoint] = useState<number | null>(null);
     const [showDropoffDetails, setShowDropoffDetails] = useState(false);
     const queryParams = new URLSearchParams(search);
     const userName = sessionStorage.getItem('username');
     const [showForm, setShowForm] = useState(false);
+    const [feedback, setFeedback] = useState(false);
 
     const [formData, setFormData] = useState<FormData>({
-        pickedTime: '',
+        pickedTime: null,
         serviceVehicle: '',
-        dropoffTime: '',
+        droppedTime: null,
         driverSalary: 'No',
         companyAmount: 'No',
         amount: '',
@@ -137,9 +145,10 @@ const ViewMore: React.FC = () => {
         fuelBillImageURLs: bookingDetails?.fuelBillImageURLs || [],
         comments: bookingDetails?.comments,
         pickedTime: bookingDetails?.pickedTime,
-        dropoffTime: bookingDetails?.dropoffTime,
+        droppedTime: bookingDetails?.droppedTime,
         remark: bookingDetails?.remark,
-        vehicleModal:bookingDetails?.vehicleModal,
+        feedback: bookingDetails?.feedback,
+
     });
 
     const [editStates, setEditStates] = useState({
@@ -167,9 +176,8 @@ const ViewMore: React.FC = () => {
         fuelBillImageURLs: false,
         comments: false,
         pickedTime: false,
-        dropoffTime: false,
+        droppedTime: false,
         remark: false,
-        vehicleModal:false,
         companyName:false,
 
     });
@@ -199,9 +207,8 @@ const ViewMore: React.FC = () => {
         fuelBillImageURLs: false,
         comments: false,
         pickedTime: false,
-        dropoffTime: false,
+        droppedTime: false,
         remark: false,
-        vehicleModal:false,
         companyName:false,
 
     });
@@ -241,7 +248,6 @@ const ViewMore: React.FC = () => {
     // ------------------------------------------------------------
     useEffect(() => {
         fetchBookingDetails();
-        fetchPoints();
         fetchDrivers();
     }, [db, id, uid]);
 
@@ -260,21 +266,7 @@ const ViewMore: React.FC = () => {
             console.error('Error fetching drivers:', error);
         }
     };
-    const fetchPoints = async () => {
-        try {
-            const querySnapshot = await getDocs(collection(db, `user/${uid}/driverPoint`));
-
-            if (!querySnapshot.empty) {
-                const docData = querySnapshot.docs[0].data();
-                setFixedPoint(docData.point); // Set the point value
-                setDocId(querySnapshot.docs[0].id); // Set the document ID
-            } else {
-                console.log('No documents found in the collection!');
-            }
-        } catch (err) {
-            console.error('Error fetching point:', err);
-        }
-    };
+   
 
     const fetchBookingDetails = async () => {
         if (!uid || !id) {
@@ -323,13 +315,14 @@ const ViewMore: React.FC = () => {
                     comments: data.comments || '',
                     status: data.status || '',
                     pickedTime: data.pickedTime || '',
-                    dropoffTime: data.dropoffTime || '',
+                    droppedTime: data.droppedTime || '',
                     remark: data.remark || '',
                     selectedDriver: data.selectedDriver || '',
                     formAdded: data.formAdded || '',
                     bookingChecked: data.bookingChecked || false,
-                    vehicleModal:data.vehicleModal || '',
-                    droppedTime:data.droppedTime|| ''
+                    paymentStatus:data.paymentStatus || '',
+                    feedback: data.feedback || false,
+
                 });
             }
         } catch (error) {
@@ -365,14 +358,56 @@ const ViewMore: React.FC = () => {
         setShowPickupDetails(false);
     };
 
-    const handleFormChange = (e: any) => {
+    const handleFormChange = (
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => {
         const { name, value } = e.target;
+    
         setFormData((prevData) => ({
             ...prevData,
-            [name]: value,
+            [name]: name === 'pickedTime' || name === 'droppedTime'
+                ? (value ? Timestamp.fromDate(new Date(value)) : null) // Convert string to Timestamp
+                : value,
         }));
     };
-
+    
+    const timestampToDate = (timestamp: Timestamp | null | undefined): Date | null => {
+        if (timestamp) {
+            return timestamp.toDate(); // Converts Timestamp to Date if it's not null
+        }
+        return null;
+    };
+    
+    // Updated useEffect
+    useEffect(() => {
+        if (bookingDetails) {
+            const isValidDate = (date: any): boolean => {
+                const parsedDate = new Date(date);
+                return !isNaN(parsedDate.getTime());
+            };
+    
+            setFormData({
+                // Keep pickedTime and droppedTime as Timestamp or null
+                pickedTime: bookingDetails.pickedTime 
+                    ? bookingDetails.pickedTime // Keep as Timestamp (no conversion)
+                    : null,
+                serviceVehicle: bookingDetails.serviceVehicle || '',
+                droppedTime: bookingDetails.droppedTime 
+                    ? bookingDetails.droppedTime // Keep as Timestamp (no conversion)
+                    : null,
+                driverSalary: bookingDetails.driverSalary || 'No',
+                companyAmount: bookingDetails.companyAmount || 'No',
+                amount: bookingDetails.amount || '',
+                distance: bookingDetails.distance || '',
+                remark: bookingDetails.remark || '',
+                fuelBillImageURLs: bookingDetails.fuelBillImageURLs || [],
+                vehicleImageURLs: bookingDetails.vehicleImageURLs || [],
+                rcBookImageURLs: bookingDetails.rcBookImageURLs || [],
+                vehicleImgURLs: bookingDetails.vehicleImgURLs || [],
+            });
+        }
+    }, [bookingDetails]);
+    
     const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!uid || !id) {
@@ -388,6 +423,7 @@ const ViewMore: React.FC = () => {
             });
             console.log('Booking successfully updated!');
             setShowForm(false);
+            navigate('/bookings/newbooking')
         } catch (error) {
             console.error('Error updating document:', error);
         }
@@ -470,8 +506,7 @@ const ViewMore: React.FC = () => {
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
-            timeZoneName: 'short',
-            hour12: false, // 24-hour format
+            hour12: true, // 24-hour format
         };
     
         // Use Intl.DateTimeFormat for proper formatting
@@ -527,8 +562,14 @@ const ViewMore: React.FC = () => {
         );
       };
       const handleFeedbackClick = () => {
-        navigate('/bookings/newbooking/viewmore/feedback', { state: { bookingId: id } }); // Navigate with bookingId
+        if (bookingDetails) {
+            const { selectedDriver } = bookingDetails;
+            navigate('/bookings/newbooking/viewmore/feedback', {
+                state: { bookingId: id, selectedDriver: selectedDriver } // Passing selectedDriver state
+            });
+        }
     };
+    
     return (
         <div className="container mx-auto my-8 p-4 bg-white shadow rounded-lg">
             <h5 className="font-semibold text-lg mb-5">Booking Details</h5>
@@ -560,12 +601,7 @@ const ViewMore: React.FC = () => {
 
 {showDropoffDetails && (
   <div>
-    {/* {bookingDetails.status === 'Order Completed' && (
-      <h3 className="text-xl font-bold mt-5">Fuel Bill Images</h3>
-    )}
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-      {renderImages({ images: bookingDetails.fuelBillImageURLs, type: 'fuelBill' })}
-    </div> */}
+   
 
     <h2 className="text-xl font-bold mt-5">Vehicle Images (Dropoff)</h2>
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -843,13 +879,13 @@ const ViewMore: React.FC = () => {
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <EditableField
                                     label="Vehicle Modal"
-                                    value={bookingDetails?.vehicleModal}
-                                    isEditing={editStates.vehicleModal}
-                                    editedValue={editedFields.vehicleModal}
-                                    loading={loadingStates.vehicleModal}
-                                    onEditClick={() => handleEditClick('vehicleModal')}
-                                    onSaveClick={() => handleSaveClick('vehicleModal')}
-                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, vehicleModal: e.target.value }))}
+                                    value={bookingDetails?.vehicleModel}
+                                    isEditing={editStates.vehicleModel}
+                                    editedValue={editedFields.vehicleModel}
+                                    loading={loadingStates.vehicleModel}
+                                    onEditClick={() => handleEditClick('vehicleModel')}
+                                    onSaveClick={() => handleSaveClick('vehicleModel')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, vehicleModel: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
                                     bookingCheck={bookingCheck}                                      
                                 />
@@ -976,7 +1012,7 @@ const ViewMore: React.FC = () => {
                             </tr>
                             <tr>
                                 <td className="bg-gray-100 p-2 font-semibold">Remark :</td>
-                                <td className="p-2">{bookingDetails.remark}</td>
+                                <td className="p-2 text-danger">{bookingDetails.remark}</td>
                             </tr>
                         </>
                     )}
@@ -986,9 +1022,14 @@ const ViewMore: React.FC = () => {
             <div className="w-full">
                 {bookingDetails?.bookingChecked === false && bookingDetails?.status === 'Order Completed' && (
                     <button
+                    disabled={bookingDetails?.paymentStatus === 'Not Paid'}
+
                         onClick={handleVerifyClick}
-                        className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-lg hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-300 ease-in-out"
-                    >
+                        className={`w-full text-white font-semibold py-2 px-4 rounded-lg shadow-lg focus:outline-none focus:ring-2 transition duration-300 ease-in-out ${
+                            bookingDetails?.paymentStatus === 'Not Paid' 
+                                ? 'bg-red-500 hover:bg-red-600 focus:ring-red-300' 
+                                : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:ring-blue-300'
+                        }`}                    >
                         Verify
                     </button>
                 )}
@@ -996,17 +1037,21 @@ const ViewMore: React.FC = () => {
                 {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && (
                     <p className="text-green-600 font-medium text-center mt-2">Booking verified successfully!</p>
                 )}
-                {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && (
-                <button
-                    className="bg-green-500 text-white px-4 py-2 rounded mt-4"
-                    onClick={handleFeedbackClick}
-                >
-                    Feedback Form
-                </button>
-            )}
+               {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && bookingDetails?.feedback !== true && (
+        <button
+            className="bg-green-500 text-white px-4 py-2 rounded mt-4"
+            onClick={handleFeedbackClick}
+        >
+            Feedback Form
+        </button>
+    )}
+
+    {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && bookingDetails?.feedback === true && (
+        <p className="text-red-600 font-medium text-center mt-2">Feedback Closed</p>
+    )}
             </div>
 
-            {showForm && (
+            {showForm && bookingDetails && (
                 <form onSubmit={handleFormSubmit} className="mt-8">
                     <div className="flex mb-5">
                         <button onClick={togglePickupDetails} className="mr-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
@@ -1020,8 +1065,7 @@ const ViewMore: React.FC = () => {
                     {/* Pickup details */}
                     {showPickupDetails && (
                         <div>
-                            {/* RC Book Images */}
-                            <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
+                            {/* <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
                             <input type="file" multiple onChange={(e) => handleFileChange(e, 'rcBookImageURLs')} />
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                 {formData.rcBookImageURLs.length > 0 ? (
@@ -1033,7 +1077,7 @@ const ViewMore: React.FC = () => {
                                 ) : (
                                     <p className="col-span-3">No RC Book Images available.</p>
                                 )}
-                            </div>
+                            </div> */}
 
                             {/* Vehicle Images (Pickup) */}
                             <h2 className="text-xl font-bold mt-5">Vehicle Images (Pickup)</h2>
@@ -1086,35 +1130,44 @@ const ViewMore: React.FC = () => {
                             </div>
                         </div>
                     )}
-                    <div className="mb-4">
-                        <label htmlFor="pickedTime" className="block text-sm font-medium text-gray-700">
-                            Pickup Time
-                        </label>
-                        <input
-                            type="datetime-local"
-                            id="pickedTime"
-                            name="pickedTime"
-                            value={formData.pickedTime}
-                            onChange={handleFormChange}
-                            className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-                            required
-                        />
-                    </div>
+                   <div className="mb-4">
+    <label htmlFor="pickedTime" className="block text-sm font-medium text-gray-700">
+        Pickup Time
+    </label>
+    <input
+        type="datetime-local"
+        id="pickedTime"
+        name="pickedTime"
+        value={
+            formData.pickedTime
+                ? formData.pickedTime.toDate().toISOString().slice(0, 16) // Convert Timestamp to ISO string
+                : '' // Use an empty string if null or undefined
+        }
+        onChange={handleFormChange}
+        className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
+        required
+    />
+</div>
 
-                    <div className="mb-4">
-                        <label htmlFor="dropoffTime" className="block text-sm font-medium text-gray-700">
-                            Dropoff Time
-                        </label>
-                        <input
-                            type="datetime-local"
-                            id="dropoffTime"
-                            name="dropoffTime"
-                            value={formData.dropoffTime}
-                            onChange={handleFormChange}
-                            className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-                            required
-                        />
-                    </div>
+<div className="mb-4">
+    <label htmlFor="droppedTime" className="block text-sm font-medium text-gray-700">
+        Dropoff Time
+    </label>
+    <input
+        type="datetime-local"
+        id="droppedTime"
+        name="droppedTime"
+        value={
+            formData.droppedTime
+                ? formData.droppedTime.toDate().toISOString().slice(0, 16) // Convert Timestamp to ISO string
+                : '' // Use an empty string if null or undefined
+        }
+        onChange={handleFormChange}
+        className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
+        required
+    />
+</div>
+
                     <div className="mb-4">
                         <label htmlFor="serviceVehicle" className="block text-sm font-medium text-gray-700">
                             Service Vehicle Number
@@ -1152,7 +1205,7 @@ const ViewMore: React.FC = () => {
                             Amount
                         </label>
                         <input
-                            type="number"
+                            type="text"
                             id="amount"
                             name="amount"
                             value={formData.amount}
@@ -1166,7 +1219,7 @@ const ViewMore: React.FC = () => {
                             Distance
                         </label>
                         <input
-                            type="number"
+                            type="text"
                             id="distance"
                             name="distance"
                             value={formData.distance}

@@ -1,18 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
 
-const InvoicedBooking = () => {
-    const [completedBookings, setCompletedBookings] = useState([]);
-    const uid = sessionStorage.getItem('uid')
+// Define the shape of booking data
+interface Booking {
+    id: string;
+    dateTime: string;
+    customerName: string;
+    phoneNumber: string;
+    serviceType: string;
+    vehicleNumber: string;
+    comments: string;
+}
+
+const InvoicedBooking: React.FC = () => {
+    const [completedBookings, setCompletedBookings] = useState<Booking[]>([]); // Properly type the state
+    const uid = sessionStorage.getItem('uid'); // sessionStorage can return null
+
     useEffect(() => {
         const fetchCompletedBookings = async () => {
             try {
+                if (!uid) {
+                    console.error('User ID is not available in session storage.');
+                    return;
+                }
+
                 const db = getFirestore();
-                const q = query(collection(db, `user/${uid}/bookings`), where('status', '==', 'Rejected'));
-                const querySnapshot = await getDocs(q);
-                const bookingsData = querySnapshot.docs.map((doc) => ({
+                const bookingsQuery = query(
+                    collection(db, `user/${uid}/bookings`),
+                    where('status', '==', 'Rejected')
+                );
+                const querySnapshot = await getDocs(bookingsQuery);
+                const bookingsData: Booking[] = querySnapshot.docs.map((doc) => ({
                     id: doc.id,
-                    ...doc.data(),
+                    ...(doc.data() as Omit<Booking, 'id'>), // Cast Firestore data to Booking type
                 }));
                 setCompletedBookings(bookingsData);
             } catch (error) {
@@ -21,7 +41,7 @@ const InvoicedBooking = () => {
         };
 
         fetchCompletedBookings();
-    }, []);
+    }, [uid]);
 
     return (
         <div className="panel mt-6">
