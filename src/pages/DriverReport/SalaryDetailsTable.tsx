@@ -82,7 +82,9 @@ const SalaryDetailsTable: React.FC<SalaryDetailsTableProps> = ({
       colorIndex = (colorIndex + 1) % colors.length;
     }
   });
-
+  if (!showAdvanceDetails) {
+    return null; // Explicitly return null when the details are not shown
+  }
   return (
     showAdvanceDetails && (
       <div className="overflow-x-auto">

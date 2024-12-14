@@ -13,6 +13,14 @@ interface StaffReceived {
     amount: number;
     date: string;
     amountGiven?: number;
+    selectedBookingId?: string;
+    fileNumber?: string; // Added optional property
+    driver?: string;
+}
+interface Booking {
+    fileNumber: string;
+    driver: string;
+    updatedTotalSalary: number;
 }
 
 const StaffDetailsReport = () => {
@@ -20,6 +28,8 @@ const StaffDetailsReport = () => {
     const [staffReceivedEntries, setStaffReceivedEntries] = useState<StaffReceived[]>([]);
     const [amountGivenValues, setAmountGivenValues] = useState<{ [key: number]: number }>({});
     const [buttonColors, setButtonColors] = useState<{ [key: number]: string }>({});
+    const [bookings, setBookings] = useState<Booking[]>([]);
+
     const [filteredEntries, setFilteredEntries] = useState<StaffReceived[]>([]);
     const { id } = useParams<{ id: string }>();
     const db = getFirestore();
@@ -50,18 +60,34 @@ const navigate = useNavigate()
     useEffect(() => {
         const fetchStaffReceivedEntries = async () => {
             if (!uid || !id) return;
-
+    
             try {
                 const staffReceivedQuery = collection(db, `user/${uid}/users/${id}/staffReceived`);
                 const querySnapshot = await getDocs(staffReceivedQuery);
-
+    
                 const fetchedEntries = querySnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data(),
+                    amount: Number(doc.data().amount), // Convert amount to a number
+
                 } as StaffReceived));
-                setStaffReceivedEntries(fetchedEntries);
-                setFilteredEntries(fetchedEntries); // Initialize filteredEntries
-                const initialColors = fetchedEntries.map(entry => {
+    
+                // Fetch bookings data for selectedBookingId
+                const bookingsPromises = fetchedEntries
+                    .filter(entry => entry.selectedBookingId) // Ensure selectedBookingId exists
+                    .map(async (entry) => {
+                        const bookingDoc = doc(db, `user/${uid}/bookings`, entry.selectedBookingId!);
+                        const bookingSnap = await getDoc(bookingDoc);
+                        return bookingSnap.exists()
+                            ? { ...entry, ...bookingSnap.data() } // Merge booking data into entry
+                            : entry;
+                    });
+    
+                const combinedEntries = (await Promise.all(bookingsPromises)) as (StaffReceived & Booking)[];
+                setStaffReceivedEntries(combinedEntries);
+                setFilteredEntries(combinedEntries); // Initialize filteredEntries
+    
+                const initialColors = combinedEntries.map(entry => {
                     const amountGiven = entry.amountGiven || 0;
                     return amountGiven <= 0 ? 'red' : amountGiven < entry.amount ? 'orange' : 'green';
                 });
@@ -70,7 +96,7 @@ const navigate = useNavigate()
                 console.error("Error fetching staff received entries: ", error);
             }
         };
-
+    
         fetchStaffReceivedEntries();
     }, [uid, id]);
 
@@ -81,8 +107,9 @@ const navigate = useNavigate()
         }));
     };
 
-    const calculateBalance = (amount: number, amountGiven: number = 0) => amount - amountGiven;
-
+    const calculateBalance = (amount: number | string, amountGiven: number = 0) => 
+        Number(amount) - amountGiven;
+    
     const handleSaveAmountGiven = async (index: number) => {
         const entry = staffReceivedEntries[index];
         const newAmountGiven = amountGivenValues[index];
@@ -181,6 +208,9 @@ const navigate = useNavigate()
                             <thead>
                                 <tr>
                                     <th className="px-6 py-3 border-b-2 border-gray-300">Date</th>
+                                    <th className="px-6 py-3 border-b-2 border-gray-300">FileNumber</th>
+                                    <th className="px-6 py-3 border-b-2 border-gray-300">Driver Name</th>
+
                                     <th className="px-6 py-3 border-b-2 border-gray-300">Staff Received Amount</th>
                                     {role !== 'staff' && (
                                         <th className="px-6 py-3 border-b-2 border-gray-300">Amount Given From Staff</th>
@@ -198,14 +228,22 @@ const navigate = useNavigate()
                                             {format(new Date(entry.date), 'yyyy-MM-dd HH:mm')}
                                         </td>
                                         <td className="px-6 py-4 border-b">
-                                            {entry.amount.toFixed(2)}
-                                        </td>
+                {entry.fileNumber || 'N/A'}
+            </td>
+            <td className="px-6 py-4 border-b">
+                {entry.driver || 'N/A'}
+            </td>
+            <td className="px-6 py-4 border-b">
+    {(Number(entry.amount) || 0).toFixed(2)}
+</td>
+
+
                                         {role !== 'staff' && (
                                             <td className="px-6 py-4 border-b">
                                                 <input
-                                                    type="number"
+                                                    type="text"
                                                     value={amountGivenValues[index] || entry.amountGiven || 0}
-                                                    onChange={(e) => handleAmountGivenChange(index, Number(e.target.value))}
+                                                    onChange={(e) => handleAmountGivenChange(index, Number(e.target.value) || 0 )}
                                                     placeholder="Enter Amount"
                                                     className="border border-gray-300 rounded-lg p-2"
                                                 />

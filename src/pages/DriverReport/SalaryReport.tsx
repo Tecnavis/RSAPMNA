@@ -292,7 +292,9 @@ const SalaryReport: React.FC = () => {
                     const bookingSnapshot = await getDoc(bookingRef);
 
                     if (bookingSnapshot.exists()) {
-                        const { totalDriverSalary } = bookingSnapshot.data();
+                        const bookingData = bookingSnapshot.data();
+
+                        const totalDriverSalary = bookingData?.totalDriverSalary || 0;
                         const transferedSalary = totalDriverSalary;
                         const balanceSalary = 0;
                         const salaryApproved = true; // Set salaryApproved status to true
@@ -303,7 +305,7 @@ const SalaryReport: React.FC = () => {
                             salaryApproved, // Add this line to update the status
                         });
 
-                        return { id: bookingSnapshot.id, ...bookingSnapshot.data(), transferedSalary, balanceSalary, salaryApproved };
+                        return { id: bookingSnapshot.id,totalDriverSalary, transferedSalary, balanceSalary, salaryApproved };
                     } else {
                         console.log(`No booking found with ID: ${bookingId}`);
                         return null;
@@ -315,12 +317,14 @@ const SalaryReport: React.FC = () => {
 
                 // Update local state after successful updates
                 setBookings((prevBookings) =>
-                    prevBookings.map((booking) =>
-                        filteredBookings.find((updatedBooking) => updatedBooking.id === booking.id)
-                            ? { ...booking, transferedSalary: booking.totalDriverSalary, balanceSalary: 0, salaryApproved: true }
-                            : booking
-                    )
+                    prevBookings.map((booking) => {
+                        const updatedBooking = filteredBookings.find((updatedBooking) => updatedBooking?.id === booking.id);
+                        return updatedBooking
+                            ? { ...booking, transferedSalary: updatedBooking.totalDriverSalary, balanceSalary: 0, salaryApproved: true }
+                            : booking;
+                    })
                 );
+                
 
                 setSelectedBookings([]); // Clear selected bookings after confirmation
 
@@ -687,29 +691,9 @@ const SalaryReport: React.FC = () => {
             </div>
 
             {/* ------------------------------------------------- */}
-            <div className="mb-4 flex flex-col items-center">
-                <h2 className="text-xl font-bold mb-2">Add Advance Payment</h2>
-                <div className="flex flex-col md:flex-row items-center">
-                    <input
-                        type="text"
-                        placeholder="Advance Payment"
-                        value={editFormData.advance}
-                        onChange={(e) => setEditFormData({ ...editFormData, advance: Number(e.target.value) })}
-                        className="border rounded p-2 mb-2 md:mb-0 md:mr-2 w-full md:w-auto"
-                    />   {/* <input
-                        type="date"
-                        placeholder="Advance Payment Date"
-                        value={editFormData.advancePaymentDate}
-                        onChange={(e) => setEditFormData({ ...editFormData, advancePaymentDate: e.target.value })}
-                        className="border rounded p-2 mb-2 md:mb-0 w-full md:w-auto"
-                    />
-                  */}
-                </div>
-            </div>
+           
             <div className="mb-4 flex justify-center space-x-0 md:space-x-4 flex-col md:flex-row">
-                <button onClick={handleAdvance} className="bg-blue-900 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded mb-2 md:mb-0">
-                    Add Advance
-                </button>
+               
                 <button
           onClick={() => setShowAdvanceTable(!showAdvanceTable)}
           className="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"

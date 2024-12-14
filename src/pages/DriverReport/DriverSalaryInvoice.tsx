@@ -17,6 +17,7 @@ interface Booking {
     balanceSalary: number;
     driver: string;
     fileNumber: string;
+    dateTime:string
   }
   
   interface LocationState {
@@ -120,6 +121,8 @@ const DriverSalaryInvoice: React.FC = () => {
 
     const columns = [
         { key: 'id', label: 'S.NO' },
+        { key: 'dateTime', label: 'Date' },
+
         { key: 'serviceType', label: 'Service Type' },
         { key: 'vehicleNumber', label: 'Vehicle Number', class: 'text-center' },
         { key: 'totalDriverSalary', label: 'Salary', class: 'text-center' },
@@ -214,7 +217,9 @@ const totalBalance = bookings.reduce((total, booking) => total + Number(booking.
                         {bookings.map((booking, index) => (
                         <tr key={booking.id}>
                             <td>{index + 1}</td>
-                            <td>{booking.serviceType}</td>
+                            <td className="text-center">{booking.dateTime}</td>
+
+                            <td className="text-center">{booking.serviceType}</td>
                             <td className="text-center">{booking.vehicleNumber}</td>
                             <td className="text-center">{booking.totalDriverSalary}</td>
                             <td className="text-center">{booking.transferedSalary}</td>

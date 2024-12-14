@@ -48,7 +48,7 @@ const CompanyCreationAdd = () => {
 
     const [companyName, setCompanyName] = useState("Company");
     const [errorMessage, setErrorMessage] = useState('');
-    const [advance, setAdvance] = useState('0');
+    const [advance, setAdvance] = useState(0);
 
     const [personalphone, setPersonalPhone] = useState('');
     const [salaryPerKm, setSalaryPerKm] = useState<SalaryPerKm>({});

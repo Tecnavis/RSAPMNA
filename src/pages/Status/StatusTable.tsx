@@ -250,7 +250,7 @@ const StatusTable: React.FC = () => {
                 let paymentStatus = 'Not Paid';
     
                 // Calculate newAmount by adding the new payment to existing amount
-                let newAmount = paymentAmountNumber;
+                let newAmount = String(paymentAmountNumber);
     
                 // Update user collection
                 const userQuery = query(
@@ -276,8 +276,8 @@ const StatusTable: React.FC = () => {
                     if (!existingEntrySnapshot.empty) {
                         // If an entry exists, update the amount by summing
                         const existingEntryDoc = existingEntrySnapshot.docs[0];
-                        const existingAmount = existingEntryDoc.data().amount || 0;
-                        newAmount += existingAmount;
+                        const existingAmount = existingEntryDoc.data().amount || '0'; // Default to string
+                        newAmount = String(Number(newAmount) + Number(existingAmount));
     
                         const entryRef = doc(
                             db,
@@ -286,7 +286,7 @@ const StatusTable: React.FC = () => {
                         );
     
                         await updateDoc(entryRef, {
-                            amount: newAmount,
+                            amount: newAmount, // Save as string
                             date: new Date().toISOString(),
                         });
                     } else {
@@ -300,7 +300,7 @@ const StatusTable: React.FC = () => {
                 }
     
                 // Update payment status based on the new total amount
-                if (newAmount >= updatedTotalSalary) {
+                if (Number(newAmount) >= updatedTotalSalary) {
                     paymentStatus = 'Paid';
                 }
     
@@ -685,7 +685,7 @@ const StatusTable: React.FC = () => {
         }}
     >
         <h2 className="text-xl font-semibold">
-            Payment Settlement for {selectedBooking?.customerName}
+            Payment Settlement of {selectedBooking?.customerName}
         </h2>
         <div className="mt-4">
             <label className="block">Payable Amount (By Customer):</label>
@@ -696,7 +696,7 @@ const StatusTable: React.FC = () => {
         <div className="mt-4">
             <label className="block">Amount</label>
             <input
-                type="number"
+                type="text"
                 value={paymentAmount}
                 onChange={(e) => setPaymentAmount(e.target.value)}
                 className="border p-2 w-full"

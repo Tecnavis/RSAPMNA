@@ -53,6 +53,7 @@ type RecordData = {
     requestBool: boolean;
     requestBool1: boolean;
     currentLocation?: string;
+    phone?: string;
 };
 interface Location {
     name?: string;
@@ -312,6 +313,7 @@ console.log("currentDate",currentDate)
     
             // Update the pickupLocation in Firestore with the currentLocation
             await updateDoc(bookingRef, {
+                status: 'Vehicle Picked',
                 pickupLocation: {
                     lat: modalData.currentLocation.lat.toString(), // Convert to string
                     lng: modalData.currentLocation.lng.toString(), // Convert to string

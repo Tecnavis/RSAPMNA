@@ -40,7 +40,6 @@ const DriverReport: React.FC = () => {
                 const driverList = querySnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data(),
-                    netTotalAmountInHand: doc.data().netTotalAmountInHand ?? 0, // Default to 0 if undefined
 
                 })) as Driver[];
                 setDrivers(driverList);
@@ -146,8 +145,9 @@ const DriverReport: React.FC = () => {
                                     )}
                                 </td>
                                 <td className="border px-4 py-2">
-    {driver.netTotalAmountInHand.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
+    {driver.netTotalAmountInHand?.toLocaleString('en-IN', { style: 'currency', currency: 'INR' }) ?? 'N/A'}
 </td>
+
 
 {(title === 'PMNA Drivers' || title === 'Providers Details') && (
                                 <td className="border px-4 py-2">

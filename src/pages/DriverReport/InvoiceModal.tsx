@@ -27,7 +27,10 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({
   const selectedBookingDetails = selectedBookings.map((bookingId) =>
     bookings.find((b) => b.id === bookingId)
   ).filter((booking): booking is Booking => !!booking); // Type guard to filter out undefined bookings
-
+  const parseCustomDate = (dateStr: string) => {
+    const [day, month, year] = dateStr.split('/'); // Adjust for your custom format
+    return new Date(`${year}-${month}-${day}`);
+  };
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 p-4">
       <div className="bg-white p-5 rounded-lg shadow-lg w-full max-w-4xl">
@@ -50,8 +53,12 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({
                 <tr key={booking.id}>
                   <td className="border px-4 py-2">{booking.fileNumber}</td>
                   <td className="border px-4 py-2">
-                    {new Date(booking.dateTime).toLocaleDateString()}
-                  </td>
+  {isNaN(parseCustomDate(booking.dateTime).getTime())
+    ? "Invalid Date"
+    : parseCustomDate(booking.dateTime).toLocaleDateString()}
+</td>
+
+
                   <td className="border px-4 py-2">{booking.serviceType}</td>
                   <td className="border px-4 py-2">{booking.vehicleNumber}</td>
                   <td className="border px-4 py-2">{booking.totalDriverSalary}</td>

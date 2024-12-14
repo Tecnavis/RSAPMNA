@@ -46,7 +46,7 @@ const CashCollectionCompany: React.FC = () => {
     const [driver, setDriver] = useState<Driver | null>(null);
     const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
     const [editingAmount, setEditingAmount] = useState<string>('');
-    // const [receivedAmount, setReceivedAmount] = useState<string>('');
+    const [inputValues, setInputValues] = useState<Record<string, string>>({}); // Track input values for each booking
     const [receivedAmountCompany, setReceivedAmountCompany] = useState<string>('');
     const [password, setPassword] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -251,11 +251,9 @@ const CashCollectionCompany: React.FC = () => {
 
             const totalBalances = bookings.reduce((acc, booking) => {
                 if (booking.companyBooking) {
-                    let amount = parseFloat(booking.amount?.toString() || '0');
-                    let receivedAmountCompany = parseFloat(booking.receivedAmountCompany?.toString() || '0');
-                    const balance = amount - receivedAmountCompany;
-                    console.log(`Accumulated Total Balance So Far (Company Booking): ${balance}`);
-                    return acc + balance;
+                    const amount = parseFloat(booking.amount?.toString() || '0');
+                const receivedAmountCompany = parseFloat(booking.receivedAmountCompany?.toString() || '0');
+                return acc + (amount - receivedAmountCompany);
                 }
                 return acc;
             }, 0);
@@ -263,7 +261,7 @@ const CashCollectionCompany: React.FC = () => {
             console.log('Total Balance:', totalBalances);
             const calculatedNetTotalAmountInHand = calculateNetTotalAmountInHand();
             setTotalBalances(totalBalances);
-            setNetTotalAmountInHand(parseFloat(calculatedNetTotalAmountInHand));
+            setNetTotalAmountInHand(parseFloat(calculatedNetTotalAmountInHand ));
 
             const driverRef = doc(db, `user/${uid}/driver`, id);
             console.log('Total Balance:', totalBalances);
@@ -525,7 +523,22 @@ const CashCollectionCompany: React.FC = () => {
             console.error('Error during handleAmountReceiveChange:', error);
         }
     };
-
+    const handleInputChange = (bookingId: string, value: string) => {
+        setInputValues((prev) => ({
+            ...prev,
+            [bookingId]: value,
+        }));
+    };
+    
+    const handleOkClick = async (bookingId: string) => {
+        const receivedAmountCompany = inputValues[bookingId]; // Get the input value for the specific booking
+        if (!receivedAmountCompany) {
+            console.error('No amount entered.');
+            return;
+        }
+    
+        await handleAmountReceivedChange(bookingId, receivedAmountCompany); // Call the existing function
+    };
     const handleAmountReceivedChange = async (bookingId: string, receivedAmountCompany: string) => {
         try {
             if (!uid || typeof uid !== 'string') {
@@ -550,8 +563,12 @@ const CashCollectionCompany: React.FC = () => {
                 console.error('Invalid received amount.');
                 return;
             }
-            const updatedBalance = calculateBalance(booking.updatedTotalSalary , receivedAmountToUse, true);
-            const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
+            const updatedBalance = calculateBalance(
+                booking.updatedTotalSalary || 0,
+                receivedAmountToUse,
+                true
+            );
+                        const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
             await updateDoc(bookingRef, {
                 receivedAmountCompany: receivedAmountToUse,
                 balance: updatedBalance,
@@ -570,7 +587,7 @@ const CashCollectionCompany: React.FC = () => {
 
         // Update driver's netTotalAmountInHand
         await updateDoc(driverRef, {
-            netTotalAmountInHand: newNetTotal.toFixed(2),
+            netTotalAmountInHand: newNetTotal,
         });
     } else {
         console.warn('Driver not found.');
@@ -794,8 +811,8 @@ const CashCollectionCompany: React.FC = () => {
                                                         <>
                                                         <input
                                                             type="text"
-                                                            value={booking.receivedAmountCompany || ''}
-                                                            onChange={(e) => handleAmountReceivedChange(booking.id, e.target.value)}
+                                                            value={inputValues[booking.id] || booking.receivedAmountCompany || ''}
+                                                            onChange={(e) => handleInputChange(booking.id, e.target.value)}
                                                             style={{
                                                                 border: '1px solid #d1d5db',
                                                                 borderRadius: '0.25rem',
@@ -805,12 +822,33 @@ const CashCollectionCompany: React.FC = () => {
                                                             disabled={booking.approve}
                                                             min="0"
                                                         />
-                                                        <button 
-                    onClick={() => handleAmountReceivedChange(booking.id, receivedAmountCompany || '')} // Pass the value from the input field
+                                                        <button
+                    onClick={() => handleOkClick(booking.id)}
                     disabled={booking.approve}
-                                                    >
-                                                        OK
-                                                    </button>
+                    style={{
+                        backgroundColor:
+                            Number(
+                                calculateBalance(
+                                    parseFloat(
+                                        booking.updatedTotalSalary?.toString() || 
+                                        
+                                        '0'
+                                    ),
+                                    inputValues[booking.id] || booking.receivedAmountCompany || '0',
+                                    booking.companyBooking ?? false
+                                )
+                            ) === 0
+                                ? '#28a745' // Green for zero balance
+                                : '#dc3545', // Red for non-zero balance
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.25rem',
+                        padding: '0.5rem',
+                        cursor: 'pointer',
+                    }}
+                >
+                    OK
+                </button>
                                                 </>
                                                     )}
                                                     
