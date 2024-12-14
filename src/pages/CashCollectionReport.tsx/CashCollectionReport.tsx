@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, writeBatch, arrayUnion, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, writeBatch, arrayUnion, Timestamp, runTransaction } from 'firebase/firestore';
 import Modal from 'react-modal';
 import { parse, format } from 'date-fns';
 import styles from './cashCollectionReport.module.css';
@@ -45,7 +45,7 @@ const CashCollectionReport: React.FC = () => {
     const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
     const [editingAmount, setEditingAmount] = useState<string>('');
     const [receivedAmount, setReceivedAmount] = useState<string>('');
-    // const [receivedAmountCompany, setReceivedAmountCompany] = useState<string>('');
+    const [inputValues, setInputValues] = useState<Record<string, string>>({}); // Track input values for each booking
     const [password, setPassword] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState('');
     const [bookingToApprove, setBookingToApprove] = useState<Booking | null>(null);
@@ -250,21 +250,21 @@ const amountToUse = parseFloat(booking.amount.toString() );
             console.log('Total Balance:', totalBalances);
             const calculatedNetTotalAmountInHand = calculateNetTotalAmountInHand();
             setTotalBalances(totalBalances);
-            setNetTotalAmountInHand(parseFloat(calculatedNetTotalAmountInHand));
-    
+            const netTotalAsNumber = parseFloat(calculatedNetTotalAmountInHand);
+        
             const driverRef = doc(db, `user/${uid}/driver`, id);
             console.log('Total Balance:', totalBalances);
             console.log('Net Total Amount in Hand:', calculatedNetTotalAmountInHand);
     
-            if (parseFloat(calculatedNetTotalAmountInHand) !== 0) {
-                await updateDoc(driverRef, {
-                    totalBalances: totalBalances,
-                    netTotalAmountInHand: parseFloat(calculatedNetTotalAmountInHand),
-                });
+                   // Update Firestore document
+        await updateDoc(driverRef, {
+            totalBalances: totalBalances,
+            netTotalAmountInHand: netTotalAsNumber,
+        });
+        setNetTotalAmountInHand(netTotalAsNumber);
+
                 console.log('Total balance and net total updated successfully:', calculatedNetTotalAmountInHand);
-            } else {
-                console.log('Net Total is zero, skipping update.');
-            }
+            
         } catch (error) {
             console.error('Error updating total balance:', error);
         }
@@ -498,7 +498,22 @@ const amountToUse = parseFloat(booking.amount.toString() );
             console.error('Error during handleAmountReceiveChange:', error);
         }
     };
+    const handleInputChange = (bookingId: string, value: string) => {
+        setInputValues((prev) => ({
+            ...prev,
+            [bookingId]: value,
+        }));
+    };
     
+    const handleOkClick = async (bookingId: string) => {
+        const receivedAmountCompany = inputValues[bookingId]; // Get the input value for the specific booking
+        if (!receivedAmountCompany) {
+            console.error('No amount entered.');
+            return;
+        }
+    
+        await handleAmountReceivedChange(bookingId, receivedAmountCompany); // Call the existing function
+    };
     const handleAmountReceivedChange = async (bookingId: string, receivedAmount: string) => {
         try {
             if (!uid || typeof uid !== 'string') {
@@ -512,14 +527,33 @@ const amountToUse = parseFloat(booking.amount.toString() );
             if (!booking) {
                 throw new Error('Booking not found.');
             }
-    
+            if (!booking.selectedDriver) {
+                throw new Error('Selected driver is not defined for this booking.');
+            }
             const receivedAmountToUse = parseFloat(receivedAmount);
     
             const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
-            await updateDoc(bookingRef, {
-                receivedAmount: receivedAmountToUse,
-                balance: calculateBalance(booking.amount || 0, receivedAmountToUse),
-            });
+            const driverRef = doc(db, `user/${uid}/driver`, booking.selectedDriver);
+
+            await runTransaction(db, async (transaction) => {
+                const bookingDoc = await transaction.get(bookingRef);
+                if (!bookingDoc.exists()) throw new Error("Booking does not exist.");
+    
+                const driverDoc = await transaction.get(driverRef);
+                if (!driverDoc.exists()) throw new Error("Driver does not exist.");
+    
+                const currentNetTotal = parseFloat(driverDoc.data().netTotalAmountInHand || 0);
+                const newNetTotal = currentNetTotal + receivedAmountToUse;
+    
+                // Update booking and driver within the same transaction
+                transaction.update(bookingRef, {
+                                    receivedAmount: receivedAmountToUse,
+                                    balance: calculateBalance(bookingDoc.data().amount || 0, receivedAmountToUse),
+                                });
+                                transaction.update(driverRef, {
+                                    netTotalAmountInHand: newNetTotal,
+                                });
+                            });
     
             setBookings(
                 bookings.map((b) =>
@@ -756,21 +790,48 @@ const amountToUse = parseFloat(booking.amount.toString() );
                                                         <span style={{ color: 'red', fontWeight: 'bold' }}>Not Need</span>
                                                     ) : (
                                                         <>
-                                                            <input
-                                                                type="text"
-                                                                value={booking.receivedAmount }
-                                                                onChange={(e) => handleAmountReceivedChange(booking.id, e.target.value)}
-                                                                style={{
-                                                                    border: '1px solid #d1d5db',
-                                                                    borderRadius: '0.25rem',
-                                                                    padding: '0.25rem 0.5rem',
-                                                                    marginRight: '0.5rem',
-                                                                }}
-                                                                disabled={booking.approve}
-                                                                min="0"
-                                                            />
-                                                        </>
+                                                             <input
+                                                            type="text"
+                                                            value={inputValues[booking.id] || booking.receivedAmount || ''}
+                                                            onChange={(e) => handleInputChange(booking.id, e.target.value)}
+                                                            style={{
+                                                                border: '1px solid #d1d5db',
+                                                                borderRadius: '0.25rem',
+                                                                padding: '0.25rem 0.5rem',
+                                                                marginRight: '0.5rem',
+                                                            }}
+                                                            disabled={booking.approve}
+                                                            min="0"
+                                                        />
+                                                        <button
+                    onClick={() => handleOkClick(booking.id)}
+                    disabled={booking.approve}
+                    style={{
+                        backgroundColor:
+                            Number(
+                                calculateBalance(
+                                    parseFloat(
+                                        booking.amount?.toString() || 
+                                         
+                                        '0'
+                                    ),
+                                    inputValues[booking.id] || booking.receivedAmount || '0'
+                                )
+                            ) === 0
+                                ? '#28a745' // Green for zero balance
+                                : '#dc3545', // Red for non-zero balance
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.25rem',
+                        padding: '0.5rem',
+                        cursor: 'pointer',
+                    }}
+                >
+                    OK
+                </button>
+                                                </>
                                                     )}
+                                                    
                                                 </div>
                                             </td>
 

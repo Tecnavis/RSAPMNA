@@ -13,6 +13,7 @@ interface VehicleSectionProps {
     adjustValue: string;
     onInsuranceChange: (insurance: string) => void;
     bodyShope: string;
+    onApplyAdjustment: () => void; 
 }
 
 interface ShowRoomState {
@@ -36,6 +37,7 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
     adjustValue,
     onInsuranceChange,
     bodyShope,
+    onApplyAdjustment, 
 }) => {
     const [showRoom, setShowRoom] = useState<ShowRoomState>({
         availableServices: serviceCategory || '',
@@ -52,8 +54,10 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
     const adjustmentApplied = useRef<boolean>(false);
     const uid = sessionStorage.getItem('uid') || '';
     const db = getFirestore();
-// --------------------------------------------------------------------------------------
-    useEffect(() => {
+    const handleApply = () => {
+        // Trigger the parent callback to handle the adjustment
+        onApplyAdjustment();
+    };    useEffect(() => {
         const fetchInsuranceAmountBody = async () => {
             const showroomRef = collection(db, `user/${uid}/showroom`);
             const q = query(showroomRef, where('Location', '==', showroomLocation));
@@ -148,6 +152,9 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
             setShowNotification(false); // Hide notification if input is cleared
         }
     };
+   
+  
+    
     const applyAdjustment = (event?: React.MouseEvent<HTMLButtonElement>) => {
         // Prevent default form behavior if applicable
         if (event) event.preventDefault();
@@ -184,7 +191,11 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
             }
         }
     };
-
+    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        // Call both functions
+        applyAdjustment(event); // First, apply the adjustment logic
+        handleApply();           // Then, trigger the parent callback to handle additional logic
+    };
     return (
         <div className="mb-5">
             <h1>Service Category</h1>
@@ -296,7 +307,7 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
                         <label style={{ fontSize: '1.5em', color: 'red', marginRight: '10px' }}>Adjustment Value:</label>
                         <input type="text" value={adjustValue} onChange={handleAdjustValueChange} style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }} />
                         <button
-                            onClick={applyAdjustment}
+                            onClick={handleClick}
                             style={{
                                 padding: '8px 16px',
                                 borderRadius: '5px',

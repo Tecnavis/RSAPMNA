@@ -119,15 +119,12 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [errors, setErrors] = useState<any>({});
     const [adjustValue, setAdjustValue] = useState<string>('');
     const [bodyShope, setBodyShope] = useState<string>('');
-//   ----------------------------------------------------------------------------------
+    const [isAdjustmentApplied, setIsAdjustmentApplied] = useState(false);
+    const [isEditing, setIsEditing] = useState(false); // To track if we're in edit mode
 
     const uid = sessionStorage.getItem('uid');
     const userName = sessionStorage.getItem('username');
     const role = sessionStorage.getItem('role');
-    // const [dis1, setDis1] = useState<string>('');
-    // const [dis2, setDis2] = useState<string>('');
-    // const [dis3, setDis3] = useState<string>('');
-    // -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------13-10-2024----------------------------------------------------------
     useEffect(() => {
         if (state && state.editData) {
             const editData = state.editData;
@@ -139,7 +136,6 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             setComments(editData.comments || '');
             setFileNumber(editData.fileNumber || '');
             setCompany(editData.company || '');
-            console.log('editData.company', editData.company);
             setTotalDriverSalary(editData.totalDriverSalary || 0);
             setTotalDriverDistance(editData.totalDriverDistance || 0);
             setCustomerName(editData.customerName || '');
@@ -164,11 +160,12 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             setTotalSalary(editData.totalSalary || 0);
             setDropoffLocation(editData.dropoffLocation || null);
             setSelectedCompany(editData.selectedCompany || '');
-            console.log('editData.selectedCompan', editData.selectedCompany);
             setDisableFields(false);
+            setIsEditing(true); // Mark as editing
+        } else {
+            setIsEditing(false); // If no edit data, it's a new entry
         }
     }, [state]);
-    
 
     useEffect(() => {
         const formatDate = (date: Date) => {
@@ -231,27 +228,30 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             tempErrors['updatedTotalSalary'] = 'Updated Total Salary is required and must be greater than 0 when Trapped Location is "Outside of Road"';
             isValid = false;
         }
-  // Company validation
-  if (!company) {
-    tempErrors['company'] = 'Company is required';
-    isValid = false;
-} else if (company === 'rsa' && !selectedCompany) {
-    tempErrors['selectedCompany'] = 'Please select a company for RSA work';
-    isValid = false;
-} else if (company === 'rsa') {
-    // File number validation for "self"
-    if (!fileNumber.trim()) {
-        tempErrors['fileNumber'] = 'File number is required for rsa work';
-        isValid = false;
-    } else if (!fileNumber.trim()) {
-        tempErrors['fileNumber'] = 'File number is required for payment work';
-        isValid = false;
-    }
-}
+        if (!isEditing && adjustValue && !isAdjustmentApplied) {
+            tempErrors['applyAdjustment'] = 'You must click the Apply button';
+            isValid = false;
+        }
+        if (!company) {
+            tempErrors['company'] = 'Company is required';
+            isValid = false;
+        } else if (company === 'rsa' && !selectedCompany) {
+            tempErrors['selectedCompany'] = 'Please select a company for RSA work';
+            isValid = false;
+        } else if (company === 'rsa') {
+            // File number validation for "self"
+            if (!fileNumber.trim()) {
+                tempErrors['fileNumber'] = 'File number is required for rsa work';
+                isValid = false;
+            } else if (!fileNumber.trim()) {
+                tempErrors['fileNumber'] = 'File number is required for payment work';
+                isValid = false;
+            }
+        }
 
-setErrors(tempErrors);
-return isValid;
-};
+        setErrors(tempErrors);
+        return isValid;
+    };
     // ------------------------------------------
     useEffect(() => {
         if (company === 'rsa') {
@@ -276,13 +276,16 @@ return isValid;
     const handleUpdateTotalSalary = (newTotaSalary: any) => {
         setUpdatedTotalSalary(newTotaSalary);
     };
-
+    const handleApplyAdjustment = () => {
+        setIsAdjustmentApplied(true);
+        // Call any other logic you need for applying the adjustment
+    };
     const handleInsuranceAmountBodyChange = (amount: any) => {
-        console.log('amounttt', amount);
         setInsuranceAmountBody(amount);
     };
     const handleAdjustValueChange = (newAdjustValue: any) => {
         setAdjustValue(newAdjustValue);
+        setIsAdjustmentApplied(false);
     };
     const handleServiceCategoryChange = (service: any) => {
         setServiceCategory(service);
@@ -292,16 +295,12 @@ return isValid;
     };
 
     useEffect(() => {
-        console.log('Selected Company ID:', selectedCompany);
-        console.log('Companies Data:', companies); // Log the companies array
-
+      
         if (selectedCompany) {
             // Find the company details corresponding to the selected company
             const foundCompanyData = companies.find((company) => company.id === selectedCompany); // Update this to match your company data structure
-            console.log('foundCompanyData', foundCompanyData);
 
             if (foundCompanyData) {
-                console.log('Found Company Data:', foundCompanyData);
                 setSelectedCompanyData(foundCompanyData);
             } else {
                 console.warn('No matching company found for selectedCompany');
@@ -412,15 +411,11 @@ return isValid;
             case 'distance':
                 setDistance(value || 0); // Default to 0 if totalDistance is NaN
                 break;
-            // case 'serviceVehicle':
-            //     setServiceVehicle(value);
-            //     break;
-            //---------------------
+           
             case 'selectedDriver':
                 setSelectedDriver(value || '');
 
                 const selectedDriverData = drivers.find((driver) => driver.id === value);
-                console.log('firstselectedDriverData', selectedDriverData);
                 if (selectedDriverData) {
                     const isRSA = selectedDriverData.companyName !== 'Company';
 
@@ -645,17 +640,14 @@ return isValid;
     useEffect(() => {
         const fetchDrivers = async () => {
             if (!serviceType || !serviceDetails || !pickupLocation) {
-                console.log('Missing criteria: serviceType, serviceDetails, or pickupLocation');
                 setDrivers([]);
                 return;
             }
 
             try {
-                console.log('Fetching drivers...');
                 const driversCollection = collection(db, `user/${uid}/driver`);
                 const snapshot = await getDocs(driversCollection);
 
-                console.log('Snapshot received:', snapshot.docs.length, 'documents found');
 
                 const filteredDrivers = await Promise.all(
                     snapshot.docs.map(async (doc) => {
@@ -663,11 +655,9 @@ return isValid;
                         const { currentLocation, selectedServices, status } = driverData;
 
                         // Log current driver data
-                        console.log(`Processing driver ${doc.id}`, driverData);
 
                         // Filter out drivers that don't match the criteria
                         if (!selectedServices || !selectedServices.includes(serviceType) || status === 'deleted from UI') {
-                            console.log(`Driver ${doc.id} filtered out: No matching service or deleted`);
                             return null;
                         }
 
@@ -675,10 +665,8 @@ return isValid;
                         const currentLng = currentLocation?.longitude ?? null;
 
                         // Log the current driver's location
-                        console.log(`Driver currentLocation${doc.id} location:`, { currentLat, currentLng });
 
                         if (typeof currentLat === 'number' && typeof currentLng === 'number' && pickupLocation.lat && pickupLocation.lng) {
-                            console.log(`Valid location data for driver ${doc.id}. Proceeding with distance calculation.`);
                         } else {
                             console.error(`Invalid location data for driver ${doc.id}:`, { currentLat, currentLng });
                             return null; // Skip this driver
@@ -763,7 +751,6 @@ return isValid;
         const numericTotalDistance = Number(totalDistance) || 0;
         const numericKmValueNumeric = Number(basicSalaryKM) || 0;
         const numericPerKmValueNumeric = Number(salaryPerKM) || 0;
-        console.log('numericBasicSalaryoo', numericBasicSalary);
         if (isRSA) {
             // For RSA company
             if (numericTotalDistance > numericKmValueNumeric) {
@@ -829,7 +816,7 @@ return isValid;
                 if (selectedCompanyData) {
                     if (selectedCompanyData.basicSalaries && selectedCompanyData.selectedServices && selectedCompanyData.basicSalaryKm && selectedCompanyData.salaryPerKm) {
                         // Filter only the selected serviceType from the selectedServices array
-                        selectedService = selectedCompanyData.selectedServices.find((service:any) => service === serviceType);
+                        selectedService = selectedCompanyData.selectedServices.find((service: any) => service === serviceType);
 
                         setSelectedServiceType(selectedService);
                         console.log('Selected Service Typeee:', selectedService);
@@ -839,26 +826,17 @@ return isValid;
                         basicSalaryKM = selectedCompanyData.basicSalaryKm[selectedService];
                         salaryPerKM = selectedCompanyData.salaryPerKm[selectedService];
 
-                        console.log('Selected Services:', selectedService);
-                        console.log('Salary:', salary);
-                        console.log('Basic Salary per KM:', basicSalaryKM);
-                        console.log('Salary per KM:', salaryPerKM);
                     } else {
                         console.error('Missing properties in selectedCompanyData');
                     }
                 } else if (isRSA) {
                     // Fallback for RSA scenario or when selectedCompanyData is unavailable
-                    selectedService = driver.selectedServices.find((service:any) => service === serviceType);
+                    selectedService = driver.selectedServices.find((service: any) => service === serviceType);
 
                     salary = isRSA ? serviceDetails.salary : driver.basicSalaries[selectedService];
                     basicSalaryKM = isRSA ? serviceDetails.basicSalaryKM : driver.basicSalaryKm[selectedService];
                     salaryPerKM = isRSA ? serviceDetails.salaryPerKM : driver.salaryPerKm[selectedService];
 
-                    console.log('Fallback for RSA scenario:');
-                    console.log('Selected Service Type:', selectedService);
-                    console.log('Salary:', salary);
-                    console.log('Basic Salary per KM:', basicSalaryKM);
-                    console.log('Salary per KM:', salaryPerKM);
                 }
 
                 // Calculate the total salary if calculateTotalSalary is available
@@ -884,18 +862,14 @@ return isValid;
             // Do something with totalSalaries (like setting state or logging it)
             console.log('Total Salaries for Drivers:', totalSalaries);
         }
-    }, [distance, selectedCompany,selectedDriver,drivers, serviceDetails, selectedCompanyData,calculateTotalSalary]);
+    }, [distance, selectedCompany, selectedDriver, drivers, serviceDetails, selectedCompanyData, calculateTotalSalary]);
 
     const calculateTotalDriverSalary = (totalDriverDistance: any, basicSalaryKM: any, salaryPerKM: any, salary: any) => {
         totalDriverDistance = parseFloat(totalDriverDistance);
         basicSalaryKM = parseFloat(basicSalaryKM);
         salaryPerKM = parseFloat(salaryPerKM);
         salary = parseFloat(salary);
-        console.log('totalDriverDistance', totalDriverDistance);
-        console.log('totalDriverDistancebasicSalaryKM', basicSalaryKM);
-        console.log('totalDriverDistancesalaryPerKM', salaryPerKM);
-        console.log('totalDriverDistancesalary', salary);
-
+       
         if (totalDriverDistance > basicSalaryKM) {
             return salary + (totalDriverDistance - basicSalaryKM) * salaryPerKM;
         } else {
@@ -910,19 +884,19 @@ return isValid;
             if (selectedDriverData) {
                 // Access the nested properties
                 const { basicSalaryKm, salaryPerKm, basicSalaries } = selectedDriverData;
-    
+
                 if (!basicSalaryKm || !salaryPerKm || !basicSalaries) {
                     console.error('Selected driver does not have all required properties:', selectedDriverData);
                     return;
                 }
-    
+
                 if (selectedServiceType) {
                     // Now that we know selectedServiceType is not null, use it as an index
                     const basicSalaryKM = basicSalaryKm[selectedServiceType];
                     const salaryPerKM = salaryPerKm[selectedServiceType];
                     const salary = basicSalaries[selectedServiceType];
                     console.log('selectedServiceType', selectedServiceType);
-    
+
                     if (basicSalaryKM === undefined || salaryPerKM === undefined || salary === undefined) {
                         console.error('Selected service does not have all required properties:', {
                             basicSalaryKM,
@@ -931,7 +905,7 @@ return isValid;
                         });
                         return;
                     }
-    
+
                     if (totalDriverDistance < basicSalaryKM) {
                         setTotalDriverSalary(salary); // If distance is less than basicSalaryKM, return the base salary
                     }
@@ -944,8 +918,8 @@ return isValid;
                 console.error('Driver not found:', selectedDriver);
             }
         }
-    }, [selectedDriver, totalDriverDistance, drivers, selectedServiceType,totalSalary]);
-    
+    }, [selectedDriver, totalDriverDistance, drivers, selectedServiceType, totalSalary]);
+
     useEffect(() => {
         let newTotalSalary = totalSalary;
         if (serviceCategory === 'Body Shop' && bodyShope === 'insurance') {
@@ -954,20 +928,16 @@ return isValid;
         }
         if (editData?.adjustValue) {
             // If editData has adjustValue, prioritize it
-            setUpdatedTotalSalary(parseFloat(editData.adjustValue) || 0);
-        } else if (newTotalSalary !== updatedTotalSalary) {
+            if (!isAdjustmentApplied) {
+                setUpdatedTotalSalary(parseFloat(editData.adjustValue) || 0);
+            }
+                } else if (newTotalSalary !== updatedTotalSalary) {
             // Otherwise, use the calculated newTotalSalary
             setUpdatedTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
         }
-    }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope, adjustValue]);
+    }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope, adjustValue, editData?.adjustValue]);
 
-    // const renderServiceVehicle = (serviceVehicle: any, serviceType: any) => {
-    //     if (serviceVehicle && serviceVehicle[serviceType]) {
-    //         return serviceVehicle[serviceType];
-    //     } else {
-    //         return 'Unknown Vehicle';
-    //     }
-    // };
+    
     const formatDate = (date: any) => {
         const day = date.getDate().toString().padStart(2, '0');
         const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are zero-based
@@ -1069,9 +1039,7 @@ return isValid;
 
                 if (selectedCompanyData) {
                     const { advancePayment, netTotalAmountInHand, companyName } = selectedCompanyData;
-                    console.log('advancePayment', advancePayment);
-                    console.log('netTotalAmountInHand', netTotalAmountInHand);
-
+                  
                     // Check if the condition applies based on the company's name
                     if (companyName === 'Company' && advancePayment < netTotalAmountInHand) {
                         alert('Exceeds Credit Limit Amount');
@@ -1080,9 +1048,7 @@ return isValid;
                 } else if (selectedDriverData) {
                     // const driverName = selectedDriverData.driverName || 'DummyDriver';
                     const { advancePayment, netTotalAmountInHand, companyName } = selectedDriverData;
-                    console.log('advancePayment', advancePayment);
-                    console.log('netTotalAmountInHand', netTotalAmountInHand);
-
+          
                     // Check if the condition applies based on the driver's company name
                     if (companyName !== 'RSA' && advancePayment < netTotalAmountInHand) {
                         alert('Exceeds Credit Limit Amount');
@@ -1139,7 +1105,7 @@ return isValid;
                     statusEdit: activeForm === 'withoutMap' ? 'mapbooking' : 'withoutmapbooking',
                     selectedCompany: selectedCompany || '',
                     serviceType: serviceType || '',
-                   serviceCategory: serviceCategory || '',
+                    serviceCategory: serviceCategory || '',
                     vehicleModel: vehicleModel || '',
                     vehicleSection: vehicleSection || '',
                     vehicleNumber: vehicleNumber || '',
@@ -1153,7 +1119,7 @@ return isValid;
                     companyBooking: companyBooking,
                     companyName: companyName,
                     newStatus: '',
-                    editedTime: '', 
+                    editedTime: '',
                 };
 
                 if (editData) {
@@ -1292,7 +1258,6 @@ return isValid;
                         <option value="self">Payment Work</option>
                     </select>
                     {errors.company && <p className={styles.errorMessage}>{errors.company}</p>}
-
                 </div>
 
                 {company === 'rsa' && (
@@ -1306,7 +1271,6 @@ return isValid;
                             name="selectedCompany"
                             className={styles.formControl}
                             onChange={(e) => handleInputChange('selectedCompany', e.target.value)}
-                        
                         >
                             <option value="">Select Company</option>
                             {companies.map((driver) => (
@@ -1316,7 +1280,8 @@ return isValid;
                             ))}
                         </select>
                         {errors.selectedCompany && <p className={styles.errorMessage}>{errors.selectedCompany}</p>}
-                        {companies.length === 0 && <p className={styles.errorMessage}>No drivers available</p>}                    </div>
+                        {companies.length === 0 && <p className={styles.errorMessage}>No drivers available</p>}{' '}
+                    </div>
                 )}
 
                 {company === 'self' ? (
@@ -1328,7 +1293,6 @@ return isValid;
                             <input id="fileNumber" type="text" name="fileNumber" placeholder="Enter File Number" className={styles.formControl} value={`PMNA${bookingId}`} readOnly />
                         </div>
                         {errors.fileNumber && <p className="text-red-500 text-sm mt-1">{errors.fileNumber}</p>}
-
                     </div>
                 ) : (
                     <div className={styles.flexRow}>
@@ -1345,8 +1309,7 @@ return isValid;
                                 value={fileNumber}
                                 onChange={(e) => handleInputChange('fileNumber', e.target.value)}
                             />
-                                {errors.fileNumber && <p className="text-red-500 text-sm mt-1">{errors.fileNumber}</p>}
-
+                            {errors.fileNumber && <p className="text-red-500 text-sm mt-1">{errors.fileNumber}</p>}
                         </div>
                     </div>
                 )}
@@ -1377,7 +1340,7 @@ return isValid;
                                 handleManualChange('lat', parseFloat(lat));
                                 handleManualChange('lng', parseFloat(lng));
                             }}
-                            autoComplete="off" 
+                            autoComplete="off"
                         />
                         <a href={`https://www.google.com/maps/search/?api=1&query=${pickupLocation.lat},${pickupLocation.lng}`} target="_blank" rel="noopener noreferrer" className={styles.mapButton}>
                             <IconMapPin />
@@ -1416,7 +1379,7 @@ return isValid;
                         }}
                     >
                         <div className="modal-body">
-                            <BaseLocationModal onClose={closeModal1} setBaseLocation={setBaseLocation} pickupLocation={pickupLocation}/>
+                            <BaseLocationModal onClose={closeModal1} setBaseLocation={setBaseLocation} pickupLocation={pickupLocation} />
                         </div>
                     </div>
                 )}
@@ -1427,28 +1390,25 @@ return isValid;
                     </label>
                     <div className={styles.inputContainer}>
                         {showrooms.length > 0 && (
-                         <ReactSelect
-                         id="showrooms"
-                         name="showrooms"
-                         className="w-full"
-                         value={showrooms.find((option) => option.value === showroomLocation) || null}
-                         options={showrooms}
-                         placeholder="Select showroom"
-                         onChange={(selectedOption) =>
-                             handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')
-                         }
-                         isSearchable={true}
-                         getOptionLabel={(option) => option.label} // Ensure this always returns a string
-                         styles={{
-                             option: (provided: any, state: any) => ({
-                                 ...provided,
-                                 color: state.data.value === 'lifting' ? 'red' : provided.color,
-                                 fontSize: state.data.value === 'lifting' ? '20px' : provided.fontSize,
-                                 fontWeight: state.data.value === 'lifting' ? 'bold' : provided.fontWeight,
-                             }),
-                         }}
-                     />
-                     
+                            <ReactSelect
+                                id="showrooms"
+                                name="showrooms"
+                                className="w-full"
+                                value={showrooms.find((option) => option.value === showroomLocation) || null}
+                                options={showrooms}
+                                placeholder="Select showroom"
+                                onChange={(selectedOption) => handleInputChange('showroomLocation', selectedOption ? selectedOption.value : '')}
+                                isSearchable={true}
+                                getOptionLabel={(option) => option.label} // Ensure this always returns a string
+                                styles={{
+                                    option: (provided: any, state: any) => ({
+                                        ...provided,
+                                        color: state.data.value === 'lifting' ? 'red' : provided.color,
+                                        fontSize: state.data.value === 'lifting' ? '20px' : provided.fontSize,
+                                        fontWeight: state.data.value === 'lifting' ? 'bold' : provided.fontWeight,
+                                    }),
+                                }}
+                            />
                         )}
                         <button onClick={handleButtonClick} className={styles.addButton}>
                             <IconPlus />
@@ -1687,7 +1647,7 @@ return isValid;
                                         // Determine the selected service based on serviceType for both RSA and non-RSA companies
                                         const selectedService = isRSA
                                             ? serviceType // Use the provided serviceType for RSA companies
-                                            : driver.selectedServices.find((service:any) => service === serviceType); // Use the selected service type for non-RSA drivers
+                                            : driver.selectedServices.find((service: any) => service === serviceType); // Use the selected service type for non-RSA drivers
 
                                         // Fallback handling in case no service matches
                                         if (!selectedService) {
@@ -1713,8 +1673,8 @@ return isValid;
                                         const salaryPerKM =
                                             isRSA && selectedCompanyData ? selectedCompanyData.salaryPerKm[selectedService] : !isRSA ? driver.salaryPerKm[selectedService] : serviceDetails.salaryPerKM;
 
-                                            const parsedDistance = parseFloat(distance) || 0; // Ensure distance is a number
-                                            const calculatedSalary = calculateTotalSalary(salary, parsedDistance, basicSalaryKM, salaryPerKM, isRSA);
+                                        const parsedDistance = parseFloat(distance) || 0; // Ensure distance is a number
+                                        const calculatedSalary = calculateTotalSalary(salary, parsedDistance, basicSalaryKM, salaryPerKM, isRSA);
 
                                         // Calculate profit based on expenses per KM
                                         const expensePerKM = serviceDetails.expensePerKM || 0;
@@ -1779,9 +1739,25 @@ return isValid;
                                 adjustValue={adjustValue}
                                 bodyShope={bodyShope}
                                 onInsuranceChange={handleBodyInsuranceChange}
-                                // onInsuranceAmountBodyChange={}
+                                onApplyAdjustment={handleApplyAdjustment} // <-- Add this line to pass the function
                             />
-                            {/* <div>Selected Service Category: {availableServices}</div> */}
+
+                            {errors.applyAdjustment && (
+                                <div
+                                    style={{
+                                        backgroundColor: '#f44336', // Red background
+                                        color: '#fff', // White text
+                                        padding: '10px',
+                                        borderRadius: '5px',
+                                        fontWeight: 'bold',
+                                        textAlign: 'center',
+                                        animation: 'blink 1s linear infinite', // Blinking effect
+                                    }}
+                                >
+                                    {errors.applyAdjustment}
+                                </div>
+                            )}
+
                             <div className="mt-4 flex items-center space-x-4">
                                 {/* Total Amount without insurance */}
                                 <div className="flex items-center w-1/3">
@@ -1844,21 +1820,6 @@ return isValid;
                         </div>
                     </React.Fragment>
                 )}
-                {/* <div className={styles.formGroup}>
-                    <label htmlFor="serviceVehicle" className={styles.label}>
-                        Service Vehicle Number
-                    </label>
-                    <input
-                        id="serviceVehicle"
-                        name="serviceVehicle"
-                        type="text"
-                        placeholder="Enter Service Vehicle Number"
-                        onChange={(e) => handleInputChange('serviceVehicle', e.target.value)}
-                        required
-                        value={serviceVehicle}
-                        className={styles.formControl}
-                    />
-                </div> */}
 
                 <div className={styles.formGroup}>
                     <label htmlFor="totalDriverDistance" className={styles.label}>
@@ -2020,4 +1981,4 @@ return isValid;
     );
 };
 export default WithoutMapBooking;
-// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+

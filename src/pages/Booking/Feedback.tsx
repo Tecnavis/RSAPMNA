@@ -139,37 +139,51 @@ const Feedback: React.FC = () => {
         return Object.values(feedback).every((answer) => answer !== '');
     };
 
-    const handleSubmit = async () => {
+    const handleSubmitAndUpdateRewardPoints = async () => {
         if (!validateForm()) {
             alert('Please fill all fields.');
             return;
         }
-
+    
         const feedbackData = {
             feedback,
             totalPoints,
             timestamp: new Date(),
         };
-
+    
         try {
+            // Submit feedback
             const driverDocRef = doc(collection(db, `user/${uid}/driver`), selectedDriver);
             await setDoc(
                 doc(driverDocRef, 'feedbacks', bookingId),
                 feedbackData,
                 { merge: true }
             );
-
+    
             const bookingDocRef = doc(db, `user/${uid}/bookings`, bookingId);
             await setDoc(bookingDocRef, { feedback: true }, { merge: true });
-
-            alert('Feedback submitted successfully!');
+    
+            // Calculate total points from feedbacks subcollection
+            const feedbacksRef = collection(driverDocRef, 'feedbacks');
+            const feedbacksSnapshot = await getDocs(feedbacksRef);
+    
+            let totalRewardPoints = 0;
+            feedbacksSnapshot.forEach((doc) => {
+                const data = doc.data();
+                totalRewardPoints += data.totalPoints || 0; // Sum up totalPoints
+            });
+    
+            // Update rewardPoints in the driver document
+            await setDoc(driverDocRef, { rewardPoints: totalRewardPoints }, { merge: true });
+    
+            alert('Feedback submitted and reward points updated successfully!');
             navigate(`/bookings/closedbooking`);
         } catch (error) {
-            console.error("Error submitting feedback: ", error);
-            alert('Failed to submit feedback.');
+            console.error("Error in submitting feedback and updating reward points: ", error);
+            alert('Failed to submit feedback and update reward points.');
         }
     };
-
+    
     return (
         <div className={styles['form-container']}>
             <h1>Feedback Form</h1>
@@ -231,14 +245,15 @@ const Feedback: React.FC = () => {
                     </select>
                 </div>
                 <Button
-                    type="button"
-                    variant="contained"
-                    color="primary"
-                    className={styles['submit-button']}
-                    onClick={handleSubmit}
-                >
-                    Submit Feedback
-                </Button>
+    type="button"
+    variant="contained"
+    color="primary"
+    className={styles['submit-button']}
+    onClick={handleSubmitAndUpdateRewardPoints}
+>
+    Submit Feedback
+</Button>
+
             </form>
         </div>
     );

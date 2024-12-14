@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { collection, doc, getDoc, getFirestore, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getFirestore, serverTimestamp, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import './Track.css';
 import { ref, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { storage } from '../../config/config';
@@ -18,6 +18,7 @@ interface BookingDetails {
     customerName?: string; // Add this
     phoneNumber?: string; // Add this
     vehicleNumber?: string;
+    pickedTime?: Timestamp;
 }
 const Track: React.FC = () => {
     const { bookingId } = useParams<{ bookingId: string }>();
@@ -35,6 +36,7 @@ const Track: React.FC = () => {
     const [imageFiles, setImageFiles] = useState<(File | null)[]>(Array(6).fill(null));
     const [imageURLs, setImageURLs] = useState<string[]>(Array(6).fill(''));
     const [imgURLs, setImgURLs] = useState<string[]>(Array(6).fill(''));
+    const [pickedTime, setPickedTime] = useState('');
 
     const [imgFiles, setImgFiles] = useState<(File | null)[]>(Array(6).fill(null));
     const [vehicleImgURLs, setVehicleImgURLs] = useState<string[]>([]);
@@ -128,23 +130,32 @@ const Track: React.FC = () => {
     };
     //   ----------------------------------------------dropof image------------------------------------------
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (companyBooking) return; // Prevent manual input for company bookings
-      
-      const newAmount = e.target.value;
-      setAmount(newAmount);
-  
-      // If payment status is 'Paid', validate that amount must be >= updatedTotalSalary
-      if (paymentStatus === 'Paid') {
-          const salaryAmount = parseFloat(bookingDetails.updatedTotalSalary || '0'); // Default to 0 if undefined
-          const enteredAmount = parseFloat(newAmount);
-  
-          if (enteredAmount < salaryAmount) {
-              setError(`Amount must be equal to or greater than ${salaryAmount}`);
-          } else {
-              setError(''); // Clear error if the condition is met
-          }
-      }
-  };
+        if (companyBooking) return; // Prevent manual input for company bookings
+    
+        const newAmount = e.target.value;
+    
+        // If payment status is 'Not Paid', set the amount to 0
+        if (paymentStatus === 'Not Paid') {
+            setAmount('0');
+            setError(''); // Clear any existing error
+            return;
+        }
+    
+        setAmount(newAmount);
+    
+        // Validate amount only if payment status is 'Paid'
+        if (paymentStatus === 'Paid') {
+            const salaryAmount = parseFloat(bookingDetails.updatedTotalSalary || '0'); // Default to 0 if undefined
+            const enteredAmount = parseFloat(newAmount);
+    
+            if (enteredAmount < salaryAmount) {
+                setError(`Amount must be equal to or greater than ${salaryAmount}`);
+            } else {
+                setError(''); // Clear error if the condition is met
+            }
+        }
+    };
+    
   
     // ---------------------------------------------------------------
     const compressImage = async (file: File, maxSizeInKB: number) => {
@@ -223,50 +234,52 @@ const uploadImgs = async () => {
   return urls;
 };
 
-// Submit Booking Complete Function (Update Firestore with Image URLs)
 const submitBookingComplete = async () => {
-  if ( (!companyBooking && !amount)) {
-      console.error('Missing fields.');
-      return;
-  }
+    if (!companyBooking && !amount) {
+        console.error('Missing fields.');
+        return;
+    }
 
-  const salaryAmount = parseFloat(bookingDetails.updatedTotalSalary || '0');
-  const enteredAmount = parseFloat(amount);
+    // Set amount to 0 if payment status is 'Not Paid'
+    const finalAmount = paymentStatus === 'Not Paid' ? 0 : parseFloat(amount);
 
-  // Validate only if it's not a company booking
-  if (!companyBooking && enteredAmount < salaryAmount) {
-      alert(`Amount must be at least ${salaryAmount}`);
-      return;
-  }
+    const salaryAmount = parseFloat(bookingDetails.updatedTotalSalary || '0');
 
-  try {
-      setLoading(true);
-      const uploadedImgURLs = await uploadImgs();
-      setLoading(false);
+    // Validate only if it's not a company booking
+    if (!companyBooking && paymentStatus === 'Paid' && finalAmount < salaryAmount) {
+        alert(`Amount must be at least ${salaryAmount}`);
+        return;
+    }
 
-      if (bookingId && uid) {
-          const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
-          const totalDriverSalaryString = String(bookingDetails.totalDriverSalary || '0');
-          const updatedTotalSalaryString = String(bookingDetails.updatedTotalSalary || '0');
+    try {
+        setLoading(true);
+        const uploadedImgURLs = await uploadImgs();
+        setLoading(false);
 
-          await updateDoc(bookingRef, {
-              paymentStatus,
-              amount,
-              vehicleImgURLs: uploadedImgURLs,
-              status: 'Order Completed',
-              totalDriverSalary: totalDriverSalaryString,
-              updatedTotalSalary: updatedTotalSalaryString,
-          });
+        if (bookingId && uid) {
+            const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
+            const totalDriverSalaryString = String(bookingDetails.totalDriverSalary || '0');
+            const updatedTotalSalaryString = String(bookingDetails.updatedTotalSalary || '0');
 
-          alert('Booking details updated successfully!');
-          navigate('/bookings/newbooking');
-      } else {
-          console.error('Booking ID or UID is missing.');
-      }
-  } catch (error) {
-      console.error('Error adding booking details:', error);
-  }
+            await updateDoc(bookingRef, {
+                paymentStatus,
+                amount: finalAmount,
+                vehicleImgURLs: uploadedImgURLs,
+                status: 'Order Completed',
+                totalDriverSalary: totalDriverSalaryString,
+                updatedTotalSalary: updatedTotalSalaryString,
+            });
+
+            alert('Booking details updated successfully!');
+            navigate('/bookings/newbooking');
+        } else {
+            console.error('Booking ID or UID is missing.');
+        }
+    } catch (error) {
+        console.error('Error adding booking details:', error);
+    }
 };
+
 
     // -------------------------------------------------------------------------------------
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
@@ -324,12 +337,20 @@ const submitBookingComplete = async () => {
   };
     // -----------------------------------------------------------------------
     const submitBookingDetails = async () => {
-        if (!customerName || !phoneNumber || !vehicleNumber) {
+        if (!customerName || !phoneNumber || !vehicleNumber || !pickedTime) {
             console.error('Missing fields.');
             return;
         }
 
         try {
+            // Convert pickedTime to a Firestore Timestamp
+            const pickedTimeDate = new Date(pickedTime);
+            if (isNaN(pickedTimeDate.getTime())) {
+                alert('Invalid Picked Time format. Please enter a valid date and time.');
+                return;
+            }
+            const pickedTimeTimestamp = Timestamp.fromDate(pickedTimeDate);
+    
             setLoading(true);
             const uploadedImageURLs = await uploadImages();
             setLoading(false);
@@ -341,6 +362,7 @@ const submitBookingComplete = async () => {
                     customerName,
                     phoneNumber,
                     vehicleNumber,
+                    pickedTime: pickedTimeTimestamp, // Save as Firestore Timestamp
                     vehicleImageURLs: uploadedImageURLs,
                     status: 'Vehicle Confirmed',
                 });
@@ -503,7 +525,7 @@ const submitBookingComplete = async () => {
                 </div>
             )}
 
-            {!companyBooking && (
+{!companyBooking && paymentStatus !== 'Not Paid' && (
                 <div className="payment-amount-input">
                     <p>
                         <strong>Payable Amount From Customer:</strong>
@@ -559,7 +581,10 @@ const submitBookingComplete = async () => {
                             <label htmlFor="vehicleNumber">Vehicle Number:</label>
                             <input type="text" id="vehicleNumber" value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)} placeholder="Enter vehicle number" className="input-field" />
                         </div>
-
+                        <div className="input-group">
+                            <label htmlFor="pickedTime">Picked Time:</label>
+                            <input type="datetime-local" id="pickedTime" value={pickedTime} onChange={(e) => setPickedTime(e.target.value)} placeholder="Set Picked Time" className="input-field" />
+                        </div>
                         <div className="image-upload-container">
                             <h2 className="upload-title">Upload Vehicle Images</h2>
                             <p className="upload-subtitle">Please upload images for Dashboard, Front, Rear, and Scratches</p>

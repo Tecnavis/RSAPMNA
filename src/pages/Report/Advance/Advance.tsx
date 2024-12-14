@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getFirestore, collection, doc, query, where, getDocs, addDoc, Timestamp, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, doc, query, where, getDocs, addDoc, Timestamp, onSnapshot, updateDoc, getDoc, orderBy } from 'firebase/firestore';
 import './Advance.css';
 interface Booking {
     id: string;
@@ -79,7 +79,9 @@ const Advance: React.FC = () => {
                 console.log('Listening to advance details for all drivers.');
                 // Reference to the 'advance' collection
                 const advanceDataRef = collection(db, `user/${uid}/advance`);
-                const unsubscribe = onSnapshot(advanceDataRef, (querySnapshot) => {
+                const sortedQuery = query(advanceDataRef, orderBy("advancePaymentDate", "desc"));
+
+                const unsubscribe = onSnapshot(sortedQuery, (querySnapshot) => {
                     const advanceList: AdvanceData[] = querySnapshot.docs.map((doc) => {
                         const data = doc.data();
                         let advancePaymentDate = '';
@@ -100,6 +102,7 @@ const Advance: React.FC = () => {
                             type: data.type,
                         };
                     });
+                    
                     console.log('Advance details fetched:', advanceList);
                     setAdvanceDetails(advanceList);
                 });
@@ -166,7 +169,6 @@ console.log("driver name" , driverName)
                 // Update total advance for the driver
                 await updateTotalAdvance(selectedDriver);
 
-                alert('Advance data added successfully!');
             } else if (selectedType === 'salary') {
                 const salaryRef = collection(db, `user/${uid}/salary`);
                 await addDoc(salaryRef, {
@@ -237,7 +239,6 @@ console.log("driver name" , driverName)
             console.log(`Starting settlement for advanceId: ${advanceId}, driverId: ${driverId}`);
             console.log(`Initial advance amount: ${advanceAmount}`);
     
-            // Query the 'bookings' collection for the selected driver
             const bookingsRef = collection(db, `user/${uid}/bookings`);
             const q = query(
                 bookingsRef,
@@ -247,74 +248,48 @@ console.log("driver name" , driverName)
             );
             const querySnapshot = await getDocs(q);
     
-            // Fetch and filter bookings
-            const fetchedBookings: Booking[] = querySnapshot.docs
+            const fetchedBookings = querySnapshot.docs
                 .map((doc) => {
                     const data = doc.data();
                     return {
                         id: doc.id,
                         driverId: data.selectedDriver,
                         createdAt: data.createdAt?.toDate() || new Date(),
-                        amount: data.amount,
+                        amount: data.fileNumber,
                         totalDriverSalary: data.totalDriverSalary,
-                        bookingDate: data.createdAt,
-                        balanceSalary: data.balanceSalary || 0,
                         transferedSalary: data.transferedSalary || 0,
                     } as Booking;
                 })
-                // Filter bookings that need adjustment
-                .filter(
-                    (booking) =>
-                        booking.transferedSalary === 0 ||
-                        booking.transferedSalary !== (typeof booking.totalDriverSalary === 'string'
-                            ? parseFloat(booking.totalDriverSalary)
-                            : booking.totalDriverSalary || 0)
+                .filter((booking) =>
+                    booking.transferedSalary !==
+                    (typeof booking.totalDriverSalary === 'string'
+                        ? parseFloat(booking.totalDriverSalary)
+                        : booking.totalDriverSalary || 0)
                 )
-                // Sort by `createdAt` (earliest first)
                 .sort((a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0));
     
-            console.log(`Eligible bookings for settlement:`, fetchedBookings);
-    
-            // Check if there are no eligible bookings
             if (fetchedBookings.length === 0) {
                 console.log("No bookings to adjust. Remaining advance saved as is.");
-                // Update the advance document with the remaining advance
                 const advanceDocRef = doc(db, `user/${uid}/advance`, advanceId);
-                await updateDoc(advanceDocRef, {
-                    advance: advanceAmount,
-                });
-    
-                // Update the advanceData subcollection with the remaining advance
-                const advanceDataDocRef = doc(
-                    db,
-                    `user/${uid}/driver/${driverId}/advanceData`,
-                    advanceDataId
-                );
-                await updateDoc(advanceDataDocRef, {
-                    advance: advanceAmount,
-                });
-    
+                await updateDoc(advanceDocRef, { advance: advanceAmount });
+                const advanceDataDocRef = doc(db, `user/${uid}/driver/${driverId}/advanceData`, advanceDataId);
+                await updateDoc(advanceDataDocRef, { advance: advanceAmount });
                 alert('No bookings to adjust. Remaining advance has been saved.');
                 return;
             }
     
             let remainingAdvance = advanceAmount;
+            const salaryAdjustments = [];
     
-            // Process eligible bookings
             for (const booking of fetchedBookings) {
-                const totalDriverSalary =
-                    typeof booking.totalDriverSalary === 'string'
-                        ? parseFloat(booking.totalDriverSalary)
-                        : booking.totalDriverSalary || 0;
+                const totalDriverSalary = typeof booking.totalDriverSalary === 'string'
+                    ? parseFloat(booking.totalDriverSalary)
+                    : booking.totalDriverSalary || 0;
     
                 let transferedSalary = booking.transferedSalary || 0;
                 let balanceSalary = totalDriverSalary - transferedSalary;
     
-                if (balanceSalary <= 0) continue; // Skip if no balance salary
-    
-                console.log(
-                    `Processing booking: ${booking.id}, Total Driver Salary: ${totalDriverSalary}, Remaining Advance: ${remainingAdvance}`
-                );
+                if (balanceSalary <= 0) continue;
     
                 if (remainingAdvance >= balanceSalary) {
                     transferedSalary += balanceSalary;
@@ -326,42 +301,38 @@ console.log("driver name" , driverName)
                     remainingAdvance = 0;
                 }
     
-                console.log(
-                    `Updated Booking ${booking.id}: Transferred Salary: ${transferedSalary}, Balance Salary: ${balanceSalary}, Remaining Advance: ${remainingAdvance}`
-                );
-    
-                // Update the booking
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
                 await updateDoc(bookingRef, {
                     transferedSalary,
                     balanceSalary,
                 });
     
-                if (remainingAdvance === 0) {
-                    console.log('Remaining advance fully utilized. Stopping further deductions.');
-                    break;
-                }
+                salaryAdjustments.push({
+                    bookingId: booking.id,
+                    fileNumbers: [booking.amount], // Replace with relevant file numbers if available
+                    initialAdvance: advanceAmount,
+                    transferAmount: advanceAmount - remainingAdvance,
+                    timestamp: Timestamp.now(),
+                });
+    
+                if (remainingAdvance === 0) break;
             }
     
-            // Update the advance document with the remaining advance
-            const advanceDocRef = doc(db, `user/${uid}/advance`, advanceId);
-            await updateDoc(advanceDocRef, {
-                advance: remainingAdvance,
-            });
-    
-            // Update the advanceData subcollection
-            const advanceDataDocRef = doc(
+            const salaryAdjustmentsRef = collection(
                 db,
-                `user/${uid}/driver/${driverId}/advanceData`,
-                advanceDataId
+                `user/${uid}/driver/${driverId}/salaryAdjustments`
             );
-            await updateDoc(advanceDataDocRef, {
-                advance: remainingAdvance,
-            });
+            for (const adjustment of salaryAdjustments) {
+                await addDoc(salaryAdjustmentsRef, adjustment);
+            }
     
-            alert('Settlement complete!');
+            const advanceDocRef = doc(db, `user/${uid}/advance`, advanceId);
+            await updateDoc(advanceDocRef, { advance: remainingAdvance });
+            const advanceDataDocRef = doc(db, `user/${uid}/driver/${driverId}/advanceData`, advanceDataId);
+            await updateDoc(advanceDataDocRef, { advance: remainingAdvance });
+    
+            alert('Settlement complete and saved!');
             await updateTotalAdvance(driverId);
-
         } catch (error) {
             console.error('Error settling the advance:', error);
             alert('Failed to settle advance. Please try again.');
