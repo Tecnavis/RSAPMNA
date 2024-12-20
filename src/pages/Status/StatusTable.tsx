@@ -249,10 +249,10 @@ const StatusTable: React.FC = () => {
                 // Initialize paymentStatus to 'Not Paid'
                 let paymentStatus = 'Not Paid';
     
-                // Calculate newAmount by adding the new payment to existing amount
+                // Calculate newAmount by adding the new payment to the existing amount
                 let newAmount = String(paymentAmountNumber);
     
-                // Update user collection
+                // Query user collection
                 const userQuery = query(
                     collection(db, `user/${uid}/users`),
                     where('userName', '==', userName)
@@ -266,17 +266,20 @@ const StatusTable: React.FC = () => {
                         `user/${uid}/users/${userDoc.id}/staffReceived`
                     );
     
-                    // Query the staffReceived subcollection for the selectedBookingId
+                    // Check if entry exists for the selectedBookingId
                     const existingEntryQuery = query(
                         staffReceivedRef,
-                        where('selectedBookingId', '==', selectedBooking.id)
+                        where('selectedBookingId', 'array-contains', selectedBooking.id)
                     );
                     const existingEntrySnapshot = await getDocs(existingEntryQuery);
     
                     if (!existingEntrySnapshot.empty) {
-                        // If an entry exists, update the amount by summing
+                        // If an entry exists, update amount and append booking ID
                         const existingEntryDoc = existingEntrySnapshot.docs[0];
-                        const existingAmount = existingEntryDoc.data().amount || '0'; // Default to string
+                        const existingData = existingEntryDoc.data();
+                        const existingAmount = existingData.amount || '0'; // Default to string
+                        const existingBookingIds = existingData.selectedBookingId || [];
+    
                         newAmount = String(Number(newAmount) + Number(existingAmount));
     
                         const entryRef = doc(
@@ -286,52 +289,51 @@ const StatusTable: React.FC = () => {
                         );
     
                         await updateDoc(entryRef, {
-                            amount: newAmount, // Save as string
+                            amount: newAmount,
                             date: new Date().toISOString(),
+                            selectedBookingIds: [...new Set([...existingBookingIds, selectedBooking.id])], // Ensure uniqueness
                         });
                     } else {
-                        // If no entry exists, create a new document
+                        // Create a new document if no entry exists
                         await addDoc(staffReceivedRef, {
                             amount: newAmount,
                             date: new Date().toISOString(),
-                            selectedBookingId: selectedBooking.id,
+                            selectedBookingIds: [selectedBooking.id],
                         });
                     }
                 }
     
-                // Update payment status based on the new total amount
+                // Determine payment status
                 if (Number(newAmount) >= updatedTotalSalary) {
                     paymentStatus = 'Paid';
                 }
     
-                // Fetch the current booking document to check unPaidReceivedUser
+                // Fetch current booking and update with calculated values
                 const bookingRef = doc(db, `user/${uid}/bookings`, selectedBooking.id);
                 const bookingSnapshot = await getDoc(bookingRef);
     
-                let unPaidReceivedUser = userName; // Default to the current userName
-                let receivedUser = 'Staff'; // Default to "Staff"
+                let unPaidReceivedUser = userName;
+                let receivedUser = 'Staff';
                 if (bookingSnapshot.exists()) {
                     const bookingData = bookingSnapshot.data();
                     if (bookingData.unPaidReceivedUser && bookingData.unPaidReceivedUser !== userName) {
-                        unPaidReceivedUser = 'Other'; // Set to "Other" if it doesn't match userName
+                        unPaidReceivedUser = 'Other';
                     } else {
-                        receivedUser = 'Staff'; // Set receivedUser to 'Staff' for a match
+                        receivedUser = 'Staff';
                     }
                 }
     
-                // Update booking document with the calculated payment status and new amount
                 await updateDoc(bookingRef, {
                     amount: newAmount,
                     status: 'Order Completed',
                     paymentStatus: paymentStatus,
                     unPaidReceivedUser: unPaidReceivedUser,
-                    selectedBookingId: selectedBooking.id,
-                    receivedAmount: newAmount,
+                    selectedBookingId: [selectedBooking.id],
+                    receivedAmountStaff: newAmount,
                     receivedUser: receivedUser,
-
                 });
     
-                // Hide the modal and reset states
+                // Reset modal and states
                 setShowPaymentModal(false);
                 setSelectedBooking(null);
                 setPaymentAmount('');
@@ -340,6 +342,7 @@ const StatusTable: React.FC = () => {
             }
         }
     };
+    
     
     
 

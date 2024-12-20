@@ -155,6 +155,7 @@ const UserAdd: React.FC = () => {
                     staffRole,
                     confirmPassword,
                     profileImage: profileImageUrl,
+                    staffId: editData?.id || '',
                 };
 
                 if (editData?.id) {
@@ -168,6 +169,8 @@ console.log('Document Path:', `user/${uid}/users/${editData?.id}`);
                     const docRef = await addDoc(collection(db, `user/${uid}/users`), itemData);
                     console.log(docRef, 'this is the doc ref');
                     console.log('Document written with ID: ', docRef.id);
+                    await updateDoc(docRef, { staffId: docRef.id });
+
                 }
 
                 navigate('/users/staff');
@@ -230,7 +233,7 @@ console.log('Document Path:', `user/${uid}/users/${editData?.id}`);
                             <label htmlFor="phone_number">Phone</label>
                             <input
                                 id="phone_number"
-                                type="number"
+                                type="text"
                                 placeholder="phone number"
                                 className={`${styles.formInput} form-input`}
                                 value={phone_number}

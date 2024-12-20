@@ -808,6 +808,7 @@ const SalaryReport: React.FC = () => {
                     </div>
                     {showInvoiceModal && (
                         <InvoiceModal
+                        
                             selectedBookings={selectedBookings}
                             bookings={bookings.map((booking) => ({
                                 ...booking,
@@ -825,7 +826,7 @@ const SalaryReport: React.FC = () => {
             )}
 
 <div ref={printRef}>
-<div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform ">
+<div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl  hover:scale-105 ">
                     <div className="flex items-center space-x-4">
                         <div className="text-4xl text-green-600">
                             <i className="fas fa-receipt"></i>
@@ -837,7 +838,7 @@ const SalaryReport: React.FC = () => {
                     </div>
                     </div>
 <br />
-                    <div className="bg-gradient-to-r from-red-100 to-red-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
+                    <div className="bg-gradient-to-r from-red-100 to-red-200 p-6 shadow-lg rounded-lg hover:shadow-xl  hover:scale-105 transition-transform">
                         <div className="flex items-center space-x-4">
                             <div className="text-4xl text-red-600">
                                 <i className="fas fa-hand-holding-usd"></i>
@@ -924,7 +925,7 @@ const SalaryReport: React.FC = () => {
                                             ) : (
                                                 <div className="flex justify-center space-x-2 no-print">
   <button
-    className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-2 py-1 rounded-lg shadow-lg hover:shadow-xl transform transition-all duration-300 hover:scale-105"
+    className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-2 py-1 rounded-lg shadow-lg hover:shadow-xl  duration-300 hover:scale-105"
     onClick={() => handleEditBooking(booking.id)}
   >
     Settle Salary

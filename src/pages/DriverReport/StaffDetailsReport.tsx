@@ -13,10 +13,12 @@ interface StaffReceived {
     amount: number;
     date: string;
     amountGiven?: number;
-    selectedBookingId?: string;
+    selectedBookingIds?: string[];
     fileNumber?: string; // Added optional property
-    driver?: string;
+    driver?: string | string[];
+    bookings?: Booking[];  // Ensure this field is typed as an array of bookings
 }
+
 interface Booking {
     fileNumber: string;
     driver: string;
@@ -68,26 +70,37 @@ const navigate = useNavigate()
                 const fetchedEntries = querySnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data(),
-                    amount: Number(doc.data().amount), // Convert amount to a number
-
+                    amount: Number(doc.data().amount),
                 } as StaffReceived));
     
-                // Fetch bookings data for selectedBookingId
+                // Fetch bookings data for selectedBookingIds (handling multiple IDs)
                 const bookingsPromises = fetchedEntries
-                    .filter(entry => entry.selectedBookingId) // Ensure selectedBookingId exists
+                    .filter(entry => entry.selectedBookingIds && entry.selectedBookingIds.length > 0)
                     .map(async (entry) => {
-                        const bookingDoc = doc(db, `user/${uid}/bookings`, entry.selectedBookingId!);
-                        const bookingSnap = await getDoc(bookingDoc);
-                        return bookingSnap.exists()
-                            ? { ...entry, ...bookingSnap.data() } // Merge booking data into entry
-                            : entry;
+                        const bookings = await Promise.all(
+                            entry.selectedBookingIds!.map(async (bookingId) => {
+                                const bookingDoc = doc(db, `user/${uid}/bookings`, bookingId);
+                                const bookingSnap = await getDoc(bookingDoc);
+                                return bookingSnap.exists() ? bookingSnap.data() : null;
+                            })
+                        );
+    
+                        return { ...entry, bookings: bookings.filter(Boolean) }; // Merge bookings
                     });
     
-                const combinedEntries = (await Promise.all(bookingsPromises)) as (StaffReceived & Booking)[];
-                setStaffReceivedEntries(combinedEntries);
-                setFilteredEntries(combinedEntries); // Initialize filteredEntries
+                const combinedEntries = (await Promise.all(bookingsPromises)) as (StaffReceived & { bookings: Booking[] })[];
     
-                const initialColors = combinedEntries.map(entry => {
+                // Sort entries by date in descending order
+                const sortedEntries = combinedEntries.sort((a, b) => {
+                    const dateA = a.date ? new Date(a.date).getTime() : 0;
+                    const dateB = b.date ? new Date(b.date).getTime() : 0;
+                    return dateB - dateA;
+                });
+    
+                setStaffReceivedEntries(sortedEntries);
+                setFilteredEntries(sortedEntries);
+    
+                const initialColors = sortedEntries.map(entry => {
                     const amountGiven = entry.amountGiven || 0;
                     return amountGiven <= 0 ? 'red' : amountGiven < entry.amount ? 'orange' : 'green';
                 });
@@ -99,7 +112,8 @@ const navigate = useNavigate()
     
         fetchStaffReceivedEntries();
     }, [uid, id]);
-
+    
+    
     const handleAmountGivenChange = (index: number, value: number) => {
         setAmountGivenValues((prev) => ({
             ...prev,
@@ -207,6 +221,8 @@ const navigate = useNavigate()
                         <table className="min-w-full bg-white shadow-md rounded-lg">
                             <thead>
                                 <tr>
+                                <th className="px-6 py-3 border-b-2 border-gray-300">SI</th>
+
                                     <th className="px-6 py-3 border-b-2 border-gray-300">Date</th>
                                     <th className="px-6 py-3 border-b-2 border-gray-300">FileNumber</th>
                                     <th className="px-6 py-3 border-b-2 border-gray-300">Driver Name</th>
@@ -224,15 +240,23 @@ const navigate = useNavigate()
                             <tbody>
                                 {filteredEntries.map((entry, index) => (
                                     <tr key={index}>
+                                        <td>{index+1}</td>
                                         <td className="px-6 py-4 border-b">
-                                            {format(new Date(entry.date), 'yyyy-MM-dd HH:mm')}
-                                        </td>
+    {format(new Date(entry.date), 'dd-MM-yyyy hh:mm a')}
+</td>
+
+
                                         <td className="px-6 py-4 border-b">
-                {entry.fileNumber || 'N/A'}
-            </td>
-            <td className="px-6 py-4 border-b">
-                {entry.driver || 'N/A'}
-            </td>
+    {entry.bookings?.map((booking, idx) => (
+        <div key={idx}>{booking.fileNumber}</div> // Displaying booking details
+    ))}
+</td>
+<td className="px-6 py-4 border-b">
+    {entry.bookings?.map((booking, idx) => (
+        <div key={idx}>{booking.driver}</div> // Displaying booking details
+    ))}
+</td>
+          
             <td className="px-6 py-4 border-b">
     {(Number(entry.amount) || 0).toFixed(2)}
 </td>

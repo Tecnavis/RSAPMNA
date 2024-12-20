@@ -10,13 +10,23 @@ interface Driver {
     companyName: string;
     netTotalAmountInHand: number;
     totalSalaryAmount?:number;
+    advance?: number;
 }
 
 interface EditDriverData {
     driverName: string;
     idnumber: string;
 }
-
+interface Booking {
+    driverId: string;
+    amount: number;
+    receivedAmount: number;
+    companyBooking:boolean;
+    balance:number;
+    balanceCompany:number;
+    selectedDriver:string;
+    selectedCompany:string;
+}
 const DriverReport: React.FC = () => {
     const [drivers, setDrivers] = useState<Driver[]>([]);
     const [editDriverId, setEditDriverId] = useState<string | null>(null);
@@ -30,25 +40,80 @@ const DriverReport: React.FC = () => {
     const uid = sessionStorage.getItem('uid');
 
     useEffect(() => {
-        const fetchDrivers = async () => {
+        const fetchDriversWithNetTotal = async () => {
             if (!uid) {
                 console.error('UID is not available');
                 return;
             }
             try {
-                const querySnapshot = await getDocs(collection(db, `user/${uid}/driver`));
-                const driverList = querySnapshot.docs.map(doc => ({
+                // Step 1: Fetch all drivers
+                const driverSnapshot = await getDocs(collection(db, `user/${uid}/driver`));
+                const driverList = driverSnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data(),
-
                 })) as Driver[];
-                setDrivers(driverList);
+    
+                // Step 2: Fetch all bookings
+                const bookingsSnapshot = await getDocs(collection(db, `user/${uid}/bookings`));
+                const bookings = bookingsSnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        driverId: data.driverId ?? '',
+                        amount: data.amount ?? 0,
+                        receivedAmount: data.receivedAmount ?? 0,
+                        companyBooking: data.companyBooking ?? false,
+                        balance: data.balance ?? 0,
+                        balanceCompany: data.balanceCompany ?? 0,
+                        selectedCompany: data.selectedCompany ?? '',
+
+                        selectedDriver: data.selectedDriver ?? '',
+
+                    };
+                }) as Booking[];
+                
+    
+                // Step 3: Calculate net total amount for each driver
+                const updatedDrivers = driverList.map(driver => {
+                    // Filter bookings for the driver based on conditions
+                    const driverBookings = bookings.filter(
+                        booking => 
+                            (booking.companyBooking === false && booking.selectedDriver === driver.id) ||
+                            (booking.companyBooking === true && booking.selectedCompany === driver.id)
+                    );
+    
+                    console.log("Bookings for Driver:", driver.id, driverBookings);
+    
+                    // Separate logic for company and individual bookings
+                    const totalBalance = driverBookings
+                        .filter(b => !b.companyBooking)
+                        .reduce((sum, b) => sum + (Number(b.balance) || 0), 0);
+    
+                    const totalCompanyBalance = driverBookings
+                        .filter(b => b.companyBooking)
+                        .reduce((sum, b) => sum + (Number(b.balanceCompany) || 0), 0);
+    
+                    const advance = driver.advance || 0; // Default to 0 if advance is missing
+    
+                    return {
+                        ...driver,
+                        netTotalAmountInHand: driverBookings.some(b => b.companyBooking)
+                            ? totalCompanyBalance + advance
+                            : totalBalance + advance,
+                    };
+                });
+    
+                // Update state
+                setDrivers(updatedDrivers);
             } catch (error) {
-                console.error('Error fetching drivers: ', error);
+                console.error('Error fetching drivers or bookings: ', error);
             }
         };
-        fetchDrivers();
+    
+        fetchDriversWithNetTotal();
     }, [db, uid]);
+    
+    
 
     const handleEditDriverClick = (driver: Driver) => {
         setEditDriverId(driver.id);
@@ -145,10 +210,8 @@ const DriverReport: React.FC = () => {
                                     )}
                                 </td>
                                 <td className="border px-4 py-2">
-    {driver.netTotalAmountInHand?.toLocaleString('en-IN', { style: 'currency', currency: 'INR' }) ?? 'N/A'}
-</td>
-
-
+                                    {driver.netTotalAmountInHand?.toLocaleString('en-IN', { style: 'currency', currency: 'INR' }) ?? '0'}
+                                </td>
 {(title === 'PMNA Drivers' || title === 'Providers Details') && (
                                 <td className="border px-4 py-2">
                                     {driver.totalSalaryAmount?.toLocaleString('en-IN', { style: 'currency', currency: 'INR' }) ?? 'N/A'}

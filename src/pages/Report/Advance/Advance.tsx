@@ -594,10 +594,46 @@ console.log("driver name" , driverName)
                                     <td>{advance.advancePaymentDate}</td>
                                     <td>₹{advance.advance}</td>
                                     <td>
-                                        {' '}
-                                        <button onClick={() => handleEditClick(advance.id, advance.advance)}>Edit</button>
-                                        <button onClick={() => handleSettleClick(advance.id, advance.advanceDataId, advance.advance, advance.driverId)}>Settle</button>
-                                    </td>
+  <button
+    onClick={() => handleEditClick(advance.id, advance.advance)}
+    style={{
+      backgroundColor: "#4CAF50", 
+      color: "white", 
+      border: "none", 
+      padding: "10px 20px", 
+      textAlign: "center", 
+      textDecoration: "none", 
+      display: "inline-block", 
+      fontSize: "14px", 
+      margin: "5px 2px", 
+      borderRadius: "5px", 
+      cursor: "pointer",
+      boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)"
+    }}
+  >
+    Edit
+  </button>
+  <button
+    onClick={() => handleSettleClick(advance.id, advance.advanceDataId, advance.advance, advance.driverId)}
+    style={{
+      backgroundColor: "#f44336", 
+      color: "white", 
+      border: "none", 
+      padding: "10px 20px", 
+      textAlign: "center", 
+      textDecoration: "none", 
+      display: "inline-block", 
+      fontSize: "14px", 
+      margin: "5px 2px", 
+      borderRadius: "5px", 
+      cursor: "pointer",
+      boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)"
+    }}
+  >
+    Settle
+  </button>
+</td>
+
                                 </tr>
                             ))}
                         </tbody>

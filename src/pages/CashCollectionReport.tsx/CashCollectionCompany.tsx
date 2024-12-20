@@ -62,6 +62,7 @@ const CashCollectionCompany: React.FC = () => {
     const [showAmountDiv, setShowAmountDiv] = useState(true); // Add state to show/hide the div
     const [totalBalances, setTotalBalances] = useState(0);
     const [clickedButtons, setClickedButtons] = useState<Record<string, boolean>>({});
+    const [invoiceNumbers, setInvoiceNumbers] = useState<Record<string, string>>({}); // State to track invoice numbers for bookings
 
     const [netTotalAmountInHand, setNetTotalAmountInHand] = useState(0); // State to disable/enable fields
     const role = sessionStorage.getItem('role');
@@ -280,17 +281,31 @@ const CashCollectionCompany: React.FC = () => {
             console.error('Error updating total balance:', error);
         }
     };
-
+    const handleInvoiceChange = (bookingId: string, value: string) => {
+        setInvoiceNumbers((prev) => ({
+            ...prev,
+            [bookingId]: value,
+        }));
+    };
     const handleApproveClick = async (booking: Booking) => {
         const balance = calculateBalance(booking.amount.toString(), booking.receivedAmountCompany || 0, booking.companyBooking ?? false);
 
         if (balance !== '0.00') {
             alert('Approval not allowed. The balance must be zero before approving.');
         } else {
+            const invoiceNumber = invoiceNumbers[booking.id]; // Get the entered invoice number
+            if (!invoiceNumber) {
+                alert('Please enter an invoice number before approving.');
+                return;
+            }
+
             try {
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id); // Use the booking ID to reference the correct booking
-                await updateDoc(bookingRef, { approve: true }); // Directly approve the booking
-                setBookings((prevBookings) => prevBookings.map((bookingItem) => (bookingItem.id === booking.id ? { ...bookingItem, approve: true, disabled: true } : bookingItem)));
+                await updateDoc(bookingRef, {   
+                    approve: true,
+                    invoiceNumber,
+                 }); // Directly approve the booking
+                setBookings((prevBookings) => prevBookings.map((bookingItem) => (bookingItem.id === booking.id ? { ...bookingItem, approve: true, disabled: true,invoiceNumber } : bookingItem)));
             } catch (error) {
                 console.error('Error approving booking:', error);
             }
@@ -604,6 +619,18 @@ const CashCollectionCompany: React.FC = () => {
         }
     };
 
+    useEffect(() => {
+        const term = searchTerm.toLowerCase();
+        const filtered = bookings.filter(
+          (record) =>
+            (record.fileNumber?.toLowerCase().includes(term) ?? false) ||
+            (record.vehicleNumber?.toLowerCase().includes(term) ?? false) ||
+            (record.dateTime?.toLowerCase().includes(term) ?? false)
+        );
+        setFilteredBookings(filtered);
+      }, [searchTerm, bookings]);
+
+
     return (
         <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg">
             <h1 className="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">Cash Collection Report</h1>
@@ -685,17 +712,7 @@ const CashCollectionCompany: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                        <div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
-                            <div className="flex items-center space-x-4">
-                                <div className="text-4xl text-green-600">
-                                    <i className="fas fa-receipt"></i>
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-800">Total Amount of Booking</h3>
-                                    <p className="text-gray-700 text-lg">{monthlyTotals.totalAmount}</p>
-                                </div>
-                            </div>
-                        </div>
+                       
                         <div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
                             <div className="flex items-center space-x-4">
                                 <div className="text-4xl text-green-600">
@@ -719,7 +736,20 @@ const CashCollectionCompany: React.FC = () => {
                             </div>
                         </div>
                     </div>
-
+                    <input
+                type="text"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                    padding: '10px',
+                    borderRadius: '5px',
+                    border: '1px solid #ccc',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    marginBottom: '10px',
+                }}
+            />
                     {selectedBookings.length > 0 && totalSelectedBalance !== '0.00' && showAmountDiv && (
                         <div className="fixed top-40 left-1/2 transform -translate-x-1/2 bg-yellow-100 border-2 border-gray-300 shadow-lg rounded-lg p-6 z-10">
                             <div className="flex flex-col space-y-4">
@@ -777,6 +807,8 @@ const CashCollectionCompany: React.FC = () => {
                                     <th className={styles.tableCell}>Received Amount From Company</th>
 
                                     <th className={styles.tableCell}>Balance</th>
+                                    <th className={styles.tableCell}>InvoiceNumber</th>
+
                                     <th className={styles.tableCell}>Approve</th>
                                 </tr>
                             </thead>
@@ -876,7 +908,20 @@ const CashCollectionCompany: React.FC = () => {
                                                     booking.companyBooking ?? false
                                                 )}{' '}
                                             </td>
-
+                                            <td>
+                            <input
+                                type="text"
+                                value={invoiceNumbers[booking.id] || ''}
+                                onChange={(e) => handleInvoiceChange(booking.id, e.target.value)}
+                                disabled={booking.approve}
+                                placeholder="Enter Invoice Number"
+                                style={{
+                                    padding: '5px',
+                                    borderRadius: '4px',
+                                    border: '1px solid #ccc',
+                                }}
+                            />
+                        </td>
                                             <td>
                                                 <button
                                                     onClick={() => handleApproveClick(booking)}
