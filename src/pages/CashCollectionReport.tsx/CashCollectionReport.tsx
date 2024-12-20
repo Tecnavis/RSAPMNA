@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, writeBatch, arrayUnion, Timestamp, runTransaction } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, writeBatch, arrayUnion, Timestamp, runTransaction, addDoc, setDoc } from 'firebase/firestore';
 import Modal from 'react-modal';
 import { parse, format } from 'date-fns';
 import styles from './cashCollectionReport.module.css';
@@ -46,7 +46,7 @@ const CashCollectionReport: React.FC = () => {
     const [editingAmount, setEditingAmount] = useState<string>('');
     const [receivedAmount, setReceivedAmount] = useState<string>('');
     const [inputValues, setInputValues] = useState<Record<string, string>>({}); // Track input values for each booking
-    const [password, setPassword] = useState<string>('');
+    const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
     const [searchTerm, setSearchTerm] = useState('');
     const [bookingToApprove, setBookingToApprove] = useState<Booking | null>(null);
     const [selectedMonth, setSelectedMonth] = useState<string>('');
@@ -64,8 +64,9 @@ const CashCollectionReport: React.FC = () => {
     const [netTotalAmountInHand, setNetTotalAmountInHand] = useState(0); // State to disable/enable fields
     const role = sessionStorage.getItem('role');
     const userName = sessionStorage.getItem('username');
+    const password = sessionStorage.getItem('password');
+
     // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    console.log('role', userName);
     console.log(filteredBookings, 'this is the filtered bookings');
 
     const sortedBookings = [...filteredBookings].sort((a, b) => {
@@ -187,11 +188,15 @@ const amountToUse = parseFloat(booking.amount.toString() );
     };
     // ----------------------------------------------------------------------------------------------------------------------------------
 
-    const calculateBalance = (amount: string | number, receivedAmount: string | number) => {
-        const parsedAmount = parseFloat(amount.toString());
-        const parsedReceivedAmount = parseFloat(receivedAmount.toString());
+    const calculateBalance = (amount: string | number, receivedAmount: string | number,receivedUser?: string) => {
+        if (receivedUser === "Staff") {
+            return '0.00';
+        }
+        const parsedAmount = Number(amount) || 0; // Convert to number safely
+        const parsedReceivedAmount = Number(receivedAmount) || 0;
         const balance = parsedAmount - parsedReceivedAmount;
-        return balance.toFixed(2);
+    
+        return balance.toFixed(2); // Always return a string
     };
     
 
@@ -210,7 +215,7 @@ const amountToUse = parseFloat(booking.amount.toString() );
             receivedAmount = isNaN(receivedAmount) ? 0 : receivedAmount;
     
             // Calculate balance
-            const balance = calculateBalance(amountToUse, receivedAmount);
+            const balance = calculateBalance(amountToUse, receivedAmount, booking.receivedUser);
             console.log(`Booking ID: ${booking.id}, Amount: ${amountToUse}, Received Amount: ${receivedAmount}, Balance: ${balance}`);
             return acc + parseFloat(balance);
         }, 0);
@@ -224,51 +229,47 @@ const amountToUse = parseFloat(booking.amount.toString() );
 
     const updateTotalBalance = async () => {
         try {
-            if (!uid || typeof uid !== 'string') {
-                throw new Error('User ID (uid) is not defined or is not a string.');
-            }
-            if (!id || typeof id !== 'string') {
-                throw new Error('Driver ID (id) is not defined or is not a string.');
-            }
+            if (!uid || typeof uid !== "string") throw new Error("User ID is invalid.");
+            if (!id || typeof id !== "string") throw new Error("Driver ID is invalid.");
     
-            // Ensure that bookings and driver are fully loaded
             if (!bookings || bookings.length === 0) {
-                console.log('Bookings are not loaded yet.');
+                console.log("Bookings are not loaded yet.");
                 return;
             }
             if (!driver) {
-                console.log('Driver data is not loaded yet.');
+                console.log("Driver data is not loaded yet.");
                 return;
             }
     
+            const calculatedNetTotalAmountInHand = calculateNetTotalAmountInHand();
             const totalBalances = bookings.reduce((acc, booking) => {
-                const amount = parseFloat(booking.amount?.toString() || '0');
-                const receivedAmount = parseFloat(booking.receivedAmount?.toString() || '0');
-                return acc + (amount - receivedAmount);
+                const balance = calculateBalance(
+                    parseFloat(booking.amount?.toString() || "0"),
+                    parseFloat(booking.receivedAmount?.toString() || "0"),
+                    booking.receivedUser
+                );
+                return acc + parseFloat(balance);
             }, 0);
     
-            console.log('Total Balance:', totalBalances);
-            const calculatedNetTotalAmountInHand = calculateNetTotalAmountInHand();
-            setTotalBalances(totalBalances);
-            const netTotalAsNumber = parseFloat(calculatedNetTotalAmountInHand);
-        
             const driverRef = doc(db, `user/${uid}/driver`, id);
-            console.log('Total Balance:', totalBalances);
-            console.log('Net Total Amount in Hand:', calculatedNetTotalAmountInHand);
     
-                   // Update Firestore document
-        await updateDoc(driverRef, {
-            totalBalances: totalBalances,
-            netTotalAmountInHand: netTotalAsNumber,
-        });
-        setNetTotalAmountInHand(netTotalAsNumber);
-
-                console.log('Total balance and net total updated successfully:', calculatedNetTotalAmountInHand);
-            
+            await updateDoc(driverRef, {
+                totalBalances: totalBalances,
+                netTotalAmountInHand: parseFloat(calculatedNetTotalAmountInHand),
+            });
+    
+            setTotalBalances(totalBalances);
+            setNetTotalAmountInHand(parseFloat(calculatedNetTotalAmountInHand));
+    
+            console.log(
+                "Total balance and net total updated successfully:",
+                calculatedNetTotalAmountInHand
+            );
         } catch (error) {
-            console.error('Error updating total balance:', error);
+            console.error("Error updating total balance:", error);
         }
     };
+    
     
 
     const handleApproveClick = async (booking: Booking) => {
@@ -316,35 +317,42 @@ const amountToUse = parseFloat(booking.amount.toString() );
     };
     const calculateMonthlyTotals = () => { 
         const totalAmount = filteredBookings.reduce((acc, booking) => {
-            // Use booking.amount directly
-            const amountToUse = typeof booking.amount === 'number' 
-                ? booking.amount 
-                : parseFloat(booking.amount || '0');
-    
+            // Treat amount as 0 if receivedUser is "Staff"
+            const amountToUse = booking.receivedUser === "Staff"
+                ? 0
+                : (typeof booking.amount === 'number' 
+                    ? booking.amount 
+                    : parseFloat(booking.amount || '0'));
+        
             return acc + (isNaN(amountToUse) ? 0 : amountToUse);
         }, 0);
         const totalReceived = filteredBookings.reduce((acc, booking) => {
-            // Use booking.receivedAmount directly
-            const receivedAmount = typeof booking.receivedAmount === 'number' 
-                ? booking.receivedAmount 
-                : parseFloat(booking.receivedAmount || '0');
-    
+            // Treat receivedAmount as 0 if receivedUser is "Staff"
+            const receivedAmount = booking.receivedUser === "Staff"
+                ? 0
+                : (typeof booking.receivedAmount === 'number' 
+                    ? booking.receivedAmount 
+                    : parseFloat(booking.receivedAmount || '0'));
+        
             return acc + (isNaN(receivedAmount) ? 0 : receivedAmount);
         }, 0);
         console.log("totalAmount",totalReceived)
 
         const totalBalances = filteredBookings.reduce((acc, booking) => {
-            // Use booking.amount and booking.receivedAmount directly
-            const amountToUse = typeof booking.amount === 'number'
-                ? booking.amount
-                : parseFloat(booking.amount || '0');
-    
-            const receivedAmount = typeof booking.receivedAmount === 'number'
-                ? booking.receivedAmount
-                : parseFloat(booking.receivedAmount || '0');
-    
+            // Treat amount and receivedAmount as 0 if receivedUser is "Staff"
+            const amountToUse = booking.receivedUser === "Staff"
+                ? 0
+                : (typeof booking.amount === 'number'
+                    ? booking.amount
+                    : parseFloat(booking.amount || '0'));
+            
+            const receivedAmount = booking.receivedUser === "Staff"
+                ? 0
+                : (typeof booking.receivedAmount === 'number'
+                    ? booking.receivedAmount
+                    : parseFloat(booking.receivedAmount || '0'));
+            
             const balance = amountToUse - receivedAmount;
-    
             return acc + (isNaN(balance) ? 0 : balance);
         }, 0);
     
@@ -365,9 +373,15 @@ const amountToUse = parseFloat(booking.amount.toString() );
         const totalBalances = selectedBookings.reduce((acc, bookingId) => {
             const booking = bookings.find((b) => b.id === bookingId);
             if (booking) {
-                // Calculate balance directly
-                const amountToUse = parseFloat(booking.amount?.toString() || '0');
-                const receivedAmount = parseFloat(booking.receivedAmount?.toString() || '0');
+                // Apply the condition for receivedUser === "Staff"
+                const amountToUse = booking.receivedUser === "Staff"
+                    ? 0
+                    : (typeof booking.amount === 'number' ? booking.amount : parseFloat(booking.amount || '0'));
+    
+                const receivedAmount = booking.receivedUser === "Staff"
+                    ? 0
+                    : (typeof booking.receivedAmount === 'number' ? booking.receivedAmount : parseFloat(booking.receivedAmount || '0'));
+    
                 const balance = amountToUse - receivedAmount;
     
                 return acc + (isNaN(balance) ? 0 : balance);
@@ -377,6 +391,7 @@ const amountToUse = parseFloat(booking.amount.toString() );
     
         setTotalSelectedBalance(totalBalances.toFixed(2));
     };
+    
     
     const generateInvoice = () => {
         const selectedBookingDetails = selectedBookings
@@ -439,30 +454,40 @@ const amountToUse = parseFloat(booking.amount.toString() );
     // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     const distributeReceivedAmount = (receivedAmount: number, bookings: Booking[]) => {
         let remainingAmount = receivedAmount;
+        const selectedBookingIds: string[] = []; // Array to hold selected booking IDs
         const sortedBookings = [...bookings].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
     
         const updatedBookings = sortedBookings.map((booking) => {
-            // Use a unified approach for calculating amount and balance
+            // Skip booking if receivedUser is 'Staff'
+            if (booking.receivedUser === "Staff") {
+                return booking; // No changes to the booking if it's "Staff"
+            }
+    
+            // Calculate amount to use
             const amountToUse = parseFloat(booking.amount?.toString() || '0');
             const bookingBalance = amountToUse - (booking.receivedAmount || 0);
     
-            if (remainingAmount > 0) {
+            if (remainingAmount > 0 && bookingBalance > 0) {
+                // Calculate applied amount
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);
                 booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
                 remainingAmount -= appliedAmount;
+    
+                // Add the booking ID to the selectedBookingIds array
+                selectedBookingIds.push(booking.id);
             }
     
-            // Add amountToUse as a property for further use
+            // Store the amountToUse for further use
             booking.amountToUse = amountToUse;
             return booking;
         });
     
-        return updatedBookings;
+        return { updatedBookings, selectedBookingIds }; // Return both updated bookings and selected booking IDs
     };
     
     const handleAmountReceiveChange = async (receivedAmount: number) => {
         try {
-            const updatedBookings = distributeReceivedAmount(receivedAmount, bookings);
+            const { updatedBookings, selectedBookingIds } = distributeReceivedAmount(receivedAmount, bookings);
             setBookings(updatedBookings);
     
             const totalAppliedAmount = updatedBookings.reduce((acc, booking) => acc + (booking.receivedAmount || 0), 0);
@@ -471,9 +496,14 @@ const amountToUse = parseFloat(booking.amount.toString() );
             const batch = writeBatch(db);
             updatedBookings.forEach((booking) => {
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
+                const balance = calculateBalance(
+                    booking.amountToUse || 0,
+                    booking.receivedAmount || 0,
+                    booking.receivedUser // Ensure receivedUser is passed
+                );
                 batch.update(bookingRef, {
                     receivedAmount: booking.receivedAmount || 0,
-                    balance: String(calculateBalance(booking.amountToUse || 0, booking.receivedAmount || 0)),
+                    balance: balance,
                     role: role || 'unknown',
                 });
             });
@@ -482,101 +512,283 @@ const amountToUse = parseFloat(booking.amount.toString() );
             const querySnapshot = await getDocs(usersQuery);
     
             querySnapshot.forEach((userDoc) => {
-                const staffReceivedEntry = {
-                    amount: receivedAmount,
-                    date: new Date().toISOString(),
-                };
-                const staffReceivedRef = collection(db, `user/${uid}/users/${userDoc.id}/staffReceived`);
-                const newStaffReceivedDocRef = doc(staffReceivedRef);
-                batch.set(newStaffReceivedDocRef, staffReceivedEntry);
+                // Update staff received with multiple selectedBookingIds
+                updateStaffReceived(userDoc.id, uid, receivedAmount, selectedBookingIds);
             });
     
             await batch.commit();
             updateTotalBalance();
             setShowAmountDiv(false);
+            if (role === 'admin') {
+                await handleAmountReceivedChangeWithoutAuth(selectedBookingIds[0], receivedAmount.toString());
+            }
         } catch (error) {
             console.error('Error during handleAmountReceiveChange:', error);
         }
     };
+    
+    const updateStaffReceived = async (
+        staffId: string,
+        uid: string,
+        receivedAmount: number,
+        selectedBookingIds: string[]
+    ) => {
+        try {
+            const db = getFirestore();
+            const staffReceivedRef = collection(db, `user/${uid}/users/${staffId}/staffReceived`);
+            
+            await addDoc(staffReceivedRef, {
+                amount: receivedAmount.toString(),
+                date: new Date().toISOString(),
+                selectedBookingIds, // Store the array of booking IDs
+            });
+            console.log("Staff received details updated successfully.");
+        } catch (error) {
+            console.error("Error updating staff received details:", error);
+        }
+    };
+    
+    
     const handleInputChange = (bookingId: string, value: string) => {
         setInputValues((prev) => ({
             ...prev,
             [bookingId]: value,
         }));
     };
+    const getStaffId = async (userName: string, password: string, uid: string) => {
+        const db = getFirestore();
+        const usersRef = collection(db, `user/${uid}/users`);
+        
+        const querySnapshot = await getDocs(usersRef);
+        const userDoc = querySnapshot.docs.find(doc => {
+            const data = doc.data();
+            return data.userName === userName && data.password === password && data.role === 'staff';
+        });
+    
+        return userDoc ? userDoc.id : null; // Return staffId or null if not found
+    };
+    
     
     const handleOkClick = async (bookingId: string) => {
-        const receivedAmountCompany = inputValues[bookingId]; // Get the input value for the specific booking
-        if (!receivedAmountCompany) {
+        const receivedAmount = inputValues[bookingId]; // Get the input value for the specific booking
+        if (!receivedAmount) {
             console.error('No amount entered.');
             return;
         }
-    
-        await handleAmountReceivedChange(bookingId, receivedAmountCompany); // Call the existing function
-    };
-    const handleAmountReceivedChange = async (bookingId: string, receivedAmount: string) => {
+        setLoadingStates((prevState) => ({ ...prevState, [bookingId]: true }));
+
         try {
-            if (!uid || typeof uid !== 'string') {
-                throw new Error('User ID (uid) is not defined or is not a string.');
-            }
-            if (!bookingId || typeof bookingId !== 'string') {
-                throw new Error('Booking ID is not defined or is not a string.');
+                    const role = sessionStorage.getItem('role');  // Assuming role is stored in sessionStorage
+        const userName = sessionStorage.getItem('username');
+        const password = sessionStorage.getItem('password');
+    
+        // Check if the role is 'staff', then proceed with username and password operations
+        if (role === 'staff') {
+            if (!userName || !password) {
+                console.error('Username or password is missing.');
+                return;
             }
     
-            const booking = bookings.find((booking) => booking.id === bookingId);
-            if (!booking) {
-                throw new Error('Booking not found.');
-            }
-            if (!booking.selectedDriver) {
-                throw new Error('Selected driver is not defined for this booking.');
-            }
+            // Pass the missing arguments (username and password) to the function
+            await handleAmountReceivedChange(bookingId, receivedAmount, userName, password);
+        } else if (role === 'admin') {
+            // If role is admin, skip username and password operations
+            await handleAmountReceivedChangeWithoutAuth(bookingId, receivedAmount);
+        } else {
+            console.error('Role is neither staff nor admin.');
+        }
+    } catch (error) {
+        console.error('Error processing payment:', error);
+    } finally {
+        // Remove loading state for the current booking
+        setLoadingStates((prevState) => ({ ...prevState, [bookingId]: false }));
+    }
+};
+    
+    const handleAmountReceivedChange = async (bookingId: string, receivedAmount: string, userName: string, password: string) => {
+        try {
+            if (!uid || typeof uid !== "string") throw new Error("User ID is invalid.");
+            if (!bookingId || typeof bookingId !== "string") throw new Error("Booking ID is invalid.");
+        
             const receivedAmountToUse = parseFloat(receivedAmount);
-    
+            if (isNaN(receivedAmountToUse)) {
+                console.error("Invalid received amount.");
+                return;
+            }
+            
+            // Fetch staffId based on username and password
+            const staffId = await getStaffId(userName, password, uid);
+            if (!staffId) {
+                console.error("Staff not found.");
+                return;
+            }
+      // Continue with the existing logic to update the booking and driver data
+      const booking = bookings.find((b) => b.id === bookingId);
+      if (!booking) throw new Error("Booking not found.");
+      if (!booking.selectedDriver) throw new Error("Selected driver is not defined.");
+  
+            // Update the staffReceived collection
+            await updateStaffReceived(staffId, uid, receivedAmountToUse, [bookingId]);
+        
+          
             const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
             const driverRef = doc(db, `user/${uid}/driver`, booking.selectedDriver);
-
+        
             await runTransaction(db, async (transaction) => {
                 const bookingDoc = await transaction.get(bookingRef);
                 if (!bookingDoc.exists()) throw new Error("Booking does not exist.");
-    
+            
                 const driverDoc = await transaction.get(driverRef);
                 if (!driverDoc.exists()) throw new Error("Driver does not exist.");
-    
+            
                 const currentNetTotal = parseFloat(driverDoc.data().netTotalAmountInHand || 0);
                 const newNetTotal = currentNetTotal + receivedAmountToUse;
-    
-                // Update booking and driver within the same transaction
+            
+                const balance = calculateBalance(
+                    bookingDoc.data().amount || 0,
+                    receivedAmountToUse,
+                    bookingDoc.data().receivedUser
+                );
+            
                 transaction.update(bookingRef, {
-                                    receivedAmount: receivedAmountToUse,
-                                    balance: calculateBalance(bookingDoc.data().amount || 0, receivedAmountToUse),
-                                });
-                                transaction.update(driverRef, {
-                                    netTotalAmountInHand: newNetTotal,
-                                });
-                            });
-    
+                    receivedAmount: receivedAmountToUse,
+                    balance: balance,
+                });
+            
+                transaction.update(driverRef, {
+                    netTotalAmountInHand: newNetTotal,
+                });
+            });
+        
             setBookings(
                 bookings.map((b) =>
                     b.id === bookingId
                         ? {
                               ...b,
                               receivedAmount: receivedAmountToUse,
+                              balance: calculateBalance(b.amount, receivedAmountToUse, b.receivedUser),
                           }
                         : b
                 )
             );
-    
+        
             await updateTotalBalance();
+        
             setClickedButtons((prevState) => ({
                 ...prevState,
                 [bookingId]: true,
             }));
         } catch (error) {
-            console.error('Error updating received amount:', error);
+            console.error("Error updating received amount:", error);
         }
     };
     
-
+    // If the role is 'admin', you can define a method that skips the username and password logic
+    const handleAmountReceivedChangeWithoutAuth = async (bookingId: string, receivedAmount: string) => {
+        try {
+            if (!uid || typeof uid !== "string") throw new Error("User ID is invalid.");
+            if (!bookingId || typeof bookingId !== "string") throw new Error("Booking ID is invalid.");
+        
+            const receivedAmountToUse = parseFloat(receivedAmount);
+            if (isNaN(receivedAmountToUse)) {
+                console.error("Invalid received amount.");
+                return;
+            }
+        
+            // Update the staffReceived collection without username/password
+            await updateStaffReceivedWithoutAuth(bookingId, receivedAmountToUse, uid);
+        
+            // Continue with the existing logic to update the booking and driver data
+            const booking = bookings.find((b) => b.id === bookingId);
+            if (!booking) throw new Error("Booking not found.");
+            if (!booking.selectedDriver) throw new Error("Selected driver is not defined.");
+        
+            const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
+            const driverRef = doc(db, `user/${uid}/driver`, booking.selectedDriver);
+        
+            await runTransaction(db, async (transaction) => {
+                const bookingDoc = await transaction.get(bookingRef);
+                if (!bookingDoc.exists()) throw new Error("Booking does not exist.");
+            
+                const driverDoc = await transaction.get(driverRef);
+                if (!driverDoc.exists()) throw new Error("Driver does not exist.");
+            
+                const currentNetTotal = parseFloat(driverDoc.data().netTotalAmountInHand || 0);
+                const newNetTotal = currentNetTotal + receivedAmountToUse;
+            
+                const balance = calculateBalance(
+                    bookingDoc.data().amount || 0,
+                    receivedAmountToUse,
+                    bookingDoc.data().receivedUser
+                );
+            
+                transaction.update(bookingRef, {
+                    receivedAmount: receivedAmountToUse,
+                    balance: balance,
+                });
+            
+                transaction.update(driverRef, {
+                    netTotalAmountInHand: newNetTotal,
+                });
+            });
+        
+            setBookings(
+                bookings.map((b) =>
+                    b.id === bookingId
+                        ? {
+                              ...b,
+                              receivedAmount: receivedAmountToUse,
+                              balance: calculateBalance(b.amount, receivedAmountToUse, b.receivedUser),
+                          }
+                        : b
+                )
+            );
+        
+            await updateTotalBalance();
+        
+            setClickedButtons((prevState) => ({
+                ...prevState,
+                [bookingId]: true,
+            }));
+        } catch (error) {
+            console.error("Error updating received amount:", error);
+        }
+    };
+    const updateStaffReceivedWithoutAuth = async (
+        bookingId: string,
+        receivedAmount: number,
+        uid: string
+    ) => {
+        try {
+            const staffReceivedRef = doc(db, `user/${uid}/adminReceived`, bookingId);
+    
+            await setDoc(
+                staffReceivedRef,
+                {
+                    bookingId:bookingId,
+                    receivedAmount: receivedAmount,
+                    updatedAt: new Date(),
+                },
+                { merge: true } // Merge if the document exists
+            );
+    
+            console.log("Staff received data updated successfully (no auth required).");
+        } catch (error) {
+            console.error("Error updating staff received data without auth:", error);
+            throw error; // Re-throw for error handling
+        }
+    };
+      useEffect(() => {
+            const term = searchTerm.toLowerCase();
+            const filtered = bookings.filter(
+              (record) =>
+                (record.fileNumber?.toLowerCase().includes(term) ?? false) ||
+                (record.vehicleNumber?.toLowerCase().includes(term) ?? false) ||
+                (record.dateTime?.toLowerCase().includes(term) ?? false)
+            );
+            setFilteredBookings(filtered);
+          }, [searchTerm, bookings]);
+    
     return (
         <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg">
             <h1 className="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">Cash Collection Report</h1>
@@ -666,7 +878,7 @@ const amountToUse = parseFloat(booking.amount.toString() );
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                       
-                        <div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
+                        {/* <div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
                             <div className="flex items-center space-x-4">
                                 <div className="text-4xl text-green-600">
                                     <i className="fas fa-receipt"></i>
@@ -676,7 +888,7 @@ const amountToUse = parseFloat(booking.amount.toString() );
                                     <p className="text-gray-700 text-lg">{monthlyTotals.totalAmount}</p>
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
                         <div className="bg-gradient-to-r from-blue-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
                             <div className="flex items-center space-x-4">
                                 <div className="text-4xl text-blue-600">
@@ -700,7 +912,20 @@ const amountToUse = parseFloat(booking.amount.toString() );
                             </div>
                         </div>
                     </div>
-
+                    <input
+                type="text"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                    padding: '10px',
+                    borderRadius: '5px',
+                    border: '1px solid #ccc',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    marginBottom: '10px',
+                }}
+            />
                     {selectedBookings.length > 0 && totalSelectedBalance !== '0.00' && showAmountDiv && (
                         <div className="fixed top-40 left-1/2 transform -translate-x-1/2 bg-yellow-100 border-2 border-gray-300 shadow-lg rounded-lg p-6 z-10">
                             <div className="flex flex-col space-y-4">
@@ -783,6 +1008,7 @@ const amountToUse = parseFloat(booking.amount.toString() );
                                             <td className={styles.responsiveCell}>{format(parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date()), 'dd/MM/yyyy, h:mm:ss a')}</td>
                                             <td className={styles.responsiveCell}>{booking.fileNumber}</td>
                                             <td className={styles.responsiveCell}>{booking.vehicleNumber}</td>
+                                           
                                             <td className={styles.responsiveCell}>{booking.amount}</td>
                                           <td key={booking.id} className={styles.responsiveCell}>
                                                 <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -805,7 +1031,7 @@ const amountToUse = parseFloat(booking.amount.toString() );
                                                         />
                                                         <button
                     onClick={() => handleOkClick(booking.id)}
-                    disabled={booking.approve}
+                    disabled={booking.approve || loadingStates[booking.id]} // Disable if loading
                     style={{
                         backgroundColor:
                             Number(
@@ -815,7 +1041,7 @@ const amountToUse = parseFloat(booking.amount.toString() );
                                          
                                         '0'
                                     ),
-                                    inputValues[booking.id] || booking.receivedAmount || '0'
+                                    inputValues[booking.id] || booking.receivedAmount || '0',booking.receivedUser
                                 )
                             ) === 0
                                 ? '#28a745' // Green for zero balance
@@ -827,8 +1053,8 @@ const amountToUse = parseFloat(booking.amount.toString() );
                         cursor: 'pointer',
                     }}
                 >
-                    OK
-                </button>
+    {loadingStates[booking.id] ? 'Loading...' : 'OK'}
+    </button>
                                                 </>
                                                     )}
                                                     
@@ -841,7 +1067,9 @@ const amountToUse = parseFloat(booking.amount.toString() );
         backgroundColor: 
             Number(calculateBalance(
                 parseFloat(booking.amount?.toString() || '0'),
-                effectiveReceivedAmount || 0
+                effectiveReceivedAmount || 0,
+                booking.receivedUser
+
             )) === 0
             ? '#e6ffe6' // Light green for zero balance
             : '#ffe6e6', // Light red for non-zero balance
@@ -850,6 +1078,8 @@ const amountToUse = parseFloat(booking.amount.toString() );
     {calculateBalance(
         parseFloat(booking.amount?.toString() ||  '0'),
         effectiveReceivedAmount || 0,
+        booking.receivedUser
+
     )}
 </td>
 
@@ -891,11 +1121,12 @@ const amountToUse = parseFloat(booking.amount.toString() );
             // Use receivedAmountCompany if available, otherwise use receivedAmount
             const receivedAmount = parseFloat( booking.receivedAmount?.toString() || '0');
 
-            // Calculate the balance for this booking
-            const balance = amountToUse - receivedAmount;
+            const balance = booking.receivedUser === "Staff"
+            ? 0
+            : amountToUse - receivedAmount;
 
-            // Return the accumulated total balance
-            return total + (isNaN(balance) ? 0 : balance);
+        // Return the accumulated total balance
+        return total + (isNaN(balance) ? 0 : balance);
         }, 0)
     ).toFixed(2) || 0}
 </td>
@@ -953,4 +1184,4 @@ const amountToUse = parseFloat(booking.amount.toString() );
 };
 
 export default CashCollectionReport;
-// ----------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------------

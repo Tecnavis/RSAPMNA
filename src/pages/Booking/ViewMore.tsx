@@ -415,9 +415,12 @@ const ViewMore: React.FC = () => {
             return; // Exit the function if either is undefined
         }
         try {
+            const updatedAmount = bookingDetails?.company?.toLowerCase() === "rsa" ? "0" : formData.amount;
+
             const docRef = doc(db, `user/${uid}/bookings`, id);
             await updateDoc(docRef, {
                 ...formData,
+                amount: updatedAmount,
                 status: 'Order Completed',
                 closedStatus: 'Admin closed booking',
             });
@@ -1201,19 +1204,26 @@ const ViewMore: React.FC = () => {
                         </select>
                     </div>
                     <div className="mb-4">
-                        <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-                            Amount
-                        </label>
-                        <input
-                            type="text"
-                            id="amount"
-                            name="amount"
-                            value={formData.amount}
-                            onChange={handleFormChange}
-                            className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-                            required
-                        />
-                    </div>
+    {bookingDetails?.company?.toLowerCase() !== "rsa" ? (
+        <>
+            <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
+                Amount
+            </label>
+            <input
+                type="text"
+                id="amount"
+                name="amount"
+                value={formData.amount}
+                onChange={handleFormChange}
+                className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
+                required
+            />
+        </>
+    ) : (
+        <p className="text-sm text-gray-500">RSA Work</p>
+    )}
+</div>
+
                     <div className="mb-4">
                         <label htmlFor="distance" className="block text-sm font-medium text-gray-700">
                             Distance

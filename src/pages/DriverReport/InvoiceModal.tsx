@@ -33,8 +33,10 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({
   };
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 p-4">
-      <div className="bg-white p-5 rounded-lg shadow-lg w-full max-w-4xl">
-        <h2 className="text-2xl font-bold mb-4 text-center">Generate Invoice</h2>
+    <div
+      className="bg-white p-5 rounded-lg shadow-lg w-full max-w-4xl"
+      style={{ maxHeight: '80vh', overflowY: 'auto' }} // Add max height and scrolling
+    > <h2 className="text-2xl font-bold mb-4 text-center">Generate Invoice</h2>
         <div className="overflow-x-auto">
           <table className="table-auto w-full text-left whitespace-no-wrap">
             <thead>

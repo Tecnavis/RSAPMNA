@@ -72,7 +72,9 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [updatedTotalSalary, setUpdatedTotalSalary] = useState<number>(0);
     const [companies, setCompanies] = useState<Driver[]>([]);
     const [totalDriverDistance, setTotalDriverDistance] = useState<string>('');
-    const [receivedAmount, setReceivedAmount] = useState<string>('');
+    const [receivedAmount, setReceivedAmount] = useState<number>(0);
+    const [receivedAmountCompany, setReceivedAmountCompany] = useState<number>(0);
+
     const { state } = useLocation();
     const [isModalOpen1, setIsModalOpen1] = useState<boolean>(false);
     const openModal1 = () => setIsModalOpen1(true);
@@ -1114,7 +1116,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     trappedLocation: trappedLocation || '',
                     updatedTotalSalary: updatedTotalSalary || 0,
                     insuranceAmountBody: insuranceAmountBody || '',
-                    receivedAmount: receivedAmount || '',
+                    receivedAmount: receivedAmount || 0,
+                    receivedAmountCompany: receivedAmountCompany || 0,
                     pickupDistance: pickupDistance,
                     companyBooking: companyBooking,
                     companyName: companyName,

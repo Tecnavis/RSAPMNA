@@ -54,6 +54,7 @@ type RecordData = {
     requestBool1: boolean;
     currentLocation?: string;
     phone?: string;
+    vehicleNumber:string
 };
 interface Location {
     name?: string;
@@ -562,7 +563,7 @@ console.log("currentDate",currentDate)
                             <th>#</th>
                             <th>Date & Time</th>
                             <th>File Number</th>
-                            <th>Customer Name</th>
+                            <th>Customer Vehicle Number</th>
 
                             <th>Customer Phone Number</th>
                             <th>Driver</th>
@@ -609,7 +610,7 @@ console.log("currentDate",currentDate)
                                     <td data-label="#"> {index + 1} </td>
                                     <td data-label="Date & Time">{rowData.createdAt}</td>
                                     <td data-label="File Number">{rowData.fileNumber}</td>
-                                    <td data-label="Customer Name">{rowData.customerName}</td>
+                                    <td data-label="Customer Vehicle Number">{rowData.vehicleNumber}</td>
 
                                     <td data-label="Customer Phone Number">{rowData.phoneNumber}</td>
                                     <td data-label="Driver">{rowData.driver}</td>
