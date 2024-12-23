@@ -53,8 +53,10 @@ const Leave: React.FC = () => {
       hour12: true, // Use 12-hour format with AM/PM
       timeZoneName: 'short', // Optional, include the time zone if needed
     };
-    return new Date(seconds * 1000).toLocaleString('en-IN', options);
-  };
+   // Format the date and convert 'am'/'pm' to 'AM'/'PM'
+   const formattedDate = new Date(seconds * 1000).toLocaleString('en-IN', options);
+   return formattedDate.replace(/\b(am|pm)\b/g, (match) => match.toUpperCase());
+ };
   
   
   const fetchLeaveDetails = async () => {

@@ -21,3 +21,4 @@ const IconMenuCalendar: FC<IconMenuCalendarProps> = ({ className }) => {
 };
 
 export default IconMenuCalendar;
+// ---------------------------------------------------------------------

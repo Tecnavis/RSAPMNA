@@ -24,7 +24,10 @@
   }
   @media print {
     .no-print {
-      display: none !important;
+      display: none !important; /* Hide elements with the 'no-print' class */
     }
+  
+  
   }
+  
   
