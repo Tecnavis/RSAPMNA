@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, onSnapshot, addDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
-import IconEdit from '../../components/Icon/IconEdit'; // Import your IconEdit component here
 import InvoiceModal from './InvoiceModal';
 import { parse, format } from 'date-fns';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
@@ -615,38 +614,99 @@ const SalaryReport: React.FC = () => {
         }
     };
 
-    const handlePrint = () => {
+    const handlePrint = () => { 
         const printContent = printRef.current; // Get the content to print
         const printWindow = window.open('', '', 'height=800,width=1200'); // Create a print window
-      
+        
         if (printWindow && printContent) {
-          printWindow.document.write('<html><head><title>Print</title></head><body>');
-          printWindow.document.write(`
-            <style>
-              table { width: 100%; border: 1px solid black; }
-              .no-print { display: none !important; } /* Hides elements with the 'no-print' class */
-            </style>
-          `);
-          printWindow.document.write(printContent.innerHTML); // Write the content into the print window
-          printWindow.document.write('</body></html>');
-          printWindow.document.close(); // Close the document to trigger printing
-          printWindow.print(); // Trigger the print dialog
+            printWindow.document.write('<html><head><title>Print</title>');
+            
+            // Add custom styles for print
+            printWindow.document.write(`
+                <style>
+                    body {
+                        font-family: 'Arial', sans-serif;
+                        line-height: 1.5;
+                        margin: 0;
+                        padding: 20px;
+                    }
+                    h2, h3 {
+                        color: #2c3e50;
+                    }
+                    .bg-gradient-to-r {
+                        background: linear-gradient(to right, #a8e063, #56ab2f);
+                        padding: 15px;
+                        border-radius: 8px;
+                        color: #fff;
+                    }
+                    .table-container {
+                        width: 100%;
+                        margin-top: 20px;
+                        border-collapse: collapse;
+                    }
+                    .table-container th, .table-container td {
+                        padding: 12px;
+                        border: 1px solid #ccc;
+                        text-align: left;
+                    }
+                    .table-container th {
+                        background-color: #f2f2f2;
+                        font-weight: bold;
+                    }
+                    .table-container tr:nth-child(even) {
+                        background-color: #f9f9f9;
+                    }
+                    .table-container td {
+                        background-color: #fff;
+                    }
+                    .no-print {
+                        display: none !important; /* Hide elements with the 'no-print' class */
+                    }
+                    .text-green {
+                        color: #2ecc71;
+                    }
+                    .text-red {
+                        color: #e74c3c;
+                    }
+                    .action-buttons {
+                        display: none; /* Hide action buttons for printing */
+                    }
+                </style>
+            `);
+            
+            printWindow.document.write('</head><body>');
+            
+            // Get selected month and year
+            const monthText = selectedMonth ? selectedMonth : "All"; // Default to "All" if no month is selected
+            const yearText = selectedYear ? selectedYear : "All"; // Default to "All" if no year is selected
+            
+            // Inject the selected month and year values in the print content
+            printWindow.document.write(`
+                <p><strong>Month:</strong> ${monthText}</p>
+                <p><strong>Year:</strong> ${yearText}</p>
+            `);
+            
+            // Write the rest of the content into the print window
+            printWindow.document.write(printContent.innerHTML); 
+            printWindow.document.write('</body></html>');
+            printWindow.document.close(); // Close the document to trigger printing
+            printWindow.print(); // Trigger the print dialog
         } else {
-          console.error('Print window or content is null');
+            console.error('Print window or content is null');
         }
-      };
-      
+    };
+    
     
     return (
-        <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg sm:p-8 lg:p-10">
+        <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg sm:p-8 lg:p-10"  ref={printRef}>
             {driver && (
                 <h1 className="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">
                     {' '}
                     Salary Report <span className="text-red-500">{driver.driverName}</span>
                 </h1>
             )}
-            <div className="flex justify-center mb-4">
-                {/* Month Selection */}
+<div className="flex justify-center mb-4 no-print">
+{/* Month Selection */}
                 <div className="flex flex-col items-center mr-4">
                     <label htmlFor="monthSelect" className="text-lg font-semibold mb-1">
                         Select Month:
@@ -678,9 +738,9 @@ const SalaryReport: React.FC = () => {
                         onChange={(e) => setSelectedYear(e.target.value)}
                     >
                         <option value="">All</option>
-                        {Array.from({ length: 10 }, (_, i) => {
-                            const year = new Date().getFullYear() - i; // Generate the last 10 years
-                            return (
+                        {Array.from({ length: 11 }, (_, i) => {
+    const year = new Date().getFullYear() - 5 + i; // Generate years from 5 years before to 5 years after the current year
+    return (
                                 <option key={year} value={year}>
                                     {year}
                                 </option>
@@ -692,7 +752,7 @@ const SalaryReport: React.FC = () => {
 
             {/* ------------------------------------------------- */}
            
-            <div className="mb-4 flex justify-center space-x-0 md:space-x-4 flex-col md:flex-row">
+            <div className="mb-4 flex justify-center space-x-0 md:space-x-4 flex-col md:flex-row  no-print">
                
                 <button
           onClick={() => setShowAdvanceTable(!showAdvanceTable)}
@@ -744,7 +804,7 @@ const SalaryReport: React.FC = () => {
 
             <SalaryDetailsTable uid={uid} id={id || ''} showAdvanceDetails={showAdvanceDetails} />
 
-            <div className="flex justify-end">
+            <div className="flex justify-end  no-print">
         <button
           type="button"
           className="p-2 rounded-full bg-gray-500 text-white hover:bg-blue-600 mt-2 mb-2"
@@ -825,7 +885,7 @@ const SalaryReport: React.FC = () => {
                 </div>
             )}
 
-<div ref={printRef}>
+<div >
 <div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl  hover:scale-105 ">
                     <div className="flex items-center space-x-4">
                         <div className="text-4xl text-green-600">

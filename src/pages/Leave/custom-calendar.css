@@ -32,4 +32,17 @@
     opacity: 1;
     font-size: larger;
   }
-  
+  .calendar-container {
+    width: 100%; /* Full width */
+    display: flex; /* Align items */
+    justify-content: center; /* Center the content */
+    align-items: center; /* Vertical centering */
+    background-color: #f9f9f9; /* Optional background for the calendar */
+    padding: 10px; /* Optional padding */
+}
+
+.calendar-icon {
+    width: 100%;
+    height: auto;
+    max-width: 100%; /* Prevent overflow */
+}

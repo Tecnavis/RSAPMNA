@@ -36,6 +36,17 @@ interface Driver {
 interface WithoutMapBookingProps {
     activeForm: string;
 }
+interface DriverLeave {
+    driverId: string;
+    id: string;
+    date: {
+        toDate: () => Date;
+    };
+    leaveDate?: string; // Adjust this property based on your actual structure
+}
+
+const driverLeaves: DriverLeave[] = [];
+
 const customStyles = {
     overlay: {
         backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -47,8 +58,8 @@ const customStyles = {
         bottom: 'auto',
         transform: 'translate(-50%, -50%)',
         borderRadius: '10px',
-        maxWidth: '90%',
-        width: '600px',
+        maxWidth: '95%',
+        width: '800px',
         maxHeight: '80%',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
         padding: '30px',
@@ -123,8 +134,10 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [bodyShope, setBodyShope] = useState<string>('');
     const [isAdjustmentApplied, setIsAdjustmentApplied] = useState(false);
     const [isEditing, setIsEditing] = useState(false); // To track if we're in edit mode
+// -----------------------------------------------------------------------------------------------------------------------------------------------
+const [driverLeaves, setDriverLeaves] = useState<DriverLeave[]>([]);
 
-    const uid = sessionStorage.getItem('uid');
+const uid = sessionStorage.getItem('uid');
     const userName = sessionStorage.getItem('username');
     const role = sessionStorage.getItem('role');
     useEffect(() => {
@@ -198,7 +211,35 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         // Clean up interval on unmount
         return () => clearInterval(intervalId);
     }, []);
-
+    const fetchDriverLeaves = async () => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Remove time component
+        const todayTimestamp = today.getTime();
+    
+        const leavesRef = collection(db, `user/${uid}/DriverLeaves`);
+        const snapshot = await getDocs(leavesRef);
+        const leaveData: DriverLeave[] = snapshot.docs.map((doc) => {
+            const data = doc.data();
+            return {
+                ...data,
+                id: doc.id,
+                driverId: data.driverId || '', // Ensure `driverId` exists
+                date: data.date, // Ensure `date` exists and is a Firestore timestamp
+            };
+        });
+    
+        const filteredLeaves = leaveData.filter((leave) => {
+            const leaveDate = leave.date.toDate(); // Convert Firestore timestamp to Date
+            leaveDate.setHours(0, 0, 0, 0); // Remove time component
+            return leaveDate.getTime() === todayTimestamp;
+        });
+    
+        setDriverLeaves(filteredLeaves); // Now this works with the correct type
+    };
+    
+    useEffect(() => {
+        fetchDriverLeaves();
+    }, []);
     useEffect(() => {
         setManualInput(pickupLocation.name || '');
     }, [pickupLocation]);
@@ -387,6 +428,10 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             case 'company':
                 setCompany(value);
                 setFileNumber(value === 'self' ? bookingId : '');
+                if (isEditing) {
+                    setIsModalOpen(true);
+
+                }
                 break;
 
             case 'fileNumber':
@@ -412,6 +457,9 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
 
             case 'distance':
                 setDistance(value || 0); // Default to 0 if totalDistance is NaN
+                if (isEditing) {
+                    setIsModalOpen(true);
+                }
                 break;
            
             case 'selectedDriver':
@@ -475,7 +523,9 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
 
             case 'selectedCompany':
                 setSelectedCompany(value);
-
+                if (isEditing) {
+                    setIsModalOpen(true);
+                }
                 break;
 
             case 'dropoffLocation':
@@ -1589,7 +1639,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     </div>
                 )}
                 <ReactModal isOpen={isModalOpen} onRequestClose={closeModal} style={customStyles}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
                         <div style={{ position: 'sticky', top: 0, backgroundColor: '#f9f9f9', zIndex: 999, padding: '10px', borderBottom: '1px solid #ddd' }}>
                             <h2 style={{ textAlign: 'center', marginBottom: '10px', color: '#333', fontSize: '20px', fontWeight: '600' }}>Available Drivers for {serviceType}</h2>
                             <button onClick={closeModal} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded" style={{ marginLeft: 'auto', marginRight: '10px' }}>
@@ -1598,7 +1648,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         </div>
 
                         <div>
-                            <div className="grid grid-cols-1 gap-6">
+                            <div className="grid  gap-4">
                                 {/* Dummy driver with placeholder values */}
                                 <div className="border border-gray-300 p-4 rounded-lg shadow-sm bg-white">
                                     <table className="w-full table-auto">
@@ -1608,7 +1658,9 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                                 <th className="py-2 px-4 text-left">Pickup Distance</th>
 
                                                 <th className="py-2 px-4 text-left">Payable Amount</th>
-                                                <th className="py-2 px-4 text-left font-bold text-red-600">Profit after Deducting Expenses</th>
+                                                <th className="py-2 px-4 text-left font-bold text-violet-600">Profit after Deducting Expenses</th>
+                                                <th className="py-2 px-4 text-left  text-red-600">Leave Status</th>
+
                                                 <th className="py-2 px-4 text-left">Select</th>
                                             </tr>
                                         </thead>
@@ -1621,6 +1673,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                                 <td className="py-2 px-4">0.00</td>
 
                                                 <td className="py-2 px-4 text-red-600">0.00</td>
+                                                <td className="py-2 px-4 text-red-600">--------</td>
+
                                                 <td className="py-2 px-4">
                                                     <input
                                                         type="radio"
@@ -1682,6 +1736,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                         // Calculate profit based on expenses per KM
                                         const expensePerKM = serviceDetails.expensePerKM || 0;
                                         const profit = calculatedSalary - parsedDistance * expensePerKM;
+                                        const isOnLeave = driverLeaves.some((leave: DriverLeave) => leave.driverId === driver.id);
 
                                         return (
                                             <div key={driver.id} className="border border-gray-300 p-4 rounded-lg shadow-sm bg-white">
@@ -1692,20 +1747,38 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                                             <th className="py-2 px-4 text-left">Pickup Distance</th>
 
                                                             <th className="py-2 px-4 text-left">Payable Amount</th>
-                                                            <th className="py-2 px-4 text-left font-bold text-red-600">Profit after Deducting Expenses</th>
+                                                            <th className="py-2 px-4 text-left font-bold text-violet-600">Profit after Deducting Expenses</th>
+                                                            <th className="py-2 px-4 text-left font-bold text-red-600">Leave Status</th>
+
                                                             <th className="py-2 px-4 text-left">Select</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         <tr>
-                                                            <td className="py-2 px-4 font-semibold" style={{ color: isRSA ? 'green' : 'red', fontSize: '18px' }}>
-                                                                {driver.driverName || 'Unknown Driver'}
-                                                            </td>
+                                                        <td
+            className="py-2 px-4 font-semibold"
+            style={{
+                color: driver.companyName !== 'Company' && driver.companyName !== 'RSA' ? 'blue' : 'green',
+                fontSize: '18px',
+            }}
+        >
+            {driver.driverName || 'Unknown Driver'}
+        </td>
                                                             <td className="py-2 px-4">{driver.pickupDistance}</td> {/* Display the pickup distance here */}
                                                             <td className="py-2 px-4">{calculatedSalary.toFixed(2)}</td>
                                                             <td className="py-2 px-4 text-red-600 font-semibold" style={{ backgroundColor: '#ffe6e6' }}>
                                                                 {profit.toFixed(2)}
                                                             </td>
+                                                            <td
+    style={{
+        color: isOnLeave ? 'red' : 'green',
+        fontSize: isOnLeave ? '1.2em' : '1.2em',
+        fontWeight: 'bold',
+    }}
+>
+    {isOnLeave ? 'Leave Today' : 'Available'}
+</td>
+
                                                             <td className="py-2 px-4">
                                                                 <input
                                                                     type="radio"
