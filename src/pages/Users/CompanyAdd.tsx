@@ -42,6 +42,7 @@ const CompanyAdd = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [phone, setPhone] = useState('');
     const [companyName, setCompanyName] = useState('');
+    const [provider, setProvider] = useState('true');
 
     const [personalphone, setPersonalPhone] = useState('');
     const [salaryPerKm, setSalaryPerKm] = useState<SalaryDetails>({});
@@ -54,6 +55,8 @@ const CompanyAdd = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [advancePayment, setAdvancePayment] = useState('');
+    const [advance, setAdvance] = useState<number>(0);
+
     const [baseLocation, setBaseLocation] = useState('');
     const [baseLocations, setBaseLocations] = useState<Location[]>([]);
     const [serviceOptions, setServiceOptions] = useState<string[]>([]);
@@ -338,6 +341,8 @@ const CompanyAdd = () => {
                 password,
                 confirmPassword,
                 profileImageUrl,
+                advance,
+                provider
             };
     
             if (editData) {
@@ -388,7 +393,7 @@ const CompanyAdd = () => {
 
                             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
-                                    <label htmlFor="driverName">Driver Name</label>
+                                    <label htmlFor="driverName">Provider Name</label>
                                     <input id="driverName" type="text" placeholder="Enter driver Name" className="form-input" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
                                     {driverNameError && <span className={`${styles.error}`}>{driverNameError}</span>}
                                 </div>

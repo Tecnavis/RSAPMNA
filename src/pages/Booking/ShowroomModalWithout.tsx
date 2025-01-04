@@ -3,30 +3,38 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, getFirestore, onSnapshot } from 'firebase/firestore';
 import { TextField, Typography, IconButton, Button } from '@mui/material';
 import IconMapPin from '../../components/Icon/IconMapPin';
-
-const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
-    const [showRoom, setShowRoom] = useState('');
-    const [showrooms, setShowrooms] = useState([]);
-    const [description, setDescription] = useState('');
-    const [userName, setUserName] = useState('');
-    const [password, setPassword] = useState('');
-    const [tollFree, setTollFree] = useState('');
-    const [showRoomId, setShowRoomId] = useState('');
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [availableServices, setAvailableServices] = useState([]);
-    const [mobileNumber, setMobileNumber] = useState('');
-    const [state, setState] = useState('');
-    const [district, setDistrict] = useState('');
-    const [hasInsurance, setHasInsurance] = useState('');
-    const [insuranceAmount, setInsuranceAmount] = useState('');
-    const [hasInsuranceBody, setHasInsuranceBody] = useState('');
-    const [insuranceAmountBody, setInsuranceAmountBody] = useState('');
-    const [img, setImg] = useState('');
-    const [locationName, setLocationName] = useState('');
-    const [locationCoords, setLocationCoords] = useState({ lat: '', lng: '' });
+interface Showroom {
+    id: string;
+    [key: string]: any;
+  }
+  interface Props {
+    updateShowroomLocation: (location: string) => void;
+    onClose: () => void;
+  }
+  const ShowroomModalWithout: React.FC<Props> = ({ updateShowroomLocation, onClose }) => {
+    const [showRoom, setShowRoom] = useState<string>('');
+    const [showrooms, setShowrooms] = useState<Showroom[]>([]);
+    const [description, setDescription] = useState<string>('');
+    const [userName, setUserName] = useState<string>('');
+    const [password, setPassword] = useState<string>('');
+    const [tollFree, setTollFree] = useState<string>('');
+    const [showRoomId, setShowRoomId] = useState<string>('');
+    const [phoneNumber, setPhoneNumber] = useState<string>('');
+    const [availableServices, setAvailableServices] = useState<string[]>([]);
+    const [mobileNumber, setMobileNumber] = useState<string>('');
+    const [state, setState] = useState<string>('');
+    const [district, setDistrict] = useState<string>('');
+    const [hasInsurance, setHasInsurance] = useState<string>('');
+    const [insuranceAmount, setInsuranceAmount] = useState<string>('');
+    const [hasInsuranceBody, setHasInsuranceBody] = useState<string>('');
+    const [insuranceAmountBody, setInsuranceAmountBody] = useState<string>('');
+    const [img, setImg] = useState<string>('');
+    const [locationName, setLocationName] = useState<string>('');
+    const [locationCoords, setLocationCoords] = useState<{ lat: string; lng: string }>({ lat: '', lng: '' });
+  
     const db = getFirestore();
-    const uid = sessionStorage.getItem('uid');
-
+    const uid = sessionStorage.getItem('uid') || '';
+  
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, `user/${uid}/showroom`), (snapshot) => {
             const showroomsList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
@@ -36,7 +44,7 @@ const ShowroomModalWithout = ({ updateShowroomLocation, onClose }) => {
         return () => unsubscribe();
     }, [db]);
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();  // Prevent the default form submission behavior
         console.log('Form submit intercepted, no page reload should happen');
         const location = `${locationName}, ${locationCoords.lat}, ${locationCoords.lng}`;

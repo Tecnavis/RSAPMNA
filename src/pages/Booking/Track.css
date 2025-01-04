@@ -1,0 +1,301 @@
+.track-container {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+    font-family: 'Arial', sans-serif;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+  
+.track-title {
+    font-size: 1.6rem;
+    color: #333;
+    text-align: center;
+}
+  
+  .track-title span {
+    color: #007bff;
+  }
+  
+  .track-status {
+    font-size: 20px;
+    color: #555;
+    margin-bottom: 25px;
+    margin-top: 25px;
+
+  }
+  
+  .track-details p {
+    font-size: 18px;
+    color: #444;
+    margin: 8px 0;
+    padding: 10px;
+    border-left: 4px solid #007bff;
+    background-color: #f0f8ff;
+    border-radius: 5px;
+  }
+  
+  .track-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+  }
+  
+  .btn {
+    padding: 12px 25px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s ease;
+  }
+  
+  .btn.accept {
+    background-color: #28a745;
+  }
+  
+  .btn.call {
+    background-color: #007bff;
+  }
+  
+  .btn.reject {
+    background-color: #dc3545;
+  }
+  
+  .btn:hover {
+    transform: scale(1.05);
+  }
+  
+  .btn:active {
+    transform: scale(0.95);
+  }
+  .vehicle-number-input-container {
+    max-width: 400px;
+    margin: 20px auto;
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+  
+  .vehicle-number-heading {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 10px;
+  }
+  
+  .vehicle-number-subheading {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 20px;
+  }
+  
+  .vehicle-number-input {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .input-label {
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 5px;
+    text-align: left;
+  }
+  
+  .input-field {
+    padding: 12px;
+    font-size: 1rem;
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.3s ease;
+    width: 100%;
+    max-width: 350px;
+  }
+  
+  .input-field:focus {
+    border-color: #007bff;
+  }
+  
+  .btn-submit {
+    padding: 12px 20px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+    width: 100%;
+    max-width: 350px;
+  }
+  
+  .btn-submit:hover {
+    background-color: #0056b3;
+  }
+  .image-upload-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-width: 700px;
+    margin: 2rem auto;
+}
+
+.upload-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.upload-subtitle {
+    font-size: 0.9rem;
+    color: #777;
+    margin-bottom: 1rem;
+}
+
+.image-upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    width: 100%;
+}
+
+.image-upload-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.image-label {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 0.5rem;
+}
+
+.image-input {
+    display: inline-block;
+    margin-top: 0.5rem;
+    padding: 8px;
+    font-size: 0.85rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.image-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.image-input:hover:not(:disabled) {
+    border-color: #007bff;
+}
+
+.uploaded-notice {
+    font-size: 0.8rem;
+    color: #28a745;
+    margin-top: 0.5rem;
+}
+.vehicle-number-input-container, .vehicle-info-section {
+    margin-top: 20px;
+}
+
+.vehicle-number-heading, .upload-title {
+    font-size: 1.5rem;
+    color: #333;
+}
+
+.input-group {
+    margin-bottom: 1rem;
+}
+
+.input-label {
+    font-size: 1rem;
+    color: #555;
+}
+
+.input-field {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    font-size: 1rem;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.input-field:focus {
+    border-color: #007bff;
+    outline: none;
+}
+.btn-submit {
+    padding: 12px 20px;
+    font-size: 1.1rem;
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+    width: 100%;
+    margin-top: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn-submit:hover {
+    background-color: #0056b3;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .track-buttons {
+        flex-direction: column;
+    }
+
+    .image-upload-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.btn-drop {
+    background: linear-gradient(135deg, #4caf50, #81c784); /* Gradient green */
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  }
+  
+  .btn-drop:hover {
+    background: linear-gradient(135deg, #388e3c, #66bb6a); /* Darker gradient on hover */
+    transform: translateY(-2px); /* Slight raise on hover */
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+  }
+  
+  .btn-drop:active {
+    transform: translateY(0); /* Return to normal position on click */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  .error-message {
+    color: red;
+    font-size: 14px;
+    margin-top: 5px;
+  }
+    

@@ -11,10 +11,11 @@ lerna-debug.log*
 
 
 node_modules
-config/rsapmna-de966-firebase-adminsdk-5871a-fa63c6fc31.json
+config/rsa-dashboard-34773-firebase-adminsdk-5871a-fa63c6fc31.json
 dist
 dist-ssr
 *.local
+.env
 
 # Editor directories and files
 .vscode/*

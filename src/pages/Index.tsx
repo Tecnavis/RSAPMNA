@@ -14,7 +14,7 @@ const Index = () => {
     const role = sessionStorage.getItem('role');
     const userName = sessionStorage.getItem('username');
 
-    console.log("role", userName);
+    console.log("roleeer", uid);
 
     const [loading, setLoading] = useState(true);
     const [blink, setBlink] = useState(false); // New state for blinking

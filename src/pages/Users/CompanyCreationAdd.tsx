@@ -48,6 +48,7 @@ const CompanyCreationAdd = () => {
 
     const [companyName, setCompanyName] = useState("Company");
     const [errorMessage, setErrorMessage] = useState('');
+    const [advance, setAdvance] = useState(0);
 
     const [personalphone, setPersonalPhone] = useState('');
     const [salaryPerKm, setSalaryPerKm] = useState<SalaryPerKm>({});
@@ -311,7 +312,8 @@ const [phoneError, setPhoneError] = useState('');
                 basicSalaries,
                 password,
                 confirmPassword,
-                profileImageUrl // Use the corrected variable name
+                profileImageUrl ,
+advance,
             };
     
             if (editData) {
@@ -389,7 +391,7 @@ const [phoneError, setPhoneError] = useState('');
                                 </div>
                                 <div>
                                     <label htmlFor="phone">Phone</label>
-                                    <input id="phone" type="number" placeholder="phone number" className={`${styles.formInput} form-input`} value={phone} onChange={(e) => setPhone(e.target.value)} />
+                                    <input id="phone" type="phone" placeholder="phone number" className={`${styles.formInput} form-input`} value={phone} onChange={(e) => setPhone(e.target.value)} />
                                     {phoneError && <span className={`${styles.error}`}>{phoneError}</span>}
                                 </div>
                                 

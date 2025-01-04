@@ -4,34 +4,44 @@ import { collection, addDoc, getFirestore, onSnapshot } from 'firebase/firestore
 import { Autocomplete, IconButton, TextField, Typography } from '@mui/material';
 import axios from 'axios';
 import IconMapPin from '../../components/Icon/IconMapPin';
+interface ShowroomModalProps {
+    updateShowroomLocation: (location: string) => void;
+    onClose: () => void;
+  }
+  interface LocationOption {
+    label: string;
+    lat: number | string;
+    lng: number | string;
+    place_id?: string;
+  }
+  
+  const ShowroomModal: React.FC<ShowroomModalProps> = ({ updateShowroomLocation, onClose }) => {
+    const [showRoom, setShowRoom] = useState<string>('');
+  const [showrooms, setShowrooms] = useState<any[]>([]);
+  const [description, setDescription] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [tollFree, setTollFree] = useState<string>('');
+  const [showRoomId, setShowRoomId] = useState<string>('');
+  const [phoneNumber, setPhoneNumber] = useState<string>('');
+  const [availableServices, setAvailableServices] = useState<string[]>([]);
+  const [mobileNumber, setMobileNumber] = useState<string>('');
+  const [state, setState] = useState<string>('');
+  const [district, setDistrict] = useState<string>('');
+  const [hasInsurance, setHasInsurance] = useState<string>('');
+  const [insuranceAmount, setInsuranceAmount] = useState<string>('');
+  const [hasInsuranceBody, setHasInsuranceBody] = useState<string>('');
+  const [insuranceAmountBody, setInsuranceAmountBody] = useState<string>('');
+  const [img, setImg] = useState<string>('');
+  const [location, setLocation] = useState<LocationOption | null>(null);
+  const [locationOptions, setLocationOptions] = useState<LocationOption[]>([]);
+  const [locationCoords, setLocationCoords] = useState<{ lat: string; lng: string }>({ lat: '', lng: '' });
+  const db = getFirestore();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const uid = sessionStorage.getItem('uid') || '';
 
-const ShowroomModal = ({ updateShowroomLocation , onClose}) => {
-    const [showRoom, setShowRoom] = useState('');
-    const [showrooms, setShowrooms] = useState([]);
-    const [description, setDescription] = useState('');
-    const [userName, setUserName] = useState('');
-    const [password, setPassword] = useState('');
-    const [tollFree, setTollFree] = useState('');
-    const [showRoomId, setShowRoomId] = useState('');
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [availableServices, setAvailableServices] = useState([]);
-    const [mobileNumber, setMobileNumber] = useState('');
-    const [state, setState] = useState('');
-    const [district, setDistrict] = useState('');
-    const [hasInsurance, setHasInsurance] = useState('');
-    const [insuranceAmount, setInsuranceAmount] = useState('');
-    const [hasInsuranceBody, setHasInsuranceBody] = useState('');
-    const [insuranceAmountBody, setInsuranceAmountBody] = useState('');
-    const [img, setImg] = useState('');
-    const [location, setLocation] = useState(null);
-    const [locationOptions, setLocationOptions] = useState([]);
-    const [locationCoords, setLocationCoords] = useState({ lat: '', lng: '' });
-    const db = getFirestore();
-    const inputRef = useRef(null);
-    const uid = sessionStorage.getItem('uid')
-
-    const handleInputChange = (event, newInputValue) => {
-        setShowRoom(newInputValue);
+  const handleInputChange = (event: React.SyntheticEvent, newInputValue: string) => {
+    setShowRoom(newInputValue);
         if (newInputValue) {
             getAutocompleteResults(newInputValue, setLocationOptions);
         } else {
@@ -39,12 +49,12 @@ const ShowroomModal = ({ updateShowroomLocation , onClose}) => {
         }
     };
 
-    const getAutocompleteResults = async (inputText, setOptions) => {
+    const getAutocompleteResults = async (inputText: string, setOptions: React.Dispatch<React.SetStateAction<LocationOption[]>>) => {
         try {
             const response = await axios.get(`https://api.olamaps.io/places/v1/autocomplete?input=${inputText}&api_key=${import.meta.env.VITE_REACT_APP_API_KEY}`);
             if (response.data && Array.isArray(response.data.predictions)) {
                 const predictionsWithCoords = await Promise.all(
-                    response.data.predictions.map(async (prediction) => {
+                    response.data.predictions.map(async (prediction:any) => {
                         const placeDetails = await getPlaceDetails(prediction.place_id);
                         const locationName = prediction.description.split(',')[0]; // Extract the location name
                         return {
@@ -65,7 +75,7 @@ const ShowroomModal = ({ updateShowroomLocation , onClose}) => {
         }
     };
 
-    const getPlaceDetails = async (placeId) => {
+    const getPlaceDetails = async (placeId: string) => {
         try {
             const response = await axios.get(`https://api.olamaps.io/places/v1/details?place_id=${placeId}&api_key=${import.meta.env.VITE_REACT_APP_API_KEY}`);
             return response.data.result;
@@ -75,25 +85,25 @@ const ShowroomModal = ({ updateShowroomLocation , onClose}) => {
         }
     };
 
-    const handleLocationChange = (event, newValue) => {
+    const handleLocationChange = (event: React.SyntheticEvent, newValue: LocationOption | null) => {
         if (newValue) {
             setLocation(newValue);
-            setLocationCoords({ lat: newValue.lat, lng: newValue.lng });
+            setLocationCoords({ lat: newValue.lat.toString(), lng: newValue.lng.toString() });
         } else {
             setLocationCoords({ lat: '', lng: '' });
         }
         setLocationOptions([]);
     };
 
-    const handleLatChange = (e) => {
+    const handleLatChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setLocationCoords({ ...locationCoords, lat: e.target.value });
     };
 
-    const handleLngChange = (e) => {
+    const handleLngChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setLocationCoords({ ...locationCoords, lng: e.target.value });
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             await addDoc(collection(db, `user/${uid}/showroom`), {

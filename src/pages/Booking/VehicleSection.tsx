@@ -1,7 +1,30 @@
 import { collection, getDocs, getFirestore, query, where } from 'firebase/firestore';
 import React, { useState, useEffect, useRef } from 'react';
+interface VehicleSectionProps {
+    showroomLocation: string;
+    totalSalary: number;
+    onUpdateTotalSalary: (newSalary: number) => void;
+    insuranceAmountBody: string;
+    onInsuranceAmountBodyChange: (amount: string) => void;
+    serviceCategory: string;
+    updatedTotalSalary: number;
+    onServiceCategoryChange: (category: string) => void;
+    onAdjustValueChange: (value: string) => void;
+    adjustValue: string;
+    onInsuranceChange: (insurance: string) => void;
+    bodyShope: string;
+    onApplyAdjustment: () => void; 
+}
 
-const VehicleSection = ({
+interface ShowRoomState {
+    availableServices: string;
+    hasInsurance: string;
+    lifting: string;
+    insuranceAmount: string;
+    insurance: string;
+    insuranceAmountBody: string;
+}
+const VehicleSection: React.FC<VehicleSectionProps> = ({
     showroomLocation,
     totalSalary,
     onUpdateTotalSalary,
@@ -14,21 +37,27 @@ const VehicleSection = ({
     adjustValue,
     onInsuranceChange,
     bodyShope,
+    onApplyAdjustment, 
 }) => {
-    const [showRoom, setShowRoom] = useState({
+    const [showRoom, setShowRoom] = useState<ShowRoomState>({
         availableServices: serviceCategory || '',
         hasInsurance: '',
+        lifting: '',
         insuranceAmount: '',
         insurance: bodyShope || '', // Initialize insurance with bodyShope
         insuranceAmountBody: insuranceAmountBody || '', // Allow insurance amount to be an empty string for manual entry
     });
-    // const [updatedTotalSalary, setUpdatedTotalSalary] = useState('');
-    const adjustmentApplied = useRef(false);
-    const uid = sessionStorage.getItem('uid');
-    //    ------------------------------------------------------------
+    const [changedInsuranceAmountBody, setChangedInsuranceAmountBody] = useState<string>('');
+    const [showNotification, setShowNotification] = useState<boolean>(false);
+    const [isButtonGreen, setIsButtonGreen] = useState(false); // State to change button color
+    const role = sessionStorage.getItem('role');
+    const adjustmentApplied = useRef<boolean>(false);
+    const uid = sessionStorage.getItem('uid') || '';
     const db = getFirestore();
-
-    useEffect(() => {
+    const handleApply = () => {
+        // Trigger the parent callback to handle the adjustment
+        onApplyAdjustment();
+    };    useEffect(() => {
         const fetchInsuranceAmountBody = async () => {
             const showroomRef = collection(db, `user/${uid}/showroom`);
             const q = query(showroomRef, where('Location', '==', showroomLocation));
@@ -43,7 +72,7 @@ const VehicleSection = ({
 
                     setShowRoom((prevShowRoom) => ({
                         ...prevShowRoom,
-                        insuranceAmountBody: showroomData.insuranceAmountBody,
+                        insuranceAmountBody: String(showroomData.insuranceAmountBody),
                     }));
                     onInsuranceAmountBodyChange(showroomData.insuranceAmountBody);
                 } else {
@@ -54,10 +83,10 @@ const VehicleSection = ({
             }
         };
 
-        if (showroomLocation) {
+        if (!changedInsuranceAmountBody && showroomLocation) {
             fetchInsuranceAmountBody();
         }
-    }, [showroomLocation, onInsuranceAmountBodyChange]);
+    }, [showroomLocation, changedInsuranceAmountBody, onInsuranceAmountBodyChange]);
     useEffect(() => {
         if (bodyShope !== showRoom.insurance) {
             setShowRoom((prevShowRoom) => ({
@@ -75,20 +104,22 @@ const VehicleSection = ({
         }
     }, [serviceCategory]);
 
-    const handleServiceChange = (e) => {
+    const handleServiceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { value } = e.target;
+        console.log('valuess', value);
         setShowRoom((prevShowRoom) => ({
             ...prevShowRoom,
             availableServices: value,
             insurance: '',
         }));
 
-        if (value === 'Body Shop') {
+        const validServices = ['Body Shop', 'Service Center', 'Showroom', 'lifting'];
+        if (validServices.includes(value)) {
             onServiceCategoryChange(value);
         }
     };
 
-    const handleBodyInsuranceChange = (e) => {
+    const handleBodyInsuranceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { value } = e.target;
         setShowRoom((prevShowRoom) => ({
             ...prevShowRoom,
@@ -97,7 +128,7 @@ const VehicleSection = ({
         onInsuranceChange(value);
     };
 
-    const handleInsuranceAmountChange = (e) => {
+    const handleInsuranceAmountBodyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { value } = e.target;
         setShowRoom((prevShowRoom) => ({
             ...prevShowRoom,
@@ -105,32 +136,53 @@ const VehicleSection = ({
         }));
         onInsuranceAmountBodyChange(value);
     };
-
-    const handleAdjustValueChange = (e) => {
+    const handleChangedInsuranceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { value } = e.target;
+        setChangedInsuranceAmountBody(value);
+        console.log('changedInsuranceAmountBodyyy', value);
+        onInsuranceAmountBodyChange(value); // Notify parent component of the change
+    };
+    const handleAdjustValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { value } = e.target;
         onAdjustValueChange(value);
+        if (value) {
+            setShowNotification(true); // Show the notification when value is entered
+            setIsButtonGreen(false); // Reset button color to default
+        } else {
+            setShowNotification(false); // Hide notification if input is cleared
+        }
     };
-    const applyAdjustment = (event) => {
+   
+  
+    
+    const applyAdjustment = (event?: React.MouseEvent<HTMLButtonElement>) => {
         // Prevent default form behavior if applicable
         if (event) event.preventDefault();
-    
+
         const adjustedSalary = parseFloat(adjustValue);
-    
+
         if (adjustedSalary > updatedTotalSalary) {
             // Call the function to update the total salary
             onUpdateTotalSalary(adjustedSalary);
             adjustmentApplied.current = true;
+            setIsButtonGreen(true); // Change button color to green
+            setShowNotification(false);
         } else {
             // Show confirmation dialog
             const confirmAction = window.confirm('Adjusting salary below the current total. Are you sure?');
-            
+
             if (confirmAction) {
-                const password = prompt('Enter password to apply the adjustment: Password=Adjust');
-                
-                if (password === 'Adjust') {
+                // Only show the password prompt depending on the user's role
+                const password = role === 'staff' ? prompt('Enter password to apply the adjustment') : prompt('Enter password to apply the adjustment: Password=RSA@123');
+
+                const expectedPassword = role === 'staff' ? 'Adjust' : 'RSA@123';
+
+                if (password === expectedPassword) {
                     // Call the function to update the total salary
                     onUpdateTotalSalary(adjustedSalary);
                     adjustmentApplied.current = true;
+                    setIsButtonGreen(true); // Change button color to green
+                    setShowNotification(false);
                 } else {
                     alert('Incorrect password. Adjustment not applied.');
                 }
@@ -139,13 +191,16 @@ const VehicleSection = ({
             }
         }
     };
-    
-
+    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        // Call both functions
+        applyAdjustment(event); // First, apply the adjustment logic
+        handleApply();           // Then, trigger the parent callback to handle additional logic
+    };
     return (
         <div className="mb-5">
-            <h1>Service Category</h1>
+            {/* <h1>Service Category</h1> */}
             <div className="mb-2" style={{ alignItems: 'center', border: '1px solid #ccc', padding: '10px', borderRadius: '5px', backgroundColor: '#f9f9f9' }}>
-                <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
+                {/* <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
                     <input
                         type="radio"
                         name="availableServices"
@@ -156,8 +211,8 @@ const VehicleSection = ({
                         style={{ marginRight: '5px' }}
                     />
                     Service Center
-                </label>
-                <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
+                </label> */}
+                {/* <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
                     <input
                         type="radio"
                         name="availableServices"
@@ -168,8 +223,8 @@ const VehicleSection = ({
                         style={{ marginRight: '5px' }}
                     />
                     Accident
-                </label>
-                {showRoom.availableServices === 'Body Shop' && (
+                </label> */}
+                {/* {showRoom.availableServices === 'Body Shop' && (
                     <div className="mb-2" style={{ marginLeft: '10px', backgroundColor: '#ffeeba', padding: '10px', borderRadius: '5px', fontSize: '0.9em' }}>
                         <p style={{ marginBottom: '5px', fontWeight: 'bold' }}>Payment Method</p>
                         <label className="mr-2" style={{ marginRight: '10px', fontSize: '1em' }}>
@@ -210,19 +265,19 @@ const VehicleSection = ({
                         </label>
                         {showRoom.insurance === 'insurance' && (
                             <div className="mt-2" style={{ marginTop: '10px', fontSize: '0.9em' }}>
-                                <label style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>Insurance Amount:</label>
+                                <label style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>Insurance Amount (if the insurance amount changes!):</label>
                                 <input
                                     type="number"
-                                    name="insuranceAmount"
-                                    value={showRoom.insuranceAmountBody} // Bind state to input
-                                    onChange={handleInsuranceAmountChange} // Update state and parent component
+                                    name="changedInsuranceAmountBody"
+                                    value={changedInsuranceAmountBody} // Bind state to input
+                                    onChange={handleChangedInsuranceChange} // Update state and parent component
                                     style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }}
                                 />
                             </div>
                         )}
                     </div>
-                )}
-                <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
+                )} */}
+                {/* <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
                     <input
                         type="radio"
                         name="availableServices"
@@ -233,27 +288,40 @@ const VehicleSection = ({
                         style={{ marginRight: '5px' }}
                     />
                     Showroom
+                </label> */}
+                {/* <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
+                    <input
+                        type="radio"
+                        name="lifting"
+                        value="lifting"
+                        checked={showRoom.availableServices === 'lifting'}
+                        onChange={handleServiceChange}
+                        className="mr-1"
+                        style={{ marginRight: '5px' }}
+                    />
+                    Lifting
                 </label>
-            </div>
-            <br />
-            <div>
+                <br /> */}
                 <div>
-                    <label style={{ fontSize: '1em', color: '#333' }}>Adjustment Value:</label>
-                    <input type="number" value={adjustValue} onChange={handleAdjustValueChange} style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }} />
-                    <button
-                        onClick={applyAdjustment}
-                        style={{
-                            padding: '8px 16px',
-                            borderRadius: '5px',
-                            backgroundColor: '#007bff',
-                            color: 'white',
-                            border: 'none',
-                            cursor: 'pointer',
-                            marginLeft: '10px',
-                        }}
-                    >
-                        Apply
-                    </button>
+                    <div className="flex items-center ml-6">
+                        <label style={{ fontSize: '1.5em', color: 'red', marginRight: '10px' }}>Adjustment Value:</label>
+                        <input type="text" value={adjustValue} onChange={handleAdjustValueChange} style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }} />
+                        <button
+                            onClick={handleClick}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '5px',
+                                backgroundColor: isButtonGreen ? 'green' : 'red',
+                                color: 'white',
+                                border: 'none',
+                                cursor: 'pointer',
+                                marginLeft: '10px',
+                            }}
+                        >
+                            Apply
+                        </button>
+                        {showNotification && !isButtonGreen && <span style={{ color: 'red', marginLeft: '10px' }}>Click the apply button</span>}
+                    </div>
                 </div>
             </div>
         </div>

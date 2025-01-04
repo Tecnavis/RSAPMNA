@@ -25,7 +25,7 @@ interface ServiceType {
     salary: string;
     basicSalaryKM: string;
     salaryPerKM: string;
-    expensePerKM: string;  // New field
+    expensePerKM: string;  
 }
 
 interface Errors {
@@ -33,7 +33,7 @@ interface Errors {
     newSalary?: string;
     newBasicSalaryKM?: string;
     newSalaryPerKM?: string;
-    newExpensePerKM?: string;  // New field
+    newExpensePerKM?: string;  
 }
 const ServiceType: React.FC = () => {
     const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
@@ -50,10 +50,10 @@ const ServiceType: React.FC = () => {
     const [isModalVisible, setModalVisible] = useState<boolean>(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
     const uid = sessionStorage.getItem('uid');
-    const navigate = useNavigate(); // Initialize useNavigate
+    const navigate = useNavigate(); 
     useEffect(() => {
         const fetchServices = async () => {
-            if (!uid) return; // Ensure UID exists before fetching
+            if (!uid) return; 
 
             const db = getFirestore();
             const serviceRef = collection(db, `user/${uid}/service`);
@@ -149,7 +149,11 @@ const ServiceType: React.FC = () => {
             setServiceTypes([...serviceTypes, { ...newService, id: docRef.id }]);
             handleClose();
         } catch (error) {
-            console.error('Error adding service type:', error);
+            if (error instanceof Error) {
+                console.error('Error adding service type:', error.message);
+            } else {
+                console.error('Unknown error adding service type:', error);
+            }
         }
     };
 
@@ -179,7 +183,11 @@ const ServiceType: React.FC = () => {
             setServiceTypes(serviceTypes.map((service) => (service.id === id ? { ...service, ...updatedService } : service)));
             handleClose();
         } catch (error) {
-            console.error('Error updating service type:', error);
+            if (error instanceof Error) {
+                console.error('Error updating service type:', error.message);
+            } else {
+                console.error('Unknown error updating service type:', error);
+            }
         }
     };
 
@@ -193,8 +201,12 @@ const ServiceType: React.FC = () => {
             setServiceTypes(serviceTypes.filter((service) => service.id !== id));
             setModalVisible(false);
         } catch (error) {
-            console.error('Error deleting service type:', error);
-            alert(`Error deleting service: ${error.message}`);
+            if (error instanceof Error) {
+                console.error('Error deleting service type:', error.message);
+                alert(`Error deleting service: ${error.message}`);
+            } else {
+                console.error('Unknown error deleting service type:', error);
+            }
         }
     };
 

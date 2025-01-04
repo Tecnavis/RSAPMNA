@@ -81,7 +81,8 @@ const LoginCover = () => {
 
                 sessionStorage.setItem('role', role);
                 sessionStorage.setItem('username', username); // Store username
-                sessionStorage.setItem('uid', 'VITE_REACT_APP_UID');
+                sessionStorage.setItem('uid', uid);
+                sessionStorage.setItem('password', password);
 
                 console.log("Staff user signed in successfully with UID:", userId);
                 navigate('/index');

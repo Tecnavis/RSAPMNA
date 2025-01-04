@@ -6,10 +6,19 @@ import IconSend from '../../components/Icon/IconSend';
 import IconPrinter from '../../components/Icon/IconPrinter';
 import IconDownload from '../../components/Icon/IconDownload';
 import IconPlus from '../../components/Icon/IconPlus';
+interface Booking {
+    id: string;
+    dateTime: string;
+    fileNumber: string;
+    updatedTotalSalary: number;
+    receivedAmount: number;
+    balance: number;
+    companyName: string;
+}
 
 const SelectiveReportInvoice = () => {
     const location = useLocation();
-    const { bookings } = location.state || { bookings: [] };
+    const { bookings } = location.state || { bookings: [] as Booking[] };
     const invoiceRef = useRef<HTMLDivElement>(null);
 
     if (!bookings || bookings.length === 0) {
@@ -62,15 +71,15 @@ const SelectiveReportInvoice = () => {
     };
 
     // Calculate total payable amount
-    const totalPayableAmount = bookings.reduce((total, booking) => total + Number(booking.amount), 0);
-    const totalBalanceAmount = bookings.reduce((total, booking) => total + Number(booking.balance), 0);
+    const totalPayableAmount = bookings.reduce((total:any, booking:any) => total + Number(booking.updatedTotalSalary), 0);
+    const totalBalanceAmount = bookings.reduce((total:any, booking:any) => total + Number(booking.balance), 0);
     
     const columns = [
         { key: 'id', label: 'S.NO' },
         { key: 'serviceType', label: 'Service Type' },
         { key: 'vehicleNumber', label: 'Vehicle Number', class: 'text-center' },
-        { key: 'amount', label: 'Amount (from customer)', class: 'text-center' },
-        { key: 'receivedAmount', label: 'Amount Received from Driver', class: 'text-center' },
+        { key: 'updatedTotalSalary', label: 'Amount of Bookings', class: 'text-center' },
+        { key: 'receivedAmount', label: 'Amount Received from Company', class: 'text-center' },
         { key: 'balance', label: 'Balance' },
     ];
 
@@ -138,12 +147,12 @@ const SelectiveReportInvoice = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {bookings.map((booking, index) => (
+                            {bookings.map((booking:any, index:any) => (
                                 <tr key={booking.id}>
                                     <td>{index + 1}</td>
                                     <td>{booking.dateTime}</td>
                                     <td className="text-center">{booking.fileNumber}</td>
-                                    <td className="text-center">{booking.amount}</td>
+                                    <td className="text-center">{booking.updatedTotalSalary}</td>
                                     <td className="text-center">{booking.receivedAmount}</td>
                                     <td className="text-center">{booking.balance}</td>
                                 </tr>

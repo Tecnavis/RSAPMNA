@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { doc, getFirestore, updateDoc, arrayUnion, query, where, getDocs, collection, getDoc } from 'firebase/firestore';
 import './ShowRoom.css';
 import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 
 interface ShowRoomDetailsType {
     id: string;
@@ -37,7 +38,23 @@ const ShowRoomDetails: React.FC = () => {
 
     const [formData, setFormData] = useState({ name: '', phoneNumber: '' });
     const [signInData, setSignInData] = useState({ phoneNumber: '' }); // New state for sign-in form
-
+    const userRole = sessionStorage.getItem('role'); // Assume 'role' is stored in sessionStorage
+    console.log("userRole",userRole)
+        // // Role-based access control
+        // useEffect(() => {
+        //     if (userRole !== 'admin' && userRole !== 'staff') {
+        //         toast.error('You are an unauthorized user', { autoClose: 3000 });
+        //     }
+        // }, [userRole]);
+    
+        // // Only allow access if role is 'admin' or 'staff'
+        // if (userRole !== 'admin' && userRole !== 'staff') {
+        //     return (
+        //         <div style={{ textAlign: 'center', marginTop: '50px' }}>
+        //             <h1>You are an unauthorized user</h1>
+        //         </div>
+        //     );
+        // }
     useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
         setShowRoomDetails({
@@ -70,8 +87,19 @@ const ShowRoomDetails: React.FC = () => {
     };
 
     const handleNavigation = () => {
-        navigate('/addbook', { state: { uid: showRoomDetails?.uid, showroomId: showRoomDetails?.id } });
+        console.log("Name:", formData.name);
+        console.log("Phone Number:", formData.phoneNumber);
+    
+        navigate('/addbook', { 
+            state: { 
+                uid: showRoomDetails?.uid, 
+                showroomId: showRoomDetails?.id,
+                name: formData.name, 
+                phoneNumber: formData.phoneNumber 
+            } 
+        });
     };
+    
 
     const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -84,7 +112,6 @@ const ShowRoomDetails: React.FC = () => {
         }
 
         if (!showRoomDetails.id || !showRoomDetails.uid) return;
-
         try {
             const showroomCollectionRef = collection(db, `user/${showRoomDetails.uid}/showroom`);
             const q = query(showroomCollectionRef, where('showroomId', '==', showRoomDetails.id));
@@ -117,6 +144,14 @@ const ShowRoomDetails: React.FC = () => {
                 });
                 setFormData({ name: '', phoneNumber: '' })
                 setIsSignIn(true);
+                navigate('/addbook', { 
+                    state: { 
+                        uid: showRoomDetails?.uid, 
+                        showroomId: showRoomDetails?.id,
+                        name: formData.name, 
+                        phoneNumber: formData.phoneNumber 
+                    } 
+                });
             } else {
                 setErrorMessage('No such document!');
             }
@@ -150,8 +185,14 @@ const ShowRoomDetails: React.FC = () => {
 
                 if (isPhoneExists) {
                     // Redirect to dashboard or desired page
-                    handleNavigation();
-                } else {
+                    navigate('/addbook', { 
+                        state: { 
+                            uid: showRoomDetails?.uid, 
+                            showroomId: showRoomDetails?.id,
+                            phoneNumber: signInData.phoneNumber // Pass the phone number
+                        } 
+                    });
+                                } else {
                     setErrorMessage('Phone number is not registered.');
                 }
             }

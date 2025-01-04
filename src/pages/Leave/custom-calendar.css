@@ -1,0 +1,48 @@
+.leave-day {
+    background-color: red !important;
+    color: white !important;
+    position: relative;
+  }
+  
+  .tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+  }
+  
+  .tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    padding: 5px;
+    border-radius: 6px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%; /* Position above the calendar cell */
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+    font-size: larger;
+  }
+  .calendar-container {
+    width: 100%; /* Full width */
+    display: flex; /* Align items */
+    justify-content: center; /* Center the content */
+    align-items: center; /* Vertical centering */
+    background-color: #f9f9f9; /* Optional background for the calendar */
+    padding: 10px; /* Optional padding */
+}
+
+.calendar-icon {
+    width: 100%;
+    height: auto;
+    max-width: 100%; /* Prevent overflow */
+}

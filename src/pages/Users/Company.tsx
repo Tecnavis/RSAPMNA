@@ -19,11 +19,23 @@ interface Item {
     profileImageUrl?: string;
     companyName?: string;
     status?: string;
+    personalphone: string;
+    password?: string;
+    confirmPassword?: string;
+    advancePayment?: string;
+    serviceVehicle?: Record<string, any>; // Define actual type instead of 'any'
+    salaryPerKm?: Record<string, any>; // Define actual type instead of 'any'
+    basicSalaryKm?: Record<string, any>; // Define actual type instead of 'any'
+    baseLocation?: string;
 }
+
 
 const Company: React.FC = () => {
     const [items, setItems] = useState<Item[]>([]);
     const db = getFirestore();
+      const [searchTerm, setSearchTerm] = useState('');
+      const [filteredItems, setFilteredItems] = useState<Item[]>([]);
+
     const navigate = useNavigate();
     const uid = sessionStorage.getItem('uid');
     const [isModalVisible, setModalVisible] = useState(false);
@@ -33,19 +45,19 @@ const Company: React.FC = () => {
     useEffect(() => {
         const fetchData = async () => {
             console.log('Fetching data from Firestore...');
-
+    
             const driverCollection = collection(db, `user/${uid}/driver`);
             console.log('Driver collection reference:', driverCollection);
-
+    
             // Create query to filter out items with companyName as 'RSA'
             const q = query(driverCollection, where('companyName', '!=', 'RSA'));
             console.log('Query created with parameters:', q);
-
+    
             try {
                 console.log('Executing query...');
                 const querySnapshot = await getDocs(q);
                 console.log('Query executed. Snapshot:', querySnapshot);
-
+    
                 // Further filter items client-side
                 const filteredItems = querySnapshot.docs
                     .filter((doc) => {
@@ -55,22 +67,54 @@ const Company: React.FC = () => {
                                (!data.status || data.status === '');
                     })
                     .map((doc) => {
-                        console.log('Document data:', doc.data());
-                        return { id: doc.id, ...doc.data() };
+                        const data = doc.data();
+                        console.log('Document data:', data);
+    
+                        // Ensure all required fields from the Item interface are present
+                        return {
+                            id: doc.id,
+                            driverName: data.driverName || 'Unknown Driver', // Default value if missing
+                            idnumber: data.idnumber || 'N/A',
+                            phone: data.phone || 'N/A',
+                            personalphone: data.personalphone || 'N/A',
+                            password: data.password || '',
+                            confirmPassword: data.confirmPassword || '',
+                            advancePayment: data.advancePayment || '',
+                            serviceVehicle: data.serviceVehicle || '',
+                            salaryPerKm: data.salaryPerKm || '',
+                            basicSalaryKm: data.basicSalaryKm || '',
+                            baseLocation: data.baseLocation || '',
+                            selectedServices: data.selectedServices || {}, // Use empty object as fallback
+                            basicSalaries: data.basicSalaries || {}, // Use empty object as fallback
+                            profileImageUrl: data.profileImageUrl || defaultImage,
+                            companyName: data.companyName || '',
+                            status: data.status || ''
+                        };
                     });
-
-                console.log('Filtered items:', filteredItems);
+    
                 setItems(filteredItems);
                 console.log('State updated with fetched data.');
             } catch (error) {
                 console.error('Error fetching data:', error); // Log errors if any
             }
         };
-
+    
         console.log('useEffect triggered to fetch data.');
         fetchData().catch(console.error); // Correctly call fetchData inside useEffect
-    }, []);
-   
+    }, [uid]); // Add 'uid' as a dependency to refetch data when 'uid' changes
+    useEffect(() => {
+        const filtered = items.filter((item) => {
+            const searchTermLower = searchTerm.toLowerCase();
+            return (
+                item.driverName.toLowerCase().includes(searchTermLower) ||
+                item.idnumber.toLowerCase().includes(searchTermLower) ||
+                item.phone.toLowerCase().includes(searchTermLower) ||
+                (item.companyName?.toLowerCase().includes(searchTermLower) ?? false)
+            );
+        });
+        setFilteredItems(filtered);
+    }, [searchTerm, items]);
+    
     const handleDelete = async (userId: string) => {
         try {
             const userDoc = doc(db, `user/${uid}/driver`, userId);
@@ -109,23 +153,34 @@ const Company: React.FC = () => {
                         </span>
                     </Link>
                 </div>
+                <div className="mb-5">
+                    <input
+                        type="text"
+                        placeholder="Search by provider name"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full p-2 border rounded"
+                    />
+                </div>
                 <div className="table-responsive mb-5 ">
                     <table>
                         <thead>
                             <tr>
+                                <th>#</th>
                                 <th>Photo</th>
-                                <th>Driver Name</th>
+                                <th>Provider Name</th>
                                 <th>ID Number</th>
                                 <th>Phone Number</th>
                                 <th>Service Types</th>
-                                <th>Basic Amount</th>
+                                <th>Company Name</th>
                                 <th className="!text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {items.map((item, index) => {
+                            {filteredItems.map((item, index) => {
                                 return (
                                     <tr key={item.id}>
+                                        <td>{index+1}</td>
                                         <td>  <div className="w-14 h-14 rounded-full overflow-hidden">
                                             <img src={item.profileImageUrl || defaultImage} className="w-full h-full object-cover" alt="Profile" />
                                         </div></td>
@@ -142,11 +197,7 @@ const Company: React.FC = () => {
                                             </ul>
                                         </td>
                                         <td>
-                                            <ul>
-                                                {Object.entries(item.basicSalaries).map(([key, value]) => (
-                                                    <li key={key}>{key}: {value}</li>
-                                                ))}
-                                            </ul>
+                                        {item.companyName}
                                         </td>
                                         <td className="text-center">
                                             <ul className="flex items-center justify-center gap-2">
@@ -180,7 +231,11 @@ const Company: React.FC = () => {
                     </table>
                 </div>
             </div>
-            <ConfirmationModal isVisible={isModalVisible} onConfirm={() => handleDelete(itemToDelete?.id)} onCancel={closeModal} />
+            <ConfirmationModal 
+  isVisible={isModalVisible} 
+  onConfirm={() => itemToDelete?.id ? handleDelete(itemToDelete.id) : console.error("Item ID is missing")} 
+  onCancel={closeModal} 
+/>
         </div>
     );
 };

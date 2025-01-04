@@ -1,0 +1,129 @@
+.vehicle-container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  h2, h3 {
+    text-align: center;
+    color: #333;
+  }
+  
+  .vehicle-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .vehicle-form label {
+    display: flex;
+    flex-direction: column;
+    font-weight: bold;
+    color: #555;
+  }
+  
+  .vehicle-form input {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  
+  .vehicle-form button {
+    padding: 10px;
+    font-size: 16px;
+    background: #4caf50;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  
+  .vehicle-form button:hover {
+    background: #45a049;
+  }
+  
+  .vehicle-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  
+  .vehicle-table th, .vehicle-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+  }
+  
+  /* Fix for table styling or additional rules */
+  .vehicle-table th {
+    background: #4caf50;
+    color: #fff;
+    font-weight: bold;
+  }
+  
+  .vehicle-table tr:nth-child(even) {
+    background: #f2f2f2;
+  }
+  
+  .vehicle-table tr:hover {
+    background: #ddd;
+  }
+  
+  .vehicle-table button {
+    padding: 5px 10px;
+    font-size: 14px;
+    background: #ff9800;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  
+  .vehicle-table button:hover {
+    background: #e68a00;
+  }
+  .vehicle-container {
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  max-width: 900px;
+  margin: 0 auto;
+  font-family: 'Roboto', sans-serif;
+}
+
+.vehicle-heading {
+  font-size: 2.5rem;
+  color: #34495e;
+  text-align: center;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.vehicle-heading::after {
+  content: "";
+  display: block;
+  width: 50px;
+  height: 4px;
+  background: #3498db;
+  margin: 10px auto 0;
+  border-radius: 2px;
+}
+
+.vehicle-list-heading {
+  font-size: 1.8rem;
+  color: #2c3e50;
+  text-align: left;
+  margin-top: 15px;
+
+  margin-bottom: 15px;
+  border-left: 4px solid #3498db;
+  padding-left: 10px;
+}
+
+  

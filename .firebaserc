@@ -1,9 +1,5 @@
 {
   "projects": {
-    "default": "rsapmna-de966",
-    "production": "rsapmna-de966"
-  },
-  "targets": {},
-  "etags": {},
-  "dataconnectEmulatorConfig": {}
+    "default": "rsasub1-96d62"
+  }
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { addDoc, collection, getFirestore, getDocs, doc, updateDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { addDoc, collection, getFirestore, getDocs, doc, updateDoc, serverTimestamp, query, orderBy, deleteDoc, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import './ShowRoom.css';
 import { ChangeEvent, FormEvent } from 'react';
@@ -15,14 +15,14 @@ import ConfirmationModal from '../../pages/Users/ConfirmationModal/ConfirmationM
 import QRCode from 'qrcode.react';
 import IconMapPin from '../../components/Icon/IconMapPin';
 
-
 interface ShowRoomType {
+    [key: string]: any;
     img: string;
     ShowRoom: string;
     description: string;
     Location: string;
-    locationLatLng: { lat: number; lng: number }; 
-    lat: string;
+    locationLatLng: { lat: number | null; lng: number | null };
+        lat: string;
     lng: string;
     userName: string;
     password: string;
@@ -31,16 +31,20 @@ interface ShowRoomType {
     phoneNumber: string;
     availableServices: string[];
     mobileNumber: string;
+    manualLat: number;
+    manualLng: number;
     state: string;
     district: string;
     hasInsurance: string;
     insuranceAmount: string;
     hasInsuranceBody: string;
+    manualLocationName: string;
     insuranceAmountBody: string;
     showroomLink?: string;
     qrCode?: string;
-    createdAt?: any; 
+    createdAt?: any;
     status?: string;
+    newShowRoom?: string;
 }
 
 interface ShowRoomRecord extends ShowRoomType {
@@ -98,26 +102,27 @@ const ShowRoom: React.FC = () => {
         mobileNumber: '',
         locationLatLng: { lat: 0, lng: 0 },
         state: '',
-        qrCode:'',
-        showroomLink:'',
+        manualLocationName: '',
+        qrCode: '',
+        showroomLink: '',
         district: '',
         hasInsurance: '',
         insuranceAmount: '',
         hasInsuranceBody: '',
         insuranceAmountBody: '',
-        lat:'',
-        lng:'',
+        manualLat: 0,
+        manualLng: 0,
+        lat: '',
+        lng: '',
     });
 
     const [existingShowRooms, setExistingShowRooms] = useState<ShowRoomRecord[]>([]);
     const [editRoomId, setEditRoomId] = useState<string | null>(null);
-    const locationInputRef = useRef<HTMLInputElement | null>(null);
     const [open, setOpen] = useState<boolean>(false);
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [filteredRecords, setFilteredRecords] = useState<ShowRoomRecord[]>([]);
     const listRef = useRef<HTMLDivElement | null>(null);
     const formRef = useRef<HTMLFormElement | null>(null);
-    const [baseOptions, setBaseOptions] = useState<AutocompleteResult[]>([]);
     const [baseLocation, setBaseLocation] = useState<AutocompleteResult | null>(null);
     const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
     const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
@@ -127,13 +132,30 @@ const ShowRoom: React.FC = () => {
     const [manualLng, setManualLng] = useState<string>('');
     const [generatedLink, setGeneratedLink] = useState<string>('');
     const qrRef = useRef<HTMLDivElement>(null); // Change the type to HTMLDivElement
+    const [manualLatLng, setManualLatLng] = useState<string>(''); // Initialize with an empty string
 
     console.log(baseLocation, 'the baseLocation');
     const uid = sessionStorage.getItem('uid');
+    const userRole = sessionStorage.getItem('role'); // Assume 'role' is stored in sessionStorage
+console.log("userRole",userRole)
+    // Role-based access control
+    useEffect(() => {
+        if (userRole !== 'admin' && userRole !== 'staff') {
+            toast.error('You are an unauthorized user', { autoClose: 3000 });
+        }
+    }, [userRole]);
+
+    // Only allow access if role is 'admin' or 'staff'
+    if (userRole !== 'admin' && userRole !== 'staff') {
+        return (
+            <div style={{ textAlign: 'center', marginTop: '50px' }}>
+                <h1>You are an unauthorized user</h1>
+            </div>
+        );
+    }
     useEffect(() => {
         const term = searchTerm.toLowerCase();
         const filtered = existingShowRooms.filter((record) => {
-            // Helper function to safely convert values to lower case
             const toLower = (value: string | undefined) => (value || '').toLowerCase();
 
             return (
@@ -159,11 +181,6 @@ const ShowRoom: React.FC = () => {
     }, [searchTerm, existingShowRooms]);
 
     const handleChange = (e: React.ChangeEvent<any>) => {
-        const { name, value } = e.target;
-        setShowRoom({ ...showRoom, [name]: value });
-    };
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setShowRoom({ ...showRoom, [name]: value });
     };
@@ -206,7 +223,7 @@ const ShowRoom: React.FC = () => {
     const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-    
+
         const storage = getStorage();
         const storageRef = ref(storage, `showroomImages/${file.name}`);
         await uploadBytes(storageRef, file);
@@ -229,6 +246,8 @@ const ShowRoom: React.FC = () => {
                 qrCodeBase64 = canvas.toDataURL('image/png'); // Convert canvas to Base64
             }
         }
+        const baseLocation = showRoom.Location.split(',')[0];
+        const [manualLat, manualLng] = manualLatLng.split(',').map(coord => coord.trim());
 
         const newShowRoom: ShowRoomType = {
             ...showRoom,
@@ -236,20 +255,29 @@ const ShowRoom: React.FC = () => {
             status: 'admin added showroom',
             showroomLink: generatedLink || '',
             qrCode: qrCodeBase64,
-            Location: `${showRoom.Location}, ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`,
+            Location: `${baseLocation}, ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`,
+            manualLocationName: manualLocationName, // Add manual location name
+            manualLat: parseFloat(manualLat), // Add manual latitude and ensure it's a number
+            manualLng: parseFloat(manualLng), // Add manual longitude and ensure it's a number
         };
 
         try {
             if (editRoomId) {
                 const roomRef = doc(db, `user/${uid}/showroom`, editRoomId);
-                await updateDoc(roomRef, newShowRoom as any);
-                toast.success('Showroom updated successfully', { autoClose: 3000 });
+                const docSnapshot = await getDoc(roomRef);
+    
+                if (docSnapshot.exists()) {
+                    await updateDoc(roomRef, newShowRoom as { [key: string]: any });
+                    toast.success('Showroom updated successfully', { autoClose: 3000 });
+                } else {
+                    toast.error('No document found to update', { autoClose: 3000 });
+                }
+    
                 setEditRoomId(null);
             } else {
-                await addDoc(collection(db, `user/${uid}/showroom`), newShowRoom);
+                await addDoc(collection(db, `user/${uid}/showroom`), newShowRoom as { [key: string]: any });
                 toast.success('Showroom added successfully', { autoClose: 3000 });
             }
-
             setShowRoom({
                 img: '',
                 ShowRoom: '',
@@ -262,17 +290,20 @@ const ShowRoom: React.FC = () => {
                 phoneNumber: '',
                 availableServices: [],
                 mobileNumber: '',
+                manualLocationName: '',
+                manualLat: 0,
+                manualLng: 0,
                 locationLatLng: { lat: 0, lng: 0 },
                 state: '',
                 district: '',
                 qrCode: editRoomId ? showRoom.qrCode : '',
-    showroomLink: editRoomId ? showRoom.showroomLink : '',
+                showroomLink: editRoomId ? showRoom.showroomLink : '',
                 hasInsurance: '',
                 insuranceAmount: '',
                 hasInsuranceBody: '',
                 insuranceAmountBody: '',
-                lat:'',
-                lng:'',
+                lat: '',
+                lng: '',
             });
 
             fetchShowRooms();
@@ -312,23 +343,45 @@ const ShowRoom: React.FC = () => {
         setIsEditing(false);
         setIsModalVisible(true);
     };
-// --------------------------
-const onConfirmAction = () => {
-    if (isEditing) {
-        const roomToEdit = existingShowRooms.find((room) => room.id === currentRoomId);
-        console.log('Editing room:', roomToEdit); // Debugging line
-        setOpen(true);
-        setShowRoom(roomToEdit!);
-        console.log('Set showroom state:', roomToEdit); // Debugging line
-        setEditRoomId(currentRoomId);
-        formRef.current?.scrollIntoView({ behavior: 'smooth' });
-    } else {
-            setExistingShowRooms((prevShowRooms) => prevShowRooms.filter((room) => room.id !== currentRoomId));
-            toast.success('Showroom removed successfully!', { autoClose: 3000 });
-        }
-        setIsModalVisible(false);
-    };
+    const onConfirmAction = async () => {
+        if (isEditing) {
+            const roomToEdit = existingShowRooms.find((room) => room.id === currentRoomId);
+            console.log('Editing room:', roomToEdit); // Debugging line
+           
+            setOpen(true);
+            setShowRoom(roomToEdit!);
+            setManualLocationName(roomToEdit?.manualLocationName || '');
+             // Split manualLatLng here and set state
+        const { manualLat, manualLng } = roomToEdit!;
+        setManualLat(manualLat.toString()); // Convert to string for input
+        setManualLng(manualLng.toString()); // Convert to string for input
+        setManualLatLng(`${manualLat},${manualLng}`); // Set combined input
 
+            
+            console.log('Set showroom state:', roomToEdit); // Debugging line
+            setEditRoomId(currentRoomId);
+            formRef.current?.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            if (!currentRoomId) {
+                console.error('Invalid currentRoomId');
+                toast.error('Invalid showroom ID, cannot delete!', { autoClose: 3000 });
+                return;
+            }           
+            
+            const db = getFirestore();
+            const roomRef = doc(db, `user/${uid}/showroom`, currentRoomId);
+            try {
+                await deleteDoc(roomRef);
+                // Update the state after deletion
+                setExistingShowRooms((prevShowRooms) => prevShowRooms.filter((room) => room.id !== currentRoomId));
+                toast.success('Showroom removed successfully!', { autoClose: 3000 });
+            } catch (error) {
+                console.error('Error deleting showroom:', error);
+                toast.error('Failed to remove showroom!', { autoClose: 3000 });
+            }
+            setIsModalVisible(false);
+        }
+    };
     const onCancelAction = () => {
         setIsModalVisible(false);
     };
@@ -344,110 +397,53 @@ const onConfirmAction = () => {
         window.print();
         document.body.innerHTML = originalContents;
     };
-
-    const getAutocompleteResults = async (inputText: string, setOptions: (options: AutocompleteResult[]) => void) => {
-        const keralaCenterLat = 10.8505;
-        const keralaCenterLng = 76.2711;
-        const radius = 200000;
-
-        try {
-            const response = await axios.get('https://api.olamaps.io/places/v1/autocomplete', {
-                params: {
-                    input: inputText,
-                    api_key: import.meta.env.VITE_REACT_APP_API_KEY,
-                    location: `${keralaCenterLat},${keralaCenterLng}`,
-                    radius,
-                },
-            });
-
-            if (response.data && Array.isArray(response.data.predictions)) {
-                const predictionsWithCoords = await Promise.all(
-                    response.data.predictions.map(async (prediction: any) => {
-                        const placeDetails = await getPlaceDetails(prediction.place_id);
-                        const locationName = prediction.description.split(',')[0]; // Extract the location name
-                        return {
-                            label: locationName,
-                            lat: placeDetails.geometry.location.lat,
-                            lng: placeDetails.geometry.location.lng,
-                            ...prediction,
-                        };
-                    })
-                );
-                setOptions(predictionsWithCoords);
-            } else {
-                setOptions([]);
-            }
-        } catch (error) {
-            console.error('Error fetching autocomplete results:', error);
-            setOptions([]);
-        }
-    };
-
-    const getPlaceDetails = async (placeId: string) => {
-        try {
-            const response = await axios.get(`https://api.olamaps.io/places/v1/details?place_id=${placeId}&api_key=${import.meta.env.VITE_REACT_APP_API_KEY}`);
-            return response.data.result;
-        } catch (error) {
-            console.error('Error fetching place details:', error);
-            return { geometry: { location: { lat: undefined, lng: undefined } } };
-        }
-    };
-
-    const handleLocationChange = (event: React.ChangeEvent<{}>, newValue: AutocompleteResult | null) => {
-        if (newValue) {
-            setBaseLocation(newValue);
-            setShowRoom((prevShowRoom) => ({
-                ...prevShowRoom,
-                locationLatLng: { lat: newValue.lat, lng: newValue.lng }, // Ensure lat and lng are numbers
-                Location: newValue.label,
-            }));
-        } else {
-            setShowRoom((prevShowRoom) => ({
-                ...prevShowRoom,
-                locationLatLng: { lat: 0, lng: 0 }, // Use numbers here, adjust as needed
-                Location: '',
-            }));
-        }
-        setBaseOptions([]);
-    };
-
     const handleManualInputChange = (event: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = event.target;
-        const numericValue = parseFloat(value); // Convert string to number
-
+    
         if (name === 'manualLocationName') {
             setManualLocationName(value);
             setShowRoom((prevShowRoom) => ({
                 ...prevShowRoom,
+                manualLocationName: value,
                 Location: value,
             }));
-        } else if (name === 'manualLat') {
-            setManualLat(value);
-            setShowRoom((prevShowRoom) => ({
-                ...prevShowRoom,
-                locationLatLng: { ...prevShowRoom.locationLatLng, lat: numericValue }, // Ensure lat is a number
-            }));
-        } else if (name === 'manualLng') {
-            setManualLng(value);
-            setShowRoom((prevShowRoom) => ({
-                ...prevShowRoom,
-                locationLatLng: { ...prevShowRoom.locationLatLng, lng: numericValue }, // Ensure lng is a number
-            }));
+        } else if (name === 'manualLatLng') {
+            // Split the input into latitude and longitude
+            const [lat, lng] = value.split(',').map((coord) => parseFloat(coord.trim()));
+            
+            // Update the state regardless of validity
+            setManualLatLng(value);
+    
+            // Update showRoom only if valid latitude and longitude are present
+            if (!isNaN(lat) && !isNaN(lng)) {
+                setShowRoom((prevShowRoom) => ({
+                    ...prevShowRoom,
+                    locationLatLng: { lat, lng },
+                }));
+            } else {
+                setShowRoom((prevShowRoom) => ({
+                    ...prevShowRoom,
+                    locationLatLng: { lat: null, lng: null },
+                }));
+            }
         }
     };
+    
+    
+    // -----------------------------------------------------------------
 
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
 
     const generateShowRoomLink = () => {
         const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`; // Your actual base URL
-        // const baseUrl = `http://localhost:5175/showrooms/showroom/showroomDetails`; // Your actual base URL
+        // const baseUrl = `http://localhost:5174/showrooms/showroom/showroomDetails`; // Your actual base URL
         const uid = sessionStorage.getItem('uid') || '';
 
         const queryParams = new URLSearchParams({
             id: showRoom.showroomId,
             name: showRoom.ShowRoom,
-            location: showRoom.Location,
+            location: showRoom.manualLocationName,
             img: showRoom.img,
             tollfree: showRoom.tollfree,
             phoneNumber: showRoom.phoneNumber,
@@ -519,6 +515,8 @@ const onConfirmAction = () => {
                 <table className="tableContainer">
                     <thead className="tableHeader">
                         <tr>
+                        <th className="tableCell">#</th>
+
                             <th className="tableCell">Image</th>
                             <th className="tableCell">Showroom Name</th>
                             <th className="tableCell">Showroom Id</th>
@@ -549,25 +547,21 @@ const onConfirmAction = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredRecords.map((room) => (
+                        {filteredRecords.map((room,index) => (
                             <tr
                                 key={room.id}
                                 className="tableRow"
                                 style={{ backgroundColor: room.status === 'admin added showroom' ? '#e6f7ff' : room.status === 'new showroom' ? '#f2f9ff' : 'transparent' }}
                             >
-                              <td className="tableCell" data-label="Image">
-            {/* Ensure room.img is properly defined */}
-            {room.img ? (
-                <img
-                    src={room.img}
-                    alt="ShowRoom"
-                    className="w-16 h-16 object-cover"
-                    style={{ width: '64px', height: '64px', objectFit: 'cover' }}
-                />
-            ) : (
-                'No Image Available'
-            )}
-        </td>
+                                <td>{index+1}</td>
+                                <td className="tableCell" data-label="Image">
+                                    {/* Ensure room.img is properly defined */}
+                                    {room.img ? (
+                                        <img src={room.img} alt="ShowRoom" className="w-16 h-16 object-cover" style={{ width: '64px', height: '64px', objectFit: 'cover' }} />
+                                    ) : (
+                                        'No Image Available'
+                                    )}
+                                </td>
                                 <td className="tableCell" data-label="Showroom Name">
                                     {room.ShowRoom.toUpperCase()}
                                 </td>
@@ -814,39 +808,36 @@ const onConfirmAction = () => {
                             />
                         </div>
                         <div className="mb-4" style={{ marginBottom: '16px' }}>
-                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                                Location
-                            </label>
-                            <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" width="100%" sx={{ gap: 2 }}>
-                                <Autocomplete
-                                    style={{ width: '100%', backgroundColor: 'white' }}
-                                    value={showRoom ? { label: showRoom.Location, value: showRoom.Location, lat: showRoom.lat, lng: showRoom.lng } : null} // Ensure it has lat, lng
-                                    onInputChange={(event, newInputValue) => {
-                                        if (newInputValue) {
-                                            getAutocompleteResults(newInputValue, setBaseOptions);
-                                        } else {
-                                            setBaseOptions([]);
-                                        }
-                                    }}
-                                    onChange={handleLocationChange}
-                                    sx={{ width: 300 }}
-                                    options={baseOptions}
-                                    getOptionLabel={(option) => option.label}
-                                    isOptionEqualToValue={(option, value) => option.label === value?.label && option.lat === value?.lat && option.lng === value?.lng} // Ensure proper equality
-                                    renderInput={(params) => <TextField {...params} label="Location" variant="outlined" />}
-                                />
+    <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
+        Location
+    </label>
+    <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" width="100%" sx={{ gap: 2 }}>
+        <TextField
+            label="Manual Location Name"
+            name="manualLocationName"
+            value={manualLocationName}
+            onChange={handleManualInputChange}
+            fullWidth
+            variant="outlined"
+        />
+        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(manualLocationName)}`} target="_blank" rel="noopener noreferrer">
+            <IconMapPin />
+        </a>
+        <TextField
+            label="Latitude,Longitude"
+            name="manualLatLng" // Ensure the name matches the handler
+            value={manualLatLng} // Use the state variable
+            onChange={handleManualInputChange} // Use the updated handler
+            placeholder="e.g. 40.7128,-74.0060"
+            fullWidth
+            variant="outlined"
+        />
+        {showRoom.locationLatLng.lat && showRoom.locationLatLng.lng && (
+            <Typography>{`Location Lat/Lng: ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`}</Typography>
+        )}
+    </Box>
+</div>
 
-                                <TextField label="Manual Location Name" name="manualLocationName" value={manualLocationName} onChange={handleManualInputChange} fullWidth variant="outlined" />
-                                <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(manualLocationName)}`} target="_blank" rel="noopener noreferrer">
-                                    <IconMapPin />
-                                </a>
-                                <TextField label="Latitude" name="manualLat" value={manualLat} onChange={handleManualInputChange} fullWidth variant="outlined" />
-                                <TextField label="Longitude" name="manualLng" value={manualLng} onChange={handleManualInputChange} fullWidth variant="outlined" />
-                                {showRoom.locationLatLng.lat && showRoom.locationLatLng.lng && (
-                                    <Typography>{`Location Lat/Lng: ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`}</Typography>
-                                )}
-                            </Box>
-                        </div>
 
                         <div className="mb-4" style={{ marginBottom: '16px' }}>
                             <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
@@ -958,25 +949,11 @@ const onConfirmAction = () => {
                             </select>
                         </div>
 
-                        {/* <div className="mb-4" style={{ marginBottom: '16px' }}>
-                            <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '1em', color: '#333' }}>
-                                Upload Image
-                            </label>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageUpload}
-                                className="form-input w-full"
-                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1em' }}
-                            />
-                        </div> */}
                         <div>
-    <label htmlFor="image">Image</label>
-    <input type="file" name="img" onChange={handleImageUpload} />
-    {showRoom.img && <img src={showRoom.img} alt="Showroom Image" width="100" />}
-</div>
-
-
+                            <label htmlFor="image">Image</label>
+                            <input type="file" name="img" onChange={handleImageUpload} />
+                            {showRoom.img && <img src={showRoom.img} alt="Showroom Image" width="100" />}
+                        </div>
                         {/* Display the generated link */}
                         {generatedLink && (
                             <div ref={qrRef}>
@@ -1001,7 +978,6 @@ const onConfirmAction = () => {
                                 Generate Showroom Link
                             </Button>
                         </div>
-
                         <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
                             <button
                                 type="submit"

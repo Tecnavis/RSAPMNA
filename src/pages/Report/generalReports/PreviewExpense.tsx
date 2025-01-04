@@ -45,7 +45,7 @@ const PreviewExpense = () => {
     const location = useLocation();
     const stateId = location.state?.id as string; // Use type assertion
     const invoiceRef = useRef<HTMLDivElement | null>(null);
-
+console.log("id",id)
     useEffect(() => {
         const fetchBooking = async () => {
             setLoading(true);

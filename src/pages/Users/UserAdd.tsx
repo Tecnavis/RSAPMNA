@@ -33,6 +33,7 @@ const UserAdd: React.FC = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
     const [profileImage, setProfileImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string>('');
+    const [staffRole, setStaffRole] = useState<string>(''); 
     const navigate = useNavigate();
     const { state } = useLocation(); // Use the useLocation hook to access location state
 
@@ -51,6 +52,7 @@ const UserAdd: React.FC = () => {
             setPassword(state.editData.password || '');
             setConfirmPassword(state.editData.confirmPassword || '');
             setImagePreview(state.editData.profileImage || '');
+            setStaffRole(state.editData.staffRole || '');
         }
     }, [state]);
           
@@ -74,7 +76,9 @@ const UserAdd: React.FC = () => {
 
     const validate = (): boolean => {
         let formErrors: Record<string, string> = {};
-
+        if (!staffRole) {
+            formErrors.staffRole = 'Role is required';
+        }
         if (!name.trim()) {
             formErrors.name = 'Name is required';
         } else if (name.length < 3) {
@@ -148,19 +152,25 @@ const UserAdd: React.FC = () => {
                     userName,
                     password,
                     role: "staff" ,
-
+                    staffRole,
                     confirmPassword,
                     profileImage: profileImageUrl,
+                    staffId: editData?.id || '',
                 };
 
                 if (editData?.id) {
                     const docRef = doc(db, `user/${uid}/users`, editData.id);
+                    console.log('Document ID:', editData?.id);
+console.log('Document Path:', `user/${uid}/users/${editData?.id}`);
+
                     await updateDoc(docRef, itemData);
                     console.log('Document updated');
                 } else {
                     const docRef = await addDoc(collection(db, `user/${uid}/users`), itemData);
                     console.log(docRef, 'this is the doc ref');
                     console.log('Document written with ID: ', docRef.id);
+                    await updateDoc(docRef, { staffId: docRef.id });
+
                 }
 
                 navigate('/users/staff');
@@ -180,7 +190,31 @@ const UserAdd: React.FC = () => {
                     <div className="ltr:sm:mr-4 rtl:sm:ml-4 w-full sm:w-2/12 mb-5">
                         <img src={imagePreview || defaultImage} alt="Profile" className="w-20 h-20 md:w-32 md:h-32 rounded-full object-cover mx-auto" />
                     </div>
+                        {/* [Other fields remain unchanged] */}
+
+                       
+
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div className="select-container">
+    <label htmlFor="staffRole">Staff Role</label>
+    <select
+        id="staffRole"
+        className="form-input"
+        value={staffRole}
+        onChange={(e) => setStaffRole(e.target.value)}
+    >
+        <option value="">Select Role</option>
+        <option value="admin">Admin</option>
+        <option value="secondary admin">Secondary Admin</option>
+        <option value="call executive">Call Executive</option>
+        <option value="verifier">Verifier</option>
+        <option value="accountant">Accountant</option>
+        <option value="cashier">Cashier</option>
+    </select>
+    {errors.staffRole && <p>{errors.staffRole}</p>}
+</div>
+
+
                         <div>
                             <label htmlFor="name">Name</label>
                             <input id="name" type="text" placeholder="Enter Name" className="form-input" value={name} onChange={(e) => setName(e.target.value)} />
@@ -199,7 +233,7 @@ const UserAdd: React.FC = () => {
                             <label htmlFor="phone_number">Phone</label>
                             <input
                                 id="phone_number"
-                                type="number"
+                                type="text"
                                 placeholder="phone number"
                                 className={`${styles.formInput} form-input`}
                                 value={phone_number}

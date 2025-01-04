@@ -7,7 +7,7 @@ interface Booking {
     showroomId: string;
     dateTime: string;
     amount: number;
-    receivedAmount?: number;
+    receivedAmountShowroom?: number;
     showroomAmount?: number;
     insuranceAmountBody: string;
     approved?: boolean;
@@ -33,7 +33,7 @@ const ShowroomCashCollection: React.FC = () => {
     const [selectedBookings, setSelectedBookings] = useState<Set<string>>(new Set());
     const location = useLocation();
     const { showroomName } = location.state || {}; // Destructure showroomName from state
-
+console.log("showroomId",showroomId)
     // Log the showroomName to the console
     useEffect(() => {
         if (showroomName) {
@@ -52,6 +52,7 @@ const ShowroomCashCollection: React.FC = () => {
                     ...doc.data(),
                 })) as Booking[];
                 setBookings(bookingList);
+                console.log("bookingList",bookingList)
                 setFilteredBookings(bookingList); // Set filteredBookings initially to all bookings
             } catch (error) {
                 console.error('Error fetching bookings: ', error);
@@ -73,8 +74,8 @@ const ShowroomCashCollection: React.FC = () => {
     };
 
     // Calculate balance: Total - Received Amount
-    const calculateBalance = (total: number, receivedAmount: number | undefined): number => {
-        return total - (receivedAmount || 0);
+    const calculateBalance = (total: number, receivedAmountShowroom: number | undefined): number => {
+        return total - (receivedAmountShowroom || 0);
     };
 
     // Update Firestore when showroomAmount, receivedAmount, or balanceshowroom is changed
@@ -103,7 +104,7 @@ const ShowroomCashCollection: React.FC = () => {
         const updatedBooking = updatedBookings.find((booking) => booking.id === id);
         if (updatedBooking) {
             const total = calculateTotal(updatedBooking.showroomAmount, updatedBooking.insuranceAmountBody);
-            const balanceshowroom = calculateBalance(total, updatedBooking.receivedAmount);
+            const balanceshowroom = calculateBalance(total, updatedBooking.receivedAmountShowroom);
 
             // Update Firestore with new values
             updateBookingInDB(id, {
@@ -113,7 +114,10 @@ const ShowroomCashCollection: React.FC = () => {
         }
     };
     const updateShowroomWholeBalance = async (wholeBalance: number) => {
-        try {
+        if (!uid || !showroomId) {
+            console.error('UID or Showroom ID is undefined');
+            return;
+        }        try {
             const showroomRef = doc(db, `user/${uid}/showroom`, showroomId);
             await updateDoc(showroomRef, { wholeBalance });
             console.log('Successfully updated wholeBalance:', wholeBalance);
@@ -124,7 +128,7 @@ const ShowroomCashCollection: React.FC = () => {
     
     const handleApproveClick = async (booking: Booking) => {
         const total = calculateTotal(booking.showroomAmount, booking.insuranceAmountBody);
-        const balanceshowroom = calculateBalance(total, booking.receivedAmount);
+        const balanceshowroom = calculateBalance(total, booking.receivedAmountShowroom);
 
         if (balanceshowroom === 0) {
             // Prompt for password input
@@ -206,7 +210,7 @@ const ShowroomCashCollection: React.FC = () => {
         let monthlyBalance = 0;
         filteredBookings.forEach((booking) => {
             const total = calculateTotal(booking.showroomAmount, booking.insuranceAmountBody);
-            const balance = calculateBalance(total, booking.receivedAmount);
+            const balance = calculateBalance(total, booking.receivedAmountShowroom);
             monthlyTotal += total;
             monthlyBalance += balance;
         });
@@ -218,7 +222,7 @@ const ShowroomCashCollection: React.FC = () => {
         let wholeBalance = 0;
         bookings.forEach((booking) => {
             const total = calculateTotal(booking.showroomAmount, booking.insuranceAmountBody);
-            const balance = calculateBalance(total, booking.receivedAmount);
+            const balance = calculateBalance(total, booking.receivedAmountShowroom);
             wholeTotal += total;
             wholeBalance += balance;
         });
@@ -265,9 +269,8 @@ const ShowroomCashCollection: React.FC = () => {
     };
     return (
         <div className="w-full px-6 py-8 bg-gray-80 rounded-lg shadow-lg">
-            <h2 className="text-3xl font-bold text-gray-800 mb-6">
-                 Report of <span className="text-red-500">{showroomName}</span>
-            </h2>
+           
+            <h1 className="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">Cash Collection Report <span className="text-red-500">{showroomName}</span></h1>
 
             {notification && <div className="mb-4 p-4 text-white bg-red-600 rounded-lg shadow-md">{notification}</div>}
             <div className="mb-6">
@@ -338,6 +341,7 @@ const ShowroomCashCollection: React.FC = () => {
             </div>
 
             {filteredBookings.length > 0 ? (
+                <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-100">
                         <button
@@ -365,7 +369,7 @@ const ShowroomCashCollection: React.FC = () => {
                     <tbody className="bg-white divide-y divide-gray-200">
                         {sortedBookingsData.map((booking) => {
                             const total = calculateTotal(booking.showroomAmount, booking.insuranceAmountBody);
-                            const balanceshowroom = calculateBalance(total, booking.receivedAmount);
+                            const balanceshowroom = calculateBalance(total, booking.receivedAmountShowroom);
 
                             return (
                                 <tr key={booking.id}>
@@ -400,8 +404,8 @@ const ShowroomCashCollection: React.FC = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <input
                                             type="number"
-                                            value={booking.receivedAmount || ''}
-                                            onChange={(e) => handleAmountChange(booking.id, 'receivedAmount', e.target.value)}
+                                            value={booking.receivedAmountShowroom || ''}
+                                            onChange={(e) => handleAmountChange(booking.id, 'receivedAmountShowroom', e.target.value)}
                                             className="border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-teal-500"
                                             disabled={booking.approved}
                                         />
@@ -422,6 +426,8 @@ const ShowroomCashCollection: React.FC = () => {
                         })}
                     </tbody>
                 </table>
+                </div>
+
             ) : (
                 <div>No bookings found.</div>
             )}

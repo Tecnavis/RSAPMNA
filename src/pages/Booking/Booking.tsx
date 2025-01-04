@@ -6,7 +6,7 @@
 // import styles from './booking.module.css'
 
 // const Booking = () => {
-//     const [activeForm, setActiveForm] = useState('withoutMap');
+//     const [activeForm, setActiveForm] = useState('map');
 //     const [isEditing, setIsEditing] = useState(false);
 //     const location = useLocation();
 //     const editData = location.state?.editData;
@@ -24,9 +24,9 @@
 //         }
 //     }, [editData]);
 
-//     // const handleWithMapClick = () => {
-//     //     setActiveForm('map');
-//     // };
+//     const handleWithMapClick = () => {
+//         setActiveForm('map');
+//     };
 
 //     const handleWithoutMapClick = () => {
 //         setActiveForm('withoutMap');
@@ -36,7 +36,7 @@
 //         <div style={{ backgroundColor: '#e6f7ff', borderRadius: '10px', boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 //             <div style={{ marginBottom: '1rem' }}>
 //             <div  className={styles.buttonContainer}>
-//             {/* <button 
+//             <button 
 //                 onClick={handleWithMapClick} 
 //                 className={styles.button}
 //                 style={{ backgroundColor: '#4CAF50' }} 
@@ -44,7 +44,7 @@
 //             >
 //                 <FaMapMarkedAlt className={styles.icon} />
 //                 <span>Map Booking</span>
-//             </button> */}
+//             </button>
 //             <button 
 //                 onClick={handleWithoutMapClick} 
 //                 className={styles.button}
@@ -56,7 +56,7 @@
 //             </button>
 //         </div>
 //             </div>
-//             {/* {activeForm === 'map' && <MapBooking />} */}
+//             {activeForm === 'map' && <MapBooking />}
 //             {activeForm === 'withoutMap' && <WithoutMapBooking />}
 //         </div>
 //     );

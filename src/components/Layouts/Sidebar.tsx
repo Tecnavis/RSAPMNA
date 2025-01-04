@@ -16,7 +16,12 @@ import IconServer from '../Icon/IconServer';
 import IconTxtFile from '../Icon/IconTxtFile';
 import IconBook from '../Icon/IconBook';
 import IconBarChart from '../Icon/IconBarChart';
-
+import IconAward from '../Icon/IconAward';
+import IconCalendar from '../Icon/IconCalendar';
+import IconMenuCalendar from '../Icon/Menu/IconMenuCalendar';
+import IconMenuTodo from '../Icon/Menu/IconMenuTodo';
+import IconTrashLines from '../Icon/IconTrashLines';
+import IconMenuDocumentation from '../Icon/Menu/IconMenuDocumentation';
 
 const Sidebar = () => {
     const [currentMenu, setCurrentMenu] = useState<string>('');
@@ -25,8 +30,8 @@ const Sidebar = () => {
     const location = useLocation();
     const dispatch = useDispatch();
     const { t } = useTranslation();
-    const role =sessionStorage.getItem('role');
-console.log("role",role)
+    const role = sessionStorage.getItem('role');
+    console.log('role', role);
     const toggleMenu = (value: string) => {
         setCurrentMenu((oldValue) => {
             return oldValue === value ? '' : value;
@@ -94,7 +99,13 @@ console.log("role",role)
                             </h2> */}
 
                             <li className="menu nav-item">
-                                <button type="button" className={`${currentMenu === 'users' ? 'active' : ''} nav-link group w-full  py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('users')}>
+                                <button
+                                    type="button"
+                                    className={`${
+                                        currentMenu === 'users' ? 'active' : ''
+                                    } nav-link group w-full  py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`}
+                                    onClick={() => toggleMenu('users')}
+                                >
                                     <div className="flex items-center">
                                         <IconMenuUsers className="group-hover:!text-primary shrink-0" />
                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('users')}</span>
@@ -106,25 +117,25 @@ console.log("role",role)
                                 </button>
 
                                 <AnimateHeight duration={300} height={currentMenu === 'users' ? 'auto' : 0}>
-                                <ul className="sub-menu text-gray-500">
-                    {role !== 'staff' && (
-                        <li>
-                            <NavLink to="/users/staff">Staff Creation</NavLink>
-                        </li>
-                    )}
-                    <li>
-                        <NavLink to="/users/company">Provider Creation</NavLink>
-                    </li>
-                    <li>
-                        <NavLink to="/users/customer">Customer Creation</NavLink>
-                    </li>
-                    <li>
-                        <NavLink to="/users/driver">Driver Creation</NavLink>
-                    </li>
-                    <li>
-                        <NavLink to="/users/companycreation">Company Creation</NavLink>
-                    </li>
-                </ul>
+                                    <ul className="sub-menu text-gray-500">
+                                        {role !== 'staff' && (
+                                            <li>
+                                                <NavLink to="/users/staff">Staff Creation</NavLink>
+                                            </li>
+                                        )}
+                                        <li>
+                                            <NavLink to="/users/company">Provider Creation</NavLink>
+                                        </li>
+                                        <li>
+                                            <NavLink to="/users/customer">Customer Creation</NavLink>
+                                        </li>
+                                        <li>
+                                            <NavLink to="/users/driver">Driver Creation</NavLink>
+                                        </li>
+                                        <li>
+                                            <NavLink to="/users/companycreation">Company Creation</NavLink>
+                                        </li>
+                                    </ul>
                                 </AnimateHeight>
                             </li>
 
@@ -136,7 +147,13 @@ console.log("role",role)
                             </h2> */}
 
                             <li className="menu nav-item">
-                                <button type="button" className={`${currentMenu === 'bookings' ? 'active' : ''} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('bookings')}>
+                                <button
+                                    type="button"
+                                    className={`${
+                                        currentMenu === 'bookings' ? 'active' : ''
+                                    } nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`}
+                                    onClick={() => toggleMenu('bookings')}
+                                >
                                     <div className="flex items-center">
                                         <IconBook className="group-hover:!text-primary shrink-0" />
                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">Bookings</span>
@@ -159,12 +176,12 @@ console.log("role",role)
                                             <NavLink to="/bookings/pendingbookings">Pending Bookings</NavLink>
                                         </li>
                                         <li>
-                                            <NavLink to="/bookings/closedbooking">Closed Bookings</NavLink>
+                                            <NavLink to="/bookings/closedbooking">Driver Completed Bookings</NavLink>
                                         </li>
                                         <li>
-                                            <NavLink to="/bookings/approvedbooking">Approved Bookings</NavLink>
+                                            <NavLink to="/bookings/approvedbooking">Service Details</NavLink>
                                         </li>
-                                       
+
                                         <li>
                                             <NavLink to="/bookings/cancelbooking">Canceled Bookings</NavLink>
                                         </li>
@@ -174,52 +191,15 @@ console.log("role",role)
                                     </ul>
                                 </AnimateHeight>
                             </li>
-                            {/* <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
-                                <IconMinus className="w-4 h-5 flex-none hidden" />
-                                <span>
-                                    Status
-                                </span>
-                            </h2> */}
-                            
-                            {/* <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
-                                <IconMinus className="w-4 h-5 flex-none hidden" />
-                                <span>
-                                    ShowRooms
-                                </span>
-                            </h2> */}
 
                             <li className="menu nav-item">
-                                <button type="button" className={`${currentMenu === 'showrooms' ? 'active' : ''} nav-link group w-full  py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('showrooms')}>
-                                    <div className="flex items-center">
-                                        <IconGlobe className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">ShowRoom</span>
-                                    </div>
-
-                                    <div className={currentMenu !== 'showrooms' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                        <IconCaretDown />
-                                    </div>
-                                </button>
-                                <AnimateHeight duration={300} height={currentMenu === 'showrooms' ? 'auto' : 0}>
-                                    <ul className="sub-menu text-gray-500">
-                                        <li>
-                                            <NavLink to="/showrooms/showroom">ShowRoom Details</NavLink>
-                                        </li>
-                                        {/* <li>
-                                            <NavLink to="/showrooms/showrm">ShowRooms</NavLink>
-                                        </li> */}
-                                    </ul>
-                                </AnimateHeight>
-                            </li>
-
-                            {/* <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
-                                <IconMinus className="w-4 h-5 flex-none hidden" />
-                                <span>
-                                    Service
-                                </span>
-                            </h2> */}
-
-                            <li className="menu nav-item">
-                                <button type="button" className={`${currentMenu === 'service' ? 'active' : ''} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('service')}>
+                                <button
+                                    type="button"
+                                    className={`${
+                                        currentMenu === 'service' ? 'active' : ''
+                                    } nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`}
+                                    onClick={() => toggleMenu('service')}
+                                >
                                     <div className="flex items-center">
                                         <IconServer className="group-hover:!text-primary shrink-0" />
                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">Service Types</span>
@@ -243,12 +223,51 @@ console.log("role",role)
                                     </ul>
                                 </AnimateHeight>
                             </li>
-
+                            {/* =------------------------------------------------------*/}
                             <li className="menu nav-item ">
-                                <button type="button" className={`${currentMenu === 'driverreport' ? 'active' : ''} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('driverreport')}>
+                                <button
+                                    type="button"
+                                    className={`${currentMenu} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`}
+                                    onClick={() => toggleMenu('vehicle')}
+                                >
+                                    <div className="flex items-center">
+                                        {/* <i className="fas fa-truck-pickup"></i> */}
+                                        <IconMenuDocumentation className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">
+                                            {' '}
+                                            &nbsp; Vehicle List &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{' '}
+                                        </span>
+                                    </div>
+
+                                    <div className={currentMenu !== 'vehicle' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                        <IconCaretDown />
+                                    </div>
+                                </button>
+
+                                <AnimateHeight duration={300} height={currentMenu === 'vehicle' ? 'auto' : 0}>
+                                    <ul className="sub-menu text-gray-500">
+                                        <li>
+                                            <NavLink to="/vehicle">RSA Vehicle</NavLink>
+                                        </li>
+                                    </ul>
+                                </AnimateHeight>
+                            </li>
+
+                            {/* -------------------------------------------------------- */}
+                            <li className="menu nav-item ">
+                                <button
+                                    type="button"
+                                    className={`${
+                                        currentMenu === 'driverreport' ? 'active' : ''
+                                    } nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`}
+                                    onClick={() => toggleMenu('driverreport')}
+                                >
                                     <div className="flex items-center">
                                         <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark"> &nbsp;  Reports &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">
+                                            {' '}
+                                            &nbsp; Reports &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{' '}
+                                        </span>
                                     </div>
 
                                     <div className={currentMenu !== 'driverreport' ? 'rtl:rotate-90 -rotate-90' : ''}>
@@ -259,68 +278,46 @@ console.log("role",role)
                                 <AnimateHeight duration={300} height={currentMenu === 'driverreport' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <NavLink to="/driverreport">Driver Reports</NavLink>
+                                            <NavLink to="/driverreport">Driver/Company/Provider Reports</NavLink>
                                         </li>
                                         <li>
                                             <NavLink to="/showroomreport">ShowRoom Reports</NavLink>
                                         </li>
+                                        <li>
+                                            <NavLink to="/rsastaffreport">RSA Staff Reports</NavLink>
+                                        </li>
                                     </ul>
                                 </AnimateHeight>
                             </li>
 
                             <li className="menu nav-item ">
-                                <button type="button" className={`${currentMenu } nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('driverreport')}>
+                                <button
+                                    type="button"
+                                    className={`${currentMenu} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`}
+                                    onClick={() => toggleMenu('feedbacktable')}
+                                >
                                     <div className="flex items-center">
-                                        <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark"> &nbsp;  Rewards &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+                                        <IconMenuDocumentation className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">
+                                            {' '}
+                                            &nbsp; Feed Back &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{' '}
+                                        </span>
                                     </div>
 
-                                    <div className={currentMenu !== 'driverreport' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                    <div className={currentMenu !== 'feedbacktable' ? 'rtl:rotate-90 -rotate-90' : ''}>
                                         <IconCaretDown />
                                     </div>
                                 </button>
 
-                                <AnimateHeight duration={300} height={currentMenu === 'driverreport' ? 'auto' : 0}>
+                                <AnimateHeight duration={300} height={currentMenu === 'feedbacktable' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <NavLink to="/rewarditem">Reward Items</NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/rewards">Rewards</NavLink>
+                                            <NavLink to="/feedbacktable">Feed Back</NavLink>
                                         </li>
                                     </ul>
                                 </AnimateHeight>
                             </li>
-
- {/* <li className="menu nav-item ">
-                                <button type="button" className={`${currentMenu === 'location' ? 'active' : ''} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('location')}>
-                                    <div className="flex items-center">
-                                        <IconMapPin className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">Base Location</span>
-                                    </div>
-
-                                    <div className={currentMenu !== 'location' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                        <IconCaretDown />
-                                    </div>
-                                </button>
-
-                                <AnimateHeight duration={300} height={currentMenu === 'location' ? 'auto' : 0}>
-                                    <ul className="sub-menu text-gray-500">
-                                        <li>
-                                            <NavLink to="/baselocation/location">Base Location Details</NavLink>
-                                        </li>
-                                    </ul>
-                                </AnimateHeight>
-                            </li> */}
-                             <li className="menu nav-item">
-                                <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
-                                    <IconMinus className="w-4 h-5 flex-none hidden" />
-                                    <span>
-                                       <Link to="/baselocation/location"> Base Location</Link>
-                                        {/* {t('user_and_pages')} */}
-                                    </span>
-                                </h2>
-                            </li>
+                         
                             {/* <li className="menu nav-item ">
                                 <button type="button" className={`${currentMenu === 'status' ? 'active' : ''} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('status')}>
                                     <div className="flex items-center">
@@ -341,11 +338,11 @@ console.log("role",role)
                                     </ul>
                                 </AnimateHeight>
                             </li> */}
-                              <li className="menu nav-item">
+                            <li className="menu nav-item">
                                 <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
                                     <IconMinus className="w-4 h-5 flex-none hidden" />
                                     <span>
-                                       <Link to="/checkstatus/status"> Status</Link>
+                                        <Link to="/checkstatus/status"> Status</Link>
                                         {/* {t('user_and_pages')} */}
                                     </span>
                                 </h2>
@@ -443,34 +440,34 @@ console.log("role",role)
                                 </AnimateHeight>
                             </li>
                             <li className="menu nav-item">
-                                        <button type="button" className={`${currentMenu === 'invoice' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('invoice')}>
-                                            <div className="flex items-center">
-                                                <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('invoice')}</span>
-                                            </div>
+                                <button type="button" className={`${currentMenu === 'invoice' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('invoice')}>
+                                    <div className="flex items-center">
+                                        <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('invoice')}</span>
+                                    </div>
 
-                                            <div className={currentMenu !== 'invoice' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                <IconCaretDown />
-                                            </div>
-                                        </button>
+                                    <div className={currentMenu !== 'invoice' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                        <IconCaretDown />
+                                    </div>
+                                </button>
 
-                                        <AnimateHeight duration={300} height={currentMenu === 'invoice' ? 'auto' : 0}>
-                                            <ul className="sub-menu text-gray-500">
-                                                <li>
-                                                    <NavLink to="/apps/invoice/list">{t('list')}</NavLink>
-                                                </li>
-                                                <li>
-                                                    <NavLink to="/apps/invoice/preview">{t('preview')}</NavLink>
-                                                </li>
-                                                <li>
-                                                    <NavLink to="/apps/invoice/add">{t('add')}</NavLink>
-                                                </li>
-                                                {/* <li>
+                                <AnimateHeight duration={300} height={currentMenu === 'invoice' ? 'auto' : 0}>
+                                    <ul className="sub-menu text-gray-500">
+                                        <li>
+                                            <NavLink to="/apps/invoice/list">{t('list')}</NavLink>
+                                        </li>
+                                        <li>
+                                            <NavLink to="/apps/invoice/preview">{t('preview')}</NavLink>
+                                        </li>
+                                        <li>
+                                            <NavLink to="/apps/invoice/add">{t('add')}</NavLink>
+                                        </li>
+                                        {/* <li>
                                                     <NavLink to="/apps/invoice/edit">{t('edit')}</NavLink>
                                                 </li> */}
-                                            </ul>
-                                        </AnimateHeight>
-                                    </li>
+                                    </ul>
+                                </AnimateHeight>
+                            </li>
                             {/* <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
                                 <IconMinus className="w-4 h-5 flex-none hidden" />
                                 <span>

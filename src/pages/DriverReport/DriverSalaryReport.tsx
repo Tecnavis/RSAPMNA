@@ -91,6 +91,7 @@ const DriverSalaryReport: React.FC = () => {
     return (
         <div className="container mx-auto px-4">
             <h2 className="text-2xl font-semibold mb-4">Driver Cash Collection Report</h2>
+            
             <div className="mb-4 w-full">
                 <input
                     type="text"

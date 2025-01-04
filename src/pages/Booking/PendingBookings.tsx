@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { DataTable } from 'mantine-datatable';
 import { Link } from 'react-router-dom';
-import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where, QueryDocumentSnapshot } from 'firebase/firestore';
 
 type RecordData = {
-    index: number;
+    index?: number; // Optional if not explicitly set
     customerName: string;
     fileNumber: string;
     phoneNumber: string;
@@ -14,33 +14,40 @@ type RecordData = {
     comments: string;
     id: string; 
     status: string; 
-    bookingStatus:string;
+    bookingStatus: string;
     dateTime: string;
 };
 
-const PendingBookings = () => {
+const PendingBookings: React.FC = () => {
     const [recordsData, setRecordsData] = useState<RecordData[]>([]);
     const [filteredRecords, setFilteredRecords] = useState<RecordData[]>([]);
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [pageSize, setPageSize] = useState<number | 'All'>(10);
     const [searchTerm, setSearchTerm] = useState('');
-    const PAGE_SIZES = [10, 25, 'All'];
+    const PAGE_SIZES: Array<number | 'All'> = [10, 25, 'All'];
     const db = getFirestore();
-    const uid = sessionStorage.getItem('uid')
+    const uid = sessionStorage.getItem('uid') || ''; // Default to empty string if uid is null
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const statusConditions = ['booking added','Contacted Customer', 'Vehicle Picked', 'Vehicle Confirmed', 'To DropOff Location', 'Vehicle dropoff'];
+                const statusConditions = [
+                    'booking added',
+                    'Contacted Customer',
+                    'Vehicle Picked',
+                    'Vehicle Confirmed',
+                    'To DropOff Location',
+                    'Vehicle dropoff',
+                ];
                 const q = query(collection(db, `user/${uid}/bookings`), where('status', 'in', statusConditions));
                 const querySnapshot = await getDocs(q);
-                const dataWithIndex = querySnapshot.docs
-                    .map((doc) => ({
+                const dataWithIndex: RecordData[] = querySnapshot.docs
+                    .map((doc: QueryDocumentSnapshot) => ({
                         ...doc.data(),
                         id: doc.id,
-                    }))
+                    } as RecordData))
                     .filter((record) => record.status !== 'Order Completed'); // Filter out 'Order Completed'
-                
+
                 setRecordsData(dataWithIndex);
                 setFilteredRecords(dataWithIndex); // Set filtered records to initial data
             } catch (error) {
@@ -48,12 +55,12 @@ const PendingBookings = () => {
             }
         };
 
-        fetchData().catch(console.error);
-    }, [db]);
+        fetchData();
+    }, [db, uid]);
 
     useEffect(() => {
         const term = searchTerm.toLowerCase();
-        const filtered = recordsData.filter(record =>
+        const filtered = recordsData.filter((record) =>
             (record.customerName?.toLowerCase().includes(term) ?? false) ||
             (record.fileNumber?.toLowerCase().includes(term) ?? false) ||
             (record.phoneNumber?.toLowerCase().includes(term) ?? false) ||
@@ -67,9 +74,11 @@ const PendingBookings = () => {
         );
         setFilteredRecords(filtered);
     }, [searchTerm, recordsData]);
-    const totalPages = Math.ceil(filteredRecords.length / pageSize);
 
-    const displayedRecords = pageSize === 'All' ? filteredRecords : filteredRecords.slice((page - 1) * pageSize, page * pageSize);
+    const totalPages = pageSize === 'All' ? 1 : Math.ceil(filteredRecords.length / pageSize);
+
+    const displayedRecords =
+        pageSize === 'All' ? filteredRecords : filteredRecords.slice((page - 1) * pageSize, page * pageSize);
 
     return (
         <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', color: '#333' }}>
@@ -88,69 +97,71 @@ const PendingBookings = () => {
                         border: '1px solid #ccc',
                         width: '300px',
                         marginRight: '10px',
-                        fontSize: '16px'
+                        fontSize: '16px',
                     }}
                 />
             </div>
 
-            <div style={{
-                padding: '20px',
-                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-                borderRadius: '10px',
-                backgroundColor: '#fff',
-                overflowX: 'auto'
-            }}>
+            <div
+                style={{
+                    padding: '20px',
+                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                    borderRadius: '10px',
+                    backgroundColor: '#fff',
+                    overflowX: 'auto',
+                }}
+            >
                 <div className="datatables">
-                    <DataTable
-                        noRecordsText="No results match your search query"
-                        highlightOnHover
-                        className="whitespace-nowrap table-hover"
-                        records={displayedRecords}
-                        columns={[
-                            { accessor: 'dateTime', title: 'Booking Date & Time' },
-                            { accessor: 'fileNumber', title: 'File Number' },
-                            { accessor: 'customerName', title: 'Customer Name' },
-                            { accessor: 'phoneNumber', title: 'Phone Number' },
-                            {
-                                accessor: 'viewMore',
-                                title: 'View More',
-                                render: (rowData: RecordData) => (
-                                    <Link to={`/bookings/newbooking/viewmore/${rowData.id}`}>
-                                        <button
-                                            style={{
-                                                backgroundColor: '#ffc107',
-                                                color: '#212529',
-                                                border: 'none',
-                                                padding: '0.5rem 1rem',
-                                                borderRadius: '5px',
-                                                cursor: 'pointer',
-                                                transition: 'background-color 0.3s',
-                                                animation: 'pulse 1.5s infinite',
-                                            }}
-                                        >
-                                            Pending
-                                        </button>
-                                    </Link>
-                                ),
-                            },
-                        ]}
-                        totalRecords={filteredRecords.length}
-                        recordsPerPage={pageSize === 'All' ? filteredRecords.length : pageSize}
-                        page={page}
-                        onPageChange={(p) => setPage(p)}
-                        recordsPerPageOptions={PAGE_SIZES}
-                        onRecordsPerPageChange={(size) => {
-                            setPageSize(size === 'All' ? filteredRecords.length : size);
-                            setPage(1); // reset to first page when page size changes
+                <DataTable
+    noRecordsText="No results match your search query"
+    highlightOnHover
+    className="whitespace-nowrap table-hover"
+    records={displayedRecords}
+    columns={[
+        { accessor: 'dateTime', title: 'Booking Date & Time' },
+        { accessor: 'fileNumber', title: 'File Number' },
+        { accessor: 'customerName', title: 'Customer Name' },
+        { accessor: 'phoneNumber', title: 'Phone Number' },
+        {
+            accessor: 'viewMore',
+            title: 'View More',
+            render: (rowData: RecordData) => (
+                <Link to={`/bookings/newbooking/viewmore/${rowData.id}`}>
+                    <button
+                        style={{
+                            backgroundColor: '#ffc107',
+                            color: '#212529',
+                            border: 'none',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.3s',
+                            animation: 'pulse 1.5s infinite',
                         }}
-                        minHeight={200}
-                        rowStyle={(record) =>
-                            record.bookingStatus === 'ShowRoom Booking' ? { backgroundColor: '#ffeeba' } : {}
-                        }
-                        paginationText={({ from, to, totalRecords }) =>
-                            `Showing ${from} to ${to} of ${totalRecords} entries`
-                        }
-                    />
+                    >
+                        Pending
+                    </button>
+                </Link>
+            ),
+        },
+    ]}
+    totalRecords={filteredRecords.length}
+    recordsPerPage={pageSize === 'All' ? filteredRecords.length : pageSize}
+    page={page}
+    onPageChange={(p) => setPage(p)}
+    recordsPerPageOptions={PAGE_SIZES.filter((size) => size !== 'All') as number[]} // Only include numeric options
+    onRecordsPerPageChange={(size) => {
+        setPageSize(size);
+        setPage(1); // Reset to first page when page size changes
+    }}
+    minHeight={200}
+    rowStyle={(record) =>
+        record.bookingStatus === 'ShowRoom Booking' ? { backgroundColor: '#ffeeba' } : {}
+    }
+    paginationText={({ from, to, totalRecords }) =>
+        `Showing ${from} to ${to} of ${totalRecords} entries`
+    }
+/>;
                 </div>
             </div>
         </div>

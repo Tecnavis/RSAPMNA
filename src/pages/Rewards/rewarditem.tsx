@@ -124,14 +124,14 @@ const CardLayout = () => {
             }
 
             const docRef = await addDoc(collection(db, `user/${uid}/rewarditems`), {
-                name: formData.name,
-                description: formData.description,
-                price: formData.price,
-                category: formData.category,
-                percentage: formData.percentage,
-                stock: formData.stock,
-                points: formData.points,
-                image: imageUrl,
+                name: formData.name || '',
+                description: formData.description || '',
+                price: formData.price || '',
+                category: formData.category || '',
+                percentage: formData.percentage || '',
+                stock: formData.stock || '',
+                points: formData.points || '',
+                image: imageUrl || '',
             });
 
             Swal.fire({
@@ -265,7 +265,7 @@ const CardLayout = () => {
                             <option value="Showroom">Showroom</option>
                             <option value="Driver">Driver</option>
                             <option value="Staff">Staff</option>
-                            <option value="Customer">Customer</option>
+                            <option value="ShowroomStaff">Showroom Staff</option>
                             <option value="Provider">Provider</option>
                         </select>
                         </div>
@@ -299,7 +299,7 @@ const CardLayout = () => {
                             <option value="Showroom">Showroom</option>
                             <option value="Driver">Driver</option>
                             <option value="Staff">Staff</option>
-                            <option value="Customer">Customer</option>
+                            <option value="ShowroomStaff">Showroom Staff</option>
                             <option value="Provider">Provider</option>
                         </select>
                         <input type="file" name="image" onChange={handleFileChange} />
