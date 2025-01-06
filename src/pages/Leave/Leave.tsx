@@ -69,8 +69,8 @@ const Leave: React.FC = () => {
         })) as LeaveData[];
           // Sort the leave data by `createdAt` in descending order
           const sortedLeaves = leaveData.sort((a, b) => {
-            const aTime = a.createdAt?.seconds || 0;
-            const bTime = b.createdAt?.seconds || 0;
+            const aTime = a.date?.seconds || 0;
+            const bTime = b.date?.seconds || 0;
             return bTime - aTime;
           });
     
@@ -281,7 +281,7 @@ const Leave: React.FC = () => {
               filteredLeaves.map((leave) => (
                 <tr key={leave.id} className="border-b hover:bg-gray-100">
                                <td className="py-2 px-4">{formatTimestamp(leave.createdAt.seconds)}</td>
-                               <td className="py-2 px-4">{formatTimestamp(leave.date.seconds)}</td>
+                               <td className="py-2 px-4 text-danger">{formatTimestamp(leave.date.seconds)}</td>
 
                   <td className="py-2 px-4">{leave.driverName}</td>
                  {/* -------------------------------------------------------------- */}

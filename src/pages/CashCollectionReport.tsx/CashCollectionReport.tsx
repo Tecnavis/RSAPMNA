@@ -1,7 +1,7 @@
 // new code
 
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, writeBatch, arrayUnion, Timestamp, runTransaction, addDoc, setDoc } from 'firebase/firestore';
 import Modal from 'react-modal';
 import { parse, format } from 'date-fns';
@@ -552,9 +552,11 @@ const amountToUse = parseFloat(booking.amount.toString() );
     const handleInputChange = (bookingId: string, value: string) => {
         setInputValues((prev) => ({
             ...prev,
-            [bookingId]: value,
+            [bookingId]: value === '' ? '0' : value,  // Set to '0' if empty
         }));
     };
+
+    
     const getStaffId = async (userName: string, password: string, uid: string) => {
         const db = getFirestore();
         const usersRef = collection(db, `user/${uid}/users`);
@@ -790,7 +792,7 @@ const amountToUse = parseFloat(booking.amount.toString() );
           }, [searchTerm, bookings]);
     
     return (
-        <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg">
+        <div className="container mx-auto  p-5 bg-gray-50 shadow-lg rounded-lg">
             <h1 className="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">Cash Collection Report</h1>
 
             {driver ? (
@@ -826,92 +828,113 @@ const amountToUse = parseFloat(booking.amount.toString() );
                         </div>
                     </div>
 
-                    <div className="container-fluid mb-5">
-                        <div className="flex flex-wrap justify-between items-center text-center md:text-left">
-                            <div className="w-full md:w-auto flex flex-col md:flex-row items-center md:justify-end">
-                                <div className="flex items-center mb-4 md:mb-0 space-x-2">
-                                    <label htmlFor="month" className="text-gray-700 font-semibold text-lg">
-                                        Filter by Month:
-                                    </label>
-                                    <select
-                                        id="month"
-                                        value={selectedMonth}
-                                        onChange={(e) => setSelectedMonth(e.target.value)}
-                                        className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200 ease-in-out"
-                                    >
-                                        <option value="">All Months</option>
-                                        {Array.from({ length: 12 }, (_, index) => {
-                                            const month = index + 1;
-                                            return (
-                                                <option key={month} value={month.toString()}>
-                                                    {new Date(0, month - 1).toLocaleString('default', { month: 'long' })}
-                                                </option>
-                                            );
-                                        })}
-                                    </select>
-                                </div>
+                    <div className="container-fluid mb-8">
+    <div className="flex flex-wrap justify-between items-center text-center md:text-left">
+        <div className="w-full md:w-auto flex flex-col md:flex-row items-center md:justify-end space-y-4 md:space-y-0 md:space-x-8">
+            
+            {/* Month Filter */}
+            <div className="flex items-center space-x-3">
+                <label htmlFor="month" className="text-gray-800 font-medium text-lg">
+                    Filter by Month:
+                </label>
+                <select
+                    id="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="border border-gray-300 rounded-xl px-5 py-2 text-gray-800 bg-white shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200"
+                >
+                    <option value="">All Months</option>
+                    {Array.from({ length: 12 }, (_, index) => {
+                        const month = index + 1;
+                        return (
+                            <option key={month} value={month.toString()}>
+                                {new Date(0, month - 1).toLocaleString('default', { month: 'long' })}
+                            </option>
+                        );
+                    })}
+                </select>
+            </div>
 
-                                <div className="flex items-center space-x-2">
-                                    <label htmlFor="year" className="text-gray-700 font-semibold text-lg">
-                                        Filter by Year:
-                                    </label>
-                                    <select
-                                        id="year"
-                                        value={selectedYear}
-                                        onChange={(e) => setSelectedYear(e.target.value)}
-                                        className="border border-gray-300 rounded-lg px-4 py-2 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200 ease-in-out"
-                                    >
-                                        <option value="">All Years</option>
-                                        {Array.from({ length: 5 }, (_, index) => {
-                                            const year = new Date().getFullYear() - index;
-                                            return (
-                                                <option key={year} value={year.toString()}>
-                                                    {year}
-                                                </option>
-                                            );
-                                        })}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            {/* Year Filter */}
+            <div className="flex items-center space-x-3">
+                <label htmlFor="year" className="text-gray-800 font-medium text-lg">
+                    Filter by Year:
+                </label>
+                <select
+                    id="year"
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(e.target.value)}
+                    className="border border-gray-300 rounded-xl px-5 py-2 text-gray-800 bg-white shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200"
+                >
+                    <option value="">All Years</option>
+                    {Array.from({ length: 11 }, (_, i) => {
+                        const year = new Date().getFullYear() - 5 + i;
+                        return (
+                            <option key={year} value={year.toString()}>
+                                {year}
+                            </option>
+                        );
+                    })}
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                      
-                        {/* <div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
-                            <div className="flex items-center space-x-4">
-                                <div className="text-4xl text-green-600">
-                                    <i className="fas fa-receipt"></i>
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-800">Total Amount Of Booking</h3>
-                                    <p className="text-gray-700 text-lg">{monthlyTotals.totalAmount}</p>
-                                </div>
-                            </div>
-                        </div> */}
-                        <div className="bg-gradient-to-r from-blue-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
-                            <div className="flex items-center space-x-4">
-                                <div className="text-4xl text-blue-600">
-                                    <i className="fas fa-receipt"></i>
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-800">Total Received Amount</h3>
-                                    <p className="text-gray-700 text-lg">{monthlyTotals.totalReceived}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="bg-gradient-to-r from-red-100 to-red-200 p-6 shadow-lg rounded-lg hover:shadow-xl transform hover:scale-105 transition-transform">
-                            <div className="flex items-center space-x-4">
-                                <div className="text-4xl text-red-600">
-                                    <i className="fas fa-hand-holding-usd"></i>
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-800">Balance Amount</h3>
-                                    <p className="text-gray-700 text-lg">{monthlyTotals.totalBalances}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+    {/* Total Collected Amount Card */}
+    <div className="bg-gradient-to-br from-blue-200 to-green-300 p-8 shadow-xl rounded-2xl hover:shadow-2xl transform hover:scale-[1.07] transition-all duration-300 ease-in-out">
+        <div className="flex items-center space-x-6">
+            <div className="text-5xl text-blue-600">
+                <i className="fas fa-receipt"></i>
+            </div>
+            <div>
+                <h3 className="text-2xl font-extrabold text-gray-800 leading-tight">
+                    Total Collected Amount in {selectedMonth
+                        ? new Date(0, Number(selectedMonth) - 1).toLocaleString('default', { month: 'long' })
+                        : 'All Months'}
+                </h3>
+                <p className="text-xl text-gray-700 mt-2">{monthlyTotals.totalReceived}</p>
+            </div>
+        </div>
+    </div>
+
+    {/* Balance Amount To Collect Card */}
+    <div className="bg-gradient-to-br from-red-200 to-red-400 p-8 shadow-xl rounded-2xl hover:shadow-2xl transform hover:scale-[1.07] transition-all duration-300 ease-in-out">
+        <div className="flex items-center space-x-6">
+            <div className="text-5xl text-red-600">
+                <i className="fas fa-hand-holding-usd"></i>
+            </div>
+            <div>
+                <h3 className="text-2xl font-extrabold text-gray-800 leading-tight">
+                    Balance Amount To Collect in {selectedMonth
+                        ? new Date(0, Number(selectedMonth) - 1).toLocaleString('default', { month: 'long' })
+                        : 'All Months'}
+                </h3>
+                <p className="text-xl text-gray-700 mt-2">{monthlyTotals.totalBalances}</p>
+            </div>
+        </div>
+    </div>
+
+    {/* Overall Amount Card - Conditional */}
+    {selectedMonth && (
+        <div className="bg-gradient-to-br from-violet-200 to-blue-300 p-8 shadow-xl rounded-2xl hover:shadow-2xl transform hover:scale-[1.07] transition-all duration-300 ease-in-out">
+            <div className="flex items-center space-x-6">
+                <div className="text-5xl text-green-600">
+                    <i className="fas fa-receipt"></i>
+                </div>
+                <div>
+                    <h3 className="text-2xl font-extrabold text-gray-800 leading-tight">
+                        Overall Amount in {new Date(0, Number(selectedMonth) - 1).toLocaleString('default', { month: 'long' })}
+                    </h3>
+                    <p className="text-xl text-gray-700 mt-2">{monthlyTotals.totalAmount}</p>
+                </div>
+            </div>
+        </div>
+    )}
+</div>
+
                     <input
                 type="text"
                 placeholder="Search..."
@@ -985,6 +1008,8 @@ const amountToUse = parseFloat(booking.amount.toString() );
 
                                     <th className={styles.tableCell}>Balance</th>
                                     <th className={styles.tableCell}>Approve</th>
+                                    <th className={styles.tableCell}>View More</th>
+
                                 </tr>
                             </thead>
                             <tbody className={styles.tableBody}>
@@ -1010,11 +1035,16 @@ const amountToUse = parseFloat(booking.amount.toString() );
                                             <td className={styles.responsiveCell}>{booking.vehicleNumber}</td>
                                            
                                             <td className={styles.responsiveCell}>{booking.amount}</td>
-                                          <td key={booking.id} className={styles.responsiveCell}>
+                                            <td key={booking.id} className={styles.responsiveCell}>
                                                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                {booking.companyBooking && driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
-                                                        <span style={{ color: 'red', fontWeight: 'bold' }}>Not Need</span>
-                                                    ) : (
+                                                {booking.receivedUser === "Staff" ? (
+                                                    <span style={{ color: 'green', fontWeight: 'bold', textShadow: '2px 2px 4px rgba(127, 198, 12, 0.9)' }}>
+    Staff Received
+</span>
+        ) : (
+            booking.companyBooking && driver?.companyName !== 'Company' ? (
+                <span style={{ color: 'red', fontWeight: 'bold', textShadow: '2px 2px 4px rgba(215, 138, 36, 0.9)' }}>Not Need</span>
+            ) : (
                                                         <>
                                                              <input
                                                             type="text"
@@ -1052,14 +1082,17 @@ const amountToUse = parseFloat(booking.amount.toString() );
                         padding: '0.5rem',
                         cursor: 'pointer',
                     }}
+                    
                 >
     {loadingStates[booking.id] ? 'Loading...' : 'OK'}
     </button>
                                                 </>
+                                                      )
                                                     )}
                                                     
                                                 </div>
                                             </td>
+
 
                                             <td
     className={styles.responsiveCell}
@@ -1097,6 +1130,26 @@ const amountToUse = parseFloat(booking.amount.toString() );
                                                     {booking.approve ? 'Approved' : 'Approve'}
                                                 </button>
                                             </td>
+                                             <td>
+                                                                                    <Link
+                                                                                        to={`/bookings/newbooking/viewmore/${booking.id}`}
+                                                                                        style={{
+                                                                                            padding: '5px 10px',
+                                                                                            color: '#fff',
+                                                                                            backgroundColor: '#007bff',
+                                                                                            borderRadius: '5px',
+                                                                                            textDecoration: 'none',
+                                                                                            display: 'inline-block',
+                                                                                            transition: 'background-color 0.3s',
+                                                                                        }}
+                                                                                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0056b3')}
+                                                                                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#007bff')}
+                                                                                    >
+                                                                                        View More
+                                                                                    </Link>
+                                                                                </td>
+                         
+                                                                             
                                         </tr>
                                     );
                                 })}

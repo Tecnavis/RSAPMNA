@@ -5,8 +5,7 @@ import {
   query,
   orderBy,
   getFirestore,
-  QueryDocumentSnapshot,
-  DocumentData,
+  where,
 } from "firebase/firestore";
 
 interface SalaryDetail {
@@ -14,6 +13,7 @@ interface SalaryDetail {
   initialAdvance?: number;
   transferAmount?: number;
   fileNumbers?: string[];
+  totalDriverSalaries?: string[];
   timestamp?: {
     seconds: number;
     nanoseconds: number;
@@ -32,114 +32,228 @@ const SalaryDetailsTable: React.FC<SalaryDetailsTableProps> = ({
   showAdvanceDetails,
 }) => {
   const [salaryDetails, setSalaryDetails] = useState<SalaryDetail[]>([]);
+  const [transferAmounts, setTransferAmounts] = useState<string[]>([]);
+  const [balanceSalaries, setBalanceSalaries] = useState<number[]>([]); // Store balance salaries here
+  const [isExpanded, setIsExpanded] = useState(false); // Track table expansion
 
+  // ------------------------------------------------------------------------------------------------------------
   const db = getFirestore();
+  useEffect(() => {
+    const fetchSalaryDetailsAndAmounts = async () => {
+      const fetchedSalaryDetails = await fetchSalaryDetails(); // Fetch salary details
+      const amounts = await fetchAllTransferAmounts(fetchedSalaryDetails);
+      
+      // Calculate balance salaries after fetching transfer amounts
+      const calculatedBalanceSalaries = fetchedSalaryDetails.map((detail, index) => {
+        const totalSalary = detail.totalDriverSalaries?.map(Number) || [];
+        const transferSalary = amounts[index].split(", ").map(Number);
+        return totalSalary.map((salary, i) => salary - (transferSalary[i] || 0));
+      }).flat();
+
+      setSalaryDetails(fetchedSalaryDetails);
+      setTransferAmounts(amounts);
+      setBalanceSalaries(calculatedBalanceSalaries); // Set balance salaries to state
+    };
+
+    if (showAdvanceDetails) {
+      fetchSalaryDetailsAndAmounts();
+    }
+  }, [showAdvanceDetails, uid, id]);
+
+  const fetchTransferAmountForFileNumber = async (fileNumber: string, selectedDriver: string): Promise<string> => {
+    const bookingsRef = collection(db, `user/${uid}/bookings`);
+    const q = query(bookingsRef, where("fileNumber", "==", fileNumber), where("selectedDriver", "==", selectedDriver));
+    const querySnapshot = await getDocs(q);
+    const amounts: string[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.transferedSalary) {
+        amounts.push(data.transferedSalary.toString());
+      }
+    });
+    return amounts.join(", ");
+  };
+
+  const fetchAllTransferAmounts = async (salaryDetails: SalaryDetail[]): Promise<string[]> => {
+    const amounts = await Promise.all(
+      salaryDetails.map(async (detail) => {
+        const fileNumbers = detail.fileNumbers || [];
+        const transferAmounts = await Promise.all(
+          fileNumbers.map((fileNumber) =>
+            fetchTransferAmountForFileNumber(fileNumber, id || "")
+          )
+        );
+        return transferAmounts.join(", ");
+      })
+    );
+    return amounts;
+  };
 
   const fetchSalaryDetails = async () => {
     try {
-      const salaryDetailsRef = collection(
-        db,
-        `user/${uid}/driver/${id}/salaryAdjustments`
-      );
+      const salaryDetailsRef = collection(db, `user/${uid}/driver/${id}/salaryAdjustments`);
       const q = query(salaryDetailsRef, orderBy("timestamp", "desc"));
       const querySnapshot = await getDocs(q);
 
-      const details: SalaryDetail[] = querySnapshot.docs.map(
-        (doc: QueryDocumentSnapshot<DocumentData>) => ({
-          id: doc.id,
-          ...doc.data(),
+      const details: SalaryDetail[] = await Promise.all(
+        querySnapshot.docs.map(async (doc) => {
+          const data = doc.data();
+          const fileNumbers = data.fileNumbers || [];
+          const totalDriverSalaries = await fetchTotalDriverSalaries(fileNumbers);
+
+          return {
+            id: doc.id,
+            ...data,
+            totalDriverSalaries,
+          };
         })
       );
-      setSalaryDetails(details);
+
+      return groupSalaryDetails(details);
     } catch (error) {
       console.error("Error fetching salary details:", error);
+      return [];
     }
   };
 
-  // Fetch details on component load
+  const groupSalaryDetails = (details: SalaryDetail[]): SalaryDetail[] => {
+    const grouped: { [key: number]: SalaryDetail } = {};
+
+    details.forEach((detail) => {
+      const advance = detail.initialAdvance || 0;
+      if (!grouped[advance]) {
+        grouped[advance] = { ...detail, fileNumbers: [], totalDriverSalaries: [] };
+      }
+      grouped[advance].fileNumbers = [
+        ...(grouped[advance].fileNumbers || []),
+        ...(detail.fileNumbers || []),
+      ];
+      grouped[advance].totalDriverSalaries = [
+        ...(grouped[advance].totalDriverSalaries || []),
+        ...(detail.totalDriverSalaries || []),
+      ];
+      grouped[advance].transferAmount = detail.transferAmount || 0;
+    });
+
+    return Object.values(grouped);
+  };
+
+  const fetchTotalDriverSalaries = async (
+    fileNumbers: string[],
+  ): Promise<string[]> => {
+    try {
+      const totalDriverSalaries: string[] = [];
+      for (const fileNumber of fileNumbers) {
+        const bookingsRef = collection(db, `user/${uid}/bookings`);
+        const q = query(
+          bookingsRef,
+          where("fileNumber", "==", fileNumber),
+          where("selectedDriver", "==", id)
+        );
+        const querySnapshot = await getDocs(q);
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.totalDriverSalary) {
+            totalDriverSalaries.push(data.totalDriverSalary);
+          }
+        });
+      }
+      return totalDriverSalaries;
+    } catch (error) {
+      console.error("Error fetching total driver salaries:", error);
+      return [];
+    }
+  };
+  const toggleExpanded = () => {
+    setIsExpanded((prev) => !prev);
+  };
+  const formatDate = (timestamp?: { seconds: number; nanoseconds: number }) => {
+    if (!timestamp) return "N/A";
+    const date = new Date(timestamp.seconds * 1000);
+    const options: Intl.DateTimeFormatOptions = { day: "2-digit", month: "2-digit", year: "numeric" };
+    return new Intl.DateTimeFormat("en-GB", options).format(date);
+  };
+
+  const formatTransferAmount = async (fileNumbers: string[], selectedDriver: string) => {
+    const amounts: string[] = [];
+    for (const fileNumber of fileNumbers) {
+      // Await the async function call to get the transferAmount
+      const amount = await fetchTransferAmountForFileNumber(fileNumber, selectedDriver);
+      amounts.push(amount);
+    }
+    return amounts.join(", ");
+  };
+
   useEffect(() => {
     if (showAdvanceDetails) {
       fetchSalaryDetails();
     }
   }, [showAdvanceDetails]);
 
-  // Format timestamp to readable date
-  const formatDate = (timestamp?: { seconds: number; nanoseconds: number }) => {
-    if (!timestamp) return "N/A";
-    const date = new Date(timestamp.seconds * 1000);
-    return date.toLocaleString();
-  };
-
-  // Assign colors based on unique initialAdvance values
-  const advanceColorMap: { [key: number]: string } = {};
-  const colors = ["#f8d7da", "#d1ecf1", "#d4edda", "#fff3cd", "#e2e3e5"];
-  let colorIndex = 0;
-
-  salaryDetails.forEach((detail) => {
-    const advance = detail.initialAdvance;
-    if (advance !== undefined && !(advance in advanceColorMap)) {
-      advanceColorMap[advance] = colors[colorIndex];
-      colorIndex = (colorIndex + 1) % colors.length;
-    }
-  });
   if (!showAdvanceDetails) {
-    return null; // Explicitly return null when the details are not shown
+    return null;
   }
+
   return (
-    showAdvanceDetails && (
-      <div className="overflow-x-auto">
-        <table className="table-auto border-collapse border border-gray-300 w-full text-left text-sm">
-          <thead className="bg-gray-200">
-            <tr>
-              <th className="border border-gray-300 px-4 py-2">ID</th>
-              <th className="border border-gray-300 px-4 py-2">Date and Time</th>
-              <th className="border border-gray-300 px-4 py-2">Initial Advance</th>
-              <th className="border border-gray-300 px-4 py-2">Transfer Amount</th>
-              <th className="border border-gray-300 px-4 py-2">File Numbers</th>
-            </tr>
-          </thead>
-          <tbody>
-            {salaryDetails.length > 0 ? (
-              salaryDetails.map((detail, index) => (
-                <tr
-                  key={detail.id}
-                  style={{
-                    backgroundColor:
-                      detail.initialAdvance !== undefined
-                        ? advanceColorMap[detail.initialAdvance]
-                        : "transparent",
-                  }}
-                  className="hover:bg-gray-100"
-                >
-                  <td className="border border-gray-300 px-4 py-2">{index + 1}</td>
-                  <td className="border border-gray-300 px-4 py-2">
-                    {formatDate(detail.timestamp)}
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2">
-                    {detail.initialAdvance || "N/A"}
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2">
-                    {detail.transferAmount || "N/A"}
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2">
-                    {detail.fileNumbers?.join(", ") || "N/A"}
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  className="border border-gray-300 px-4 py-2 text-center"
-                  colSpan={5}
-                >
-                  No Salary Adjustments Found
+    <div className="overflow-x-auto">
+      <table className="table-auto border-collapse border border-gray-300 w-full text-left text-sm">
+        <thead className="bg-gray-200">
+          <tr>
+            <th className="border border-gray-300 px-4 py-2">ID</th>
+            <th className="border border-gray-300 px-4 py-2">Date and Time</th>
+            <th className="border border-gray-300 px-4 py-2">File Numbers</th>
+            <th className="border border-gray-300 px-4 py-2">Initial Advance</th>
+            <th className="border border-gray-300 px-4 py-2">Transfer Amount</th>
+            <th className="border border-gray-300 px-4 py-2">Driver Salary</th>
+            <th className="border border-gray-300 px-4 py-2">Balance Salary</th>
+          </tr>
+        </thead>
+        <tbody>
+          {salaryDetails.length > 0 ? (
+             salaryDetails
+             .slice(0, isExpanded ? salaryDetails.length : 2) // Show all rows or first 2
+             .map((detail, index) => (
+               <tr key={detail.id} className="hover:bg-gray-100">
+                <td className="border border-gray-300 px-4 py-2">{index + 1}</td>
+                <td className="border border-gray-300 px-4 py-2">
+                  {formatDate(detail.timestamp)}
+                </td>
+                <td className="border border-gray-300 px-4 py-2">
+                  {detail.fileNumbers?.join(", ") || "N/A"}
+                </td>
+                <td className="border border-gray-300 px-4 py-2">
+                  {detail.initialAdvance || "N/A"}
+                </td>
+                <td className="border border-gray-300 px-4 py-2">
+                  {transferAmounts[index] || "Loading..."}
+                </td>
+                <td className="border border-gray-300 px-4 py-2">
+                  {detail.totalDriverSalaries?.join(", ") || "N/A"}
+                </td>
+                <td className="border border-gray-300 px-4 py-2">
+                  {balanceSalaries[index] || "Loading..."}
                 </td>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    )
+            ))
+          ) : (
+            <tr>
+              <td className="border border-gray-300 px-4 py-2 text-center" colSpan={7}>
+                No Salary Adjustments Found
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+      {salaryDetails.length > 2 && (
+        <button
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+          onClick={toggleExpanded}
+        >
+          {isExpanded ? "View Less" : "View More"}
+        </button>
+      )}
+    </div>
   );
 };
 
