@@ -85,6 +85,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [totalDriverDistance, setTotalDriverDistance] = useState<string>('');
     const [receivedAmount, setReceivedAmount] = useState<number>(0);
     const [receivedAmountCompany, setReceivedAmountCompany] = useState<number>(0);
+    const [loading, setLoading] = useState(false);
 
     const { state } = useLocation();
     const [isModalOpen1, setIsModalOpen1] = useState<boolean>(false);
@@ -140,6 +141,7 @@ const [driverLeaves, setDriverLeaves] = useState<DriverLeave[]>([]);
 const uid = sessionStorage.getItem('uid');
     const userName = sessionStorage.getItem('username');
     const role = sessionStorage.getItem('role');
+
     useEffect(() => {
         if (state && state.editData) {
             const editData = state.editData;
@@ -424,13 +426,11 @@ const uid = sessionStorage.getItem('uid');
             case 'totalDriverSalary':
                 setTotalDriverSalary(value || 0);
                 break;
-
+// --------------------------------------------------
             case 'company':
                 setCompany(value);
                 setFileNumber(value === 'self' ? bookingId : '');
                 if (isEditing) {
-                    setIsModalOpen(true);
-
                 }
                 break;
 
@@ -455,13 +455,97 @@ const uid = sessionStorage.getItem('uid');
                 setUpdatedTotalSalary(value || '');
                 break;
 
-            case 'distance':
-                setDistance(value || 0); // Default to 0 if totalDistance is NaN
+                case 'distance': 
+                const newDistance = value || 0; // Default to 0 if totalDistance is NaN
+                setDistance(newDistance);
+            
                 if (isEditing) {
-                    setIsModalOpen(true);
+                    const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
+            
+                    if (!selectedDriverData) {
+                        console.error('Driver data is missing. Cannot calculate salary.');
+                        return;
+                    }
+            
+                    const isRSA = selectedDriverData.companyName !== 'Company';
+            
+                    // Declare variables for salary calculation
+                    let salary;
+                    let basicSalaryKM;
+                    let salaryPerKM;
+                    let selectedService;
+            
+                    if (selectedCompanyData) {
+                        if (
+                            selectedCompanyData.basicSalaries &&
+                            selectedCompanyData.selectedServices &&
+                            selectedCompanyData.basicSalaryKm &&
+                            selectedCompanyData.salaryPerKm
+                        ) {
+                            // Filter only the selected serviceType from the selectedServices array
+                            selectedService = selectedCompanyData.selectedServices.find(
+                                (service: string) => service === serviceType
+                            );
+            
+                            setSelectedServiceType(selectedService);
+                            console.log('Selected Service Type:', selectedService);
+            
+                            // Use the selected service type to retrieve values
+                            salary = selectedCompanyData.basicSalaries[selectedService];
+                            basicSalaryKM = selectedCompanyData.basicSalaryKm[selectedService];
+                            salaryPerKM = selectedCompanyData.salaryPerKm[selectedService];
+                        } else {
+                            console.error('Missing properties in selectedCompanyData');
+                            return;
+                        }
+                    } else if (isRSA) {
+                        // Fallback for RSA scenario or when selectedCompanyData is unavailable
+                        selectedService = selectedDriverData.selectedServices.find(
+                            (service: string) => service === serviceType
+                        );
+            
+                        salary = isRSA
+                            ? serviceDetails.salary
+                            : selectedDriverData.basicSalaries[selectedService];
+                        basicSalaryKM = isRSA
+                            ? serviceDetails.basicSalaryKM
+                            : selectedDriverData.basicSalaryKm[selectedService];
+                        salaryPerKM = isRSA
+                            ? serviceDetails.salaryPerKM
+                            : selectedDriverData.salaryPerKm[selectedService];
+                    }
+            
+                    if (!selectedService) {
+                        console.error(`No matching service type found for driver ${selectedDriverData.id} and serviceType ${serviceType}`);
+                        setTotalSalary(0);
+                        return;
+                    }
+            
+                    if (calculateTotalSalary) {
+                        console.log(`Calculating total salary for driver ${selectedDriverData.id} with values:`, {
+                            salary,
+                            newDistance,
+                            basicSalaryKM,
+                            salaryPerKM,
+                            isRSA,
+                        });
+            
+                        const calculatedSalary = calculateTotalSalary(
+                            salary,
+                            newDistance,
+                            basicSalaryKM,
+                            salaryPerKM,
+                            isRSA
+                        );
+            
+                        console.log(`Driver ${selectedDriverData.id} - Calculated Salary: ${calculatedSalary}`);
+                        setTotalSalary(parseFloat(calculatedSalary.toFixed(2)));
+                    }
                 }
                 break;
-           
+            
+            
+        //    -------------------------------------------------------------------------------------
             case 'selectedDriver':
                 setSelectedDriver(value || '');
 
@@ -1067,8 +1151,9 @@ const uid = sessionStorage.getItem('uid');
     };
 
     const addOrUpdateItem = async (): Promise<void> => {
-        if (validateForm()) {
-            try {
+        if (validateForm() && !loading) { // Check if loading is false before proceeding
+            setLoading(true);
+                        try {
                 let selectedDriverData;
                 if (selectedDriver === 'dummy') {
                     selectedDriverData = {
@@ -1095,6 +1180,7 @@ const uid = sessionStorage.getItem('uid');
                     // Check if the condition applies based on the company's name
                     if (companyName === 'Company' && advancePayment < netTotalAmountInHand) {
                         alert('Exceeds Credit Limit Amount');
+                        setLoading(false);
                         return; // Stop execution if condition is not met
                     }
                 } else if (selectedDriverData) {
@@ -1104,10 +1190,12 @@ const uid = sessionStorage.getItem('uid');
                     // Check if the condition applies based on the driver's company name
                     if (companyName !== 'RSA' && advancePayment < netTotalAmountInHand) {
                         alert('Exceeds Credit Limit Amount');
+                        setLoading(false);
                         return; // Stop execution if condition is not met
                     }
                 } else {
                     console.error('No matching company or driver found');
+                    setLoading(false);
                     return;
                 }
                 const fcmToken = selectedDriverData ? selectedDriverData.fcmToken : null;
@@ -1197,7 +1285,7 @@ const uid = sessionStorage.getItem('uid');
                     bookingData.editedTime = formatDate(new Date());
                 } else {
                     // For new booking, add "Added by" status
-                    bookingData.newStatus = `Added by ${role}`;
+                    bookingData.newStatus = `Added by ${role} ${userName}`;
                 }
                 // Schedule the booking at deliveryDateTime if provided
                 if (deliveryDateTime) {
@@ -1270,6 +1358,7 @@ const uid = sessionStorage.getItem('uid');
                         }
                     }
                 }
+                setLoading(false);
                 navigate('/bookings/newbooking');
             } catch (error) {
                 console.error('Error adding/updating item:', error);
@@ -1666,13 +1755,13 @@ const uid = sessionStorage.getItem('uid');
                                         </thead>
                                         <tbody>
                                             <tr>
-                                                <td className="py-2 px-4 font-semibold text-red-800" style={{ fontSize: '18px' }}>
+                                                <td className="py-2 px-4 font-semibold text-blue-800" style={{ fontSize: '18px' }}>
                                                     DummyDriver
                                                 </td>
-                                                <td className="py-2 px-4">0.00</td>
-                                                <td className="py-2 px-4">0.00</td>
+                                                <td className="py-2 px-4 font-semibold text-blue-800">0.00</td>
+                                                <td className="py-2 px-4 font-semibold text-blue-800">0.00</td>
 
-                                                <td className="py-2 px-4 text-red-600">0.00</td>
+                                                <td className="py-2 px-4 text-red-600 font-semibold text-blue-800">0.00</td>
                                                 <td className="py-2 px-4 text-red-600">--------</td>
 
                                                 <td className="py-2 px-4">
@@ -1758,7 +1847,7 @@ const uid = sessionStorage.getItem('uid');
                                                         <td
             className="py-2 px-4 font-semibold"
             style={{
-                color: driver.companyName !== 'Company' && driver.companyName !== 'RSA' ? 'blue' : 'green',
+                color: driver.companyName !== 'Company' && driver.companyName !== 'RSA' ? 'red' : 'green',
                 fontSize: '18px',
             }}
         >
@@ -1834,9 +1923,9 @@ const uid = sessionStorage.getItem('uid');
                                 </div>
                             )}
 
-                            <div className="mt-4 flex items-center space-x-4">
+                            {/* <div className="mt-4 flex items-center space-x-4"> */}
                                 {/* Total Amount without insurance */}
-                                <div className="flex items-center w-1/3">
+                                <div className="flex items-center w-1/2">
                                     <label htmlFor="totalSalary" className="ltr:mr-2 rtl:ml-2 mb-0">
                                         Total Amount without insurance
                                     </label>
@@ -1861,7 +1950,7 @@ const uid = sessionStorage.getItem('uid');
                                 </div>
 
                                 {/* Insurance Amount Body */}
-                                <div className="flex items-center w-1/4">
+                                <div className="flex items-center w-1/2">
                                     <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 mb-0">
                                         Insurance Amount Body
                                     </label>
@@ -1869,7 +1958,7 @@ const uid = sessionStorage.getItem('uid');
                                 </div>
 
                                 {/* Payable Amount (with insurance) */}
-                                <div className="flex items-center w-1/3">
+                                <div className="flex items-center w-1/2">
                                     <label htmlFor="updatedTotalSalary" className=" mb-0">
                                         Payable Amount (with insurance)
                                     </label>
@@ -1893,7 +1982,7 @@ const uid = sessionStorage.getItem('uid');
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        
                     </React.Fragment>
                 )}
 
@@ -2049,9 +2138,15 @@ const uid = sessionStorage.getItem('uid');
                     />
                 </div>
 
-                <button type="button" onClick={addOrUpdateItem} className={styles.submitButton}>
-                    {editData ? 'Update' : 'Save'}
-                </button>
+                <button
+    type="button"
+    onClick={addOrUpdateItem}
+    className={styles.submitButton}
+    disabled={loading}
+>
+    {editData ? 'Update' : 'Save'}
+</button>
+
             </form>
         </div>
     );

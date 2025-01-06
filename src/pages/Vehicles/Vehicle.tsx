@@ -125,7 +125,7 @@ console.log("bookingData",totalOdometer)
         <label>
           Service KM:
           <input
-            type="number"
+            type="text"
             name="serviceKM"
             value={formData.serviceKM}
             onChange={handleInputChange}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { addDoc, collection, getFirestore, doc, updateDoc, getDocs } from 'firebase/firestore';
+import { addDoc, collection, getFirestore, doc, updateDoc, getDocs, GeoPoint } from 'firebase/firestore';
 import IconPlusCircle from '../../components/Icon/IconPlusCircle';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
 import defualtImage from '../../assets/css/images/user-front-side-with-white-background.jpg';
@@ -9,8 +9,10 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 interface Location {
     id: string;
     name: string;
-    // Add any other fields that might be in the `doc.data()`
+    lat: string;  // Add lat as a string type
+    lng: string;  // Add lng as a string type
 }
+
 interface EditData {
     id: string;
 
@@ -242,8 +244,13 @@ const CompanyAdd = () => {
 
         return isUnique;
     };
-
+    const handleBaseLocationChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setBaseLocation(event.target.value); // Set the selected base location ID
+   };
     const addOrUpdateItem = async () => {
+        console.log('Selected baseLocation ID:', baseLocation); // Log selected baseLocation ID
+        console.log('Available base locations:', baseLocations); // Log all fetched base locations
+   
         let isValid = true;
     
         // Validation checks
@@ -324,7 +331,22 @@ const CompanyAdd = () => {
             } else if (editData && editData.profileImageUrl) { 
                 profileImageUrl = editData.profileImageUrl;
             }
+         // Find the selected base location
+         const selectedBaseLocation = baseLocations.find(location => location.id === baseLocation);
+
+         // Ensure selectedBaseLocation exists and has lat/lng
+         if (!selectedBaseLocation) {
+             console.error('Selected base location not found');
+             return;
+         }
     
+         console.log('Selected Base Location:', selectedBaseLocation); // Log the selected location
+    
+         // Now use lat/lng from selectedBaseLocation
+         const currentLocation = new GeoPoint(
+             parseFloat(selectedBaseLocation.lat), 
+             parseFloat(selectedBaseLocation.lng)
+         );
             const itemData = {
                 driverName,
                 idnumber,
@@ -342,7 +364,8 @@ const CompanyAdd = () => {
                 confirmPassword,
                 profileImageUrl,
                 advance,
-                provider
+                provider,
+                currentLocation,
             };
     
             if (editData) {
@@ -403,14 +426,13 @@ const CompanyAdd = () => {
                                 </div>
                                 <div>
                                     <label htmlFor="baseLocation">Base Location</label>
-                                    <select id="baseLocation" className="form-input" value={baseLocation} onChange={(e) => setBaseLocation(e.target.value)}>
-                                        <option value="">Select Base Location</option>
-                                        {baseLocations.map((location) => (
-                                            <option key={location.id} value={location.name}>
-                                                {location.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <select onChange={handleBaseLocationChange}>
+         {baseLocations.map((location) => (
+             <option key={location.id} value={location.id}>
+                 {location.name}
+             </option>
+         ))}
+     </select>
                                     {baseLocationError && <span className={`${styles.error}`}>{baseLocationError}</span>}
                                 </div>
                                 <div>

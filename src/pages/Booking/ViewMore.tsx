@@ -47,11 +47,11 @@ interface BookingDetails {
     bookingChecked: boolean;
     paymentStatus: string;
     feedback?: boolean;
-  
+
     companyName?: string;
     vehicleModel: string;
     droppedTime: Timestamp | null | undefined;
-  
+
     // Add missing properties here
     driverSalary?: string;
     companyAmount?: string;
@@ -81,7 +81,7 @@ interface Driver {
 type RenderImagesProps = {
     images: string[]; // Array of image URLs (strings)
     type: string; // Type of images (e.g., 'rcBook', 'vehiclePickup', etc.)
-  };
+};
 const ViewMore: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -91,11 +91,11 @@ const ViewMore: React.FC = () => {
     const [bookingChecked, setBookingChecked] = useState(false);
     const [dId, setDId] = useState<string | null>(null);
     const [allDrivers, setALLDrivers] = useState<Driver[]>([]);
-   const [docId, setDocId] = useState<string>('');
+    const [docId, setDocId] = useState<string>('');
     const role = sessionStorage.getItem('role');
     const [replacementImage, setReplacementImage] = useState<string | null>(null);
-    const bookingCheck = bookingDetails?.bookingChecked ?? false;  
-      const { search } = useLocation();
+    const bookingCheck = bookingDetails?.bookingChecked ?? false;
+    const { search } = useLocation();
     const [showPickupDetails, setShowPickupDetails] = useState(false);
     const [fixedPoint, setFixedPoint] = useState<number | null>(null);
     const [showDropoffDetails, setShowDropoffDetails] = useState(false);
@@ -148,7 +148,6 @@ const ViewMore: React.FC = () => {
         droppedTime: bookingDetails?.droppedTime,
         remark: bookingDetails?.remark,
         feedback: bookingDetails?.feedback,
-
     });
 
     const [editStates, setEditStates] = useState({
@@ -178,8 +177,7 @@ const ViewMore: React.FC = () => {
         pickedTime: false,
         droppedTime: false,
         remark: false,
-        companyName:false,
-
+        companyName: false,
     });
 
     const [loadingStates, setLoadingStates] = useState({
@@ -209,8 +207,7 @@ const ViewMore: React.FC = () => {
         pickedTime: false,
         droppedTime: false,
         remark: false,
-        companyName:false,
-
+        companyName: false,
     });
 
     const handleImageClick = (url: string) => {
@@ -220,31 +217,28 @@ const ViewMore: React.FC = () => {
     const closeModal = () => {
         setSelectedImage(null); // Clear selected image
     };
-    const handleFileChange = async (
-        event: React.ChangeEvent<HTMLInputElement>,
-        field: keyof typeof formData
-      ) => {
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>, field: keyof typeof formData) => {
         const files = event.target.files;
         if (files) {
-          const updatedImageURLs: string[] = [];
-      
-          for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const fileExtension = file.name.split('.').pop(); // Get file extension
-            const storageRef = ref(storage, `images/${file.name}-${Date.now()}.${fileExtension}`);
-      
-            await uploadBytes(storageRef, file); // Upload the file
-            const downloadURL = await getDownloadURL(storageRef); // Get public URL
-            updatedImageURLs.push(downloadURL);
-          }
-      
-          setFormData((prevState) => ({
-            ...prevState,
-            [field]: [...(prevState[field] as string[]), ...updatedImageURLs],
-          }));
+            const updatedImageURLs: string[] = [];
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const fileExtension = file.name.split('.').pop(); // Get file extension
+                const storageRef = ref(storage, `images/${file.name}-${Date.now()}.${fileExtension}`);
+
+                await uploadBytes(storageRef, file); // Upload the file
+                const downloadURL = await getDownloadURL(storageRef); // Get public URL
+                updatedImageURLs.push(downloadURL);
+            }
+
+            setFormData((prevState) => ({
+                ...prevState,
+                [field]: [...(prevState[field] as string[]), ...updatedImageURLs],
+            }));
         }
-      };
-      
+    };
+
     // ------------------------------------------------------------
     useEffect(() => {
         fetchBookingDetails();
@@ -266,7 +260,6 @@ const ViewMore: React.FC = () => {
             console.error('Error fetching drivers:', error);
         }
     };
-   
 
     const fetchBookingDetails = async () => {
         if (!uid || !id) {
@@ -320,9 +313,8 @@ const ViewMore: React.FC = () => {
                     selectedDriver: data.selectedDriver || '',
                     formAdded: data.formAdded || '',
                     bookingChecked: data.bookingChecked || false,
-                    paymentStatus:data.paymentStatus || '',
+                    paymentStatus: data.paymentStatus || '',
                     feedback: data.feedback || false,
-
                 });
             }
         } catch (error) {
@@ -358,26 +350,27 @@ const ViewMore: React.FC = () => {
         setShowPickupDetails(false);
     };
 
-    const handleFormChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-    ) => {
+    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-    
+
         setFormData((prevData) => ({
             ...prevData,
-            [name]: name === 'pickedTime' || name === 'droppedTime'
-                ? (value ? Timestamp.fromDate(new Date(value)) : null) // Convert string to Timestamp
-                : value,
+            [name]:
+                name === 'pickedTime' || name === 'droppedTime'
+                    ? value
+                        ? Timestamp.fromDate(new Date(value))
+                        : null // Convert string to Timestamp
+                    : value,
         }));
     };
-    
+
     const timestampToDate = (timestamp: Timestamp | null | undefined): Date | null => {
         if (timestamp) {
             return timestamp.toDate(); // Converts Timestamp to Date if it's not null
         }
         return null;
     };
-    
+
     // Updated useEffect
     useEffect(() => {
         if (bookingDetails) {
@@ -385,14 +378,14 @@ const ViewMore: React.FC = () => {
                 const parsedDate = new Date(date);
                 return !isNaN(parsedDate.getTime());
             };
-    
+
             setFormData({
                 // Keep pickedTime and droppedTime as Timestamp or null
-                pickedTime: bookingDetails.pickedTime 
+                pickedTime: bookingDetails.pickedTime
                     ? bookingDetails.pickedTime // Keep as Timestamp (no conversion)
                     : null,
                 serviceVehicle: bookingDetails.serviceVehicle || '',
-                droppedTime: bookingDetails.droppedTime 
+                droppedTime: bookingDetails.droppedTime
                     ? bookingDetails.droppedTime // Keep as Timestamp (no conversion)
                     : null,
                 driverSalary: bookingDetails.driverSalary || 'No',
@@ -407,7 +400,7 @@ const ViewMore: React.FC = () => {
             });
         }
     }, [bookingDetails]);
-    
+
     const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!uid || !id) {
@@ -415,7 +408,7 @@ const ViewMore: React.FC = () => {
             return; // Exit the function if either is undefined
         }
         try {
-            const updatedAmount = bookingDetails?.company?.toLowerCase() === "rsa" ? "0" : formData.amount;
+            const updatedAmount = bookingDetails?.company?.toLowerCase() === 'rsa' ? '0' : formData.amount;
 
             const docRef = doc(db, `user/${uid}/bookings`, id);
             await updateDoc(docRef, {
@@ -426,7 +419,7 @@ const ViewMore: React.FC = () => {
             });
             console.log('Booking successfully updated!');
             setShowForm(false);
-            navigate('/bookings/newbooking')
+            navigate('/bookings/newbooking');
         } catch (error) {
             console.error('Error updating document:', error);
         }
@@ -468,39 +461,38 @@ const ViewMore: React.FC = () => {
             }
         }
     };
-    const downloadImage = async (filePath:any, filename:any) => {
+    const downloadImage = async (filePath: any, filename: any) => {
         const storage = getStorage();
         const fileRef = ref(storage, filePath);
-      
+
         try {
-          const url = await getDownloadURL(fileRef); // Get the public URL for the image
-      
-          // Fetch the image file
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch image: ${response.statusText}`);
-          }
-          const blob = await response.blob();
-      
-          // Create a link and trigger the download
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = `${filename}.jpg`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+            const url = await getDownloadURL(fileRef); // Get the public URL for the image
+
+            // Fetch the image file
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch image: ${response.statusText}`);
+            }
+            const blob = await response.blob();
+
+            // Create a link and trigger the download
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${filename}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         } catch (error) {
-          console.error("Error downloading image:", error);
+            console.error('Error downloading image:', error);
         }
-      };
-      
+    };
 
     const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
-        if (!timestamp) return "N/A";
-    
+        if (!timestamp) return 'N/A';
+
         // Convert Firestore timestamp to JavaScript Date object
         const date = timestamp.toDate();
-    
+
         // Define the options for formatting
         const options: Intl.DateTimeFormatOptions = {
             day: '2-digit',
@@ -511,72 +503,60 @@ const ViewMore: React.FC = () => {
             second: '2-digit',
             hour12: true, // 24-hour format
         };
-    
+
         // Use Intl.DateTimeFormat for proper formatting
         const formattedDate = new Intl.DateTimeFormat('en-IN', options).format(date);
-    
+
         // Replace the "at" position manually since Intl.DateTimeFormat can't add it
         return formattedDate.replace(', ', ' at ');
     };
-    const handleReplaceImage = (event: React.ChangeEvent<HTMLInputElement>, index: number, type: string) => {
-        if (event.target.files && event.target.files[0]) {
-            const fileURL = URL.createObjectURL(event.target.files[0]);
-            setReplacementImage(fileURL);
+    const handleReplaceImage = async (event: React.ChangeEvent<HTMLInputElement>, index: number, type: 'vehicleImageURLs' | 'vehicleImgURLs') => {
+        if (event.target.files && event.target.files[0] && bookingDetails && uid && id) {
+            const file = event.target.files[0];
+            const fileExtension = file.name.split('.').pop(); // Get file extension
+            const storageRef = ref(storage, `images/${file.name}-${Date.now()}.${fileExtension}`);
 
-            // Replace logic can update `bookingDetails` state or persist in DB
-            if (type === 'rcBook') {
-                bookingDetails.rcBookImageURLs[index] = fileURL;
-            } else if (type === 'vehiclePickup') {
-                bookingDetails.vehicleImageURLs[index] = fileURL;
-            } else if (type === 'fuelBill') {
-                bookingDetails.fuelBillImageURLs[index] = fileURL;
-            } else if (type === 'vehicleDropoff') {
-                bookingDetails.vehicleImgURLs[index] = fileURL;
+            try {
+                // Upload the file to Firebase Storage
+                await uploadBytes(storageRef, file);
+                const downloadURL = await getDownloadURL(storageRef);
+
+                // Update the image URL in the state
+                const updatedURLs = [...bookingDetails[type]];
+                updatedURLs[index] = downloadURL;
+
+                // Update the Firestore document
+                const docRef = doc(db, `user/${uid}/bookings`, id);
+                await updateDoc(docRef, { [type]: updatedURLs });
+
+                // Update the local state to reflect changes
+                setBookingDetails((prevDetails) => {
+                    if (!prevDetails) return null; // Handle null case
+                    return {
+                        ...prevDetails,
+                        [type]: updatedURLs,
+                    };
+                });
+
+                console.log(`${type} updated successfully at index ${index}`);
+            } catch (error) {
+                console.error(`Error updating ${type}:`, error);
             }
         }
     };
 
-    const renderImages = ({ images, type }: RenderImagesProps) => {
-        return images.length > 0 ? (
-          images.map((url: string, index: number) => (
-            <div key={index} className="max-w-xs">
-             <a
-  onClick={() => downloadImage(url, `Vehicle_Image_${type}_${index}`)}
-  className="block mb-2 text-blue-500 cursor-pointer"
->
-  Download
-</a>
-              <img
-                src={url}
-                alt={`${type} Image ${index}`}
-                className="w-full h-auto cursor-pointer"
-                onClick={() => handleImageClick(url)} // Open image in modal
-              />
-              <input
-                type="file"
-                accept="image/*"
-                className="mt-2"
-                onChange={(e) => handleReplaceImage(e, index, type)}
-              />
-            </div>
-          ))
-        ) : (
-          <p className="col-span-full">No {type} Images available.</p>
-        );
-      };
-      const handleFeedbackClick = () => {
+    const handleFeedbackClick = () => {
         if (bookingDetails) {
             const { selectedDriver } = bookingDetails;
             navigate('/bookings/newbooking/viewmore/feedback', {
-                state: { bookingId: id, selectedDriver: selectedDriver } // Passing selectedDriver state
+                state: { bookingId: id, selectedDriver: selectedDriver }, // Passing selectedDriver state
             });
         }
     };
-    
+
     return (
         <div className="container mx-auto my-8 p-4 bg-white shadow rounded-lg">
             <h5 className="font-semibold text-lg mb-5">Booking Details</h5>
-            {/* {bookingDetails.status === 'Order Completed' && ( */}
             <div className="flex mb-5">
                 <button onClick={togglePickupDetails} className="mr-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
                     {showPickupDetails ? 'Close' : 'Show Pickup Details'}
@@ -585,33 +565,34 @@ const ViewMore: React.FC = () => {
                     {showDropoffDetails ? 'Close' : 'Show Dropoff Details'}
                 </button>
             </div>
-            {/* )} */}
 
-{showPickupDetails && (
-  <div>
-    {/* <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-      {renderImages({ images: bookingDetails.rcBookImageURLs, type: 'rcBook' })}
-    </div> */}
+            {showPickupDetails && (
+                <div>
+                    <h2 className="text-xl font-bold mt-5">Vehicle Images (Pickup)</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {bookingDetails?.vehicleImageURLs.map((url, index) => (
+                            <div key={index}>
+                                <img src={url} alt={`Vehicle Image ${index + 1}`} />
+                                <input type="file" accept="image/*" onChange={(event) => handleReplaceImage(event, index, 'vehicleImageURLs')} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
-    <h2 className="text-xl font-bold mt-5">Vehicle Images (Pickup)</h2>
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-      {renderImages({ images: bookingDetails.vehicleImageURLs, type: 'vehiclePickup' })}
-    </div>
-  </div>
-)}
-
-
-{showDropoffDetails && (
-  <div>
-   
-
-    <h2 className="text-xl font-bold mt-5">Vehicle Images (Dropoff)</h2>
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-      {renderImages({ images: bookingDetails.vehicleImgURLs, type: 'vehicleDropoff' })}
-    </div>
-  </div>
-)}
+            {showDropoffDetails && (
+                <div>
+                    <h2 className="text-xl font-bold mt-5">Vehicle Images (Dropoff)</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {bookingDetails?.vehicleImgURLs.map((url, index) => (
+                            <div key={index}>
+                                <img src={url} alt={`Vehicle Img ${index + 1}`} />
+                                <input type="file" accept="image/*" onChange={(event) => handleReplaceImage(event, index, 'vehicleImgURLs')} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Modal for viewing the selected image */}
             {selectedImage && (
@@ -649,7 +630,8 @@ const ViewMore: React.FC = () => {
                                     onSaveClick={() => handleSaveClick('bookingId')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, bookingId: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                    bookingCheck={bookingCheck}                                />
+                                    bookingCheck={bookingCheck}
+                                />
                             </div>
                         </td>
                     </tr>
@@ -666,10 +648,7 @@ const ViewMore: React.FC = () => {
                             {bookingDetails.newStatus}, {bookingDetails.editedTime}
                         </td>
                     </tr>
-                    {/* <tr>
-                        <td className="bg-gray-100 p-2 font-semibold">Amount without insurance :</td>
-                        <td className="p-2">{bookingDetails.totalSalary}</td>
-                    </tr> */}
+                    {/* ----------------------------------------------------------------- */}
                     <tr>
                         <td className="bg-gray-100 p-2 font-bold">Payable Amount by Customer/Company:</td>
                         <td className="p-2">
@@ -702,7 +681,8 @@ const ViewMore: React.FC = () => {
                                     onSaveClick={() => handleSaveClick('company')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, company: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                    bookingCheck={bookingChecked}                                   />
+                                    bookingCheck={bookingChecked}
+                                />
                             </div>
                         </td>
                     </tr>
@@ -721,7 +701,8 @@ const ViewMore: React.FC = () => {
                                         onSaveClick={() => handleSaveClick('companyName')}
                                         onChange={(e) => setEditedFields((prev) => ({ ...prev, companyName: e.target.value }))}
                                         isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                        bookingCheck={bookingCheck}                                       />
+                                        bookingCheck={bookingCheck}
+                                    />
                                 </div>
                             </td>
                         </tr>
@@ -741,7 +722,8 @@ const ViewMore: React.FC = () => {
                                     onSaveClick={() => handleSaveClick('trappedLocation')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, trappedLocation: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                    bookingCheck={bookingCheck}                                   />
+                                    bookingCheck={bookingCheck}
+                                />
                             </div>
                         </td>{' '}
                     </tr>
@@ -759,7 +741,8 @@ const ViewMore: React.FC = () => {
                                     onSaveClick={() => handleSaveClick('showroomLocation')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, showroomLocation: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                    bookingCheck={bookingCheck}                                   />
+                                    bookingCheck={bookingCheck}
+                                />
                             </div>
                         </td>{' '}
                     </tr>
@@ -777,7 +760,8 @@ const ViewMore: React.FC = () => {
                                     onSaveClick={() => handleSaveClick('fileNumber')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, fileNumber: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                    bookingCheck={bookingCheck}                                   />
+                                    bookingCheck={bookingCheck}
+                                />
                             </div>
                         </td>
                     </tr>
@@ -795,7 +779,8 @@ const ViewMore: React.FC = () => {
                                     onSaveClick={() => handleSaveClick('customerName')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, customerName: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingChecked === true || bookingChecked === null)}
-                                    bookingCheck={bookingCheck}                                   />
+                                    bookingCheck={bookingCheck}
+                                />
                             </div>
                         </td>{' '}
                     </tr>
@@ -813,7 +798,8 @@ const ViewMore: React.FC = () => {
                                     onSaveClick={() => handleSaveClick('driver')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, driver: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                    bookingCheck={bookingCheck}                                   />
+                                    bookingCheck={bookingCheck}
+                                />
                             </div>
                         </td>{' '}
                     </tr>
@@ -831,7 +817,8 @@ const ViewMore: React.FC = () => {
                                     onSaveClick={() => handleSaveClick('totalDriverDistance')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, totalDriverDistance: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                    bookingCheck={bookingCheck}                                   />
+                                    bookingCheck={bookingCheck}
+                                />
                             </div>
                         </td>{' '}
                     </tr>
@@ -849,7 +836,8 @@ const ViewMore: React.FC = () => {
                                     onSaveClick={() => handleSaveClick('totalDriverSalary')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, totalDriverSalary: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                    bookingCheck={bookingCheck}                                       valueStyle={{
+                                    bookingCheck={bookingCheck}
+                                    valueStyle={{
                                         color: 'red',
                                         fontSize: '1.5rem',
                                         fontWeight: 'bold',
@@ -872,10 +860,11 @@ const ViewMore: React.FC = () => {
                                     onSaveClick={() => handleSaveClick('vehicleNumber')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, vehicleNumber: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                    bookingCheck={bookingCheck}                                     
+                                    bookingCheck={bookingCheck}
                                 />
                             </div>
-                        </td>{' '}                    </tr>
+                        </td>{' '}
+                    </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Brand Name :</td>
                         <td className="p-2">
@@ -890,10 +879,11 @@ const ViewMore: React.FC = () => {
                                     onSaveClick={() => handleSaveClick('vehicleModel')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, vehicleModel: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                    bookingCheck={bookingCheck}                                      
+                                    bookingCheck={bookingCheck}
                                 />
                             </div>
-                        </td>{' '}                     </tr>
+                        </td>{' '}
+                    </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Phone Number :</td>
                         <td className="p-2">{bookingDetails.phoneNumber}</td>
@@ -904,27 +894,15 @@ const ViewMore: React.FC = () => {
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Start Location:</td>
-                        <td className="p-2">
-                            {bookingDetails.baseLocation
-                                ? `${bookingDetails.baseLocation.name}`
-                                : 'Location not selected'}
-                        </td>
+                        <td className="p-2">{bookingDetails.baseLocation ? `${bookingDetails.baseLocation.name}` : 'Location not selected'}</td>
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Pickup Location:</td>
-                        <td className="p-2">
-                            {bookingDetails.pickupLocation
-                                ? `${bookingDetails.pickupLocation.name}`
-                                : 'Location not selected'}
-                        </td>
+                        <td className="p-2">{bookingDetails.pickupLocation ? `${bookingDetails.pickupLocation.name}` : 'Location not selected'}</td>
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Dropoff Location:</td>
-                        <td className="p-2">
-                            {bookingDetails.dropoffLocation
-                                ? `${bookingDetails.dropoffLocation.name}`
-                                : 'Location not selected'}
-                        </td>
+                        <td className="p-2">{bookingDetails.dropoffLocation ? `${bookingDetails.dropoffLocation.name}` : 'Location not selected'}</td>
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Distance :</td>
@@ -940,10 +918,11 @@ const ViewMore: React.FC = () => {
                                     onSaveClick={() => handleSaveClick('distance')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, distance: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                    bookingCheck={bookingCheck}                                      
+                                    bookingCheck={bookingCheck}
                                 />
                             </div>
-                        </td>{' '}                     </tr>
+                        </td>{' '}
+                    </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Service Type :</td>
                         <td className="p-2">
@@ -958,30 +937,30 @@ const ViewMore: React.FC = () => {
                                     onSaveClick={() => handleSaveClick('serviceType')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, serviceType: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                    bookingCheck={bookingCheck}                                      
+                                    bookingCheck={bookingCheck}
                                 />
                             </div>
-                        </td>{' '}                     </tr>
+                        </td>{' '}
+                    </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Service Vehicle Number :</td>
 
-                            <td className="p-2">
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <EditableField
-                                        label="Service Vehicle Number"
-                                        value={bookingDetails?.serviceVehicle}
-                                        isEditing={editStates.serviceVehicle}
-                                        editedValue={editedFields.serviceVehicle}
-                                        loading={loadingStates.serviceVehicle}
-                                        onEditClick={() => handleEditClick('serviceVehicle')}
-                                        onSaveClick={() => handleSaveClick('serviceVehicle')}
-                                        onChange={(e) => setEditedFields((prev) => ({ ...prev, serviceVehicle: e.target.value }))}
-                                        isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                        bookingCheck={bookingCheck}                                         
-                                    />
-                                </div>
-                            </td> 
-                     
+                        <td className="p-2">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <EditableField
+                                    label="Service Vehicle Number"
+                                    value={bookingDetails?.serviceVehicle}
+                                    isEditing={editStates.serviceVehicle}
+                                    editedValue={editedFields.serviceVehicle}
+                                    loading={loadingStates.serviceVehicle}
+                                    onEditClick={() => handleEditClick('serviceVehicle')}
+                                    onSaveClick={() => handleSaveClick('serviceVehicle')}
+                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, serviceVehicle: e.target.value }))}
+                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+                                    bookingCheck={bookingCheck}
+                                />
+                            </div>
+                        </td>
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Comments :</td>
@@ -997,10 +976,11 @@ const ViewMore: React.FC = () => {
                                     onSaveClick={() => handleSaveClick('comments')}
                                     onChange={(e) => setEditedFields((prev) => ({ ...prev, comments: e.target.value }))}
                                     isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                    bookingCheck={bookingCheck}                                      
+                                    bookingCheck={bookingCheck}
                                 />
                             </div>
-                        </td>{' '}                     </tr>
+                        </td>{' '}
+                    </tr>
                     {bookingDetails.status === 'Order Completed' && (
                         <>
                             <tr>
@@ -1009,8 +989,8 @@ const ViewMore: React.FC = () => {
                             </tr>
                             <tr>
                                 <td className="bg-gray-100 p-2 font-semibold">Dropoff Time :</td>
-                                <td className="p-2"><td>{formatTimestamp(bookingDetails?.droppedTime)}</td>
-
+                                <td className="p-2">
+                                    <td>{formatTimestamp(bookingDetails?.droppedTime)}</td>
                                 </td>
                             </tr>
                             <tr>
@@ -1025,14 +1005,14 @@ const ViewMore: React.FC = () => {
             <div className="w-full">
                 {bookingDetails?.bookingChecked === false && bookingDetails?.status === 'Order Completed' && (
                     <button
-                    disabled={bookingDetails?.paymentStatus === 'Not Paid'}
-
+                        disabled={bookingDetails?.paymentStatus === 'Not Paid'}
                         onClick={handleVerifyClick}
                         className={`w-full text-white font-semibold py-2 px-4 rounded-lg shadow-lg focus:outline-none focus:ring-2 transition duration-300 ease-in-out ${
-                            bookingDetails?.paymentStatus === 'Not Paid' 
-                                ? 'bg-red-500 hover:bg-red-600 focus:ring-red-300' 
+                            bookingDetails?.paymentStatus === 'Not Paid'
+                                ? 'bg-red-500 hover:bg-red-600 focus:ring-red-300'
                                 : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:ring-blue-300'
-                        }`}                    >
+                        }`}
+                    >
                         Verify
                     </button>
                 )}
@@ -1040,18 +1020,15 @@ const ViewMore: React.FC = () => {
                 {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && (
                     <p className="text-green-600 font-medium text-center mt-2">Booking verified successfully!</p>
                 )}
-               {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && bookingDetails?.feedback !== true && (
-        <button
-            className="bg-green-500 text-white px-4 py-2 rounded mt-4"
-            onClick={handleFeedbackClick}
-        >
-            Feedback Form
-        </button>
-    )}
+                {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && bookingDetails?.feedback !== true && (
+                    <button className="bg-green-500 text-white px-4 py-2 rounded mt-4" onClick={handleFeedbackClick}>
+                        Feedback Form
+                    </button>
+                )}
 
-    {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && bookingDetails?.feedback === true && (
-        <p className="text-red-600 font-medium text-center mt-2">Feedback Closed</p>
-    )}
+                {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && bookingDetails?.feedback === true && (
+                    <p className="text-red-600 font-medium text-center mt-2">Feedback Closed</p>
+                )}
             </div>
 
             {showForm && bookingDetails && (
@@ -1068,21 +1045,6 @@ const ViewMore: React.FC = () => {
                     {/* Pickup details */}
                     {showPickupDetails && (
                         <div>
-                            {/* <h3 className="text-xl font-bold mt-5">RC Book Images</h3>
-                            <input type="file" multiple onChange={(e) => handleFileChange(e, 'rcBookImageURLs')} />
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                {formData.rcBookImageURLs.length > 0 ? (
-                                    formData.rcBookImageURLs.map((url, index) => (
-                                        <div key={index} className="max-w-xs">
-                                            <img src={url} alt={`RC Book Image ${index}`} className="w-full h-auto" />
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="col-span-3">No RC Book Images available.</p>
-                                )}
-                            </div> */}
-
-                            {/* Vehicle Images (Pickup) */}
                             <h2 className="text-xl font-bold mt-5">Vehicle Images (Pickup)</h2>
                             <input type="file" multiple onChange={(e) => handleFileChange(e, 'vehicleImageURLs')} />
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -1133,43 +1095,43 @@ const ViewMore: React.FC = () => {
                             </div>
                         </div>
                     )}
-                   <div className="mb-4">
-    <label htmlFor="pickedTime" className="block text-sm font-medium text-gray-700">
-        Pickup Time
-    </label>
-    <input
-        type="datetime-local"
-        id="pickedTime"
-        name="pickedTime"
-        value={
-            formData.pickedTime
-                ? formData.pickedTime.toDate().toISOString().slice(0, 16) // Convert Timestamp to ISO string
-                : '' // Use an empty string if null or undefined
-        }
-        onChange={handleFormChange}
-        className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-        required
-    />
-</div>
+                    <div className="mb-4">
+                        <label htmlFor="pickedTime" className="block text-sm font-medium text-gray-700">
+                            Pickup Time
+                        </label>
+                        <input
+                            type="datetime-local"
+                            id="pickedTime"
+                            name="pickedTime"
+                            value={
+                                formData.pickedTime
+                                    ? formData.pickedTime.toDate().toISOString().slice(0, 16) // Convert Timestamp to ISO string
+                                    : '' // Use an empty string if null or undefined
+                            }
+                            onChange={handleFormChange}
+                            className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
+                            required
+                        />
+                    </div>
 
-<div className="mb-4">
-    <label htmlFor="droppedTime" className="block text-sm font-medium text-gray-700">
-        Dropoff Time
-    </label>
-    <input
-        type="datetime-local"
-        id="droppedTime"
-        name="droppedTime"
-        value={
-            formData.droppedTime
-                ? formData.droppedTime.toDate().toISOString().slice(0, 16) // Convert Timestamp to ISO string
-                : '' // Use an empty string if null or undefined
-        }
-        onChange={handleFormChange}
-        className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-        required
-    />
-</div>
+                    <div className="mb-4">
+                        <label htmlFor="droppedTime" className="block text-sm font-medium text-gray-700">
+                            Dropoff Time
+                        </label>
+                        <input
+                            type="datetime-local"
+                            id="droppedTime"
+                            name="droppedTime"
+                            value={
+                                formData.droppedTime
+                                    ? formData.droppedTime.toDate().toISOString().slice(0, 16) // Convert Timestamp to ISO string
+                                    : '' // Use an empty string if null or undefined
+                            }
+                            onChange={handleFormChange}
+                            className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
+                            required
+                        />
+                    </div>
 
                     <div className="mb-4">
                         <label htmlFor="serviceVehicle" className="block text-sm font-medium text-gray-700">
@@ -1204,25 +1166,25 @@ const ViewMore: React.FC = () => {
                         </select>
                     </div>
                     <div className="mb-4">
-    {bookingDetails?.company?.toLowerCase() !== "rsa" ? (
-        <>
-            <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-                Amount
-            </label>
-            <input
-                type="text"
-                id="amount"
-                name="amount"
-                value={formData.amount}
-                onChange={handleFormChange}
-                className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-                required
-            />
-        </>
-    ) : (
-        <p className="text-sm text-gray-500">RSA Work</p>
-    )}
-</div>
+                        {bookingDetails?.company?.toLowerCase() !== 'rsa' ? (
+                            <>
+                                <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
+                                    Amount
+                                </label>
+                                <input
+                                    type="text"
+                                    id="amount"
+                                    name="amount"
+                                    value={formData.amount}
+                                    onChange={handleFormChange}
+                                    className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
+                                    required
+                                />
+                            </>
+                        ) : (
+                            <p className="text-sm text-gray-500">RSA Work</p>
+                        )}
+                    </div>
 
                     <div className="mb-4">
                         <label htmlFor="distance" className="block text-sm font-medium text-gray-700">

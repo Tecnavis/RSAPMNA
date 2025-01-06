@@ -209,11 +209,16 @@ const BaseLocationModal: React.FC<BaseLocationModalProps> = ({ onClose, setBaseL
                             console.log('Filtered Item:', item);
                             console.log('Distances:', distances[item.id]);  // Log the distances for this item
                             const itemKey = item.id || `${item.name}-${Math.random()}`;
+                            const isPMNA = /pmna/i.test(item.name); // Regular expression to match 'pmna' case-insensitively
 
                             return (
                                 <tr key={itemKey} className="hover:bg-gray-100 dark:hover:bg-gray-700">
-                                    <td className="px-4 py-2">{item.name}</td>
-                                    <td className="px-4 py-2">
+   <td className="px-4 py-2">
+                    {/* Apply red color if item.name contains 'pmna' */}
+                    <span className={isPMNA ? 'text-red-500' : ''}>
+                        {item.name}
+                    </span>
+                </td>                                    <td className="px-4 py-2">
                                         {distances[item.id]?.distance || 'Calculating...'}
                                     </td>
                                     <td className="px-4 py-2">

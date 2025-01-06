@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, onSnapshot, addDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import InvoiceModal from './InvoiceModal';
 import { parse, format } from 'date-fns';
@@ -23,9 +23,11 @@ interface Booking {
     advancePaymentDate?: string;
     totalDriverDistance: string;
     status: string;
+    amount: number | string;
     bookingChecked: boolean;
-    // createdAt:Timestamp;
+    receivedAmount: number | string; 
     createdAt: Date | null;
+    receivedUser:string;
 }
 interface SalaryDetail {
     id: string;
@@ -34,6 +36,7 @@ interface SalaryDetail {
 interface AdvanceRecord {
     advance: number;
     advancePaymentDate: string;
+    addedAdvance: number;
 }
 
 interface BookingSalary {
@@ -46,6 +49,7 @@ interface Driver {
 }
 const SalaryReport: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+
     const uid = sessionStorage.getItem('uid') || '';
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
@@ -65,8 +69,11 @@ const SalaryReport: React.FC = () => {
     const [isModalOpen1, setIsModalOpen1] = useState(false); // State to control modal visibility
     const printRef = useRef<HTMLDivElement>(null);
     const [showAdvanceTable, setShowAdvanceTable] = useState<boolean>(false);
+    const role = sessionStorage.getItem('role');
+    const userName = sessionStorage.getItem('username');
+//    ----------------------------------------------------------------------
+const [netTotalAmountInHand, setNetTotalAmountInHand] = useState<number>(0);
 
-    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     const [editFormData, setEditFormData] = useState({
         fileNumber: '',
         dateTime: '',
@@ -85,7 +92,7 @@ const SalaryReport: React.FC = () => {
     const [selectAll, setSelectAll] = useState<boolean>(false); 
     const [advances, setAdvances] = useState<AdvanceRecord[]>([]); // Explicitly typed
   
-
+// ---------------------------------------------------------------------------------------------------------
     const saveSalaryDetails = async (bookingId: string, initialAdvance: number, transferAmount: number, fileNumbers: string[]) => {
         const salaryDetailsRef = collection(db, `user/${uid}/driver/${id}/salaryAdjustments`);
         await addDoc(salaryDetailsRef, {
@@ -93,6 +100,7 @@ const SalaryReport: React.FC = () => {
             initialAdvance,
             transferAmount,
             fileNumbers,
+            
             timestamp: serverTimestamp(),
         });
         console.log('Salary adjustment details saved.');
@@ -131,16 +139,23 @@ const SalaryReport: React.FC = () => {
         return () => unsubscribe();
     }, [db, id, uid]);
 
-    // ------------------------------------------------
+    // ----------------------------------------------------------------------------------------
     useEffect(() => {
         const fetchBookings = async () => {
             try {
                 const bookingsRef = collection(db, `user/${uid}/bookings`);
                 const querySnapshot = await getDocs(bookingsRef);
-
+    
                 const allBookings: Booking[] = querySnapshot.docs.map((doc) => {
                     const data = doc.data();
                     const balanceSalary = data.totalDriverSalary - (data.transferedSalary || 0);
+    
+                    // Check if receivedUser is "Staff" and set amount and receivedAmount to 0
+                    const isStaff = data.receivedUser === "Staff";
+                    if (isStaff) {
+                        console.log(`Staff booking detected: ${doc.id}`);
+                    }
+    
                     return {
                         id: doc.id,
                         fileNumber: data.fileNumber || '',
@@ -155,28 +170,45 @@ const SalaryReport: React.FC = () => {
                         advance: data.advance || 0,
                         advancePaymentDate: data.advancePaymentDate || '',
                         status: data.status || '',
+                        amount: isStaff ? 0 : data.amount || 0, // Adjusted field
+                        receivedAmount: isStaff ? 0 : data.receivedAmount || 0, // Adjusted field
                         bookingChecked: data.bookingChecked || false,
+                        receivedUser: data.receivedUser || '',
                         createdAt: data.createdAt ? data.createdAt.toDate() : null, // Convert Firestore Timestamp to Date
                     };
                 });
-
+    
                 // Filter and sort bookings
                 const filteredAndSortedBookings = allBookings
-                    .filter((booking) => booking.selectedDriver === id && booking.status === 'Order Completed' && booking.bookingChecked === true)
+                    .filter((booking) => 
+                        booking.selectedDriver === id && 
+                        booking.status === 'Order Completed' && 
+                        booking.bookingChecked === true
+                    )
                     .sort((a, b) => {
                         // Explicit type check to ensure createdAt is a Date object before calling getTime
                         if (!a.createdAt || !b.createdAt) return 0; // Null safety
                         return b.createdAt.getTime() - a.createdAt.getTime(); // Now works with Date objects
                     });
-
-                setBookings(filteredAndSortedBookings); // Update state with sorted bookings
+    
+                setBookings(filteredAndSortedBookings); 
+                const netTotal = filteredAndSortedBookings.reduce((sum, b) => {
+                    const received = Number(b.receivedAmount) || 0;
+                    const bookingAmount = Number(b.amount) || 0;
+                    return sum + bookingAmount - received;
+                }, 0);
+    
+                setNetTotalAmountInHand(netTotal);
+                console.log("Filtered Bookings:", filteredAndSortedBookings);
+                console.log("Net Total Amount In Hand:", netTotal);
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
         };
-
+    
         fetchBookings();
     }, [db, id, uid]);
+    
 
     useEffect(() => {
         if (selectedMonth || selectedYear) {
@@ -361,21 +393,90 @@ const SalaryReport: React.FC = () => {
             advancePaymentDate: '',
         });
     };
-
+    const handleCombinedOperation = async (bookingId: string, balanceSalary: number) => {
+        try {
+            // First, edit the booking details
+            await handleSettleSalary(bookingId, balanceSalary);
+    
+            // Wait for the editing state to settle if needed
+            // Then, proceed to settle the salary
+            await handleEditBooking(bookingId);
+    
+        } catch (error) {
+            console.error('Error performing combined operation:', error);
+        }
+    };
     const handleSaveEdit = async () => {
+        if (!uid || !id) {
+            console.error('Missing user or driver ID');
+            return;
+        }
         try {
             const { fileNumber, dateTime, serviceType, vehicleNumber, totalDriverDistance, totalDriverSalary, transferedSalary, advance, advancePaymentDate, balanceSalary } = editFormData;
-
+    
             // Check if editingBookingId is null before proceeding
             if (!editingBookingId) {
                 console.error('Editing booking ID is null');
                 return; // Early exit if the ID is null
             }
-
+    
             const bookingRef = doc(db, `user/${uid}/bookings`, editingBookingId);
-
+    
             const formattedDate = advancePaymentDate ? new Date(advancePaymentDate).toLocaleDateString() : '';
-            console.log('formattedDate', formattedDate);
+    
+            // If balanceSalary is negative, deduct from the advance
+            if (balanceSalary < 0) {
+                const driverRef = doc(db, `user/${uid}/driver`, id);
+    
+                // Fetch current driver data
+                const driverSnap = await getDoc(driverRef);
+                const currentAdvance = driverSnap.exists() ? driverSnap.data().advance || 0 : 0;
+    
+                // Deduct the balanceSalary from the current advance
+                const newAdvance = currentAdvance - Math.abs(balanceSalary);
+    
+                // Update the driver's advance
+                await updateDoc(driverRef, { advance: newAdvance });
+    
+                // Add the deduction to the advanceData collection
+                const advanceDataRef = collection(driverRef, 'advanceData');
+                const advanceDataDocRef = await addDoc(advanceDataRef, {
+                    addedAdvance: balanceSalary,
+                    advance: Math.abs(balanceSalary),  // Deduction is always positive
+                    type: 'advance',
+                    advancePaymentDate: serverTimestamp(),  // Use server timestamp
+                    driverId: id,                        // Use driver ID
+                    driverName: driverSnap.data()?.driverName || "Unknown",  // Use driver's name
+                });
+    
+                // Get the generated advanceDataId (document ID)
+                const advanceDataId = advanceDataDocRef.id;
+    
+                // Add the deduction to the global advance collection
+                const advanceRef = collection(db, `user/${uid}/advance`);
+                const advanceDocRef = await addDoc(advanceRef, {
+                    addedAdvance: balanceSalary,
+                    driverName: driverSnap.data()?.driverName || "Unknown",
+                    driverId: id,
+                    type: 'advance',
+                    advanceDataId: advanceDataId, // Use advanceDataId from above
+                    advance: Math.abs(balanceSalary),
+                    advancePaymentDate: serverTimestamp(),  // Use server timestamp
+                });
+    
+                // Get the generated advanceId (document ID)
+    
+          // Get the generated advanceId (document ID)
+          const advanceId = advanceDocRef.id;
+
+          // Now update the advanceId in the advanceData entry
+          await updateDoc(advanceDataDocRef, {
+              advanceId: advanceId,  // Link the advanceId from the global advance collection
+          });
+
+          console.log(`Deducted ${Math.abs(balanceSalary)} from driver's advance`);
+      }
+            // Update the booking with new details
             await updateDoc(bookingRef, {
                 fileNumber,
                 dateTime,
@@ -383,13 +484,13 @@ const SalaryReport: React.FC = () => {
                 vehicleNumber,
                 totalDriverDistance,
                 totalDriverSalary,
-                transferedSalary,
-                balanceSalary: totalDriverSalary - transferedSalary,
+                transferedSalary: transferedSalary + balanceSalary,  // Update transferred salary with balance adjustment
+                balanceSalary: totalDriverSalary - (transferedSalary + balanceSalary),  // Adjust the balance salary
                 advance, // Update advance payment
                 advancePaymentDate: formattedDate,
             });
-
-            // Update local state
+    
+            // Update local state for the edited booking
             setBookings((prevBookings) =>
                 prevBookings.map((booking) =>
                     booking.id === editingBookingId
@@ -401,47 +502,53 @@ const SalaryReport: React.FC = () => {
                               vehicleNumber,
                               totalDriverSalary,
                               totalDriverDistance,
-                              transferedSalary,
-                              balanceSalary: totalDriverSalary - transferedSalary,
+                              transferedSalary: transferedSalary + balanceSalary,
+                              balanceSalary: totalDriverSalary - (transferedSalary + balanceSalary),
                               advance,
                               advancePaymentDate: formattedDate,
                           }
                         : booking
                 )
             );
-
+    
             setEditingBookingId(null);
             setEditFormData({
                 fileNumber: '',
                 dateTime: '',
                 serviceType: '',
                 vehicleNumber: '',
+                totalDriverDistance: '',
                 totalDriverSalary: 0,
                 transferedSalary: 0,
-                totalDriverDistance: '',
                 balanceSalary: 0,
-                advance: 0,
+                advance: 0, // Reset advance
                 advancePaymentDate: '',
             });
+    
         } catch (error) {
             console.error('Error saving edit:', error);
         }
     };
-    const handleAdvance = async () => {
-        // Check if advance is valid
-        if (!editFormData.advance || editFormData.advance <= 0) {
-            alert('Please enter a valid advance.');
-            return;
-        }
-        setAdvances((prevAdvances) => [
-            ...prevAdvances,
-            {
-                advance: editFormData.advance,
-                advancePaymentDate: editFormData.advancePaymentDate,
-            },
-        ]);
-        setIsModalOpen1(true);
-    };
+    
+    
+    
+    // const handleAdvance = async () => {
+    //     // Check if advance is valid
+    //     if (!editFormData.advance || editFormData.advance <= 0) {
+    //         alert('Please enter a valid advance.');
+    //         return;
+    //     }
+    //     setAdvances((prevAdvances) => [
+    //         ...prevAdvances,
+    //         {
+    //             advance: editFormData.advance,
+    //             advancePaymentDate: editFormData.advancePaymentDate,
+    //             addedAdvance: editFormData.addedAdvance,
+
+    //         },
+    //     ]);
+    //     setIsModalOpen1(true);
+    // };
     const confirmAdvanceUpdate = async () => {
         try {
             if (!uid || !id) {
@@ -506,7 +613,8 @@ const SalaryReport: React.FC = () => {
                 return {
                     id: doc.id, // Document ID (optional if needed)
                     advance: data.advance || 0, // Default to 0 if advance is undefined
-                    advancePaymentDate: advancePaymentDate, // Converted Timestamp or empty string
+                    advancePaymentDate: advancePaymentDate, 
+                    addedAdvance: data.addedAdvance || 0,
                 };
             }) as AdvanceRecord[];
             setAdvances(fetchedAdvances);
@@ -523,104 +631,122 @@ const SalaryReport: React.FC = () => {
         setIsModalOpen(true);
     };
     let isAlertShown = false;
+//-------------------------------------------------------------------------------
+const confirmSalaryAdjustment = async () => {
+    if (!uid) {
+        console.error("User ID is undefined");
+        return;
+    }
 
-    const confirmSalaryAdjustment = async () => {
-        if (!uid || !id) {
-            throw new Error('User ID or Driver ID is undefined');
+    try {
+        const totalNetAmount = netTotalAmountInHand; // Total available for distribution
+        let remainingNetAmount = totalNetAmount;
+
+        if (remainingNetAmount <= 0) {
+            alert("No amount available to distribute.");
+            return;
         }
-        try {
-            const driverRef = doc(db, `user/${uid}/driver`, id);
 
-            // Listen to real-time updates for advance amount
-            onSnapshot(driverRef, async (driverSnap) => {
-                if (!driverSnap.exists()) {
-                    alert('Driver data not found.');
-                    return;
-                }
+        const updatedBookings = [];
+        const adjustedIds = [];
+        const fileNumbers = [];
 
-                const driverData = driverSnap.data();
-                const fetchedAdvance = driverData.advance || 0;
-                let remainingAdvance = fetchedAdvance;
+        let totalReceivedAmount = 0; // Track total received amount
 
-                console.log('Fetched Advance (Real-time):', fetchedAdvance);
+        // Sort bookings by date (oldest first)
+        const sortedBookings = [...filteredBookings].sort(
+            (a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
+        );
 
-                const totalSalaryAmount = filteredBookings.reduce((acc, booking) => acc + (booking.balanceSalary || 0), 0);
+        // Loop through sorted bookings and allocate amounts
+        for (const booking of sortedBookings) {
+            if (remainingNetAmount <= 0) break; // If no amount is left to allocate, exit loop
 
-                if (totalSalaryAmount === 0) {
-                    // Case 1: No pending salary to adjust, update the advance amount directly
-                    if (remainingAdvance > 0) {
-                        await updateDoc(driverRef, { advance: 0 });
-                        console.log('Advance reset to 0 as no salary is pending.');
-                        alert('Advance reset successfully.');
-                    }
-                    return;
-                }
+            // Skip "Staff" bookings and set amount/receivedAmount to 0
+            if (booking.receivedUser === "Staff") {
+                const updatedBooking = {
+                    ...booking,
+                    amount: 0,
+                    receivedAmount: 0,
+                };
+                updatedBookings.push(updatedBooking);
 
-                // Case 2: Adjust advance with bookings
-                const updatedBookings = [];
-                const adjustedIds: string[] = [];
-                const fileNumbers: string[] = [];
-                const sortedBookings = [...filteredBookings].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+                // Update Firestore document for "Staff" booking
+                const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
+                await updateDoc(bookingRef, {
+                    amount: 0,
+                    receivedAmount: 0,
+                });
+                continue;
+            }
 
-                for (let booking of sortedBookings) {
-                    if (remainingAdvance <= 0) break;
+            const maxTransferableSalary = (booking.totalDriverSalary || 0) - (booking.transferedSalary || 0);
 
-                    const maxTransferableAmount = (booking.totalDriverSalary || 0) - (booking.transferedSalary || 0);
+            if (maxTransferableSalary > 0) {
+                // Determine the transfer amount to this booking
+                const transferAmount = Math.min(remainingNetAmount, maxTransferableSalary);
 
-                    if (maxTransferableAmount > 0) {
-                        const transferAmount = Math.min(remainingAdvance, maxTransferableAmount);
+                remainingNetAmount -= transferAmount; // Deduct the allocated amount from the remaining net amount
+                totalReceivedAmount += transferAmount; // Accumulate the total received amount
 
-                        remainingAdvance -= transferAmount;
+                const newTransferedSalary = (booking.transferedSalary || 0) + transferAmount;
+                const newBalanceSalary = (booking.totalDriverSalary || 0) - newTransferedSalary;
 
-                        updatedBookings.push({
-                            ...booking,
-                            transferedSalary: (booking.transferedSalary || 0) + transferAmount,
-                            balanceSalary: (booking.totalDriverSalary || 0) - (booking.transferedSalary || 0) - transferAmount,
-                        });
+                // Update the booking with calculated values
+                const updatedBooking = {
+                    ...booking,
+                    transferedSalary: newTransferedSalary,
+                    balanceSalary: newBalanceSalary,
+                    receivedAmount: totalReceivedAmount, // Set total received amount
+                };
 
-                        adjustedIds.push(booking.id);
-                        fileNumbers.push(booking.fileNumber || 'N/A');
+                updatedBookings.push(updatedBooking);
+                adjustedIds.push(booking.id);
+                fileNumbers.push(booking.fileNumber || "N/A");
 
-                        const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
-                        await updateDoc(bookingRef, {
-                            transferedSalary: (booking.transferedSalary || 0) + transferAmount,
-                            balanceSalary: (booking.totalDriverSalary || 0) - (booking.transferedSalary || 0) - transferAmount,
-                        });
+                // Update Firestore document for the booking
+                const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
+                await updateDoc(bookingRef, {
+                    transferedSalary: newTransferedSalary,
+                    balanceSalary: newBalanceSalary,
+                    receivedAmount: updatedBooking.receivedAmount,
+                });
+            }
+        }
 
-                        // Optionally save details to a subcollection for records
-                        await saveSalaryDetails(booking.id, fetchedAdvance, transferAmount, [booking.fileNumber]);
-                    }
-                }
-
-                if (remainingAdvance !== fetchedAdvance) {
-                    // Update the remaining advance in the driver's document
-                    await updateDoc(driverRef, { advance: remainingAdvance });
-                    console.log('Updated Remaining Advance:', remainingAdvance);
-                }
-
-                setBookings(updatedBookings);
-                setAdjustedBookingIds(adjustedIds);
-                setAdjustedFileNumbers(fileNumbers);
-
-                if (!isAlertShown) {
-                    alert('Salary adjusted successfully.');
-                    isAlertShown = true;
-                }
-                window.location.reload();
+        // If there's any remaining net amount, save it as an advance adjustment
+        if (remainingNetAmount > 0) {
+            const advanceRef = collection(db, `user/${uid}/driver/${id}/advanceAdjustments`);
+            await addDoc(advanceRef, {
+                advance: remainingNetAmount,
+                timestamp: serverTimestamp(),
             });
-        } catch (error) {
-            console.error('Error during salary adjustment:', error);
-            alert('An error occurred while adjusting the salary.');
+            console.log(`Remaining amount of ${remainingNetAmount} saved to advance adjustments.`);
         }
-    };
 
-    const handlePrint = () => { 
+        // Save salary adjustment details
+        await saveSalaryDetails(
+            id || "",
+            totalNetAmount,
+            totalNetAmount - remainingNetAmount,
+            fileNumbers
+        );
+
+        setNetTotalAmountInHand(remainingNetAmount); // Update state with remaining amount
+        setAdjustedBookingIds(adjustedIds); // Track adjusted bookings
+        alert("Salary adjustment completed successfully.");
+    } catch (error) {
+        console.error("Error adjusting salary:", error);
+    }
+};
+
+    const handlePrint = () => {  
         const printContent = printRef.current; // Get the content to print
-        const printWindow = window.open('', '', 'height=800,width=1200'); // Create a print window
-        
+        const printWindow = window.open('', '', 'height=1000,width=1600'); // Create a print window
+    
         if (printWindow && printContent) {
             printWindow.document.write('<html><head><title>Print</title>');
-            
+    
             // Add custom styles for print
             printWindow.document.write(`
                 <style>
@@ -629,6 +755,7 @@ const SalaryReport: React.FC = () => {
                         line-height: 1.5;
                         margin: 0;
                         padding: 20px;
+                        
                     }
                     h2, h3 {
                         color: #2c3e50;
@@ -644,11 +771,11 @@ const SalaryReport: React.FC = () => {
                         margin-top: 20px;
                         border-collapse: collapse;
                     }
-                    .table-container th, .table-container td {
-                        padding: 12px;
-                        border: 1px solid #ccc;
-                        text-align: left;
-                    }
+                      .table-container th, .table-container td {
+                    padding: 8px;
+                    border: 1px solid #ccc;
+                    text-align: left;
+                }
                     .table-container th {
                         background-color: #f2f2f2;
                         font-weight: bold;
@@ -671,23 +798,155 @@ const SalaryReport: React.FC = () => {
                     .action-buttons {
                         display: none; /* Hide action buttons for printing */
                     }
+                         @media print {
+                    body {
+                        padding: 0;
+                        margin: 0;
+                         /* Reduce font size */
+                    }
+
+                    .grid {
+                        display: grid;
+                        grid-template-columns: repeat(1, 1fr); /* Stack items in a single column */
+                        gap: 4px; /* Reduce the gap between items */
+                    }
+
+                    .bg-gradient-to-r {
+                        padding: 5px; /* Reduce padding */
+                        font-size: 30px; /* Smaller font size */
+                    }
+
+                    .text-6xl {
+                        font-size: 4xl; /* Smaller icon size */
+                    }
+
+                    h3 {
+                        font-size: 14px; /* Smaller heading size */
+                    }
+
+                    p {
+                        font-size: 12px; /* Smaller paragraph size */
+                    }
+
+                    .flex {
+                        display: block; /* Stack flex items vertically */
+                    }
+                }
                 </style>
             `);
-            
+    
             printWindow.document.write('</head><body>');
             
             // Get selected month and year
             const monthText = selectedMonth ? selectedMonth : "All"; // Default to "All" if no month is selected
             const yearText = selectedYear ? selectedYear : "All"; // Default to "All" if no year is selected
-            
+              // Get the current date
+        const currentDate = new Date();
+        const formattedDate = currentDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
             // Inject the selected month and year values in the print content
             printWindow.document.write(`
                 <p><strong>Month:</strong> ${monthText}</p>
                 <p><strong>Year:</strong> ${yearText}</p>
             `);
+          
+            // Inject the "Printed By" message based on the role
+            const printedBy = role === 'staff' ? `Printed By: ${userName}` : 'Printed By: Admin';
+            printWindow.document.write(`
+                <p><strong>${printedBy}</strong></p>
+            `);
+            printWindow.document.write(`
+               
+                <p><strong>Printed Date:</strong> ${formattedDate}</p>
+            `);
+           
+    
+           
+    
             
             // Write the rest of the content into the print window
             printWindow.document.write(printContent.innerHTML); 
+printWindow.document.write(`<h1>---------------------------------------------------------------------------------------------------------------------------------</h1> `)    
+if (showAdvanceTable && advances.length > 0) {
+    printWindow.document.write(`
+        <div class="print-container">
+            <div class="table-wrapper">
+                <h3 class="text-2xl font-extrabold mb-6 text-center text-gray-800">
+                    Advance Payment Details
+                </h3>
+                
+                <table class="w-full border-collapse border border-gray-200 rounded-lg overflow-hidden shadow-md">
+                   <thead class="bg-gray-100">
+    <tr>
+        <th class="border border-gray-300 px-8 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+            Initial Advance
+        </th>
+        <th class="border border-gray-300 px-8 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+            Current Advance
+        </th>
+        <th class="border border-gray-300 px-8 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+            Payment Date
+        </th>
+    </tr>
+</thead>
+<tbody>
+    ${advances.map((record, index) => `
+        <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
+            <td class="border border-gray-200 px-8 py-4 text-gray-700">${record.addedAdvance}</td>
+            <td class="border border-gray-200 px-8 py-4 text-gray-700">${record.advance}</td>
+            <td class="border border-gray-200 px-8 py-4 text-gray-500">
+                ${record.advancePaymentDate ? new Date(record.advancePaymentDate).toLocaleDateString() : ''}
+            </td>
+        </tr>
+    `).join('')}
+</tbody>
+
+                </table>
+            </div>
+        </div>
+    `);
+}
+
+// Add this CSS in the style block
+printWindow.document.write(`
+    <style>
+        .print-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: auto;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .table-wrapper {
+            width: 100%;
+            max-width: 1000px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #fff;
+            padding: 10px;
+        }
+        @media print {
+            .print-container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: auto;
+                margin: 0;
+            }
+            .table-wrapper {
+                width: 100%;
+                max-width: auto;
+            }
+        }
+    </style>
+`);
+
+            
             printWindow.document.write('</body></html>');
             printWindow.document.close(); // Close the document to trigger printing
             printWindow.print(); // Trigger the print dialog
@@ -696,7 +955,74 @@ const SalaryReport: React.FC = () => {
         }
     };
     
-    
+    const totalCollectedSalaryAmount = totalCalculatedUpdatedTotalSalary
+    ? (totalCalculatedUpdatedTotalSalary - totalSalaryAmount).toFixed(2)
+    : 'N/A';
+
+console.log("totalSalaryAmount", totalSalaryAmount);
+// ---------------------------------------------------------------------------------
+
+
+const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
+    try {
+        // Ensure the balanceSalary is negative (settling an outstanding balance)
+        if (balanceSalary >= 0) {
+            console.log('Balance salary is not negative, no settlement needed.');
+            return;
+        }
+
+        const booking = bookings.find((b) => b.id === bookingId);
+        if (!booking || !uid || !id) {
+            console.error('Invalid booking or missing user/driver IDs');
+            return;
+        }
+
+        const driverRef = doc(db, `user/${uid}/driver`, id);
+        const driverSnap = await getDoc(driverRef);
+
+        if (!driverSnap.exists()) {
+            console.error('Driver document not found');
+            return;
+        }
+
+        const driverData = driverSnap.data();
+        const currentAdvance = driverData.advance || 0;
+
+        if (Math.abs(balanceSalary) > currentAdvance) {
+            console.error('Insufficient advance to settle the salary');
+            alert('Insufficient advance to settle the salary');
+            return;
+        }
+
+        const newAdvance = currentAdvance + balanceSalary; // Deduct negative balanceSalary
+
+        // Update driver's advance
+        await updateDoc(driverRef, { advance: newAdvance });
+
+        // Fetch booking and update transferredSalary
+        const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
+        const bookingSnap = await getDoc(bookingRef);
+
+        if (!bookingSnap.exists()) {
+            console.error('Booking document not found');
+            return;
+        }
+
+        const currentTransferredSalary = bookingSnap.data().transferedSalary || 0;
+        const newTransferredSalary = currentTransferredSalary + balanceSalary;
+
+        // Update booking details
+        await updateDoc(bookingRef, {
+            transferedSalary: newTransferredSalary,
+            balanceSalary: 0, // Balance settled
+        });
+
+        console.log(`Salary settled. New advance: ${newAdvance}, New transferredSalary: ${newTransferredSalary}`);
+    } catch (error) {
+        console.error('Error settling salary:', error);
+    }
+};
+
     return (
         <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg sm:p-8 lg:p-10"  ref={printRef}>
             {driver && (
@@ -764,21 +1090,27 @@ const SalaryReport: React.FC = () => {
     <table className="table-auto border-collapse border border-gray-300 w-full mt-4">
         <thead>
             <tr>
-                <th className="border border-gray-300 px-4 py-2">Advance</th>
+            <th className="border border-gray-300 px-4 py-2">Initial Advance</th>
+
+                <th className="border border-gray-300 px-4 py-2">Current Advance</th>
                 <th className="border border-gray-300 px-4 py-2">Payment Date</th>
             </tr>
         </thead>
         <tbody>
             {advances.map((record, index) => (
                 <tr key={index}>
+                   <td className="border border-gray-300 px-4 py-2">
+                   {record.addedAdvance}
+                   </td>
                     <td className="border border-gray-300 px-4 py-2">
                         {record.advance}
                     </td>
                     <td className="border border-gray-300 px-4 py-2">
     {record.advancePaymentDate
-        ? new Date(record.advancePaymentDate).toLocaleDateString() // Date object formatting
+        ? new Date(record.advancePaymentDate).toLocaleDateString('en-GB') // 'en-GB' locale formats as day/month/year
         : ''}
 </td>
+
 
                 </tr>
             ))}
@@ -886,29 +1218,66 @@ const SalaryReport: React.FC = () => {
             )}
 
 <div >
-<div className="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg hover:shadow-xl  hover:scale-105 ">
-                    <div className="flex items-center space-x-4">
-                        <div className="text-4xl text-green-600">
-                            <i className="fas fa-receipt"></i>
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-bold text-gray-800">Total Balance Salary Amount:</h3>
-                            <p className="text-gray-700 text-lg">{totalSalaryAmount}</p>
-                        </div>
-                    </div>
-                    </div>
-<br />
-                    <div className="bg-gradient-to-r from-red-100 to-red-200 p-6 shadow-lg rounded-lg hover:shadow-xl  hover:scale-105 transition-transform">
-                        <div className="flex items-center space-x-4">
-                            <div className="text-4xl text-red-600">
-                                <i className="fas fa-hand-holding-usd"></i>
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-800">Advance Amount</h3>
-                                <p className="text-gray-700 text-lg">{driver?.advance ? driver.advance : 'No advance payment made'}</p>
-                            </div>
-                        </div>
-                    </div>
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+    {/* Advance Amount Card */}
+    <div className="bg-gradient-to-r from-red-300 to-red-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out">
+        <div className="flex items-center space-x-6">
+            <div className="text-6xl text-red-700">
+                <i className="fas fa-hand-holding-usd"></i>
+            </div>
+            <div>
+                <h3 className="text-2xl font-semibold text-gray-800 tracking-tight leading-tight">Advance Amount</h3>
+                <p className="text-lg text-gray-600 mt-2">
+                    {driver?.advance ? driver.advance : 'No advance payment made'}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    {/* Salary Paid Card */}
+    <div className="bg-gradient-to-r from-green-300 to-green-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out">
+        <div className="flex items-center space-x-6">
+            <div className="text-6xl text-green-700">
+                <i className="fas fa-receipt"></i>
+            </div>
+            <div>
+                <h3 className="text-2xl font-semibold text-gray-800 tracking-tight leading-tight">
+                    Salary Paid in {selectedMonth ? selectedMonth : 'All Months'}
+                </h3>
+                <p className="text-lg text-gray-600 mt-2">{totalCollectedSalaryAmount}</p>
+            </div>
+        </div>
+    </div>
+
+    {/* Balance Salary Amount Card */}
+    <div className="bg-gradient-to-r from-green-300 to-green-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out">
+        <div className="flex items-center space-x-6">
+            <div className="text-6xl text-blue-700">
+                <i className="fas fa-receipt"></i>
+            </div>
+            <div>
+                <h3 className="text-2xl font-semibold text-gray-800 tracking-tight leading-tight">
+                    Balance Salary Amount in {selectedMonth ? selectedMonth : 'All Months'}
+                </h3>
+                <p className="text-lg text-gray-600 mt-2">{totalSalaryAmount}</p>
+            </div>
+        </div>
+    </div>
+    <div className="bg-gradient-to-r from-yellow-200 to-yellow-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out">
+        <div className="flex items-center space-x-6">
+            <div className="text-6xl text-green-700">
+                <i className="fas fa-receipt"></i>
+            </div>
+            <div>
+                <h3 className="text-2xl font-semibold text-gray-800 tracking-tight leading-tight">
+                   Total Cash In Hand
+                </h3>
+                <p className="text-lg text-gray-600 mt-2">{netTotalAmountInHand}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 
                 <div className="mt-5">
                     <h2 className="text-xl font-bold mb-3 text-center text-gray-800">Driver Salary Details</h2>
@@ -936,6 +1305,7 @@ const SalaryReport: React.FC = () => {
                                             <span className="ml-2">Select All</span>
                                         </span>
                                     </th>
+                                    <th className=' no-print'>ViewMore</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -984,12 +1354,13 @@ const SalaryReport: React.FC = () => {
                                                 </>
                                             ) : (
                                                 <div className="flex justify-center space-x-2 no-print">
-  <button
-    className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-2 py-1 rounded-lg shadow-lg hover:shadow-xl  duration-300 hover:scale-105"
-    onClick={() => handleEditBooking(booking.id)}
-  >
+ <button
+    className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-2 py-1 rounded-lg shadow-lg hover:shadow-xl duration-300 hover:scale-105"
+    onClick={() => handleCombinedOperation(booking.id, editFormData.balanceSalary)}
+>
     Settle Salary
-  </button>
+</button>
+
 
   <label className="inline-flex items-center">
     <input
@@ -1003,25 +1374,47 @@ const SalaryReport: React.FC = () => {
 
                                             )}
                                         </td>
+                                        <td className=' no-print'>
+                                            <Link
+    to={`/bookings/newbooking/viewmore/${booking.id}`}
+                                                    style={{
+                                                        padding: '5px 10px',
+                                                        color: '#fff',
+                                                        backgroundColor: '#007bff',
+                                                        borderRadius: '5px',
+                                                        textDecoration: 'none',
+                                                        display: 'inline-block',
+                                                        transition: 'background-color 0.3s',
+                                                    }}
+                                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0056b3')}
+                                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#007bff')}
+                                                >
+                                                    View More
+                                                </Link>
+                                            </td>
                                     </tr>
                                 ))}
                             </tbody>
                             <tfoot>
-                                <tr>
-                                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600" colSpan={2}></th>
-                                    <th
-                                        className="px-4 py-2 text-left text-2xl font-bold text-red-600" // Enlarged and red color
-                                        colSpan={4}
-                                    >
-                                        Total Salary
-                                    </th>
-                                    <td
-                                        className="border px-4 py-2 text-2xl font-bold text-red-600" // Enlarged and red color
-                                    >
-                                        {typeof totalCalculatedUpdatedTotalSalary === 'number' ? totalCalculatedUpdatedTotalSalary.toFixed(2) : 'N/A'}
-                                    </td>
-                                </tr>
-                            </tfoot>
+    <tr>
+        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600" colSpan={2}></th>
+        <th className="px-4 py-2 text-left text-2xl font-bold text-red-600" colSpan={4}>
+            Total Salary
+        </th>
+        <td className="border px-4 py-2 text-2xl font-bold text-red-600">
+            {totalCalculatedUpdatedTotalSalary != null
+                ? totalCalculatedUpdatedTotalSalary.toFixed(2)
+                : 'N/A'}
+        </td>
+        <th className="px-2 py-2 text-left text-xl font-bold text-gray-600">
+            Balance :
+        </th>
+        <td className="border px-4 py-2 text-2xl font-bold text-red-600">
+            {typeof totalSalaryAmount === 'number' ? totalSalaryAmount.toFixed(2) : totalSalaryAmount || 'N/A'}
+        </td>
+    </tr>
+</tfoot>
+
                         </table>
                     </div>
                 </div>
