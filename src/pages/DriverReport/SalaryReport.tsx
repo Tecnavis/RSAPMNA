@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, onSnapshot, addDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, onSnapshot, addDoc, Timestamp, serverTimestamp, writeBatch } from 'firebase/firestore';
 import InvoiceModal from './InvoiceModal';
 import { parse, format } from 'date-fns';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
@@ -28,6 +28,7 @@ interface Booking {
     receivedAmount: number | string; 
     createdAt: Date | null;
     receivedUser:string;
+    companyBooking:boolean;
 }
 interface SalaryDetail {
     id: string;
@@ -150,7 +151,6 @@ const [netTotalAmountInHand, setNetTotalAmountInHand] = useState<number>(0);
                     const data = doc.data();
                     const balanceSalary = data.totalDriverSalary - (data.transferedSalary || 0);
     
-                    // Check if receivedUser is "Staff" and set amount and receivedAmount to 0
                     const isStaff = data.receivedUser === "Staff";
                     if (isStaff) {
                         console.log(`Staff booking detected: ${doc.id}`);
@@ -170,11 +170,12 @@ const [netTotalAmountInHand, setNetTotalAmountInHand] = useState<number>(0);
                         advance: data.advance || 0,
                         advancePaymentDate: data.advancePaymentDate || '',
                         status: data.status || '',
-                        amount: isStaff ? 0 : data.amount || 0, // Adjusted field
-                        receivedAmount: isStaff ? 0 : data.receivedAmount || 0, // Adjusted field
+                        amount: isStaff ? 0 : data.amount || 0,
+                        receivedAmount: isStaff ? 0 : data.receivedAmount || 0,
                         bookingChecked: data.bookingChecked || false,
                         receivedUser: data.receivedUser || '',
-                        createdAt: data.createdAt ? data.createdAt.toDate() : null, // Convert Firestore Timestamp to Date
+                        companyBooking:data.companyBooking || false,
+                        createdAt: data.createdAt ? data.createdAt.toDate() : null,
                     };
                 });
     
@@ -186,19 +187,28 @@ const [netTotalAmountInHand, setNetTotalAmountInHand] = useState<number>(0);
                         booking.bookingChecked === true
                     )
                     .sort((a, b) => {
-                        // Explicit type check to ensure createdAt is a Date object before calling getTime
                         if (!a.createdAt || !b.createdAt) return 0; // Null safety
-                        return b.createdAt.getTime() - a.createdAt.getTime(); // Now works with Date objects
+                        return b.createdAt.getTime() - a.createdAt.getTime(); // Sort by latest
                     });
     
-                setBookings(filteredAndSortedBookings); 
-                const netTotal = filteredAndSortedBookings.reduce((sum, b) => {
-                    const received = Number(b.receivedAmount) || 0;
-                    const bookingAmount = Number(b.amount) || 0;
-                    return sum + bookingAmount - received;
-                }, 0);
+                const netTotalFromBookings = allBookings
+                    .filter((booking) =>
+                        booking.selectedDriver === id && booking.status === 'Order Completed'
+                    )
+                    .reduce((sum, b) => {
+                        const received = parseFloat(b.receivedAmount as string) || 0;
+                        const bookingAmount = parseFloat(b.amount as string) || 0;
     
+                        return sum + bookingAmount - received;
+                    }, 0);
+    
+                const advanceAmount = driver?.advance || 0;
+                const netTotal = netTotalFromBookings + advanceAmount;
+    
+                // Batch state update
+                setBookings(filteredAndSortedBookings);
                 setNetTotalAmountInHand(netTotal);
+    
                 console.log("Filtered Bookings:", filteredAndSortedBookings);
                 console.log("Net Total Amount In Hand:", netTotal);
             } catch (error) {
@@ -207,7 +217,7 @@ const [netTotalAmountInHand, setNetTotalAmountInHand] = useState<number>(0);
         };
     
         fetchBookings();
-    }, [db, id, uid]);
+    }, [db, id, uid, driver?.advance]); // Adding driver.advance to the dependency array to recalculate when it changes
     
 
     useEffect(() => {
@@ -393,162 +403,78 @@ const [netTotalAmountInHand, setNetTotalAmountInHand] = useState<number>(0);
             advancePaymentDate: '',
         });
     };
-    const handleCombinedOperation = async (bookingId: string, balanceSalary: number) => {
-        try {
-            // First, edit the booking details
-            await handleSettleSalary(bookingId, balanceSalary);
-    
-            // Wait for the editing state to settle if needed
-            // Then, proceed to settle the salary
-            await handleEditBooking(bookingId);
-    
-        } catch (error) {
-            console.error('Error performing combined operation:', error);
-        }
-    };
+   
     const handleSaveEdit = async () => {
         if (!uid || !id) {
             console.error('Missing user or driver ID');
             return;
         }
-        try {
-            const { fileNumber, dateTime, serviceType, vehicleNumber, totalDriverDistance, totalDriverSalary, transferedSalary, advance, advancePaymentDate, balanceSalary } = editFormData;
+            try {
+                const { fileNumber, dateTime, serviceType, vehicleNumber, totalDriverDistance, totalDriverSalary, transferedSalary, advance, advancePaymentDate, balanceSalary } = editFormData;
     
-            // Check if editingBookingId is null before proceeding
-            if (!editingBookingId) {
-                console.error('Editing booking ID is null');
-                return; // Early exit if the ID is null
+                // Check if editingBookingId is null before proceeding
+                if (!editingBookingId) {
+                    console.error('Editing booking ID is null');
+                    return; // Early exit if the ID is null
+                }
+    
+                const bookingRef = doc(db, `user/${uid}/bookings`, editingBookingId);
+    
+                const formattedDate = advancePaymentDate ? new Date(advancePaymentDate).toLocaleDateString() : '';
+                console.log('formattedDate', formattedDate);
+                await updateDoc(bookingRef, {
+                    fileNumber,
+                    dateTime,
+                    serviceType,
+                    vehicleNumber,
+                    totalDriverDistance,
+                    totalDriverSalary,
+                    transferedSalary,
+                    balanceSalary: totalDriverSalary - transferedSalary,
+                    advance, // Update advance payment
+                    advancePaymentDate: formattedDate,
+                });
+    
+                // Update local state
+                setBookings((prevBookings) =>
+                    prevBookings.map((booking) =>
+                        booking.id === editingBookingId
+                            ? {
+                                  ...booking,
+                                  fileNumber,
+                                  dateTime,
+                                  serviceType,
+                                  vehicleNumber,
+                                  totalDriverSalary,
+                                  totalDriverDistance,
+                                  transferedSalary,
+                                  balanceSalary: totalDriverSalary - transferedSalary,
+                                  advance,
+                                  advancePaymentDate: formattedDate,
+                              }
+                            : booking
+                    )
+                );
+    
+                setEditingBookingId(null);
+                setEditFormData({
+                    fileNumber: '',
+                    dateTime: '',
+                    serviceType: '',
+                    vehicleNumber: '',
+                    totalDriverSalary: 0,
+                    transferedSalary: 0,
+                    totalDriverDistance: '',
+                    balanceSalary: 0,
+                    advance: 0,
+                    advancePaymentDate: '',
+                });
+            } catch (error) {
+                console.error('Error saving edit:', error);
             }
-    
-            const bookingRef = doc(db, `user/${uid}/bookings`, editingBookingId);
-    
-            const formattedDate = advancePaymentDate ? new Date(advancePaymentDate).toLocaleDateString() : '';
-    
-            // If balanceSalary is negative, deduct from the advance
-            if (balanceSalary < 0) {
-                const driverRef = doc(db, `user/${uid}/driver`, id);
-    
-                // Fetch current driver data
-                const driverSnap = await getDoc(driverRef);
-                const currentAdvance = driverSnap.exists() ? driverSnap.data().advance || 0 : 0;
-    
-                // Deduct the balanceSalary from the current advance
-                const newAdvance = currentAdvance - Math.abs(balanceSalary);
-    
-                // Update the driver's advance
-                await updateDoc(driverRef, { advance: newAdvance });
-    
-                // Add the deduction to the advanceData collection
-                const advanceDataRef = collection(driverRef, 'advanceData');
-                const advanceDataDocRef = await addDoc(advanceDataRef, {
-                    addedAdvance: balanceSalary,
-                    advance: Math.abs(balanceSalary),  // Deduction is always positive
-                    type: 'advance',
-                    advancePaymentDate: serverTimestamp(),  // Use server timestamp
-                    driverId: id,                        // Use driver ID
-                    driverName: driverSnap.data()?.driverName || "Unknown",  // Use driver's name
-                });
-    
-                // Get the generated advanceDataId (document ID)
-                const advanceDataId = advanceDataDocRef.id;
-    
-                // Add the deduction to the global advance collection
-                const advanceRef = collection(db, `user/${uid}/advance`);
-                const advanceDocRef = await addDoc(advanceRef, {
-                    addedAdvance: balanceSalary,
-                    driverName: driverSnap.data()?.driverName || "Unknown",
-                    driverId: id,
-                    type: 'advance',
-                    advanceDataId: advanceDataId, // Use advanceDataId from above
-                    advance: Math.abs(balanceSalary),
-                    advancePaymentDate: serverTimestamp(),  // Use server timestamp
-                });
-    
-                // Get the generated advanceId (document ID)
-    
-          // Get the generated advanceId (document ID)
-          const advanceId = advanceDocRef.id;
-
-          // Now update the advanceId in the advanceData entry
-          await updateDoc(advanceDataDocRef, {
-              advanceId: advanceId,  // Link the advanceId from the global advance collection
-          });
-
-          console.log(`Deducted ${Math.abs(balanceSalary)} from driver's advance`);
-      }
-            // Update the booking with new details
-            await updateDoc(bookingRef, {
-                fileNumber,
-                dateTime,
-                serviceType,
-                vehicleNumber,
-                totalDriverDistance,
-                totalDriverSalary,
-                transferedSalary: transferedSalary + balanceSalary,  // Update transferred salary with balance adjustment
-                balanceSalary: totalDriverSalary - (transferedSalary + balanceSalary),  // Adjust the balance salary
-                advance, // Update advance payment
-                advancePaymentDate: formattedDate,
-            });
-    
-            // Update local state for the edited booking
-            setBookings((prevBookings) =>
-                prevBookings.map((booking) =>
-                    booking.id === editingBookingId
-                        ? {
-                              ...booking,
-                              fileNumber,
-                              dateTime,
-                              serviceType,
-                              vehicleNumber,
-                              totalDriverSalary,
-                              totalDriverDistance,
-                              transferedSalary: transferedSalary + balanceSalary,
-                              balanceSalary: totalDriverSalary - (transferedSalary + balanceSalary),
-                              advance,
-                              advancePaymentDate: formattedDate,
-                          }
-                        : booking
-                )
-            );
-    
-            setEditingBookingId(null);
-            setEditFormData({
-                fileNumber: '',
-                dateTime: '',
-                serviceType: '',
-                vehicleNumber: '',
-                totalDriverDistance: '',
-                totalDriverSalary: 0,
-                transferedSalary: 0,
-                balanceSalary: 0,
-                advance: 0, // Reset advance
-                advancePaymentDate: '',
-            });
-    
-        } catch (error) {
-            console.error('Error saving edit:', error);
-        }
-    };
+        };
     
     
-    
-    // const handleAdvance = async () => {
-    //     // Check if advance is valid
-    //     if (!editFormData.advance || editFormData.advance <= 0) {
-    //         alert('Please enter a valid advance.');
-    //         return;
-    //     }
-    //     setAdvances((prevAdvances) => [
-    //         ...prevAdvances,
-    //         {
-    //             advance: editFormData.advance,
-    //             advancePaymentDate: editFormData.advancePaymentDate,
-    //             addedAdvance: editFormData.addedAdvance,
-
-    //         },
-    //     ]);
-    //     setIsModalOpen1(true);
-    // };
     const confirmAdvanceUpdate = async () => {
         try {
             if (!uid || !id) {
@@ -631,115 +557,140 @@ const [netTotalAmountInHand, setNetTotalAmountInHand] = useState<number>(0);
         setIsModalOpen(true);
     };
     let isAlertShown = false;
-//-------------------------------------------------------------------------------
-const confirmSalaryAdjustment = async () => {
-    if (!uid) {
-        console.error("User ID is undefined");
-        return;
-    }
-
-    try {
-        const totalNetAmount = netTotalAmountInHand; // Total available for distribution
-        let remainingNetAmount = totalNetAmount;
-
-        if (remainingNetAmount <= 0) {
-            alert("No amount available to distribute.");
+    //=================================================================
+    const confirmSalaryAdjustment = async () => {
+        if (!uid) {
+            console.error("User ID is undefined");
             return;
         }
-
-        const updatedBookings = [];
-        const adjustedIds = [];
-        const fileNumbers = [];
-
-        let totalReceivedAmount = 0; // Track total received amount
-
-        // Sort bookings by date (oldest first)
-        const sortedBookings = [...filteredBookings].sort(
-            (a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
-        );
-
-        // Loop through sorted bookings and allocate amounts
-        for (const booking of sortedBookings) {
-            if (remainingNetAmount <= 0) break; // If no amount is left to allocate, exit loop
-
-            // Skip "Staff" bookings and set amount/receivedAmount to 0
-            if (booking.receivedUser === "Staff") {
-                const updatedBooking = {
-                    ...booking,
-                    amount: 0,
-                    receivedAmount: 0,
-                };
-                updatedBookings.push(updatedBooking);
-
-                // Update Firestore document for "Staff" booking
-                const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
-                await updateDoc(bookingRef, {
-                    amount: 0,
-                    receivedAmount: 0,
-                });
-                continue;
+    
+        try {
+            let remainingNetAmount = netTotalAmountInHand || 0;
+    
+            if (remainingNetAmount <= 0) {
+                alert("No amount available to distribute.");
+                return;
             }
+    
+            const batch = writeBatch(db); // Firestore batch
+            const adjustedIds = [];
+            const fileNumbers = [];
+            let totalTransferredSalary = 0;
 
-            const maxTransferableSalary = (booking.totalDriverSalary || 0) - (booking.transferedSalary || 0);
+            // Process bookings
+            // Filter bookings with driverId == id
+        const relevantBookings = bookings
+        .filter(
+            (booking) =>
+                booking.selectedDriver === id &&
+                booking.receivedUser !== "Staff" &&
+                !booking.companyBooking
+        )        .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+console.log("relevantBookings",relevantBookings)
+    // Process filtered bookings
+    for (const booking of relevantBookings) {
+        if (remainingNetAmount <= 0) break;
 
-            if (maxTransferableSalary > 0) {
-                // Determine the transfer amount to this booking
-                const transferAmount = Math.min(remainingNetAmount, maxTransferableSalary);
+                if (booking.receivedUser === "Staff") {
+                    batch.update(doc(db, `user/${uid}/bookings`, booking.id), {
+                        amount: 0,
+                        receivedAmount: 0,
+                    });
+                    continue;
+                }
+    
+                const maxTransferableSalary = (booking.totalDriverSalary || 0) - (booking.transferedSalary || 0);
+    
+                if (maxTransferableSalary > 0) {
+                    const transferAmount = Math.min(remainingNetAmount, maxTransferableSalary);
+    
+                    remainingNetAmount -= transferAmount;
+    
+                    const updatedBooking = {
+                        transferedSalary: (booking.transferedSalary || 0) + transferAmount,
+                        balanceSalary: (booking.totalDriverSalary || 0) - ((booking.transferedSalary || 0) + transferAmount),
+                    };
+                    totalTransferredSalary += transferAmount;
 
-                remainingNetAmount -= transferAmount; // Deduct the allocated amount from the remaining net amount
-                totalReceivedAmount += transferAmount; // Accumulate the total received amount
-
-                const newTransferedSalary = (booking.transferedSalary || 0) + transferAmount;
-                const newBalanceSalary = (booking.totalDriverSalary || 0) - newTransferedSalary;
-
-                // Update the booking with calculated values
-                const updatedBooking = {
-                    ...booking,
-                    transferedSalary: newTransferedSalary,
-                    balanceSalary: newBalanceSalary,
-                    receivedAmount: totalReceivedAmount, // Set total received amount
-                };
-
-                updatedBookings.push(updatedBooking);
-                adjustedIds.push(booking.id);
-                fileNumbers.push(booking.fileNumber || "N/A");
-
-                // Update Firestore document for the booking
-                const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
-                await updateDoc(bookingRef, {
-                    transferedSalary: newTransferedSalary,
-                    balanceSalary: newBalanceSalary,
-                    receivedAmount: updatedBooking.receivedAmount,
+                    batch.update(doc(db, `user/${uid}/bookings`, booking.id), updatedBooking);
+                    adjustedIds.push(booking.id);
+                    fileNumbers.push(booking.fileNumber || "N/A");
+                }
+            }
+    
+            // Save remaining amount as advance
+            if (remainingNetAmount > 0) {
+                const advanceRef = collection(db, `user/${uid}/driver/${id}/advanceAdjustments`);
+                batch.set(doc(advanceRef), {
+                    advance: remainingNetAmount,
+                    timestamp: serverTimestamp(),
                 });
             }
+    
+            // Commit batch updates
+            await batch.commit();
+    
+            // Save salary adjustment details
+            await saveSalaryDetails(
+                id || "",
+                netTotalAmountInHand || 0,
+                netTotalAmountInHand - remainingNetAmount,
+                fileNumbers
+            );
+    
+            setNetTotalAmountInHand(remainingNetAmount);
+            setAdjustedBookingIds(adjustedIds);
+            alert("Salary adjustment completed successfully.");
+            await handleReceiveAdjust( totalTransferredSalary);
+        } catch (error) {
+            console.error("Error adjusting salary:", error);
         }
-
-        // If there's any remaining net amount, save it as an advance adjustment
-        if (remainingNetAmount > 0) {
-            const advanceRef = collection(db, `user/${uid}/driver/${id}/advanceAdjustments`);
-            await addDoc(advanceRef, {
-                advance: remainingNetAmount,
-                timestamp: serverTimestamp(),
-            });
-            console.log(`Remaining amount of ${remainingNetAmount} saved to advance adjustments.`);
+    };
+    
+    const handleReceiveAdjust = async ( totalTransferredSalary: number) => {
+        if (!uid) {
+            console.error("User ID is undefined");
+            return;
         }
-
-        // Save salary adjustment details
-        await saveSalaryDetails(
-            id || "",
-            totalNetAmount,
-            totalNetAmount - remainingNetAmount,
-            fileNumbers
-        );
-
-        setNetTotalAmountInHand(remainingNetAmount); // Update state with remaining amount
-        setAdjustedBookingIds(adjustedIds); // Track adjusted bookings
-        alert("Salary adjustment completed successfully.");
-    } catch (error) {
-        console.error("Error adjusting salary:", error);
-    }
-};
-
+    
+        try {
+            let remainingSalary = totalTransferredSalary;
+    
+            // Sort bookings by earliest date
+            const driverBookings = filteredBookings
+                .filter((booking) => booking.selectedDriver === id)
+                .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+    console.log("driverBookings",driverBookings)
+            const batch = writeBatch(db); // Firestore batch
+    
+            for (const booking of driverBookings) {
+                if (remainingSalary <= 0) break;
+    
+                const maxReceivableAmount = (Number(booking.amount) || 0) - (Number(booking.receivedAmount) || 0);
+    
+                if (maxReceivableAmount > 0) {
+                    const distributeAmount = Math.min(remainingSalary, maxReceivableAmount);
+                    remainingSalary -= distributeAmount;
+    
+                    const updatedBooking = {
+                        receivedAmount: (Number(booking.receivedAmount) || 0) + distributeAmount,
+                    };
+    
+                    batch.update(doc(db, `user/${uid}/bookings`, booking.id), updatedBooking);
+                }
+            }
+    
+            // Commit batch updates
+            await batch.commit();
+    
+            console.log("ReceivedAmount adjustments completed successfully.");
+            alert("Distributed salary to bookings successfully.");
+        } catch (error) {
+            console.error("Error distributing salary:", error);
+        }
+    };
+    
+    
     const handlePrint = () => {  
         const printContent = printRef.current; // Get the content to print
         const printWindow = window.open('', '', 'height=1000,width=1600'); // Create a print window
@@ -755,7 +706,6 @@ const confirmSalaryAdjustment = async () => {
                         line-height: 1.5;
                         margin: 0;
                         padding: 20px;
-                        
                     }
                     h2, h3 {
                         color: #2c3e50;
@@ -771,11 +721,12 @@ const confirmSalaryAdjustment = async () => {
                         margin-top: 20px;
                         border-collapse: collapse;
                     }
-                      .table-container th, .table-container td {
-                    padding: 8px;
-                    border: 1px solid #ccc;
-                    text-align: left;
-                }
+                    .table-container th, .table-container td {
+                        padding: 12px 15px; /* Added padding for better readability */
+                        border: 2px solid #000; /* Solid black borders */
+                        text-align: left;
+                        font-size: 14px; /* Set font size for clarity */
+                    }
                     .table-container th {
                         background-color: #f2f2f2;
                         font-weight: bold;
@@ -798,40 +749,62 @@ const confirmSalaryAdjustment = async () => {
                     .action-buttons {
                         display: none; /* Hide action buttons for printing */
                     }
-                         @media print {
-                    body {
-                        padding: 0;
-                        margin: 0;
-                         /* Reduce font size */
-                    }
-
-                    .grid {
-                        display: grid;
-                        grid-template-columns: repeat(1, 1fr); /* Stack items in a single column */
-                        gap: 4px; /* Reduce the gap between items */
-                    }
-
-                    .bg-gradient-to-r {
-                        padding: 5px; /* Reduce padding */
-                        font-size: 30px; /* Smaller font size */
-                    }
-
-                    .text-6xl {
-                        font-size: 4xl; /* Smaller icon size */
-                    }
-
-                    h3 {
-                        font-size: 14px; /* Smaller heading size */
-                    }
-
-                    p {
-                        font-size: 12px; /* Smaller paragraph size */
-                    }
-
-                    .flex {
-                        display: block; /* Stack flex items vertically */
-                    }
+                         .print-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
                 }
+                .company-details {
+                    text-align: right;
+                    max-width: 300px;
+                    font-size: 14px;
+                }
+                .company-logo {
+                    width: 50px;
+                    height: auto;
+                }
+                    @media print {
+                        body {
+                            padding: 0;
+                            margin: 0;
+                        }
+                        .grid {
+                            display: grid;
+                            grid-template-columns: repeat(1, 1fr); /* Stack items in a single column */
+                            gap: 4px;
+                        }
+                        .bg-gradient-to-r {
+                            padding: 5px; /* Reduce padding */
+                            font-size: 30px; /* Smaller font size */
+                        }
+                        .text-6xl {
+                            font-size: 4xl; /* Smaller icon size */
+                        }
+                        h3 {
+                            font-size: 14px; /* Smaller heading size */
+                        }
+                        p {
+                            font-size: 12px; /* Smaller paragraph size */
+                        }
+                        .flex {
+                            display: block; /* Stack flex items vertically */
+                        }
+                      .company-details {
+        position: absolute;
+        right: 20px;
+        top: 20px;
+    }
+
+   .company-logo {
+        display: block !important; /* Ensure the image is not hidden during printing */
+        width: 150px; /* Set a fixed width for the logo */
+        height: auto;
+    }
+                    .print-header {
+                        flex-direction: row;
+                        align-items: flex-start;
+                    }
+                    }
                 </style>
             `);
     
@@ -840,113 +813,232 @@ const confirmSalaryAdjustment = async () => {
             // Get selected month and year
             const monthText = selectedMonth ? selectedMonth : "All"; // Default to "All" if no month is selected
             const yearText = selectedYear ? selectedYear : "All"; // Default to "All" if no year is selected
-              // Get the current date
-        const currentDate = new Date();
-        const formattedDate = currentDate.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
+            // Get the current date
+            const currentDate = new Date();
+            const formattedDate = currentDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
             // Inject the selected month and year values in the print content
             printWindow.document.write(`
                 <p><strong>Month:</strong> ${monthText}</p>
                 <p><strong>Year:</strong> ${yearText}</p>
             `);
-          
+            
             // Inject the "Printed By" message based on the role
             const printedBy = role === 'staff' ? `Printed By: ${userName}` : 'Printed By: Admin';
             printWindow.document.write(`
                 <p><strong>${printedBy}</strong></p>
             `);
             printWindow.document.write(`
-               
                 <p><strong>Printed Date:</strong> ${formattedDate}</p>
             `);
-           
-    
-           
-    
-            
-            // Write the rest of the content into the print window
-            printWindow.document.write(printContent.innerHTML); 
-printWindow.document.write(`<h1>---------------------------------------------------------------------------------------------------------------------------------</h1> `)    
-if (showAdvanceTable && advances.length > 0) {
-    printWindow.document.write(`
-        <div class="print-container">
-            <div class="table-wrapper">
-                <h3 class="text-2xl font-extrabold mb-6 text-center text-gray-800">
-                    Advance Payment Details
-                </h3>
-                
-                <table class="w-full border-collapse border border-gray-200 rounded-lg overflow-hidden shadow-md">
-                   <thead class="bg-gray-100">
-    <tr>
-        <th class="border border-gray-300 px-8 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
-            Initial Advance
-        </th>
-        <th class="border border-gray-300 px-8 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
-            Current Advance
-        </th>
-        <th class="border border-gray-300 px-8 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
-            Payment Date
-        </th>
-    </tr>
-</thead>
-<tbody>
-    ${advances.map((record, index) => `
-        <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
-            <td class="border border-gray-200 px-8 py-4 text-gray-700">${record.addedAdvance}</td>
-            <td class="border border-gray-200 px-8 py-4 text-gray-700">${record.advance}</td>
-            <td class="border border-gray-200 px-8 py-4 text-gray-500">
-                ${record.advancePaymentDate ? new Date(record.advancePaymentDate).toLocaleDateString() : ''}
-            </td>
-        </tr>
-    `).join('')}
-</tbody>
+            printWindow.document.write(`
+                <div class="print-header">
+                    <div>
+                        <h1 class="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">
+                            Salary Report for <span class="text-red-500">${driver?.driverName}</span>
+                        </h1>
+                    </div>
+        <div class="company-details">
+    <h3><strong>Company:</strong> RSA</h3>
+    <p><strong>Location:</strong> Tirurkad</p>
+<img class="company-logo" src="http://localhost/assets/images/auth/rsa-png.png" alt="Company Logo" />
+</div>
 
+
+                </div>
+            `);
+            printWindow.document.write(`
+                <style>
+                    .card-container {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                        gap: 20px;
+                        padding: 20px;
+                        margin-top: 20px;
+                    }
+                    .card {
+                        background: linear-gradient(to right, #6a11cb, #2575fc);
+                        color: white;
+                        border-radius: 10px;
+                        padding: 20px;
+                        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                        transition: transform 0.3s ease-in-out;
+                    }
+                    .card:hover {
+                        transform: translateY(-5px);
+                    }
+                    .title {
+                        font-size: 1.2rem;
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                        text-transform: uppercase;
+                    }
+                    .value {
+                        font-size: 1.5rem;
+                        font-weight: 500;
+                        margin-top: 10px;
+                    }
+                    /* Ensure proper styling for printing */
+                    @media print {
+                        .card-container {
+                            display: block;
+                            margin: 0;
+                            padding: 0;
+                        }
+                        .card {
+                            background: #ffffff;
+                            color: #333;
+                            border: 1px solid #ddd;
+                            box-shadow: none;
+                            padding: 15px;
+                            margin: 10px 0;
+                        }
+                        .card:hover {
+                            transform: none;
+                        }
+                        .title {
+                            color: #333;
+                        }
+                        .value {
+                            font-size: 1.3rem;
+                        }
+                    }
+                </style>
+                 <div class="print-header">
+        <h1 class="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">
+            Salary Report for <span class="text-red-500">${driver?.driverName}</span>
+        </h1>
+    </div>
+                <div class="card-container">
+                    <div class="card">
+                        <div class="title">Advance Amount</div>
+                        <div class="value">${driver?.advance ? driver.advance : 'No advance payment made'}</div>
+                    </div>
+                    <div class="card">
+                        <div class="title">Salary Paid in ${selectedMonth ? selectedMonth : 'All Months'}</div>
+                        <div class="value">${totalCollectedSalaryAmount}</div>
+                    </div>
+                    <div class="card">
+                        <div class="title">Balance Salary Amount in ${selectedMonth ? selectedMonth : 'All Months'}</div>
+                        <div class="value">${totalSalaryAmount}</div>
+                    </div>
+                    <div class="card">
+                        <div class="title">Total Cash In Hand</div>
+                        <div class="value">${netTotalAmountInHand}</div>
+                    </div>
+                </div>
+            `);
+                       // Write the rest of the content into the print window
+            printWindow.document.write(`
+                <table class="table-container">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>File Number</th>
+                            <th>Date</th>
+                            <th>Service Type</th>
+                            <th>Vehicle Number</th>
+                            <th>Covered Distance</th>
+                            <th>Total Driver Salary</th>
+                            <th>Transferred Salary</th>
+                            <th>Balance Salary</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filteredBookings.map((booking, index) => `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${booking.fileNumber}</td>
+                                <td>${new Date(booking.dateTime).toLocaleDateString()}</td>
+                                <td>${booking.serviceType}</td>
+                                <td>${booking.vehicleNumber}</td>
+                                <td>${booking.totalDriverDistance}</td>
+                                <td>${booking.totalDriverSalary}</td>
+                                <td>${booking.transferedSalary}</td>
+                                <td style="background-color: ${booking.balanceSalary === 0 ? '#e6ffe6' : '#ffe6e6'}">
+                                    ${booking.balanceSalary}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
                 </table>
-            </div>
-        </div>
-    `);
-}
-
-// Add this CSS in the style block
-printWindow.document.write(`
-    <style>
-        .print-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: auto;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-        .table-wrapper {
-            width: 100%;
-            max-width: 1000px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
-            background-color: #fff;
-            padding: 10px;
-        }
-        @media print {
-            .print-container {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: auto;
-                margin: 0;
+            `);
+    
+            if (showAdvanceTable && advances.length > 0) {
+                printWindow.document.write(`
+                    <div class="print-container">
+                        <div class="table-wrapper">
+                            <h3 class="text-2xl font-extrabold mb-6 text-center text-gray-800">
+                                Advance Payment Details
+                            </h3>
+                            <table class="w-full border-collapse border border-gray-200 rounded-lg overflow-hidden shadow-md table-container">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="border border-gray-300 px-8 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                                            Initial Advance
+                                        </th>
+                                        <th class="border border-gray-300 px-8 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                                            Current Advance
+                                        </th>
+                                        <th class="border border-gray-300 px-8 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                                            Payment Date
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${advances.map((record, index) => `
+                                        <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
+                                            <td class="border border-gray-200 px-8 py-4 text-gray-700">${record.addedAdvance}</td>
+                                            <td class="border border-gray-200 px-8 py-4 text-gray-700">${record.advance}</td>
+                                            <td class="border border-gray-200 px-8 py-4 text-gray-500">${record.advancePaymentDate ? new Date(record.advancePaymentDate).toLocaleDateString() : ''}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `);
             }
-            .table-wrapper {
-                width: 100%;
-                max-width: auto;
-            }
-        }
-    </style>
-`);
-
-            
+    
+            // Add CSS for print
+            printWindow.document.write(`
+                <style>
+                    .print-container {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: auto;
+                        padding: 10px;
+                        box-sizing: border-box;
+                    }
+                    .table-wrapper {
+                        width: 100%;
+                        max-width: 1000px;
+                        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                        border-radius: 8px;
+                        overflow: hidden;
+                        background-color: #fff;
+                        padding: 10px;
+                    }
+                    @media print {
+                        .print-container {
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            min-height: auto;
+                            margin: 0;
+                        }
+                        .table-wrapper {
+                            width: 100%;
+                            max-width: auto;
+                        }
+                    }
+                </style>
+            `);
+    
             printWindow.document.write('</body></html>');
             printWindow.document.close(); // Close the document to trigger printing
             printWindow.print(); // Trigger the print dialog
@@ -954,6 +1046,7 @@ printWindow.document.write(`
             console.error('Print window or content is null');
         }
     };
+    
     
     const totalCollectedSalaryAmount = totalCalculatedUpdatedTotalSalary
     ? (totalCalculatedUpdatedTotalSalary - totalSalaryAmount).toFixed(2)
@@ -1218,7 +1311,7 @@ const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
             )}
 
 <div >
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8 print-container">
     {/* Advance Amount Card */}
     <div className="bg-gradient-to-r from-red-300 to-red-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out">
         <div className="flex items-center space-x-6">
@@ -1235,7 +1328,7 @@ const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
     </div>
 
     {/* Salary Paid Card */}
-    <div className="bg-gradient-to-r from-green-300 to-green-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out">
+    <div className="bg-gradient-to-r from-green-300 to-green-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out print-card">
         <div className="flex items-center space-x-6">
             <div className="text-6xl text-green-700">
                 <i className="fas fa-receipt"></i>
@@ -1250,7 +1343,7 @@ const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
     </div>
 
     {/* Balance Salary Amount Card */}
-    <div className="bg-gradient-to-r from-green-300 to-green-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out">
+    <div className="bg-gradient-to-r from-green-300 to-green-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out print-card">
         <div className="flex items-center space-x-6">
             <div className="text-6xl text-blue-700">
                 <i className="fas fa-receipt"></i>
@@ -1263,14 +1356,14 @@ const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
             </div>
         </div>
     </div>
-    <div className="bg-gradient-to-r from-yellow-200 to-yellow-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out">
+    <div className="bg-gradient-to-r from-yellow-200 to-yellow-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out print-card">
         <div className="flex items-center space-x-6">
             <div className="text-6xl text-green-700">
                 <i className="fas fa-receipt"></i>
             </div>
             <div>
                 <h3 className="text-2xl font-semibold text-gray-800 tracking-tight leading-tight">
-                   Total Cash In Hand
+                   Total Cash In Hand (Total Collected From Customer + Advance)
                 </h3>
                 <p className="text-lg text-gray-600 mt-2">{netTotalAmountInHand}</p>
             </div>
@@ -1356,7 +1449,7 @@ const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
                                                 <div className="flex justify-center space-x-2 no-print">
  <button
     className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-2 py-1 rounded-lg shadow-lg hover:shadow-xl duration-300 hover:scale-105"
-    onClick={() => handleCombinedOperation(booking.id, editFormData.balanceSalary)}
+    onClick={() => handleEditBooking(booking.id)}
 >
     Settle Salary
 </button>

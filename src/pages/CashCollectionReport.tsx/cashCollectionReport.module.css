@@ -24,3 +24,20 @@
         background-color: #f9f9f9;
     }
 }
+.companyBookingCell {
+    background-color: #f0f0f0; /* Light grey background */
+    color: #4CAF50; /* Green text */
+    font-weight: bold; /* Bold text */
+    padding: 6px 12px; /* Add subtle padding */
+    border-radius: 4px; /* Rounded corners */
+    text-align: center; /* Center align text */
+    font-size: 14px; /* Adjust font size */
+    border: 1px solid #4CAF50; /* Green border */
+    cursor: default; /* Non-clickable cursor */
+    transition: background-color 0.3s ease; /* Smooth background transition */
+  }
+  
+  .companyBookingCell:hover {
+    background-color: #e8f5e9; /* Light green on hover */
+  }
+  

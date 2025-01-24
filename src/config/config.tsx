@@ -25,31 +25,7 @@ const db = getFirestore(app);
 // Initialize services
 const auth = getAuth(app);
 const storage = getStorage(app);
-// const messaging = getMessaging(app);
-// getToken(messaging, {vapidKey:"BKPoKIWRkx6sdBatbMyNn_rw0aT7kw52-FNKZIlfYV6QD2knwxCSEUBU_CDMJSjJnYflUix08tmsJ2-ddbnrzoQ"})
 
 export { auth ,storage };
 export default app;
-// export const generateToken = async () => {
-//   try {
-//     // Request user permission for notifications
-//     const permission = await Notification.requestPermission();
-//     console.log(`Notification permission: ${permission}`);
-    
-//     if (permission === "granted") {
-//       // Generate FCM Token using the VAPID key
-//       const token = await getToken(messaging, {
-//         vapidKey: "BKPoKIWRkx6sdBatbMyNn_rw0aT7kw52-FNKZIlfYV6QD2knwxCSEUBU_CDMJSjJnYflUix08tmsJ2-ddbnrzoQ"
-//       });
 
-//       if (token) {
-//         console.log('FCM Token:', token);
-//         // You can send the token to your server here
-//       } else {
-//         console.log('Failed to get FCM token.');
-//       }
-//     }
-//   } catch (error) {
-//     console.error('Error generating FCM token:', error);
-//   }
-// };

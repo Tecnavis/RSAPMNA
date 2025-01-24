@@ -5,6 +5,7 @@ import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 import defaultImage from '../../assets/css/images/user-front-side-with-white-background.jpg';
 import styles from './useradd.module.css'
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import Swal from 'sweetalert2';
 interface EditData {
     id?: string;
     name?: string;
@@ -164,17 +165,31 @@ const UserAdd: React.FC = () => {
 console.log('Document Path:', `user/${uid}/users/${editData?.id}`);
 
                     await updateDoc(docRef, itemData);
-                    console.log('Document updated');
-                } else {
+
+  Swal.fire({
+                    icon: 'success',
+                    title: 'Updated Successfully',
+                    text: 'The staff details have been updated.',
+                });
+                            } else {
                     const docRef = await addDoc(collection(db, `user/${uid}/users`), itemData);
                     console.log(docRef, 'this is the doc ref');
                     console.log('Document written with ID: ', docRef.id);
                     await updateDoc(docRef, { staffId: docRef.id });
-
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Added Successfully',
+                        text: 'The staff member has been added successfully.',
+                    });
                 }
 
                 navigate('/users/staff');
             } catch (e) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'An error occurred while adding/updating the document.',
+                });
                 console.error('Error adding/updating document: ', e);
             }
         } else {

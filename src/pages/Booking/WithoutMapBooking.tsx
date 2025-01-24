@@ -135,10 +135,13 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [bodyShope, setBodyShope] = useState<string>('');
     const [isAdjustmentApplied, setIsAdjustmentApplied] = useState(false);
     const [isEditing, setIsEditing] = useState(false); // To track if we're in edit mode
-// -----------------------------------------------------------------------------------------------------------------------------------------------
-const [driverLeaves, setDriverLeaves] = useState<DriverLeave[]>([]);
+    const [driverLeaves, setDriverLeaves] = useState<DriverLeave[]>([]);
+    const [confirmUpdatedTotalSalary, setConfirmUpdatedTotalSalary] = useState('');
+    const [showModal, setShowModal] = useState(false);
+    const [isButtonClicked, setIsButtonClicked] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
-const uid = sessionStorage.getItem('uid');
+    const uid = sessionStorage.getItem('uid');
     const userName = sessionStorage.getItem('username');
     const role = sessionStorage.getItem('role');
 
@@ -148,7 +151,7 @@ const uid = sessionStorage.getItem('uid');
             setEditData(editData);
             setBookingId(editData.bookingId || '');
             setTrappedLocation(editData.trappedLocation || '');
-            setInsuranceAmountBody(editData.insuranceAmountBody || '');
+            setConfirmUpdatedTotalSalary(editData.confirmUpdatedTotalSalary || '');
             setBodyShope(editData.bodyShope || '');
             setComments(editData.comments || '');
             setFileNumber(editData.fileNumber || '');
@@ -159,7 +162,6 @@ const uid = sessionStorage.getItem('uid');
             setPhoneNumber(editData.phoneNumber || '');
             setVehicleType(editData.vehicleType || '');
             setServiceCategory(editData.serviceCategory || '');
-
             setAvailableServices(editData.availableServices || '');
             setMobileNumber(editData.mobileNumber || '');
             setVehicleNumber(editData.vehicleNumber || '');
@@ -173,11 +175,14 @@ const uid = sessionStorage.getItem('uid');
             setUpdatedTotalSalary(editData.updatedTotalSalary || 0);
             setServiceType(editData.serviceType || '');
             setAdjustValue(editData.adjustValue || '');
-
             setTotalSalary(editData.totalSalary || 0);
             setDropoffLocation(editData.dropoffLocation || null);
             setSelectedCompany(editData.selectedCompany || '');
+            setInsuranceAmountBody(editData.insuranceAmountBody || '');
+            console.log('editData.insuranceAmountBody', editData.insuranceAmountBody);
+
             setDisableFields(false);
+
             setIsEditing(true); // Mark as editing
         } else {
             setIsEditing(false); // If no edit data, it's a new entry
@@ -217,7 +222,7 @@ const uid = sessionStorage.getItem('uid');
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Remove time component
         const todayTimestamp = today.getTime();
-    
+
         const leavesRef = collection(db, `user/${uid}/DriverLeaves`);
         const snapshot = await getDocs(leavesRef);
         const leaveData: DriverLeave[] = snapshot.docs.map((doc) => {
@@ -229,16 +234,16 @@ const uid = sessionStorage.getItem('uid');
                 date: data.date, // Ensure `date` exists and is a Firestore timestamp
             };
         });
-    
+
         const filteredLeaves = leaveData.filter((leave) => {
             const leaveDate = leave.date.toDate(); // Convert Firestore timestamp to Date
             leaveDate.setHours(0, 0, 0, 0); // Remove time component
             return leaveDate.getTime() === todayTimestamp;
         });
-    
+
         setDriverLeaves(filteredLeaves); // Now this works with the correct type
     };
-    
+
     useEffect(() => {
         fetchDriverLeaves();
     }, []);
@@ -252,6 +257,7 @@ const uid = sessionStorage.getItem('uid');
             setDisableFields(false);
         }
     }, [trappedLocation]);
+
     const validateForm = () => {
         let tempErrors: { [key: string]: string } = {}; // Allows string keys
         let isValid = true;
@@ -260,11 +266,35 @@ const uid = sessionStorage.getItem('uid');
         if (!phoneNumber.trim()) {
             tempErrors['phoneNumber'] = 'Phone number is required';
             isValid = false;
-        } else if (!/^\d{10}$/.test(phoneNumber)) {
-            tempErrors['phoneNumber'] = 'Phone number is invalid, must be 10 digits';
+        }
+        if (!baseLocation) {
+            tempErrors['baseLocation'] = 'BaseLocation is required';
             isValid = false;
         }
-
+        if (!showroomLocation) {
+            tempErrors['showroomLocation'] = 'showroom is required';
+            isValid = false;
+        }
+        if (!distance) {
+            tempErrors['distance'] = 'distance is required';
+            isValid = false;
+        }
+        if (!serviceType) {
+            tempErrors['serviceType'] = 'serviceType is required';
+            isValid = false;
+        }
+        if (!vehicleNumber) {
+            tempErrors['vehicleNumber'] = 'vehicleNumber is required';
+            isValid = false;
+        }
+        if (!totalDriverDistance) {
+            tempErrors['totalDriverDistance'] = 'totalDriverDistance is required';
+            isValid = false;
+        }
+        if (!vehicleType) {
+            tempErrors['vehicleType'] = 'vehicleType is required';
+            isValid = false;
+        }
         // Trapped location validation
         if (!trappedLocation) {
             tempErrors['trappedLocation'] = 'Trapped location is required';
@@ -294,10 +324,18 @@ const uid = sessionStorage.getItem('uid');
             }
         }
 
+        // Pickup location validation
+        if (!pickupLocation.lat) {
+            tempErrors['pickupLocationLat'] = 'Latitude and ';
+            isValid = false;
+        }
+        if (!pickupLocation.lng) {
+            tempErrors['pickupLocationLng'] = 'Longitude are required and must be a valid number';
+            isValid = false;
+        }
         setErrors(tempErrors);
         return isValid;
     };
-    // ------------------------------------------
     useEffect(() => {
         if (company === 'rsa') {
             const fetchDrivers = async () => {
@@ -326,8 +364,24 @@ const uid = sessionStorage.getItem('uid');
         // Call any other logic you need for applying the adjustment
     };
     const handleInsuranceAmountBodyChange = (amount: any) => {
+        console.log('Insurance Amount Body Changed:', amount);
         setInsuranceAmountBody(amount);
     };
+    const handleConfirm = () => {
+        setIsButtonClicked(true); // Mark the button as clicked
+        setErrorMessage('');
+        if (Number(confirmUpdatedTotalSalary) !== updatedTotalSalary) {
+            setShowModal(true); // Show modal if values do not match
+        } else {
+            setUpdatedTotalSalary(Number(confirmUpdatedTotalSalary));
+            setShowModal(false); // Close modal if opened
+        }
+    };
+
+    const closeModalU = () => {
+        setShowModal(false); // Close modal on button click
+    };
+
     const handleAdjustValueChange = (newAdjustValue: any) => {
         setAdjustValue(newAdjustValue);
         setIsAdjustmentApplied(false);
@@ -338,9 +392,10 @@ const uid = sessionStorage.getItem('uid');
     const handleBodyInsuranceChange = (insurance: any) => {
         setBodyShope(insurance);
     };
-
+    const handleChangedInsuranceChange = (insurance: any) => {
+        setBodyShope(insurance);
+    };
     useEffect(() => {
-      
         if (selectedCompany) {
             // Find the company details corresponding to the selected company
             const foundCompanyData = companies.find((company) => company.id === selectedCompany); // Update this to match your company data structure
@@ -356,8 +411,9 @@ const uid = sessionStorage.getItem('uid');
             setSelectedCompanyData(null);
         }
     }, [selectedCompany, companies]); // Use 'companies' instead of 'drivers'
-
+    // -------------------------------------------------------------------------------------------------------------------
     const handleInputChange = (field: any, value: any) => {
+        console.log("eeeeeee")
         switch (field) {
             case 'showroomLocation':
                 setShowroomLocation(value);
@@ -366,7 +422,7 @@ const uid = sessionStorage.getItem('uid');
 
                 if (selectedShowroom) {
                     setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
-
+                    console.log('nsuranceAmountBodymm', selectedShowroom.insuranceAmountBody);
                     // Check if selectedShowroom has locationLatLng before accessing lat and lng
                     if (selectedShowroom.locationLatLng && selectedShowroom.locationLatLng.lat && selectedShowroom.locationLatLng.lng) {
                         const latString = selectedShowroom.locationLatLng.lat.toString();
@@ -399,6 +455,7 @@ const uid = sessionStorage.getItem('uid');
             case 'totalSalary':
                 setTotalSalary(value || 0);
                 break;
+
             case 'serviceCategory':
                 setServiceCategory(value || 0);
 
@@ -411,11 +468,15 @@ const uid = sessionStorage.getItem('uid');
                 setBodyShope(value || '');
                 break;
             case 'insuranceAmountBody':
+                console.log("fortest",value)
                 setInsuranceAmountBody(value || 0);
                 break;
             case 'adjustValue':
                 setAdjustValue(value || 0);
 
+                break;
+            case 'confirmUpdatedTotalSalary':
+                setConfirmUpdatedTotalSalary(value || 0);
                 break;
             case 'customerName':
                 setCustomerName(value || '');
@@ -426,11 +487,20 @@ const uid = sessionStorage.getItem('uid');
             case 'totalDriverSalary':
                 setTotalDriverSalary(value || 0);
                 break;
-// --------------------------------------------------
             case 'company':
                 setCompany(value);
                 setFileNumber(value === 'self' ? bookingId : '');
                 if (isEditing) {
+                    if (value === 'rsa') {
+                        setSelectedDriver(''); // Reset selectedDriver when company is 'rsa'
+                    }
+                    if (value === 'self') {
+                        setSelectedDriver('');
+                        setSelectedCompany('');
+
+                        setSelectedCompany('');
+                        setIsModalOpen(true);
+                    }
                 }
                 break;
 
@@ -455,41 +525,34 @@ const uid = sessionStorage.getItem('uid');
                 setUpdatedTotalSalary(value || '');
                 break;
 
-                case 'distance': 
+            case 'distance':
                 const newDistance = value || 0; // Default to 0 if totalDistance is NaN
                 setDistance(newDistance);
-            
+
                 if (isEditing) {
                     const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-            
+
                     if (!selectedDriverData) {
                         console.error('Driver data is missing. Cannot calculate salary.');
                         return;
                     }
-            
+
                     const isRSA = selectedDriverData.companyName !== 'Company';
-            
+
                     // Declare variables for salary calculation
                     let salary;
                     let basicSalaryKM;
                     let salaryPerKM;
                     let selectedService;
-            
+
                     if (selectedCompanyData) {
-                        if (
-                            selectedCompanyData.basicSalaries &&
-                            selectedCompanyData.selectedServices &&
-                            selectedCompanyData.basicSalaryKm &&
-                            selectedCompanyData.salaryPerKm
-                        ) {
+                        if (selectedCompanyData.basicSalaries && selectedCompanyData.selectedServices && selectedCompanyData.basicSalaryKm && selectedCompanyData.salaryPerKm) {
                             // Filter only the selected serviceType from the selectedServices array
-                            selectedService = selectedCompanyData.selectedServices.find(
-                                (service: string) => service === serviceType
-                            );
-            
+                            selectedService = selectedCompanyData.selectedServices.find((service: string) => service === serviceType);
+
                             setSelectedServiceType(selectedService);
                             console.log('Selected Service Type:', selectedService);
-            
+
                             // Use the selected service type to retrieve values
                             salary = selectedCompanyData.basicSalaries[selectedService];
                             basicSalaryKM = selectedCompanyData.basicSalaryKm[selectedService];
@@ -500,27 +563,19 @@ const uid = sessionStorage.getItem('uid');
                         }
                     } else if (isRSA) {
                         // Fallback for RSA scenario or when selectedCompanyData is unavailable
-                        selectedService = selectedDriverData.selectedServices.find(
-                            (service: string) => service === serviceType
-                        );
-            
-                        salary = isRSA
-                            ? serviceDetails.salary
-                            : selectedDriverData.basicSalaries[selectedService];
-                        basicSalaryKM = isRSA
-                            ? serviceDetails.basicSalaryKM
-                            : selectedDriverData.basicSalaryKm[selectedService];
-                        salaryPerKM = isRSA
-                            ? serviceDetails.salaryPerKM
-                            : selectedDriverData.salaryPerKm[selectedService];
+                        selectedService = selectedDriverData.selectedServices.find((service: string) => service === serviceType);
+
+                        salary = isRSA ? serviceDetails.salary : selectedDriverData.basicSalaries[selectedService];
+                        basicSalaryKM = isRSA ? serviceDetails.basicSalaryKM : selectedDriverData.basicSalaryKm[selectedService];
+                        salaryPerKM = isRSA ? serviceDetails.salaryPerKM : selectedDriverData.salaryPerKm[selectedService];
                     }
-            
+
                     if (!selectedService) {
                         console.error(`No matching service type found for driver ${selectedDriverData.id} and serviceType ${serviceType}`);
                         setTotalSalary(0);
                         return;
                     }
-            
+
                     if (calculateTotalSalary) {
                         console.log(`Calculating total salary for driver ${selectedDriverData.id} with values:`, {
                             salary,
@@ -529,23 +584,15 @@ const uid = sessionStorage.getItem('uid');
                             salaryPerKM,
                             isRSA,
                         });
-            
-                        const calculatedSalary = calculateTotalSalary(
-                            salary,
-                            newDistance,
-                            basicSalaryKM,
-                            salaryPerKM,
-                            isRSA
-                        );
-            
+
+                        const calculatedSalary = calculateTotalSalary(salary, newDistance, basicSalaryKM, salaryPerKM, isRSA);
+
                         console.log(`Driver ${selectedDriverData.id} - Calculated Salary: ${calculatedSalary}`);
                         setTotalSalary(parseFloat(calculatedSalary.toFixed(2)));
                     }
                 }
                 break;
-            
-            
-        //    -------------------------------------------------------------------------------------
+
             case 'selectedDriver':
                 setSelectedDriver(value || '');
 
@@ -598,12 +645,12 @@ const uid = sessionStorage.getItem('uid');
                 }
                 break;
 
-            case 'company':
-                setCompany(value);
-                if (value === 'rsa') {
-                    setSelectedDriver('');
-                }
-                break;
+            // case 'company':
+            //     setCompany(value);
+            //     if (value === 'rsa') {
+            //         setSelectedDriver('');
+            //     }
+            //     break;
 
             case 'selectedCompany':
                 setSelectedCompany(value);
@@ -681,6 +728,7 @@ const uid = sessionStorage.getItem('uid');
     };
 
     const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
+    // -----------------------------------------------------------------------------------------------------------
     const openModal = (distance: any) => {
         setIsModalOpen(true);
     };
@@ -783,7 +831,6 @@ const uid = sessionStorage.getItem('uid');
             try {
                 const driversCollection = collection(db, `user/${uid}/driver`);
                 const snapshot = await getDocs(driversCollection);
-
 
                 const filteredDrivers = await Promise.all(
                     snapshot.docs.map(async (doc) => {
@@ -961,7 +1008,6 @@ const uid = sessionStorage.getItem('uid');
                         salary = selectedCompanyData.basicSalaries[selectedService];
                         basicSalaryKM = selectedCompanyData.basicSalaryKm[selectedService];
                         salaryPerKM = selectedCompanyData.salaryPerKm[selectedService];
-
                     } else {
                         console.error('Missing properties in selectedCompanyData');
                     }
@@ -972,7 +1018,6 @@ const uid = sessionStorage.getItem('uid');
                     salary = isRSA ? serviceDetails.salary : driver.basicSalaries[selectedService];
                     basicSalaryKM = isRSA ? serviceDetails.basicSalaryKM : driver.basicSalaryKm[selectedService];
                     salaryPerKM = isRSA ? serviceDetails.salaryPerKM : driver.salaryPerKm[selectedService];
-
                 }
 
                 // Calculate the total salary if calculateTotalSalary is available
@@ -1005,7 +1050,7 @@ const uid = sessionStorage.getItem('uid');
         basicSalaryKM = parseFloat(basicSalaryKM);
         salaryPerKM = parseFloat(salaryPerKM);
         salary = parseFloat(salary);
-       
+
         if (totalDriverDistance > basicSalaryKM) {
             return salary + (totalDriverDistance - basicSalaryKM) * salaryPerKM;
         } else {
@@ -1062,18 +1107,26 @@ const uid = sessionStorage.getItem('uid');
             // newTotalSalary -= parseFloat(insuranceAmountBody || 0);
             newTotalSalary -= parseFloat(typeof insuranceAmountBody === 'string' ? insuranceAmountBody : insuranceAmountBody.toString()) || 0;
         }
+        if (serviceCategory === 'Body Shop' && bodyShope === 'both') {
+            if (isEditing) {
+                // Set insuranceAmountBody to editData.insuranceAmountBody during editing
+                setInsuranceAmountBody(editData?.insuranceAmountBody || 0);
+            }
+            newTotalSalary -= parseFloat(typeof insuranceAmountBody === 'string' ? insuranceAmountBody : insuranceAmountBody.toString()) || 0;
+        }
+    
+        console.log('newTotalSalary', newTotalSalary);
         if (editData?.adjustValue) {
             // If editData has adjustValue, prioritize it
             if (!isAdjustmentApplied) {
                 setUpdatedTotalSalary(parseFloat(editData.adjustValue) || 0);
             }
-                } else if (newTotalSalary !== updatedTotalSalary) {
+        } else if (newTotalSalary !== updatedTotalSalary) {
             // Otherwise, use the calculated newTotalSalary
             setUpdatedTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
         }
-    }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope, adjustValue, editData?.adjustValue]);
+    }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope, adjustValue, editData?.adjustValue,isEditing]);
 
-    
     const formatDate = (date: any) => {
         const day = date.getDate().toString().padStart(2, '0');
         const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are zero-based
@@ -1136,6 +1189,7 @@ const uid = sessionStorage.getItem('uid');
             console.error('Error sending notification:', error);
         }
     };
+    // --------------------------------------------------
     const sendNotificationsToAllDrivers = async () => {
         try {
             // Extract all FCM tokens from drivers
@@ -1151,9 +1205,17 @@ const uid = sessionStorage.getItem('uid');
     };
 
     const addOrUpdateItem = async (): Promise<void> => {
-        if (validateForm() && !loading) { // Check if loading is false before proceeding
+        if (!validateForm()) {
+            return; // Stop execution if validation fails
+        }
+        if (!isButtonClicked) {
+            setErrorMessage("Click 'OK' button"); // Show error message if "OK" is not clicked
+            return;
+        }
+        if (validateForm() && !loading) {
+            // Check if loading is false before proceeding
             setLoading(true);
-                        try {
+            try {
                 let selectedDriverData;
                 if (selectedDriver === 'dummy') {
                     selectedDriverData = {
@@ -1176,7 +1238,7 @@ const uid = sessionStorage.getItem('uid');
 
                 if (selectedCompanyData) {
                     const { advancePayment, netTotalAmountInHand, companyName } = selectedCompanyData;
-                  
+
                     // Check if the condition applies based on the company's name
                     if (companyName === 'Company' && advancePayment < netTotalAmountInHand) {
                         alert('Exceeds Credit Limit Amount');
@@ -1186,7 +1248,7 @@ const uid = sessionStorage.getItem('uid');
                 } else if (selectedDriverData) {
                     // const driverName = selectedDriverData.driverName || 'DummyDriver';
                     const { advancePayment, netTotalAmountInHand, companyName } = selectedDriverData;
-          
+
                     // Check if the condition applies based on the driver's company name
                     if (companyName !== 'RSA' && advancePayment < netTotalAmountInHand) {
                         alert('Exceeds Credit Limit Amount');
@@ -1421,8 +1483,8 @@ const uid = sessionStorage.getItem('uid');
                                 </option>
                             ))}
                         </select>
-                        {errors.selectedCompany && <p className={styles.errorMessage}>{errors.selectedCompany}</p>}
-                        {companies.length === 0 && <p className={styles.errorMessage}>No drivers available</p>}{' '}
+                        {errors.selectedCompany && <p className="text-red-500 text-sm mt-1">{errors.selectedCompany}</p>}
+                        {companies.length === 0 && <p className="text-red-500 text-sm mt-1">No drivers available</p>}{' '}
                     </div>
                 )}
 
@@ -1470,6 +1532,8 @@ const uid = sessionStorage.getItem('uid');
                             onChange={handleLocationChange}
                             value={manualInput}
                         />
+                        {errors.pickupLocation && <p className="text-red-500 text-sm mt-1">{errors.pickupLocation}</p>}
+
                         <input
                             type="text"
                             id="latLng"
@@ -1484,6 +1548,13 @@ const uid = sessionStorage.getItem('uid');
                             }}
                             autoComplete="off"
                         />
+                        {errors.pickupLocationLat && errors.pickupLocationLng && (
+                            <p className="text-red-500 text-sm mt-1">
+                                {errors.pickupLocationLat}
+                                {errors.pickupLocationLng}
+                            </p>
+                        )}
+
                         <a href={`https://www.google.com/maps/search/?api=1&query=${pickupLocation.lat},${pickupLocation.lng}`} target="_blank" rel="noopener noreferrer" className={styles.mapButton}>
                             <IconMapPin />
                         </a>
@@ -1504,6 +1575,7 @@ const uid = sessionStorage.getItem('uid');
                         readOnly
                         onClick={openModal1}
                     />
+                    {errors.baseLocation && <p className="text-red-500 text-sm mt-1">{errors.baseLocation}</p>}
                 </div>
                 {isModalOpen1 && (
                     <div
@@ -1552,6 +1624,8 @@ const uid = sessionStorage.getItem('uid');
                                 }}
                             />
                         )}
+                        {errors.showroomLocation && <p className="text-red-500 text-sm mt-1">{errors.showroomLocation}</p>}
+
                         <button onClick={handleButtonClick} className={styles.addButton}>
                             <IconPlus />
                         </button>
@@ -1599,6 +1673,7 @@ const uid = sessionStorage.getItem('uid');
                                 className={styles.formControl}
                                 onChange={(e) => handleInputChange('distance', e.target.value)}
                             />
+
                             <a
                                 href={`https://www.google.com/maps/dir/?api=1&origin=${baseLocation?.lat},${baseLocation?.lng}&destination=${baseLocation?.lat},${baseLocation?.lng}&waypoints=${pickupLocation?.lat},${pickupLocation?.lng}|${dropoffLocation?.lat},${dropoffLocation?.lng}`}
                                 target="_blank"
@@ -1607,7 +1682,9 @@ const uid = sessionStorage.getItem('uid');
                             >
                                 <IconMapPin />
                             </a>
+                            {errors.distance && <p className="text-red-500 text-sm mt-1">{errors.distance}</p>}
                         </div>
+                        {errors.distance && <p className="text-red-500 text-sm mt-1">{errors.distance}</p>}
                     </div>
                 </div>
 
@@ -1707,6 +1784,7 @@ const uid = sessionStorage.getItem('uid');
                                 </option>
                             ))}
                         </select>
+                        {errors.serviceType && <p className="text-red-500 text-sm mt-1">{errors.serviceType}</p>}
                     </div>
                 )}
 
@@ -1749,6 +1827,7 @@ const uid = sessionStorage.getItem('uid');
                                                 <th className="py-2 px-4 text-left">Payable Amount</th>
                                                 <th className="py-2 px-4 text-left font-bold text-violet-600">Profit after Deducting Expenses</th>
                                                 <th className="py-2 px-4 text-left  text-red-600">Leave Status</th>
+                                                <th className="py-2 px-4 text-left font-bold">Current Status</th> {/* New Column Header */}
 
                                                 <th className="py-2 px-4 text-left">Select</th>
                                             </tr>
@@ -1763,6 +1842,7 @@ const uid = sessionStorage.getItem('uid');
 
                                                 <td className="py-2 px-4 text-red-600 font-semibold text-blue-800">0.00</td>
                                                 <td className="py-2 px-4 text-red-600">--------</td>
+                                                <td className="py-2 px-4 text-red-600">--------</td>
 
                                                 <td className="py-2 px-4">
                                                     <input
@@ -1771,6 +1851,27 @@ const uid = sessionStorage.getItem('uid');
                                                         value="dummy"
                                                         checked={selectedDriver === 'dummy'}
                                                         onChange={() => handleInputChange('selectedDriver', 'dummy')}
+                                                    />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td className="py-2 px-4 font-semibold text-blue-950" style={{ fontSize: '18px' }}>
+                                                    DummyProvider
+                                                </td>
+                                                <td className="py-2 px-4 font-semibold text-blue-950">0.00</td>
+                                                <td className="py-2 px-4 font-semibold text-blue-950">0.00</td>
+
+                                                <td className="py-2 px-4 text-red-600 font-semibold text-blue-800">0.00</td>
+                                                <td className="py-2 px-4 text-red-600">--------</td>
+                                                <td className="py-2 px-4 text-red-600">--------</td>
+
+                                                <td className="py-2 px-4">
+                                                    <input
+                                                        type="radio"
+                                                        name="selectedDriver"
+                                                        value="dummyProvider"
+                                                        checked={selectedDriver === 'dummyProvider'}
+                                                        onChange={() => handleInputChange('selectedDriver', 'dummyProvider')}
                                                     />
                                                 </td>
                                             </tr>
@@ -1838,35 +1939,37 @@ const uid = sessionStorage.getItem('uid');
                                                             <th className="py-2 px-4 text-left">Payable Amount</th>
                                                             <th className="py-2 px-4 text-left font-bold text-violet-600">Profit after Deducting Expenses</th>
                                                             <th className="py-2 px-4 text-left font-bold text-red-600">Leave Status</th>
+                                                            <th className="py-2 px-4 text-left font-bold">Current Status</th> {/* New Column Header */}
 
                                                             <th className="py-2 px-4 text-left">Select</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         <tr>
-                                                        <td
-            className="py-2 px-4 font-semibold"
-            style={{
-                color: driver.companyName !== 'Company' && driver.companyName !== 'RSA' ? 'red' : 'green',
-                fontSize: '18px',
-            }}
-        >
-            {driver.driverName || 'Unknown Driver'}
-        </td>
+                                                            <td
+                                                                className="py-2 px-4 font-semibold"
+                                                                style={{
+                                                                    color: driver.companyName !== 'Company' && driver.companyName !== 'RSA' ? 'red' : 'green',
+                                                                    fontSize: '18px',
+                                                                }}
+                                                            >
+                                                                {driver.driverName || 'Unknown Driver'}
+                                                            </td>
                                                             <td className="py-2 px-4">{driver.pickupDistance}</td> {/* Display the pickup distance here */}
                                                             <td className="py-2 px-4">{calculatedSalary.toFixed(2)}</td>
                                                             <td className="py-2 px-4 text-red-600 font-semibold" style={{ backgroundColor: '#ffe6e6' }}>
                                                                 {profit.toFixed(2)}
                                                             </td>
                                                             <td
-    style={{
-        color: isOnLeave ? 'red' : 'green',
-        fontSize: isOnLeave ? '1.2em' : '1.2em',
-        fontWeight: 'bold',
-    }}
->
-    {isOnLeave ? 'Leave Today' : 'Available'}
-</td>
+                                                                style={{
+                                                                    color: isOnLeave ? 'red' : 'green',
+                                                                    fontSize: isOnLeave ? '1.2em' : '1.2em',
+                                                                    fontWeight: 'bold',
+                                                                }}
+                                                            >
+                                                                {isOnLeave ? 'Leave Today' : 'Available'}
+                                                            </td>
+                                                            <td className="py-2 px-4 text-blue-800 font-semibold">{driver.newStatus || 'Unknown'}</td> {/* New Column Data */}
 
                                                             <td className="py-2 px-4">
                                                                 <input
@@ -1923,13 +2026,13 @@ const uid = sessionStorage.getItem('uid');
                                 </div>
                             )}
 
-                            {/* <div className="mt-4 flex items-center space-x-4"> */}
+                            <div className="mt-4 flex flex-wrap items-center gap-4">
                                 {/* Total Amount without insurance */}
-                                <div className="flex items-center w-1/2">
+                                <div className="flex items-center w-1/3">
                                     <label htmlFor="totalSalary" className="ltr:mr-2 rtl:ml-2 mb-0">
                                         Total Amount without insurance
                                     </label>
-                                    <div className="form-input flex-1">
+                                    <div className="form-input flex">
                                         <input
                                             id="totalSalary"
                                             type="text"
@@ -1950,7 +2053,7 @@ const uid = sessionStorage.getItem('uid');
                                 </div>
 
                                 {/* Insurance Amount Body */}
-                                <div className="flex items-center w-1/2">
+                                <div className="flex items-center w-1/3">
                                     <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 mb-0">
                                         Insurance Amount Body
                                     </label>
@@ -1958,11 +2061,11 @@ const uid = sessionStorage.getItem('uid');
                                 </div>
 
                                 {/* Payable Amount (with insurance) */}
-                                <div className="flex items-center w-1/2">
+                                <div className="flex items-center w-1/3">
                                     <label htmlFor="updatedTotalSalary" className=" mb-0">
                                         Payable Amount (with insurance)
                                     </label>
-                                    <div className="form-input flex-1">
+                                    <div className="form-input flex">
                                         <input
                                             id="updatedTotalSalary"
                                             type="text"
@@ -1981,8 +2084,48 @@ const uid = sessionStorage.getItem('uid');
                                         />
                                     </div>
                                 </div>
+
+                                <div className="flex items-center w-full lg:w-1/2">
+                                    <label htmlFor="confirmUpdatedTotalSalary" className="mb-0">
+                                        Confirm Payable Amount
+                                    </label>
+                                    <div className="form-input flex items-center gap-2 flex-1">
+                                        <input
+                                            id="confirmUpdatedTotalSalary"
+                                            type="text"
+                                            name="confirmUpdatedTotalSalary"
+                                            className="w-full text-success"
+                                            style={{
+                                                padding: '0.5rem',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '5px',
+                                                fontSize: '2rem',
+                                                outline: 'none',
+                                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                                            }}
+                                            value={confirmUpdatedTotalSalary}
+                                            onChange={(e) => setConfirmUpdatedTotalSalary(e.target.value)}
+                                        />
+                                        <button type="button" className={`px-4 py-2 rounded shadow ${isButtonClicked ? 'bg-green-500' : 'bg-blue-500'} text-white`} onClick={handleConfirm}>
+                                            OK
+                                        </button>
+                                    </div>
+                                    {errorMessage && <p className="text-red-500 text-sm mt-2">{errorMessage}</p>}
+                                </div>
                             </div>
-                        
+                            {showModal && (
+                                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                                    <div className="bg-red-500 text-white p-4 rounded shadow-lg w-1/3" style={{ textAlign: 'center' }}>
+                                        <p>
+                                            Confirm that <strong>Confirm Payable Amount</strong> equals <strong>Payable Amount (with insurance)</strong>.
+                                        </p>
+                                        <button onClick={closeModalU} className="mt-4 px-4 py-2 bg-white text-red-500 font-bold rounded">
+                                            Close
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </React.Fragment>
                 )}
 
@@ -1999,6 +2142,7 @@ const uid = sessionStorage.getItem('uid');
                         value={totalDriverDistance}
                         className={styles.formControl}
                     />
+                    {errors.totalDriverDistance && <p className="text-red-500 text-sm mt-1">{errors.totalDriverDistance}</p>}
                 </div>
                 {totalDriverDistance && (
                     <div className={styles.formGroup}>
@@ -2075,6 +2219,7 @@ const uid = sessionStorage.getItem('uid');
                         value={vehicleNumber}
                         className={styles.formControl}
                     />
+                    {errors.vehicleNumber && <p className="text-red-500 text-sm mt-1">{errors.vehicleNumber}</p>}
                 </div>
                 <div className={styles.formGroup}>
                     <label htmlFor="vehicleType" className={styles.label}>
@@ -2108,6 +2253,7 @@ const uid = sessionStorage.getItem('uid');
                             <option value="20">20 Wheeler</option>
                         </select>
                     </div>
+                    {errors.vehicleType && <p className="text-red-500 text-sm mt-1">{errors.vehicleType}</p>}
                 </div>
 
                 <div className={styles.formGroup}>
@@ -2138,18 +2284,11 @@ const uid = sessionStorage.getItem('uid');
                     />
                 </div>
 
-                <button
-    type="button"
-    onClick={addOrUpdateItem}
-    className={styles.submitButton}
-    disabled={loading}
->
-    {editData ? 'Update' : 'Save'}
-</button>
-
+                <button type="button" onClick={addOrUpdateItem} className={styles.submitButton} disabled={loading}>
+                    {editData ? 'Update' : 'Save'}
+                </button>
             </form>
         </div>
     );
 };
 export default WithoutMapBooking;
-

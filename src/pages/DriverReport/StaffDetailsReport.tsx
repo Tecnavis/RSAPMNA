@@ -23,6 +23,8 @@ interface Booking {
     fileNumber: string;
     driver: string;
     updatedTotalSalary: number;
+    companyBooking:boolean;
+    companyName:string;
 }
 
 const StaffDetailsReport = () => {
@@ -31,6 +33,9 @@ const StaffDetailsReport = () => {
     const [amountGivenValues, setAmountGivenValues] = useState<{ [key: number]: number }>({});
     const [buttonColors, setButtonColors] = useState<{ [key: number]: string }>({});
     const [bookings, setBookings] = useState<Booking[]>([]);
+ const [totalAmount, setTotalAmount] = useState<number>(0);
+  const [totalAmountGiven, setTotalAmountGiven] = useState<number>(0);
+  const [totalAmountInHand, setTotalAmountInHand] = useState<number>(0);
 
     const [filteredEntries, setFilteredEntries] = useState<StaffReceived[]>([]);
     const { id } = useParams<{ id: string }>();
@@ -71,7 +76,19 @@ const navigate = useNavigate()
                     id: doc.id,
                     ...doc.data(),
                     amount: Number(doc.data().amount),
+                    amountGiven: Number(doc.data().amountGiven || 0), // Ensure amountGiven is handled
+
                 } as StaffReceived));
+                let totalAmount = 0;
+                let totalAmountGiven = 0;
+    
+                fetchedEntries.forEach((entry) => {
+                    totalAmount += entry.amount;
+                    totalAmountGiven += entry.amountGiven || 0;
+                });
+    
+                // Calculate total amount in hand
+                const totalAmountInHand = totalAmount - totalAmountGiven;
     
                 // Fetch bookings data for selectedBookingIds (handling multiple IDs)
                 const bookingsPromises = fetchedEntries
@@ -99,7 +116,8 @@ const navigate = useNavigate()
     
                 setStaffReceivedEntries(sortedEntries);
                 setFilteredEntries(sortedEntries);
-    
+                setTotalAmountInHand(totalAmountInHand); // Update state for display
+
                 const initialColors = sortedEntries.map(entry => {
                     const amountGiven = entry.amountGiven || 0;
                     return amountGiven <= 0 ? 'red' : amountGiven < entry.amount ? 'orange' : 'green';
@@ -191,6 +209,10 @@ const navigate = useNavigate()
                                 <p className="text-lg text-gray-700">
                                     📞 <span className="font-medium">Phone:</span> {staff.phone_number}
                                 </p>
+                                <p className="text-lg text-gray-700 mt-4">
+                                💰 <span className="font-medium">Total Amount In Hand:</span>{' '}
+                                {totalAmountInHand !== null ? `₹${totalAmountInHand}` : 'Calculating...'}
+                            </p>
                             </div>
                         </div>
                     </div>
@@ -225,7 +247,7 @@ const navigate = useNavigate()
 
                                     <th className="px-6 py-3 border-b-2 border-gray-300">Date</th>
                                     <th className="px-6 py-3 border-b-2 border-gray-300">FileNumber</th>
-                                    <th className="px-6 py-3 border-b-2 border-gray-300">Driver Name</th>
+                                    <th className="px-6 py-3 border-b-2 border-gray-300">Driver/Company Name</th>
 
                                     <th className="px-6 py-3 border-b-2 border-gray-300">Staff Received Amount</th>
                                     {role !== 'staff' && (
@@ -253,10 +275,12 @@ const navigate = useNavigate()
 </td>
 <td className="px-6 py-4 border-b">
     {entry.bookings?.map((booking, idx) => (
-        <div key={idx}>{booking.driver}</div> // Displaying booking details
+        <div key={idx}>
+            {booking.companyBooking ? booking.companyName : booking.driver}
+        </div>
     ))}
 </td>
-          
+    
             <td className="px-6 py-4 border-b">
     {(Number(entry.amount) || 0).toFixed(2)}
 </td>

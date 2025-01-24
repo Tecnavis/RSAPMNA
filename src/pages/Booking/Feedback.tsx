@@ -26,6 +26,9 @@ const Feedback: React.FC = () => {
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
     const navigate = useNavigate();
+    const role = sessionStorage.getItem('role');
+
+    const userName = sessionStorage.getItem('username');
 
     const [feedback, setFeedback] = useState<FeedbackState>({
         isDriverWearingUniform: '',
@@ -144,7 +147,8 @@ const Feedback: React.FC = () => {
             alert('Please fill all fields.');
             return;
         }
-    
+        const feedbackWritten = role === 'admin' ? role : userName; // Determine feedbackWritten value
+
         const feedbackData = {
             feedback,
             totalPoints,
@@ -161,8 +165,11 @@ const Feedback: React.FC = () => {
             );
     
             const bookingDocRef = doc(db, `user/${uid}/bookings`, bookingId);
-            await setDoc(bookingDocRef, { feedback: true }, { merge: true });
-    
+            await setDoc(
+                bookingDocRef,
+                { feedback: true, feedbackWritten }, // Add feedbackWritten to bookings
+                { merge: true }
+            );    
             // Calculate total points from feedbacks subcollection
             const feedbacksRef = collection(driverDocRef, 'feedbacks');
             const feedbacksSnapshot = await getDocs(feedbacksRef);

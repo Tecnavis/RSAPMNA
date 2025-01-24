@@ -26,8 +26,64 @@
     .no-print {
       display: none !important; /* Hide elements with the 'no-print' class */
     }
-  
+  /* Print Styles */
+@media print {
+  .print-container {
+      display: block;
+      width: 100%;
+      margin: 0;
+  }
+
+  .print-card {
+      display: block;
+      margin-bottom: 20px;
+      page-break-inside: avoid;
+      width: 100%;
+  }
+
+  .grid {
+      display: block;
+      padding: 0;
+  }
+
+  /* Hide unnecessary items like icons during print */
+  .fas {
+      display: none;
+  }
+
+  /* Adjust the size of text */
+  .text-2xl {
+      font-size: 18px;
+  }
+
+  .text-lg {
+      font-size: 14px;
+  }
+
+  /* Remove hover effects */
+  .hover\:scale-\[1\.05\]:hover,
+  .hover\:shadow-3xl:hover {
+      transform: none;
+      box-shadow: none;
+  }
+}
+
   
   }
-  
+  @media print {
+    .company-details {
+        position: absolute;
+        right: 20px; /* Adjust the position to the right */
+        top: 20px; /* Adjust the top position */
+        text-align: right; /* Align text and logo to the right */
+    }
+
+    .company-logo {
+        width: 100px; /* Adjust the logo size as per your requirement */
+        height: auto;
+        display: block;
+        margin: 0 auto;
+    }
+}
+ 
   
