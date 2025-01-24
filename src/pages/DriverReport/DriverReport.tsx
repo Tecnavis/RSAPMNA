@@ -32,6 +32,7 @@ interface Booking {
     totalDriverSalary: number | string;
     approve?: boolean; 
     receivedUser?:string;
+    OkClick?:boolean;
 }
 const DriverReport: React.FC = () => {
     const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -82,6 +83,8 @@ const DriverReport: React.FC = () => {
                                 selectedDriver: data.selectedDriver ?? '',
                                 transferedSalary: data.transferedSalary ?? 0, // Added property
         totalDriverSalary: data.totalDriverSalary ?? 0,
+        OkClick: data.OkClick ?? false, // Ensure this field exists
+
                             };
                         }) as Booking[];
     
@@ -151,18 +154,23 @@ console.log('Total Balance:', totalBalance);
                                         .reduce((sum, b) => {
                                             const receivedCompany = Number(b.receivedAmountCompany) || 0;
                                             const updatedSalary = Number(b.updatedTotalSalary) || 0;
-                                            const balanceCompany = b.approve ? 0 : updatedSalary - receivedCompany;
-    
-                                            return sum + balanceCompany;
-                                        }, 0);
-    
-                                    const totalDriverSalary = driverBookingsForSalaries.reduce((sum, b) => {
-                                        return sum + parseFloat(b.totalDriverSalary || 0);
-                                    }, 0);
-    
-                                    const totalTransferedSalary = driverBookingsForSalaries.reduce((sum, b) => {
-                                        return sum + parseFloat(b.transferedSalary || 0);
-                                    }, 0);
+                                            // Check for OkClick to override balanceCompany to 0
+                                        const balanceCompany = b.OkClick
+                                        ? 0
+                                        : b.approve
+                                        ? 0
+                                        : updatedSalary - receivedCompany;
+
+                                    return sum + balanceCompany;
+                                }, 0);
+
+                            const totalDriverSalary = driverBookingsForSalaries.reduce((sum, b) => {
+                                return sum + parseFloat(b.totalDriverSalary || 0);
+                            }, 0);
+
+                            const totalTransferedSalary = driverBookingsForSalaries.reduce((sum, b) => {
+                                return sum + parseFloat(b.transferedSalary || 0);
+                            }, 0);
     
                                     const totalSalaryAmount = totalDriverSalary - totalTransferedSalary;
     

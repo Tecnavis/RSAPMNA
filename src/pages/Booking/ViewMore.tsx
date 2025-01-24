@@ -47,11 +47,11 @@ interface BookingDetails {
     bookingChecked: boolean;
     paymentStatus: string;
     feedback?: boolean;
-
+    remarkWritten?: string;
     companyName?: string;
     vehicleModel: string;
     droppedTime: Timestamp | null | undefined;
-
+    feedbackWritten?: string;
     // Add missing properties here
     driverSalary?: string;
     companyAmount?: string;
@@ -97,7 +97,6 @@ const ViewMore: React.FC = () => {
     const bookingCheck = bookingDetails?.bookingChecked ?? false;
     const { search } = useLocation();
     const [showPickupDetails, setShowPickupDetails] = useState(false);
-    const [fixedPoint, setFixedPoint] = useState<number | null>(null);
     const [showDropoffDetails, setShowDropoffDetails] = useState(false);
     const queryParams = new URLSearchParams(search);
     const userName = sessionStorage.getItem('username');
@@ -209,7 +208,40 @@ const ViewMore: React.FC = () => {
         remark: false,
         companyName: false,
     });
-
+    useEffect(() => {
+        if (bookingDetails) {
+            setEditedFields({
+                salary: bookingDetails?.updatedTotalSalary || '',
+                fileNumber: bookingDetails?.fileNumber || '',
+                totalDriverSalary: bookingDetails?.totalDriverSalary || '',
+                serviceVehicle: bookingDetails?.serviceVehicle || '',
+                bookingId: bookingDetails?.bookingId,
+                company: bookingDetails?.company,
+                companyName: bookingDetails?.companyName,
+                trappedLocation: bookingDetails?.trappedLocation,
+                showroomLocation: bookingDetails?.showroomLocation,
+                customerName: bookingDetails?.customerName,
+                driver: bookingDetails?.driver,
+                selectedCompany: bookingDetails?.selectedCompany,
+                totalDriverDistance: bookingDetails?.totalDriverDistance,
+                vehicleNumber: bookingDetails?.vehicleNumber,
+                vehicleModel: bookingDetails?.vehicleModel,
+                baseLocation: bookingDetails?.baseLocation,
+                pickupLocation: bookingDetails?.pickupLocation,
+                dropoffLocation: bookingDetails?.dropoffLocation,
+                distance: bookingDetails?.distance,
+                serviceType: bookingDetails?.serviceType,
+                rcBookImageURLs: bookingDetails?.rcBookImageURLs || [],
+                vehicleImageURLs: bookingDetails?.vehicleImageURLs || [],
+                fuelBillImageURLs: bookingDetails?.fuelBillImageURLs || [],
+                comments: bookingDetails?.comments,
+                pickedTime: bookingDetails?.pickedTime,
+                droppedTime: bookingDetails?.droppedTime,
+                remark: bookingDetails?.remark,
+                feedback: bookingDetails?.feedback,
+            });
+        }
+    }, [bookingDetails]);
     const handleImageClick = (url: string) => {
         setSelectedImage(url); // Set selected image for modal
     };
@@ -238,8 +270,7 @@ const ViewMore: React.FC = () => {
             }));
         }
     };
-
-    // ------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------------
     useEffect(() => {
         fetchBookingDetails();
         fetchDrivers();
@@ -315,6 +346,8 @@ const ViewMore: React.FC = () => {
                     bookingChecked: data.bookingChecked || false,
                     paymentStatus: data.paymentStatus || '',
                     feedback: data.feedback || false,
+                    remarkWritten: data.remarkWritten || '',
+                    feedbackWritten: data.feedbackWritten || '',
                 });
             }
         } catch (error) {
@@ -364,13 +397,6 @@ const ViewMore: React.FC = () => {
         }));
     };
 
-    const timestampToDate = (timestamp: Timestamp | null | undefined): Date | null => {
-        if (timestamp) {
-            return timestamp.toDate(); // Converts Timestamp to Date if it's not null
-        }
-        return null;
-    };
-
     // Updated useEffect
     useEffect(() => {
         if (bookingDetails) {
@@ -408,6 +434,8 @@ const ViewMore: React.FC = () => {
             return; // Exit the function if either is undefined
         }
         try {
+            const remarkWritten = role === 'admin' ? role : userName;
+
             const updatedAmount = bookingDetails?.company?.toLowerCase() === 'rsa' ? '0' : formData.amount;
 
             const docRef = doc(db, `user/${uid}/bookings`, id);
@@ -415,7 +443,8 @@ const ViewMore: React.FC = () => {
                 ...formData,
                 amount: updatedAmount,
                 status: 'Order Completed',
-                closedStatus: 'Admin closed booking',
+                closedStatus: 'Admin/Staff closed booking',
+                remarkWritten,
             });
             console.log('Booking successfully updated!');
             setShowForm(false);
@@ -459,31 +488,6 @@ const ViewMore: React.FC = () => {
                     [field]: false,
                 }));
             }
-        }
-    };
-    const downloadImage = async (filePath: any, filename: any) => {
-        const storage = getStorage();
-        const fileRef = ref(storage, filePath);
-
-        try {
-            const url = await getDownloadURL(fileRef); // Get the public URL for the image
-
-            // Fetch the image file
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch image: ${response.statusText}`);
-            }
-            const blob = await response.blob();
-
-            // Create a link and trigger the download
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `${filename}.jpg`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } catch (error) {
-            console.error('Error downloading image:', error);
         }
     };
 
@@ -572,7 +576,12 @@ const ViewMore: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {bookingDetails?.vehicleImageURLs.map((url, index) => (
                             <div key={index}>
-                                <img src={url} alt={`Vehicle Image ${index + 1}`} />
+                                <img
+                                    src={url}
+                                    alt={`Vehicle Image ${index + 1}`}
+                                    className="cursor-pointer" // Make the image clickable
+                                    onClick={() => handleImageClick(url)} // Open the image in the modal
+                                />
                                 <input type="file" accept="image/*" onChange={(event) => handleReplaceImage(event, index, 'vehicleImageURLs')} />
                             </div>
                         ))}
@@ -586,7 +595,12 @@ const ViewMore: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {bookingDetails?.vehicleImgURLs.map((url, index) => (
                             <div key={index}>
-                                <img src={url} alt={`Vehicle Img ${index + 1}`} />
+                                <img
+                                    src={url}
+                                    alt={`Vehicle Img ${index + 1}`}
+                                    className="cursor-pointer" // Make the image clickable
+                                    onClick={() => handleImageClick(url)} // Open the image in the modal
+                                />
                                 <input type="file" accept="image/*" onChange={(event) => handleReplaceImage(event, index, 'vehicleImgURLs')} />
                             </div>
                         ))}
@@ -603,9 +617,16 @@ const ViewMore: React.FC = () => {
                             alt="Selected"
                             className="max-w-full max-h-[80vh] object-contain" // Limit height to 80% of the viewport height
                         />
-                        <button onClick={closeModal} className="absolute top-2 right-2 bg-white text-black rounded-full p-1">
-                            X
-                        </button>
+                        <div className="absolute top-2 right-2 flex space-x-2">
+                            {/* Close Button */}
+                            <button onClick={closeModal} className="bg-white text-black rounded-full p-1">
+                                X
+                            </button>
+                            {/* Download Button */}
+                            <a href={selectedImage} download className="bg-white text-black rounded-full p-1">
+                                Download
+                            </a>
+                        </div>
                     </div>
                 </div>
             )}
@@ -997,6 +1018,22 @@ const ViewMore: React.FC = () => {
                                 <td className="bg-gray-100 p-2 font-semibold">Remark :</td>
                                 <td className="p-2 text-danger">{bookingDetails.remark}</td>
                             </tr>
+                            {bookingDetails.bookingChecked === true && (
+                                <>
+                                    <tr>
+                                        <td className="bg-gray-100 p-2 font-semibold">Remark Written By :</td>
+                                        <td className="p-2 text-danger">{bookingDetails.remarkWritten}</td>
+                                    </tr>
+                                </>
+                            )}
+                            {bookingDetails.feedback === true && (
+                                <>
+                                    <tr>
+                                        <td className="bg-gray-100 p-2 font-semibold">FeedBack Written By :</td>
+                                        <td className="p-2 text-danger">{bookingDetails.feedbackWritten}</td>
+                                    </tr>
+                                </>
+                            )}
                         </>
                     )}
                 </tbody>

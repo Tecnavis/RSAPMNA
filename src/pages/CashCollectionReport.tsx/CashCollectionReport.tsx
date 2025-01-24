@@ -19,7 +19,6 @@ interface Booking {
     id: string;
     amount: number; // Change to number
     receivedAmount?: number;
-
     vehicleNumber: string;
     dateTime: string;
     fileNumber?: string;
@@ -273,21 +272,45 @@ const amountToUse = parseFloat(booking.amount.toString() );
     
 
     const handleApproveClick = async (booking: Booking) => {
-        const balance = calculateBalance(booking.amount.toString(), booking.receivedAmount || 0);
-
-        if (balance !== '0.00') {
-            alert('Approval not allowed. The balance must be zero before approving.');
-        } else {
+        // Check if the staffReceived is 'Staff'
+        if (booking.receivedUser === 'Staff') {
             try {
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id); // Use the booking ID to reference the correct booking
                 await updateDoc(bookingRef, { approve: true }); // Directly approve the booking
-                setBookings((prevBookings) => prevBookings.map((bookingItem) => (bookingItem.id === booking.id ? { ...bookingItem, approve: true, disabled: true } : bookingItem)));
+                setBookings((prevBookings) =>
+                    prevBookings.map((bookingItem) =>
+                        bookingItem.id === booking.id
+                            ? { ...bookingItem, approve: true, disabled: true }
+                            : bookingItem
+                    )
+                );
             } catch (error) {
                 console.error('Error approving booking:', error);
             }
+        } else {
+            const balance = calculateBalance(booking.amount.toString(), booking.receivedAmount || 0);
+    
+            // Only check the balance if staffReceived is not 'Staff'
+            if (balance !== '0.00') {
+                alert('Approval not allowed. The balance must be zero before approving.');
+            } else {
+                try {
+                    const bookingRef = doc(db, `user/${uid}/bookings`, booking.id); // Use the booking ID to reference the correct booking
+                    await updateDoc(bookingRef, { approve: true }); // Directly approve the booking
+                    setBookings((prevBookings) =>
+                        prevBookings.map((bookingItem) =>
+                            bookingItem.id === booking.id
+                                ? { ...bookingItem, approve: true, disabled: true }
+                                : bookingItem
+                        )
+                    );
+                } catch (error) {
+                    console.error('Error approving booking:', error);
+                }
+            }
         }
     };
-
+    //------------------------------------------------------------------------------------------------ 
     const filterBookingsByMonthAndYear = () => {
         let filtered: Booking[] = bookings;
 
@@ -451,58 +474,47 @@ const amountToUse = parseFloat(booking.amount.toString() );
             modal.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     };
-    // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------------------------------------------------------------------------
     const distributeReceivedAmount = (receivedAmount: number, bookings: Booking[]) => {
         let remainingAmount = receivedAmount;
-        const selectedBookingIds: string[] = []; // Array to hold selected booking IDs
-        const sortedBookings = [...bookings].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+        const selectedBookingIds: string[] = [];
+    
+        const sortedBookings = bookings
+            .filter((booking) => booking.receivedUser !== "Staff" && (booking.amount - (booking.receivedAmount || 0)) > 0)
+            .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
     
         const updatedBookings = sortedBookings.map((booking) => {
-            // Skip booking if receivedUser is 'Staff'
-            if (booking.receivedUser === "Staff") {
-                return booking; // No changes to the booking if it's "Staff"
-            }
-    
-            // Calculate amount to use
-            const amountToUse = parseFloat(booking.amount?.toString() || '0');
-            const bookingBalance = amountToUse - (booking.receivedAmount || 0);
+            const bookingBalance = booking.amount - (booking.receivedAmount || 0);
     
             if (remainingAmount > 0 && bookingBalance > 0) {
-                // Calculate applied amount
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);
                 booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
                 remainingAmount -= appliedAmount;
-    
-                // Add the booking ID to the selectedBookingIds array
                 selectedBookingIds.push(booking.id);
             }
-    
-            // Store the amountToUse for further use
-            booking.amountToUse = amountToUse;
             return booking;
+            
         });
-    
-        return { updatedBookings, selectedBookingIds }; // Return both updated bookings and selected booking IDs
+
+        return { updatedBookings, selectedBookingIds };
     };
+    
     
     const handleAmountReceiveChange = async (receivedAmount: number) => {
         try {
             const { updatedBookings, selectedBookingIds } = distributeReceivedAmount(receivedAmount, bookings);
+    
             setBookings(updatedBookings);
     
-            const totalAppliedAmount = updatedBookings.reduce((acc, booking) => acc + (booking.receivedAmount || 0), 0);
-            setReceivedAmount(totalAppliedAmount.toString());
-    
             const batch = writeBatch(db);
+    
             updatedBookings.forEach((booking) => {
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
-                const balance = calculateBalance(
-                    booking.amountToUse || 0,
-                    booking.receivedAmount || 0,
-                    booking.receivedUser // Ensure receivedUser is passed
-                );
+                const currentReceivedAmount = booking.receivedAmount ?? 0;
+                const balance = booking.amount - currentReceivedAmount;
+        
                 batch.update(bookingRef, {
-                    receivedAmount: booking.receivedAmount || 0,
+                    receivedAmount: booking.receivedAmount,
                     balance: balance,
                     role: role || 'unknown',
                 });
@@ -512,18 +524,15 @@ const amountToUse = parseFloat(booking.amount.toString() );
             const querySnapshot = await getDocs(usersQuery);
     
             querySnapshot.forEach((userDoc) => {
-                // Update staff received with multiple selectedBookingIds
                 updateStaffReceived(userDoc.id, uid, receivedAmount, selectedBookingIds);
             });
     
             await batch.commit();
             updateTotalBalance();
             setShowAmountDiv(false);
-            if (role === 'admin') {
-                await handleAmountReceivedChangeWithoutAuth(selectedBookingIds[0], receivedAmount.toString());
-            }
+            window.location.reload();
         } catch (error) {
-            console.error('Error during handleAmountReceiveChange:', error);
+            console.error("Error during handleAmountReceiveChange:", error);
         }
     };
     
@@ -620,6 +629,7 @@ const amountToUse = parseFloat(booking.amount.toString() );
             
             // Fetch staffId based on username and password
             const staffId = await getStaffId(userName, password, uid);
+            console.log("staffId",staffId)
             if (!staffId) {
                 console.error("Staff not found.");
                 return;
@@ -1118,7 +1128,7 @@ const amountToUse = parseFloat(booking.amount.toString() );
 
 
                                          
-                                          
+                                          {booking.companyBooking == false && (
                                             <td>
                                                 <button
                                                     onClick={() => handleApproveClick(booking)}
@@ -1130,6 +1140,13 @@ const amountToUse = parseFloat(booking.amount.toString() );
                                                     {booking.approve ? 'Approved' : 'Approve'}
                                                 </button>
                                             </td>
+                                            )}
+                                          {booking.companyBooking === true && (
+    <td className={styles.companyBookingCell}>
+        Company Booking
+    </td>
+)}
+
                                              <td>
                                                                                     <Link
                                                                                         to={`/bookings/newbooking/viewmore/${booking.id}`}

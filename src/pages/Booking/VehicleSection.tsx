@@ -13,7 +13,7 @@ interface VehicleSectionProps {
     adjustValue: string;
     onInsuranceChange: (insurance: string) => void;
     bodyShope: string;
-    onApplyAdjustment: () => void; 
+    onApplyAdjustment: () => void;
 }
 
 interface ShowRoomState {
@@ -37,9 +37,9 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
     adjustValue,
     onInsuranceChange,
     bodyShope,
-    onApplyAdjustment, 
+    onApplyAdjustment,
 }) => {
-    const [showRoom, setShowRoom] = useState<ShowRoomState>({
+  const [showRoom, setShowRoom] = useState<ShowRoomState>({
         availableServices: serviceCategory || '',
         hasInsurance: '',
         lifting: '',
@@ -48,6 +48,8 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
         insuranceAmountBody: insuranceAmountBody || '', // Allow insurance amount to be an empty string for manual entry
     });
     const [changedInsuranceAmountBody, setChangedInsuranceAmountBody] = useState<string>('');
+    console.log('insuranceAmountBodykk', changedInsuranceAmountBody);
+
     const [showNotification, setShowNotification] = useState<boolean>(false);
     const [isButtonGreen, setIsButtonGreen] = useState(false); // State to change button color
     const role = sessionStorage.getItem('role');
@@ -57,7 +59,8 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
     const handleApply = () => {
         // Trigger the parent callback to handle the adjustment
         onApplyAdjustment();
-    };    useEffect(() => {
+    };
+    useEffect(() => {
         const fetchInsuranceAmountBody = async () => {
             const showroomRef = collection(db, `user/${uid}/showroom`);
             const q = query(showroomRef, where('Location', '==', showroomLocation));
@@ -91,10 +94,17 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
         if (bodyShope !== showRoom.insurance) {
             setShowRoom((prevShowRoom) => ({
                 ...prevShowRoom,
-                insurance: bodyShope, // <-- Update insurance field with bodyShope
+                insurance: bodyShope,
+                // <-- Update insurance field with bodyShope
             }));
         }
     }, [bodyShope]);
+    useEffect(() => {
+        // Initialize `changedInsuranceAmountBody` with the parent's `insuranceAmountBody` value
+        if (changedInsuranceAmountBody) {
+            setChangedInsuranceAmountBody(insuranceAmountBody);
+        }
+    }, [insuranceAmountBody, changedInsuranceAmountBody]);
     useEffect(() => {
         if (serviceCategory !== showRoom.availableServices) {
             setShowRoom((prevShowRoom) => ({
@@ -152,9 +162,7 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
             setShowNotification(false); // Hide notification if input is cleared
         }
     };
-   
-  
-    
+
     const applyAdjustment = (event?: React.MouseEvent<HTMLButtonElement>) => {
         // Prevent default form behavior if applicable
         if (event) event.preventDefault();
@@ -194,7 +202,7 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
     const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
         // Call both functions
         applyAdjustment(event); // First, apply the adjustment logic
-        handleApply();           // Then, trigger the parent callback to handle additional logic
+        handleApply(); // Then, trigger the parent callback to handle additional logic
     };
     return (
         <div className="mb-5">
@@ -263,20 +271,32 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
                             />
                             Both
                         </label>
-                        {showRoom.insurance === 'insurance' && (
+                        {showRoom.insurance === 'both' && (
                             <div className="mt-2" style={{ marginTop: '10px', fontSize: '0.9em' }}>
                                 <label style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>Insurance Amount (if the insurance amount changes!):</label>
                                 <input
-                                    type="number"
+                                    type="text"
                                     name="changedInsuranceAmountBody"
                                     value={changedInsuranceAmountBody} // Bind state to input
                                     onChange={handleChangedInsuranceChange} // Update state and parent component
                                     style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }}
                                 />
+                                
+            <div
+                style={{
+                    marginTop: '5px',
+                    color: '#ff0000',
+                    fontSize: '0.85em',
+                }}
+            >
+                Note: This is the billing Amount (insurance amount) send to the showroom!
+            </div>
+        
                             </div>
                         )}
                     </div>
                 )}
+
                 <label className="mr-4" style={{ marginRight: '10px', fontSize: '1em', color: '#333' }}>
                     <input
                         type="radio"
@@ -329,3 +349,4 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
 };
 
 export default VehicleSection;
+// -------------------------------------------------------------------------------------------------------------
