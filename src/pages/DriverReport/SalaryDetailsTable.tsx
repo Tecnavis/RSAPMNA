@@ -35,25 +35,25 @@ const SalaryDetailsTable: React.FC<SalaryDetailsTableProps> = ({
   const [transferAmounts, setTransferAmounts] = useState<string[]>([]);
   const [balanceSalaries, setBalanceSalaries] = useState<number[]>([]); // Store balance salaries here
   const [isExpanded, setIsExpanded] = useState(false); // Track table expansion
-
-  // ------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
   const db = getFirestore();
   useEffect(() => {
     const fetchSalaryDetailsAndAmounts = async () => {
-      const fetchedSalaryDetails = await fetchSalaryDetails(); // Fetch salary details
+      const fetchedSalaryDetails = await fetchSalaryDetails(); 
       const amounts = await fetchAllTransferAmounts(fetchedSalaryDetails);
-      
-      // Calculate balance salaries after fetching transfer amounts
+    
       const calculatedBalanceSalaries = fetchedSalaryDetails.map((detail, index) => {
-        const totalSalary = detail.totalDriverSalaries?.map(Number) || [];
-        const transferSalary = amounts[index].split(", ").map(Number);
-        return totalSalary.map((salary, i) => salary - (transferSalary[i] || 0));
+        const totalSalaries = (detail.totalDriverSalaries || []).map((salary) => Number(salary) || 0);
+        const transferSalaries = (amounts[index] || "").split(", ").map((amt) => Number(amt) || 0);
+    
+        return totalSalaries.map((salary, i) => salary - (transferSalaries[i] || 0));
       }).flat();
-
+    
       setSalaryDetails(fetchedSalaryDetails);
       setTransferAmounts(amounts);
-      setBalanceSalaries(calculatedBalanceSalaries); // Set balance salaries to state
+      setBalanceSalaries(calculatedBalanceSalaries);
     };
+    
 
     if (showAdvanceDetails) {
       fetchSalaryDetailsAndAmounts();
@@ -108,8 +108,14 @@ const SalaryDetailsTable: React.FC<SalaryDetailsTableProps> = ({
           };
         })
       );
+// Ensure sorting by timestamp in case Firestore doesn't return them in order
+const sortedDetails = details.sort((a, b) => {
+  const dateA = a.timestamp?.seconds || 0;
+  const dateB = b.timestamp?.seconds || 0;
+  return dateB - dateA; // Descending order
+});
 
-      return groupSalaryDetails(details);
+return groupSalaryDetails(sortedDetails);
     } catch (error) {
       console.error("Error fetching salary details:", error);
       return [];
@@ -168,13 +174,21 @@ const SalaryDetailsTable: React.FC<SalaryDetailsTableProps> = ({
   const toggleExpanded = () => {
     setIsExpanded((prev) => !prev);
   };
-  const formatDate = (timestamp?: { seconds: number; nanoseconds: number }) => {
+
+  const formatDateTime = (timestamp?: { seconds: number; nanoseconds: number }) => {
     if (!timestamp) return "N/A";
     const date = new Date(timestamp.seconds * 1000);
-    const options: Intl.DateTimeFormatOptions = { day: "2-digit", month: "2-digit", year: "numeric" };
-    return new Intl.DateTimeFormat("en-GB", options).format(date);
+    return date.toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
   };
-
+  
   const formatTransferAmount = async (fileNumbers: string[], selectedDriver: string) => {
     const amounts: string[] = [];
     for (const fileNumber of fileNumbers) {
@@ -217,8 +231,9 @@ const SalaryDetailsTable: React.FC<SalaryDetailsTableProps> = ({
                <tr key={detail.id} className="hover:bg-gray-100">
                 <td className="border border-gray-300 px-4 py-2">{index + 1}</td>
                 <td className="border border-gray-300 px-4 py-2">
-                  {formatDate(detail.timestamp)}
-                </td>
+  {formatDateTime(detail.timestamp)}
+</td>
+
                 <td className="border border-gray-300 px-4 py-2">
                   {detail.fileNumbers?.join(", ") || "N/A"}
                 </td>

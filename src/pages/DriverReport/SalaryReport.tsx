@@ -74,6 +74,10 @@ const SalaryReport: React.FC = () => {
     const userName = sessionStorage.getItem('username');
 //    ----------------------------------------------------------------------
 const [netTotalAmountInHand, setNetTotalAmountInHand] = useState<number>(0);
+// -----------
+const [currentPage, setCurrentPage] = useState(1);
+const [showAll, setShowAll] = useState(true); // Start by showing all bookings
+const itemsPerPage = 10;
 
     const [editFormData, setEditFormData] = useState({
         fileNumber: '',
@@ -92,7 +96,10 @@ const [netTotalAmountInHand, setNetTotalAmountInHand] = useState<number>(0);
     const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
     const [selectAll, setSelectAll] = useState<boolean>(false); 
     const [advances, setAdvances] = useState<AdvanceRecord[]>([]); // Explicitly typed
-  
+    const [balanceAmount, setBalanceAmount] = useState<number>(0);
+   
+   
+
 // ---------------------------------------------------------------------------------------------------------
     const saveSalaryDetails = async (bookingId: string, initialAdvance: number, transferAmount: number, fileNumbers: string[]) => {
         const salaryDetailsRef = collection(db, `user/${uid}/driver/${id}/salaryAdjustments`);
@@ -142,6 +149,7 @@ const [netTotalAmountInHand, setNetTotalAmountInHand] = useState<number>(0);
 
     // ----------------------------------------------------------------------------------------
     useEffect(() => {
+
         const fetchBookings = async () => {
             try {
                 const bookingsRef = collection(db, `user/${uid}/bookings`);
@@ -218,8 +226,20 @@ const [netTotalAmountInHand, setNetTotalAmountInHand] = useState<number>(0);
     
         fetchBookings();
     }, [db, id, uid, driver?.advance]); // Adding driver.advance to the dependency array to recalculate when it changes
+    useEffect(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        
+        setFilteredBookings(bookings.slice(startIndex, endIndex));
+    }, [bookings, currentPage]);
     
-
+    useEffect(() => { 
+        if (netTotalAmountInHand !== undefined && totalSalaryAmount !== undefined) {
+            setBalanceAmount(netTotalAmountInHand - totalSalaryAmount);
+        }
+    }, [netTotalAmountInHand, totalSalaryAmount]);
+    
+    
     useEffect(() => {
         if (selectedMonth || selectedYear) {
             const filtered = bookings.filter((booking) => {
@@ -689,8 +709,41 @@ console.log("relevantBookings",relevantBookings)
             console.error("Error distributing salary:", error);
         }
     };
+    useEffect(() => {
+        let tempBookings = bookings;
     
+        // Apply filtering by month/year if needed
+        if (selectedMonth || selectedYear) {
+            tempBookings = bookings.filter((booking) => {
+                const bookingDate = parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date());
+                const bookingMonth = format(bookingDate, 'MMMM');
+                const bookingYear = format(bookingDate, 'yyyy');
+        
+                const monthMatch = selectedMonth ? bookingMonth === selectedMonth : true;
+                const yearMatch = selectedYear ? bookingYear === selectedYear : true;
+        
+                return monthMatch && yearMatch;
+            });
+        }
+    // -------------------------------------
+        // if (showAll) {
+        //     setFilteredBookings(tempBookings);
+        // } else {
+        //     const startIndex = (currentPage - 1) * itemsPerPage;
+        //     const endIndex = startIndex + itemsPerPage;
+        //     setFilteredBookings(tempBookings.slice(startIndex, endIndex));
+        // }
+    }, [bookings, selectedMonth, selectedYear, currentPage, showAll]);
     
+    useEffect(() => {
+        if (showAll) {
+            setFilteredBookings(bookings); // Show all bookings initially
+        } else {
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            setFilteredBookings(bookings.slice(startIndex, endIndex));
+        }
+    }, [bookings, currentPage, showAll]);
     const handlePrint = () => {  
         const printContent = printRef.current; // Get the content to print
         const printWindow = window.open('', '', 'height=1000,width=1600'); // Create a print window
@@ -836,11 +889,7 @@ console.log("relevantBookings",relevantBookings)
             `);
             printWindow.document.write(`
                 <div class="print-header">
-                    <div>
-                        <h1 class="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">
-                            Salary Report for <span class="text-red-500">${driver?.driverName}</span>
-                        </h1>
-                    </div>
+                  
         <div class="company-details">
     <h3><strong>Company:</strong> RSA</h3>
     <p><strong>Location:</strong> Tirurkad</p>
@@ -913,22 +962,23 @@ console.log("relevantBookings",relevantBookings)
         </h1>
     </div>
                 <div class="card-container">
+                 <div class="card">
+                        <div class="title">Total Cash In Hand</div>
+                        <div class="value">${netTotalAmountInHand}</div>
+                    </div>
                     <div class="card">
                         <div class="title">Advance Amount</div>
                         <div class="value">${driver?.advance ? driver.advance : 'No advance payment made'}</div>
                     </div>
                     <div class="card">
-                        <div class="title">Salary Paid in ${selectedMonth ? selectedMonth : 'All Months'}</div>
-                        <div class="value">${totalCollectedSalaryAmount}</div>
+                        <div class="title">Salary in ${selectedMonth ? selectedMonth : 'All Months'}</div>
+                        <div class="value">${totalCalculatedUpdatedTotalSalary}</div>
                     </div>
                     <div class="card">
-                        <div class="title">Balance Salary Amount in ${selectedMonth ? selectedMonth : 'All Months'}</div>
-                        <div class="value">${totalSalaryAmount}</div>
+                        <div class="title">Balance </div>
+                        <div class="value">${balanceAmount}</div>
                     </div>
-                    <div class="card">
-                        <div class="title">Total Cash In Hand</div>
-                        <div class="value">${netTotalAmountInHand}</div>
-                    </div>
+                   
                 </div>
             `);
                        // Write the rest of the content into the print window
@@ -952,7 +1002,8 @@ console.log("relevantBookings",relevantBookings)
                             <tr>
                                 <td>${index + 1}</td>
                                 <td>${booking.fileNumber}</td>
-                                <td>${new Date(booking.dateTime).toLocaleDateString()}</td>
+                                <td>${booking.dateTime}</td>
+
                                 <td>${booking.serviceType}</td>
                                 <td>${booking.vehicleNumber}</td>
                                 <td>${booking.totalDriverDistance}</td>
@@ -1170,7 +1221,13 @@ const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
             </div>
 
             {/* ------------------------------------------------- */}
-           
+            <div className="w-[560px]  ml-6 flex justify-center md:justify-end p-2 bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl hover:scale-105">
+                                <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+                                    <span className="text-3xl mr-2">💵</span> {/* Larger icon for emphasis */}
+                                    Net Total Amount in Hand:
+                                    <span className="text-yellow-300 text-2xl ml-2 font-extrabold">{netTotalAmountInHand}</span>
+                                </h2>
+                            </div>
             <div className="mb-4 flex justify-center space-x-0 md:space-x-4 flex-col md:flex-row  no-print">
                
                 <button
@@ -1335,49 +1392,75 @@ const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
             </div>
             <div>
                 <h3 className="text-2xl font-semibold text-gray-800 tracking-tight leading-tight">
-                    Salary Paid in {selectedMonth ? selectedMonth : 'All Months'}
+                    Salary in {selectedMonth ? selectedMonth : 'All Months'}
                 </h3>
-                <p className="text-lg text-gray-600 mt-2">{totalCollectedSalaryAmount}</p>
+                <p className="text-lg text-gray-600 mt-2">{totalCalculatedUpdatedTotalSalary}</p>
             </div>
         </div>
     </div>
 
     {/* Balance Salary Amount Card */}
-    <div className="bg-gradient-to-r from-green-300 to-green-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out print-card">
+    <div className="bg-gradient-to-r from-blue-300 to-blue-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out print-card">
         <div className="flex items-center space-x-6">
             <div className="text-6xl text-blue-700">
                 <i className="fas fa-receipt"></i>
             </div>
             <div>
                 <h3 className="text-2xl font-semibold text-gray-800 tracking-tight leading-tight">
-                    Balance Salary Amount in {selectedMonth ? selectedMonth : 'All Months'}
+                    Balance
                 </h3>
-                <p className="text-lg text-gray-600 mt-2">{totalSalaryAmount}</p>
-            </div>
+                <p className="text-lg text-gray-600 mt-2">{balanceAmount}</p>
+                </div>
         </div>
     </div>
-    <div className="bg-gradient-to-r from-yellow-200 to-yellow-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out print-card">
-        <div className="flex items-center space-x-6">
-            <div className="text-6xl text-green-700">
-                <i className="fas fa-receipt"></i>
-            </div>
-            <div>
-                <h3 className="text-2xl font-semibold text-gray-800 tracking-tight leading-tight">
-                   Total Cash In Hand (Total Collected From Customer + Advance)
-                </h3>
-                <p className="text-lg text-gray-600 mt-2">{netTotalAmountInHand}</p>
-            </div>
-        </div>
-    </div>
+   
 </div>
 
+<div className="flex justify-center mt-4">
+<button
+            onClick={() => {
+                setShowAll(!showAll); // Toggle between all bookings and paginated view
+                setCurrentPage(1); // Reset to first page when switching
+            }}
+            className="px-4 py-2 bg-gray-400 text-white rounded mb-4"
+        >
+            {showAll ? "📃" : "Show All"}
+        </button>
+        </div>
+        
+        {/* Your Table */}
+        <div className="overflow-x-auto mt-5">
+            <table className="min-w-full divide-y divide-gray-200">
+                {/* ...table headers and body */}
+            </table>
+        </div>
+        
+        {!showAll && (
+            <div className="flex justify-center mt-4">
+                <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    className="px-4 py-2 mx-1 bg-gray-300 rounded disabled:opacity-50"
+                >
+                    Previous
+                </button>
+                <span className="px-4 py-2">{currentPage}</span>
+                <button
+                    disabled={currentPage * itemsPerPage >= bookings.length}
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    className="px-4 py-2 mx-1 bg-gray-300 rounded disabled:opacity-50"
+                >
+                    Next
+                </button>
+            </div>
+        )}
 
                 <div className="mt-5">
                     <h2 className="text-xl font-bold mb-3 text-center text-gray-800">Driver Salary Details</h2>
-                    <div className="overflow-x-auto">
-                        {' '}
-                        {/* Added scrollable container */}
-                        <table className="min-w-full divide-y divide-gray-200">
+                   {/* ==================================== */}
+                   <div className="flex flex-col">
+                   <div className="overflow-auto" style={{ maxHeight: "500px" }}>
+        <table className="min-w-full divide-y divide-gray-200">
                             <thead>
                                 <tr className="bg-gray-100">
                                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">#</th>
@@ -1509,6 +1592,30 @@ const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
 </tfoot>
 
                         </table>
+                        </div>
+                        <div className="bg-white shadow-md">
+        <table className="min-w-full">
+            <tfoot>
+                <tr>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600" colSpan={2}></th>
+                    <th className="px-4 py-2 text-left text-2xl font-bold text-red-600" colSpan={4}>
+                        Total Salary
+                    </th>
+                    <td className="border px-4 py-2 text-2xl font-bold text-red-600">
+                        {totalCalculatedUpdatedTotalSalary != null
+                            ? totalCalculatedUpdatedTotalSalary.toFixed(2)
+                            : 'N/A'}
+                    </td>
+                    <th className="px-2 py-2 text-left text-xl font-bold text-gray-600">
+                        Balance :
+                    </th>
+                    <td className="border px-4 py-2 text-2xl font-bold text-red-600">
+                        {typeof totalSalaryAmount === 'number' ? totalSalaryAmount.toFixed(2) : totalSalaryAmount || 'N/A'}
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
                     </div>
                 </div>
             </div>

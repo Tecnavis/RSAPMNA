@@ -63,6 +63,7 @@ import FeedbackTable from '../pages/FeedBack/FeedbackTable';
 import Advance from '../pages/Report/Advance/Advance';
 import CashCollectionCompany from '../pages/CashCollectionReport.tsx/CashCollectionCompany';
 import SelectiveReportInvoiceDriver from '../pages/DriverReport/SelectiveReportInvoiceDriver';
+import PmnaReport from '../pages/PMNAReport/PmnaReport';
 
 
 
@@ -595,6 +596,12 @@ const routes = [
     {
         path: '/users/user-account-settings',
         element: <AccountSetting />,
+    },
+    // PMNA Report
+
+    {
+        path: '/pmnareport',
+        element: <PmnaReport />,
     },
    
        //Driver Reports
