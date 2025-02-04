@@ -60,8 +60,11 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
         // Trigger the parent callback to handle the adjustment
         onApplyAdjustment();
     };
+    // ---------l-lllll-------------------------------------------
     useEffect(() => {
         const fetchInsuranceAmountBody = async () => {
+            if (changedInsuranceAmountBody) return; // Prevent fetching if manually changed
+
             const showroomRef = collection(db, `user/${uid}/showroom`);
             const q = query(showroomRef, where('Location', '==', showroomLocation));
             const querySnapshot = await getDocs(q);
@@ -138,16 +141,11 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
         onInsuranceChange(value);
     };
 
-    const handleInsuranceAmountBodyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { value } = e.target;
-        setShowRoom((prevShowRoom) => ({
-            ...prevShowRoom,
-            insuranceAmountBody: value, // Update the local state
-        }));
-        onInsuranceAmountBodyChange(value);
-    };
+   
     const handleChangedInsuranceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        
         const { value } = e.target;
+
         setChangedInsuranceAmountBody(value);
         console.log('changedInsuranceAmountBodyyy', value);
         onInsuranceAmountBodyChange(value); // Notify parent component of the change

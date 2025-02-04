@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, writeBatch, arrayUnion, Timestamp, runTransaction, addDoc, setDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, writeBatch, arrayUnion, Timestamp, runTransaction, addDoc, setDoc, limit } from 'firebase/firestore';
 import Modal from 'react-modal';
 import { parse, format } from 'date-fns';
 import styles from './cashCollectionReport.module.css';
@@ -475,7 +475,7 @@ const amountToUse = parseFloat(booking.amount.toString() );
         }
     };
     // ------------------------------------------------------------------------------------------------------------------------------------------------
-    const distributeReceivedAmount = (receivedAmount: number, bookings: Booking[]) => {
+    const distributeReceivedAmount = (receivedAmount: number, bookings: Booking[], id: string) => {
         let remainingAmount = receivedAmount;
         const selectedBookingIds: string[] = [];
     
@@ -496,13 +496,23 @@ const amountToUse = parseFloat(booking.amount.toString() );
             
         });
 
+    // Deduct remaining amount from the driver's advance
+    if (remainingAmount > 0) {
+        deductRemainingFromAdvance(remainingAmount, id);
+    }
         return { updatedBookings, selectedBookingIds };
     };
-    
+    // ------------------------------------------------------------------------------------------------------
     
     const handleAmountReceiveChange = async (receivedAmount: number) => {
         try {
-            const { updatedBookings, selectedBookingIds } = distributeReceivedAmount(receivedAmount, bookings);
+        
+  // Check if id is valid
+  if (!id) {
+    console.error("Driver ID is undefined");
+    return; // Exit the function early if ID is not defined
+}
+            const { updatedBookings, selectedBookingIds } = distributeReceivedAmount(receivedAmount, bookings, id);
     
             setBookings(updatedBookings);
     
@@ -512,7 +522,22 @@ const amountToUse = parseFloat(booking.amount.toString() );
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
                 const currentReceivedAmount = booking.receivedAmount ?? 0;
                 const balance = booking.amount - currentReceivedAmount;
-        
+                            const receivedDetailsRef = collection(db, `user/${uid}/receivedDetails`); // New collection
+         if (selectedBookingIds.includes(booking.id)) {
+                                const newReceivedDetail = {
+                                    bookingId: booking.id,  // Add booking ID
+                                    driver: booking.driver || 'Unknown Driver',
+                                    fileNumber: booking.fileNumber, // Assuming booking.id is the file number
+                                    amount: booking.amount,
+                                    receivedAmount: booking.receivedAmount || 0,
+                                    balance: balance,
+                                    timestamp: new Date(), // Use a consistent format
+                                };
+                
+                                // Add a new document to the `receivedDetails` collection
+                                batch.set(doc(receivedDetailsRef), newReceivedDetail);
+                            }
+                
                 batch.update(bookingRef, {
                     receivedAmount: booking.receivedAmount,
                     balance: balance,
@@ -533,6 +558,90 @@ const amountToUse = parseFloat(booking.amount.toString() );
             window.location.reload();
         } catch (error) {
             console.error("Error during handleAmountReceiveChange:", error);
+        }
+    };
+    const deductRemainingFromAdvance = async (remainingAmount: number, selectedDriver: string) => {
+        try {
+            if (!selectedDriver) {
+                console.error("Selected driver ID is undefined");
+                return; // Exit if selectedDriver is undefined
+            }
+    
+            // Reference to the driver's document
+            const driverRef = doc(db, `user/${uid}/driver`, selectedDriver);
+            const driverSnap = await getDoc(driverRef);
+            const currentAdvance = driverSnap.exists() ? parseFloat(driverSnap.data().advance || '0') : 0;
+            const driverName = driverSnap.exists() ? driverSnap.data()?.driverName || 'Unknown Driver' : 'Unknown Driver';
+
+            console.log("Current Advance:", currentAdvance);
+    
+            // Deduct from the driver's advance
+            const newAdvance = Math.max(0, currentAdvance - remainingAmount);
+    
+            // Update the driver's advance in the main driver document
+            await updateDoc(driverRef, { advance: newAdvance });
+            console.log("New Advance after deduction:", newAdvance);
+    
+            // Retrieve the last added advance from advanceData subcollection
+        const advanceDataRef = collection(db, `user/${uid}/driver/${selectedDriver}/advanceData`);
+        const advanceDataQuery = query(advanceDataRef, orderBy('advancePaymentDate', 'desc'), limit(1));
+        const advanceDataSnap = await getDocs(advanceDataQuery);
+
+        if (advanceDataSnap.empty) {
+            console.warn("No advanceData records found for this driver.");
+            return;
+        }
+
+        const lastAdvanceDoc = advanceDataSnap.docs[0];
+        const lastAdvanceData = lastAdvanceDoc.data();
+        const advanceId = lastAdvanceData.advanceId; // ✅ Extract advanceId
+
+        if (!advanceId) {
+            console.error("Advance ID is missing in advanceData.");
+            return;
+        }
+
+        // Deduct amount from the last added advance record in `advanceData`
+        const lastAdvanceAmount = lastAdvanceData.advance || 0;
+        const remainingAdvance = Math.max(0, lastAdvanceAmount - remainingAmount);
+
+        await updateDoc(lastAdvanceDoc.ref, { advance: remainingAdvance });
+        console.log("Updated last advance in advanceData:", remainingAdvance);
+
+        // ------------------------------------
+        // Update advance document in `user/${uid}/advance` with the extracted advanceId
+        const advanceDocRef = doc(db, `user/${uid}/advance`, advanceId);
+        const advanceSnap = await getDoc(advanceDocRef);
+
+        if (!advanceSnap.exists()) {
+            console.warn(`No advance record found in advance collection with ID: ${advanceId}`);
+            return;
+        }
+
+        const lastAdvanceMain = advanceSnap.data().advance || 0;
+        const updatedAdvance = Math.max(0, lastAdvanceMain - remainingAmount);
+
+        // Update the specific advance document
+        await updateDoc(advanceDocRef, { advance: updatedAdvance });
+
+        console.log(`Updated advance in user/${uid}/advance with ID ${advanceId}:`, updatedAdvance);
+ const receivedDetailsRef = collection(db, `user/${uid}/receivedDetails`);
+
+    const receivedDetailEntry = {
+        bookingId: `advance_deduction_${Date.now()}`, // Unique ID for tracking
+        driver: driverName,
+        fileNumber: "Advance Deduction", // Label it as an advance deduction
+        amount: remainingAmount,
+        receivedAmount: remainingAmount,
+        balance: newAdvance, // Remaining advance after deduction
+        timestamp: Timestamp.now(),
+    };
+
+    await addDoc(receivedDetailsRef, receivedDetailEntry);
+    console.log("Advance deduction recorded in receivedDetails.");
+
+        } catch (error) {
+            console.error("Error deducting remaining amount from advance:", error);
         }
     };
     

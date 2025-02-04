@@ -291,6 +291,7 @@ console.log(rewardPoints,'this is the reward points')
                 status: 'booking added',
                 statusEdit:'withoutmapbooking',
                 bookingId: bookingId,
+                bookingEdit: true,
                 company: 'rsa',
                 createdBy:'showroomStaff',
                 customerName: formData.customerName, // Adding customer name

@@ -140,6 +140,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [showModal, setShowModal] = useState(false);
     const [isButtonClicked, setIsButtonClicked] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [bookingEdit, setBookingEdit] = useState<boolean>(); // Set the default value
 
     const uid = sessionStorage.getItem('uid');
     const userName = sessionStorage.getItem('username');
@@ -178,6 +179,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             setTotalSalary(editData.totalSalary || 0);
             setDropoffLocation(editData.dropoffLocation || null);
             setSelectedCompany(editData.selectedCompany || '');
+            setBookingEdit(editData.bookingEdit || '');
+
             setInsuranceAmountBody(editData.insuranceAmountBody || '');
             console.log('editData.insuranceAmountBody', editData.insuranceAmountBody);
 
@@ -265,6 +268,9 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         // Phone number validation
         if (!phoneNumber.trim()) {
             tempErrors['phoneNumber'] = 'Phone number is required';
+            isValid = false;
+        } else if (!/^\d{10}$/.test(phoneNumber)) {
+            tempErrors['phoneNumber'] = 'Phone number is invalid, must be 10 digits';
             isValid = false;
         }
         if (!baseLocation) {
@@ -499,8 +505,12 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         setSelectedCompany('');
 
                         setSelectedCompany('');
+
+  if (bookingEdit === true) {
+                        setIsModalOpen(false);
+                    } else {
                         setIsModalOpen(true);
-                    }
+                    }                    }
                 }
                 break;
 
@@ -526,7 +536,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 break;
 
             case 'distance':
-                const newDistance = value || 0; // Default to 0 if totalDistance is NaN
+                const newDistance = value || ''; // Default to 0 if totalDistance is NaN
                 setDistance(newDistance);
 
                 if (isEditing) {
@@ -655,9 +665,15 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             case 'selectedCompany':
                 setSelectedCompany(value);
                 if (isEditing) {
-                    setIsModalOpen(true);
+                    if (bookingEdit === true) {
+                        setIsModalOpen(false);
+                    } else {
+                        setIsModalOpen(true);
+                    }
                 }
                 break;
+            
+            
 
             case 'dropoffLocation':
                 if (typeof value === 'number' || typeof value === 'string') {
@@ -735,6 +751,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const closeModal = () => {
         setIsModalOpen(false);
     };
+    // -------------------------------------------------------------------
+    
     useEffect(() => {
         const db = getFirestore();
         const serviceCollection = collection(db, `user/${uid}/showroom`);
@@ -1189,7 +1207,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             console.error('Error sending notification:', error);
         }
     };
-    // --------------------------------------------------
+    // -----------------------------------------------------
     const sendNotificationsToAllDrivers = async () => {
         try {
             // Extract all FCM tokens from drivers
@@ -1300,7 +1318,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     totalDriverDistance: totalDriverDistanceNumber || 0,
                     totalDriverSalary: totalDriverSalary || 0,
                     mobileNumber: mobileNumber || '',
-
+                    bookingEdit: false,
                     phoneNumber: phoneNumber || '',
                     vehicleType: vehicleType || '',
                     bodyShope: bodyShope || '',
@@ -1886,7 +1904,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                     .sort((a, b) => {
                                         if (a.companyName === 'RSA' && b.companyName !== 'RSA') return -1;
                                         if (a.companyName !== 'RSA' && b.companyName === 'RSA') return 1;
-                                        return 0;
+                                        return a.pickupDistance - b.pickupDistance;
                                     })
                                     .map((driver) => {
                                         const isRSA = driver.companyName !== 'Company';
@@ -2055,7 +2073,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                 {/* Insurance Amount Body */}
                                 <div className="flex items-center w-1/3">
                                     <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 mb-0">
-                                        Insurance Amount Body
+                                        Insurance Amount By ShowRoom
                                     </label>
                                     <div className="form-input flex-1">{insuranceAmountBody}</div>
                                 </div>

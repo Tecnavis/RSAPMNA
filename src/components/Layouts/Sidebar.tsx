@@ -240,12 +240,12 @@ console.log("role",role)
                                         <li>
                                             <NavLink to="/service/service-type">Service Types</NavLink>
                                         </li>
-                                        <li>
+                                        {/* <li>
                                             <NavLink to="/service/tarrif">Tarrif Details</NavLink>
                                         </li>
                                         <li>
                                             <NavLink to="/service/adjustment"> Adjustments</NavLink>
-                                        </li>
+                                        </li> */}
                                     </ul>
                                 </AnimateHeight>
                             </li>
@@ -400,6 +400,15 @@ console.log("role",role)
                                     <IconMinus className="w-4 h-5 flex-none hidden" />
                                     <span>
                                        <Link to="/advance"> Payment Report</Link>
+                                        {/* {t('user_and_pages')} */}
+                                    </span>
+                                </h2>
+                            </li>
+                            <li className="menu nav-item">
+                                <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
+                                    <IconMinus className="w-4 h-5 flex-none hidden" />
+                                    <span>
+                                       <Link to="/pmnareport"> Payment Work Report</Link>
                                         {/* {t('user_and_pages')} */}
                                     </span>
                                 </h2>

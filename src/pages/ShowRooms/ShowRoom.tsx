@@ -340,6 +340,8 @@ console.log("userRole",userRole)
 
     const handleDelete = (roomId: string) => {
         setCurrentRoomId(roomId);
+        console.log("Deleting showroom with ID:", currentRoomId);
+
         setIsEditing(false);
         setIsModalVisible(true);
     };
@@ -347,7 +349,10 @@ console.log("userRole",userRole)
         if (isEditing) {
             const roomToEdit = existingShowRooms.find((room) => room.id === currentRoomId);
             console.log('Editing room:', roomToEdit); // Debugging line
-           
+            if (!roomToEdit) {
+                console.error("Room to edit not found!");
+                return;
+            }
             setOpen(true);
             setShowRoom(roomToEdit!);
             setManualLocationName(roomToEdit?.manualLocationName || '');
@@ -371,9 +376,18 @@ console.log("userRole",userRole)
             const db = getFirestore();
             const roomRef = doc(db, `user/${uid}/showroom`, currentRoomId);
             try {
-                await deleteDoc(roomRef);
+                const roomSnap = await getDoc(roomRef);
+                if (!roomSnap.exists()) {
+                    console.error("Room does not exist, cannot delete!");
+                    toast.error("Showroom not found!", { autoClose: 3000 });
+                    return;
+                }
+    
+                console.log("Deleting showroom with ID:", currentRoomId);
                 // Update the state after deletion
                 setExistingShowRooms((prevShowRooms) => prevShowRooms.filter((room) => room.id !== currentRoomId));
+                await deleteDoc(roomRef);
+
                 toast.success('Showroom removed successfully!', { autoClose: 3000 });
             } catch (error) {
                 console.error('Error deleting showroom:', error);

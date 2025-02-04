@@ -133,7 +133,11 @@ const Track: React.FC = () => {
         if (companyBooking) return; // Prevent manual input for company bookings
     
         const newAmount = e.target.value;
-    
+        // Validate that the input is a valid number
+        if (isNaN(parseFloat(newAmount))) {
+            setError('Please enter a valid number');
+            return;
+        }
         // If payment status is 'Not Paid', set the amount to 0
         if (paymentStatus === 'Not Paid') {
             setAmount('0');
@@ -141,19 +145,23 @@ const Track: React.FC = () => {
             return;
         }
     
-        setAmount(newAmount);
+        const enteredAmount = parseFloat(newAmount);
+        const salaryAmount = parseFloat(bookingDetails.updatedTotalSalary || '0'); // Default to 0 if undefined
+    
+        // Prevent negative values
+        if (enteredAmount < 0) {
+            setError('Amount cannot be negative');
+            return;
+        }
     
         // Validate amount only if payment status is 'Paid'
-        if (paymentStatus === 'Paid') {
-            const salaryAmount = parseFloat(bookingDetails.updatedTotalSalary || '0'); // Default to 0 if undefined
-            const enteredAmount = parseFloat(newAmount);
-    
-            if (enteredAmount < salaryAmount) {
-                setError(`Amount must be equal to or greater than ${salaryAmount}`);
-            } else {
-                setError(''); // Clear error if the condition is met
-            }
+        if (paymentStatus === 'Paid' && enteredAmount < salaryAmount) {
+            setError(`Amount must be at least ${salaryAmount}`);
+        } else {
+            setError(''); // Clear error if the condition is met
         }
+    
+        setAmount(newAmount);
     };
     
   
@@ -237,6 +245,16 @@ const uploadImgs = async () => {
 const submitBookingComplete = async () => {
     if (!companyBooking && !amount) {
         console.error('Missing fields.');
+        alert('Please fill in all required fields.');
+        return;
+    }
+
+    if (!paymentStatus) {
+        alert('Please select a Payment Type.');
+        return;
+    }
+    if (imgURLs.filter(url => url).length < 2) {
+        alert('Please upload at least two images.');
         return;
     }
 
@@ -341,7 +359,10 @@ const submitBookingComplete = async () => {
             console.error('Missing fields.');
             return;
         }
-
+        if (imageURLs.filter(url => url).length < 2) {
+            alert('Please upload at least two images.');
+            return;
+        }
         try {
             // Convert pickedTime to a Firestore Timestamp
             const pickedTimeDate = new Date(pickedTime);
