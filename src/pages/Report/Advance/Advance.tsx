@@ -223,6 +223,7 @@ const Advance: React.FC = () => {
                         amount: booking.amount,
                         receivedAmount: booking.receivedAmount || 0,
                         balance: balance,
+                        
                         timestamp: new Date(), // Use a consistent format
                     };
 
@@ -247,6 +248,7 @@ const Advance: React.FC = () => {
             });
 
             await batch.commit();
+            // -------------------------------------------
             setTableData(tableData);
             setSelectedDriver('');
             setReceivedAmount('');
@@ -280,6 +282,7 @@ const Advance: React.FC = () => {
             const driverSnap = await getDoc(driverRef);
             const currentAdvance = driverSnap.exists() ? parseFloat(driverSnap.data()?.advance ?? 0) : 0;
             const driverName = driverSnap.exists() ? driverSnap.data()?.driverName || 'Unknown Driver' : 'Unknown Driver';
+            const driverAdvance = driverSnap.exists() ? driverSnap.data()?.advance || 'Unknown Driver' : 'Unknown Driver';
 
             // Deduct from the driver's advance
             const newAdvance = Math.max(0, currentAdvance - remainingAmount);
@@ -338,7 +341,7 @@ const Advance: React.FC = () => {
                 bookingId: `advance_deduction_${Date.now()}`, // Unique ID for tracking
                 driver: driverName,
                 fileNumber: 'Advance Deduction', // Label it as an advance deduction
-                amount: remainingAmount,
+                amount: `Advance: ${driverAdvance}`,
                 receivedAmount: remainingAmount,
                 balance: newAdvance, // Remaining advance after deduction
                 timestamp: Timestamp.now(),

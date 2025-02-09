@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { IRootState } from '../store';
 import ReactApexChart from 'react-apexcharts';
-import { getFirestore, collection, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, Timestamp } from 'firebase/firestore';
 import './Index.css';
+import { format } from 'date-fns'; // You can use date-fns to format the current date.
 
 const Index = () => {
     const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
@@ -13,6 +14,8 @@ const Index = () => {
     const uid = sessionStorage.getItem('uid');
     const role = sessionStorage.getItem('role');
     const userName = sessionStorage.getItem('username');
+    const [notifications, setNotifications] = useState<string[]>([]);
+    const [newNotifications, setNewNotifications] = useState<string[]>([]);
 
     console.log("roleeer", uid);
 
@@ -135,9 +138,85 @@ const Index = () => {
 
         fetchBookings();
     }, [isDark, db]);
+    useEffect(() => {
+        const fetchVehicleData = () => {
+            const unsubscribe = onSnapshot(collection(db, `user/${uid}/vehicle`), (querySnapshot) => {
+                let newNotifications: string[] = [];
+    
+                querySnapshot.forEach((doc) => {
+                    const vehicle = doc.data();
+                    const { totalOdometer, serviceKM, serviceVehicle } = vehicle;
+    console.log("vehiclessss",vehicle)
+                    if (serviceKM > 0 && totalOdometer % serviceKM === 0 && totalOdometer !== 0) {
+                        newNotifications.push(`Vehicle ${serviceVehicle} is due for service. Odometer: ${totalOdometer} km.`);
+                    }
+                });
+    
+                setNewNotifications(newNotifications);
 
+            });
+    
+            return () => unsubscribe();
+        };
+    
+        fetchVehicleData();
+    }, [db, uid]);
+    
+    useEffect(() => {
+        const fetchTaxInsuranceData = () => {
+          const unsubscribe = onSnapshot(collection(db, `user/${uid}/taxInsurance`), (querySnapshot) => {
+            let notificationsList: string[] = [];
+            querySnapshot.forEach((doc) => {
+              const data = doc.data();
+              console.log("data", data);
+    
+              let insuranceExpiryDate;
+              if (data.insuranceExpiryDate instanceof Timestamp) {
+                insuranceExpiryDate = data.insuranceExpiryDate.toDate();
+              } else {
+                insuranceExpiryDate = new Date(data.insuranceExpiryDate); // Handle non-Timestamp formats
+              }
+    
+              let taxExpiryDate;
+              if (data.taxExpiryDate instanceof Timestamp) {
+                taxExpiryDate = data.taxExpiryDate.toDate();
+              } else {
+                taxExpiryDate = new Date(data.taxExpiryDate); // Handle non-Timestamp formats
+              }
+    
+              console.log("insuranceExpiryDate", insuranceExpiryDate);
+              console.log("taxExpiryDate", taxExpiryDate);
+    
+              const currentDate = new Date();
+              const formattedCurrentDate = format(currentDate, 'yyyy-MM-dd');
+              console.log("formattedCurrentDate", formattedCurrentDate);
+    
+              // Check if insurance expiry date matches today
+              if (format(insuranceExpiryDate, 'yyyy-MM-dd') === formattedCurrentDate) {
+                notificationsList.push(
+                  `Today expires insurance of vehicle ${data.vehicleNumber}, expiry date: ${insuranceExpiryDate.toLocaleDateString()}`
+                );
+              }
+              // Check if tax expiry date matches today
+              if (format(taxExpiryDate, 'yyyy-MM-dd') === formattedCurrentDate) {
+                notificationsList.push(
+                  `Today expires tax ${data.vehicleNumber} expiry date: ${taxExpiryDate.toLocaleDateString()}`
+                );
+              }
+            });
+            setNotifications(notificationsList);
+          });
+    
+          return () => unsubscribe();
+        };
+    
+        fetchTaxInsuranceData();
+      }, [db, uid]);
+    
+    
     return (
         <div className="container mx-auto p-6 bg-cover bg-center bg-no-repeat">
+
             <ul className="flex space-x-2 rtl:space-x-reverse">
                 <li>
                     <Link to="/" className="text-primary hover:underline">
@@ -171,7 +250,16 @@ const Index = () => {
                             <p className="text-2xl">{salesByCategory.series[3]}</p>
                         </div>
                     </div>
-
+                    {notifications.map((note, index) => (
+        <div key={index} className="notification blink bg-red-500 text-white p-3 rounded-lg mb-4">
+          {note}
+        </div>
+      ))}
+            {newNotifications.map((note, index) => (
+        <div key={index} className="notification blink bg-yellow-500 text-white p-3 rounded-lg mb-4">
+          {note}
+        </div>
+      ))}
                     <div className="panel h-full bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg shadow-lg p-6">
                         <div className="flex items-center justify-between mb-5">
                             <h5 className="font-semibold text-lg">Bookings By Category</h5>

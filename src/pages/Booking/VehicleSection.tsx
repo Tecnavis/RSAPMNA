@@ -1,8 +1,7 @@
-import { collection, getDocs, getFirestore, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, getFirestore, query, where } from 'firebase/firestore';
 import React, { useState, useEffect, useRef } from 'react';
 interface VehicleSectionProps {
-    showroomLocation: string;
-    totalSalary: number;
+    showroomId: string | null; // Accept showroom ID
     onUpdateTotalSalary: (newSalary: number) => void;
     insuranceAmountBody: string;
     onInsuranceAmountBodyChange: (amount: string) => void;
@@ -25,9 +24,8 @@ interface ShowRoomState {
     insuranceAmountBody: string;
 }
 const VehicleSection: React.FC<VehicleSectionProps> = ({
-    showroomLocation,
-    totalSalary,
-    onUpdateTotalSalary,
+    showroomId,
+       onUpdateTotalSalary,
     insuranceAmountBody,
     onInsuranceAmountBodyChange,
     serviceCategory,
@@ -39,7 +37,7 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
     bodyShope,
     onApplyAdjustment,
 }) => {
-  const [showRoom, setShowRoom] = useState<ShowRoomState>({
+    const [showRoom, setShowRoom] = useState<ShowRoomState>({
         availableServices: serviceCategory || '',
         hasInsurance: '',
         lifting: '',
@@ -48,8 +46,6 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
         insuranceAmountBody: insuranceAmountBody || '', // Allow insurance amount to be an empty string for manual entry
     });
     const [changedInsuranceAmountBody, setChangedInsuranceAmountBody] = useState<string>('');
-    console.log('insuranceAmountBodykk', changedInsuranceAmountBody);
-
     const [showNotification, setShowNotification] = useState<boolean>(false);
     const [isButtonGreen, setIsButtonGreen] = useState(false); // State to change button color
     const role = sessionStorage.getItem('role');
@@ -57,25 +53,22 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
     const uid = sessionStorage.getItem('uid') || '';
     const db = getFirestore();
     const handleApply = () => {
-        // Trigger the parent callback to handle the adjustment
         onApplyAdjustment();
     };
-    // ---------l-lllll-------------------------------------------
-    useEffect(() => {
-        const fetchInsuranceAmountBody = async () => {
-            if (changedInsuranceAmountBody) return; // Prevent fetching if manually changed
-
-            const showroomRef = collection(db, `user/${uid}/showroom`);
-            const q = query(showroomRef, where('Location', '==', showroomLocation));
-            const querySnapshot = await getDocs(q);
-
-            if (!querySnapshot.empty) {
-                const showroomData = querySnapshot.docs[0].data(); // Get the first matching document
-                console.log('Fetched insuranceAmountBody:', showroomData); // Log the value
-
+    const fetchInsuranceAmountBody = async () => {
+        if (changedInsuranceAmountBody || !showroomId) return;
+    
+        const db = getFirestore();
+        const showroomDocRef = doc(db, `user/${uid}/showroom`, showroomId); // Correct reference
+    
+        try {
+            const showroomSnapshot = await getDoc(showroomDocRef);
+    
+            if (showroomSnapshot.exists()) {
+                const showroomData = showroomSnapshot.data();
+                console.log('Fetched insuranceAmountBody:', showroomData);
+    
                 if (showroomData.insuranceAmountBody) {
-                    console.log('Fetched insuranceAmountBody:', showroomData.insuranceAmountBody); // Log the value
-
                     setShowRoom((prevShowRoom) => ({
                         ...prevShowRoom,
                         insuranceAmountBody: String(showroomData.insuranceAmountBody),
@@ -85,14 +78,29 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
                     console.log('No insuranceAmountBody found in the document');
                 }
             } else {
-                console.log('No matching showroom found for the given location');
+                console.log('No matching showroom found for the given ID');
             }
-        };
-
-        if (!changedInsuranceAmountBody && showroomLocation) {
+        } catch (error) {
+            console.error('Error fetching showroom data:', error);
+        }
+    };
+    
+    // Use it inside useEffect correctly
+    useEffect(() => {
+        if (showroomId) {
             fetchInsuranceAmountBody();
         }
-    }, [showroomLocation, changedInsuranceAmountBody, onInsuranceAmountBodyChange]);
+    }, [showroomId, changedInsuranceAmountBody, onInsuranceAmountBodyChange]);
+    
+    useEffect(() => {
+        if (bodyShope === 'insurance' && showroomId) {
+            // Fetch and set showroom's insuranceAmountBody
+            fetchInsuranceAmountBody();
+        } else if (bodyShope === 'both') {
+            // Allow manual input for insuranceAmountBody
+            setShowRoom((prev) => ({ ...prev, insuranceAmountBody: changedInsuranceAmountBody }));
+        }
+    }, [bodyShope, showroomId, changedInsuranceAmountBody]);
     useEffect(() => {
         if (bodyShope !== showRoom.insurance) {
             setShowRoom((prevShowRoom) => ({
@@ -103,11 +111,11 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
         }
     }, [bodyShope]);
     useEffect(() => {
-        // Initialize `changedInsuranceAmountBody` with the parent's `insuranceAmountBody` value
-        if (changedInsuranceAmountBody) {
+        if (!changedInsuranceAmountBody) { // Only update if the user hasn't already typed something
             setChangedInsuranceAmountBody(insuranceAmountBody);
         }
-    }, [insuranceAmountBody, changedInsuranceAmountBody]);
+    }, [insuranceAmountBody]);
+    
     useEffect(() => {
         if (serviceCategory !== showRoom.availableServices) {
             setShowRoom((prevShowRoom) => ({
@@ -131,24 +139,37 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
             onServiceCategoryChange(value);
         }
     };
-
+    // -=======------------------------------------------------
     const handleBodyInsuranceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { value } = e.target;
-        setShowRoom((prevShowRoom) => ({
-            ...prevShowRoom,
-            insurance: value,
-        }));
+    
+        setShowRoom((prevShowRoom) => {
+            const isNewInsuranceType = prevShowRoom.insurance !== value;
+            return {
+                ...prevShowRoom,
+                insurance: value,
+                insuranceAmountBody: isNewInsuranceType ? '' : prevShowRoom.insuranceAmountBody,
+            };
+        });
+    
+        if (showRoom.insurance !== value) {
+            setChangedInsuranceAmountBody('');
+            onInsuranceAmountBodyChange('');
+        }
+    
         onInsuranceChange(value);
     };
-
-   
+    
     const handleChangedInsuranceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        
         const { value } = e.target;
 
         setChangedInsuranceAmountBody(value);
-        console.log('changedInsuranceAmountBodyyy', value);
-        onInsuranceAmountBodyChange(value); // Notify parent component of the change
+        setShowRoom((prevShowRoom) => ({
+            ...prevShowRoom,
+            insuranceAmountBody: value, // Allow manual updates
+        }));
+
+        onInsuranceAmountBodyChange(value); // Notify parent
     };
     const handleAdjustValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { value } = e.target;
@@ -279,17 +300,16 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
                                     onChange={handleChangedInsuranceChange} // Update state and parent component
                                     style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ccc' }}
                                 />
-                                
-            <div
-                style={{
-                    marginTop: '5px',
-                    color: '#ff0000',
-                    fontSize: '0.85em',
-                }}
-            >
-                Note: This is the billing Amount (insurance amount) send to the showroom!
-            </div>
-        
+
+                                <div
+                                    style={{
+                                        marginTop: '5px',
+                                        color: '#ff0000',
+                                        fontSize: '0.85em',
+                                    }}
+                                >
+                                    Note: This is the billing Amount (insurance amount) send to the showroom!
+                                </div>
                             </div>
                         )}
                     </div>
@@ -347,4 +367,3 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
 };
 
 export default VehicleSection;
-// -------------------------------------------------------------------------------------------------------------

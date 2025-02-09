@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { getFirestore, doc, getDoc, updateDoc, deleteDoc, getDocs, collection, Timestamp } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, deleteDoc, getDocs, collection, Timestamp, query, where } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
-import { CiEdit } from 'react-icons/ci';
 
 import { storage } from '../../config/config';
 import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField, ThemeProvider } from '@mui/material';
 import { LoadingIndicator } from 'react-select/dist/declarations/src/components/indicators';
 import EditableField from './EditableField';
+import IconPlus from '../../components/Icon/IconPlus';
+import IconSave from '../../components/Icon/IconSave';
 interface BookingDetails {
     id: string;
     dateTime: string;
@@ -33,6 +34,7 @@ interface BookingDetails {
     pickupLocation: { name: string; lat: number; lng: number } | null;
     dropoffLocation: { name: string; lat: number; lng: number } | null;
     distance: string;
+    serviceCategory:string;
     serviceType: string;
     serviceVehicle: string;
     rcBookImageURLs: string[];
@@ -102,6 +104,8 @@ const ViewMore: React.FC = () => {
     const userName = sessionStorage.getItem('username');
     const [showForm, setShowForm] = useState(false);
     const [feedback, setFeedback] = useState(false);
+const [notes, setNotes] = useState<string>('');
+const [showroomName, setShowroomName] = useState("");
 
     const [formData, setFormData] = useState<FormData>({
         pickedTime: null,
@@ -148,7 +152,11 @@ const ViewMore: React.FC = () => {
         remark: bookingDetails?.remark,
         feedback: bookingDetails?.feedback,
     });
-
+    useEffect(() => {
+        if (bookingDetails && bookingDetails.comments) {
+            setNotes(bookingDetails.comments);
+        }
+    }, [bookingDetails]);
     const [editStates, setEditStates] = useState({
         salary: false,
         fileNumber: false,
@@ -249,6 +257,21 @@ const ViewMore: React.FC = () => {
     const closeModal = () => {
         setSelectedImage(null); // Clear selected image
     };
+    const handleSaveNotes = async () => {
+        if (!uid || !id) {
+            console.error("UID or Booking ID is missing.");
+            return;
+        }
+    
+        try {
+            const bookingRef = doc(db, `user/${uid}/bookings`, id);
+            await updateDoc(bookingRef, { comments: notes });
+            alert("Notes updated successfully!");
+        } catch (error) {
+            console.error("Error updating notes:", error);
+            alert("Failed to update notes.");
+        }
+    };
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>, field: keyof typeof formData) => {
         const files = event.target.files;
         if (files) {
@@ -325,6 +348,7 @@ const ViewMore: React.FC = () => {
                     vehicleNumber: data.vehicleNumber || '',
                     vehicleModel: data.vehicleModel || '',
                     phoneNumber: data.phoneNumber || '',
+                    serviceCategory:data.serviceCategory || '',
                     mobileNumber: data.mobileNumber || '',
                     baseLocation: data.baseLocation || null,
                     pickupLocation: data.pickupLocation || null,
@@ -426,7 +450,24 @@ const ViewMore: React.FC = () => {
             });
         }
     }, [bookingDetails]);
-
+    useEffect(() => {
+        const fetchShowroom = async () => {
+          if (!bookingDetails?.showroomLocation || !uid) return;
+      
+          const showroomRef = collection(db, `user/${uid}/showroom`);
+          const q = query(showroomRef, where("Location", "==", bookingDetails.showroomLocation));
+          
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            const showroomData = querySnapshot.docs[0].data();
+            setShowroomName(showroomData.ShowRoom || "N/A");
+          } else {
+            setShowroomName("N/A");
+          }
+        };
+      
+        fetchShowroom();
+      }, [bookingDetails?.showroomLocation, uid]);
     const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!uid || !id) {
@@ -443,7 +484,7 @@ const ViewMore: React.FC = () => {
                 ...formData,
                 amount: updatedAmount,
                 status: 'Order Completed',
-                closedStatus: 'Admin/Staff closed booking',
+                closedStatus: `${role} ${userName} closed booking`, // Corrected string interpolation
                 remarkWritten,
             });
             console.log('Booking successfully updated!');
@@ -749,23 +790,23 @@ const ViewMore: React.FC = () => {
                         </td>{' '}
                     </tr>
                     <tr>
-                        <td className="bg-gray-100 p-2 font-semibold">Service Center :</td>
-                        <td className="p-2">
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <EditableField
-                                    label="Showroom Location"
-                                    value={bookingDetails?.showroomLocation}
-                                    isEditing={editStates.showroomLocation}
-                                    editedValue={editedFields.showroomLocation}
-                                    loading={loadingStates.showroomLocation}
-                                    onEditClick={() => handleEditClick('showroomLocation')}
-                                    onSaveClick={() => handleSaveClick('showroomLocation')}
-                                    onChange={(e) => setEditedFields((prev) => ({ ...prev, showroomLocation: e.target.value }))}
-                                    isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-                                    bookingCheck={bookingCheck}
-                                />
-                            </div>
-                        </td>{' '}
+                    <td className="bg-gray-100 p-2 font-semibold">Service Center :</td>
+    <td className="p-2">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <EditableField
+          label="Showroom Location"
+          value={showroomName}  // Display showroom name
+          isEditing={editStates.showroomLocation}
+          editedValue={editedFields.showroomLocation}
+          loading={loadingStates.showroomLocation}
+          onEditClick={() => handleEditClick('showroomLocation')}
+          onSaveClick={() => handleSaveClick('showroomLocation')}
+          onChange={(e) => setEditedFields((prev) => ({ ...prev, showroomLocation: e.target.value }))}
+          isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+          bookingCheck={bookingCheck}
+        />
+      </div>
+    </td>
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">File Number :</td>
@@ -914,6 +955,10 @@ const ViewMore: React.FC = () => {
                         <td className="p-2">{bookingDetails.mobileNumber}</td>
                     </tr>
                     <tr>
+                        <td className="bg-gray-100 p-2 font-semibold">Service Category :</td>
+                        <td className="p-2">{bookingDetails.serviceCategory}</td>
+                    </tr>
+                    <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Start Location:</td>
                         <td className="p-2">{bookingDetails.baseLocation ? `${bookingDetails.baseLocation.name}` : 'Location not selected'}</td>
                     </tr>
@@ -922,9 +967,24 @@ const ViewMore: React.FC = () => {
                         <td className="p-2">{bookingDetails.pickupLocation ? `${bookingDetails.pickupLocation.name}` : 'Location not selected'}</td>
                     </tr>
                     <tr>
-                        <td className="bg-gray-100 p-2 font-semibold">Dropoff Location:</td>
-                        <td className="p-2">{bookingDetails.dropoffLocation ? `${bookingDetails.dropoffLocation.name}` : 'Location not selected'}</td>
-                    </tr>
+                    <td className="bg-gray-100 p-2 font-semibold">Dropoff Location :</td>
+    <td className="p-2">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <EditableField
+          label="Showroom Location"
+          value={showroomName}  // Display showroom name
+          isEditing={editStates.showroomLocation}
+          editedValue={editedFields.showroomLocation}
+          loading={loadingStates.showroomLocation}
+          onEditClick={() => handleEditClick('showroomLocation')}
+          onSaveClick={() => handleSaveClick('showroomLocation')}
+          onChange={(e) => setEditedFields((prev) => ({ ...prev, showroomLocation: e.target.value }))}
+          isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
+          bookingCheck={bookingCheck}
+        />
+      </div>
+    </td>
+    </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Distance :</td>
                         <td className="p-2">
@@ -1018,6 +1078,31 @@ const ViewMore: React.FC = () => {
                                 <td className="bg-gray-100 p-2 font-semibold">Remark :</td>
                                 <td className="p-2 text-danger">{bookingDetails.remark}</td>
                             </tr>
+                            <tr>
+                            <td colSpan={2}>
+                            <div className="p-4 border border-gray-300 rounded-lg shadow-md bg-white">
+            <label className="block text-lg font-semibold text-gray-700 mb-2">Notes:</label>
+
+            <textarea
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none transition-all"
+                rows={3}
+                placeholder="Add your notes here..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+            />
+                        <label className="  text-red-700 mb-2">Written By: {role}{userName}</label>
+
+            <button
+                className="mt-3 flex items-center justify-center gap-2 px-5 py-2 bg-green-500 text-white font-medium rounded-md shadow-md hover:bg-blue-600 transition-all"
+                onClick={handleSaveNotes}
+            >
+                <IconSave className="w-5 h-5" />
+                Save Notes
+            </button>
+        </div>
+    </td>
+</tr>
+
                             {bookingDetails.bookingChecked === true && (
                                 <>
                                     <tr>

@@ -1,0 +1,110 @@
+.vehicle-container {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    font-family: 'Roboto', sans-serif;
+  }
+  
+  .vehicle-heading {
+    font-size: 2.5rem;
+    color: #34495e;
+    text-align: center;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  
+  .vehicle-heading::after {
+    content: "";
+    display: block;
+    width: 50px;
+    height: 4px;
+    background: #3498db;
+    margin: 10px auto 0;
+    border-radius: 2px;
+  }
+  
+  .vehicle-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .vehicle-form label {
+    font-weight: bold;
+    color: #555;
+  }
+  
+  .vehicle-form input {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  
+  .vehicle-form button {
+    padding: 12px;
+    font-size: 16px;
+    background: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  
+  .vehicle-form button:hover {
+    background: #45a049;
+  }
+  
+  .vehicle-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  
+  .vehicle-table th,
+  .vehicle-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+  }
+  
+  .vehicle-table th {
+    background: #4caf50;
+    color: white;
+    font-weight: bold;
+  }
+  
+  .vehicle-table tr:nth-child(even) {
+    background: #f2f2f2;
+  }
+  
+  .vehicle-table tr:hover {
+    background: #ddd;
+  }
+  
+  .vehicle-table button {
+    padding: 5px 10px;
+    font-size: 14px;
+    background: #ff9800;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  
+  .vehicle-table button:hover {
+    background: #e68a00;
+  }
+  .aa a {
+    text-decoration: none;
+    color: #007bff; /* Link color */
+  }
+  
+  .aa a:hover {
+    color: #0056b3; /* Hover color */
+  }
+   

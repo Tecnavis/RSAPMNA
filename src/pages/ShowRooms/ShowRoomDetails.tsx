@@ -241,7 +241,7 @@ const ShowRoomDetails: React.FC = () => {
                             <h2>Sign In Here</h2>
                             <form onSubmit={handleSignInSubmit}>
                                 <label htmlFor="signInPhoneNumber">Phone Number:</label>
-                                <input type="number" id="signInPhoneNumber" name="phoneNumber" value={signInData.phoneNumber} onChange={handleSignInFormChange} required />
+                                <input type="text" id="signInPhoneNumber" name="phoneNumber" value={signInData.phoneNumber} onChange={handleSignInFormChange} required />
                                 {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
                                 <button type="submit">Sign In</button>
                             </form>
