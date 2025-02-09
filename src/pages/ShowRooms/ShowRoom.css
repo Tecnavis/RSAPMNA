@@ -266,3 +266,22 @@
 .hover-form button:hover {
     background-color: #0056b3;
 }
+/* Add this CSS to hide buttons when printing */
+@media (max-width: 768px) {
+    #modal-content {
+      width: 90%; /* Increase width for small screens */
+    }
+  
+    .modal-content > div {
+      width: 100%; /* Ensure content takes full width */
+    }
+  
+    /* Optional: Adjust QR Code size for smaller screens */
+    .qr-container {
+      width: 150px;
+      height: 150px;
+    }
+  }
+  
+  
+  

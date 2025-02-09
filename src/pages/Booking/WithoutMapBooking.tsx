@@ -71,6 +71,7 @@ const showrooms: { value: string; label: string }[] = [
     { value: 'lifting', label: 'Lifting' },
     // Add more showroom options here
 ];
+
 const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => {
     const db = getFirestore();
     const navigate = useNavigate();
@@ -141,6 +142,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [isButtonClicked, setIsButtonClicked] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [bookingEdit, setBookingEdit] = useState<boolean>(); // Set the default value
+    const [selectedShowroomId, setSelectedShowroomId] = useState<string | null>(null);
 
     const uid = sessionStorage.getItem('uid');
     const userName = sessionStorage.getItem('username');
@@ -369,10 +371,12 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         setIsAdjustmentApplied(true);
         // Call any other logic you need for applying the adjustment
     };
-    const handleInsuranceAmountBodyChange = (amount: any) => {
+    const handleInsuranceAmountBodyChange = (amount: string) => {
         console.log('Insurance Amount Body Changed:', amount);
         setInsuranceAmountBody(amount);
+        setEditData((prev:any) => ({ ...prev, insuranceAmountBody: amount })); // Ensure state update
     };
+    
     const handleConfirm = () => {
         setIsButtonClicked(true); // Mark the button as clicked
         setErrorMessage('');
@@ -397,7 +401,18 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     };
     const handleBodyInsuranceChange = (insurance: any) => {
         setBodyShope(insurance);
+        
+        if (insurance === 'insurance' && state?.editData?.insuranceAmountBody) {
+            // Restore showroom's insuranceAmountBody when switching to "insurance"
+            setInsuranceAmountBody(state.editData.insuranceAmountBody);
+        } else {
+            // Reset for manual input when selecting "both"
+            setInsuranceAmountBody('');
+        }
     };
+    
+    
+    // -----------------00000000000000000000000000
     const handleChangedInsuranceChange = (insurance: any) => {
         setBodyShope(insurance);
     };
@@ -427,9 +442,11 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                 const selectedShowroom: any = showrooms.find((show: any) => show.value === value);
 
                 if (selectedShowroom) {
-                    setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
-                    console.log('nsuranceAmountBodymm', selectedShowroom.insuranceAmountBody);
-                    // Check if selectedShowroom has locationLatLng before accessing lat and lng
+                    setSelectedShowroomId(selectedShowroom.id); // Store the ID in state
+
+                    // setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
+                    // console.log('nsuranceAmountBodymm', selectedShowroom.insuranceAmountBody);
+                    // // Check if selectedShowroom has locationLatLng before accessing lat and lng
                     if (selectedShowroom.locationLatLng && selectedShowroom.locationLatLng.lat && selectedShowroom.locationLatLng.lng) {
                         const latString = selectedShowroom.locationLatLng.lat.toString();
                         const lngString = selectedShowroom.locationLatLng.lng.toString();
@@ -441,7 +458,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         });
                     } else {
                         console.error('Location data is missing for the selected showroom.');
-                        // You may choose to set a default or empty location here
+                        setSelectedShowroomId(null); // Reset ID if no showroom is selected
                         setDropoffLocation({
                             name: selectedShowroom.value || '',
 
@@ -450,7 +467,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         });
                     }
                 } else {
-                    setInsuranceAmountBody(0);
+                    // setInsuranceAmountBody(0);
                     setDropoffLocation({
                         name: '',
                         lat: '',
@@ -473,10 +490,10 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             case 'bodyShope':
                 setBodyShope(value || '');
                 break;
-            case 'insuranceAmountBody':
-                console.log("fortest",value)
-                setInsuranceAmountBody(value || 0);
-                break;
+            // case 'insuranceAmountBody':
+            //     console.log("fortest",value)
+            //     setInsuranceAmountBody(value || 0);
+            //     break;
             case 'adjustValue':
                 setAdjustValue(value || 0);
 
@@ -744,7 +761,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     };
 
     const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-    // -----------------------------------------------------------------------------------------------------------
+// ------------------------------------------------
+
     const openModal = (distance: any) => {
         setIsModalOpen(true);
     };
@@ -762,6 +780,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             serviceCollection,
             (snapshot) => {
                 const servicesList = snapshot.docs.map((doc) => ({
+                    id: doc.id, // Include the Firestore document ID
+
                     value: doc.data().Location, // Keep this if Location is used as the value for selecting an option
                     label: doc.data().ShowRoom, // ShowRoom will be displayed as the label in the dropdown
                     insuranceAmountBody: doc.data().insuranceAmountBody, // Include this field if needed
@@ -1297,8 +1317,12 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     lng: pickupLocation?.lng?.toString() || '',
                 };
                 const totalDriverDistanceNumber = parseFloat(totalDriverDistance) || 0;
-
-                const bookingData = {
+// -----------------------------------------------------------------
+const selectedShowroomData = showrooms.find((show: any) => show.value === showroomLocation);
+const showroomId = selectedShowroomData ? selectedShowroomData.id : '';
+console.log("selectedShowroomData", selectedShowroomData);
+         
+const bookingData = {
                     driver: driverName,
                     totalSalary: totalSalary,
                     pickupLocation: formattedPickupLocation,
@@ -1313,6 +1337,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     baseLocation: baseLocation || '',
                     showroomLocation: showroomLocation,
                     company: company || '',
+                    showroomId:showroomId,
                     adjustValue: adjustValue || '',
                     customerName: customerName || '',
                     totalDriverDistance: totalDriverDistanceNumber || 0,
@@ -1358,14 +1383,14 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         }
                     }
                     if (role === 'admin') {
-                        bookingData.newStatus = `Edited by ${role}`;
+                        bookingData.newStatus = `Edited by $${role} ${userName ?? ''}`;
                     } else if (role === 'staff') {
-                        bookingData.newStatus = `Edited by ${role} ${userName}`;
+                        bookingData.newStatus = `Edited by $${role} ${userName ?? ''}`;
                     }
                     bookingData.editedTime = formatDate(new Date());
                 } else {
                     // For new booking, add "Added by" status
-                    bookingData.newStatus = `Added by ${role} ${userName}`;
+                    bookingData.newStatus = `Added by $${role} ${userName ?? ''}`;
                 }
                 // Schedule the booking at deliveryDateTime if provided
                 if (deliveryDateTime) {
@@ -2013,8 +2038,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     <React.Fragment>
                         <div>
                             <VehicleSection
-                                showroomLocation={showroomLocation}
-                                totalSalary={totalSalary}
+                                showroomId={selectedShowroomId} // Pass showroom ID
                                 updatedTotalSalary={updatedTotalSalary}
                                 onUpdateTotalSalary={handleUpdateTotalSalary}
                                 insuranceAmountBody={String(insuranceAmountBody)}
@@ -2070,13 +2094,21 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                                     </div>
                                 </div>
 
-                                {/* Insurance Amount Body */}
-                                <div className="flex items-center w-1/3">
-                                    <label htmlFor="insuranceAmountBody" className="ltr:mr-2 rtl:ml-2 mb-0">
-                                        Insurance Amount By ShowRoom
-                                    </label>
-                                    <div className="form-input flex-1">{insuranceAmountBody}</div>
-                                </div>
+                                {serviceCategory === 'Body Shop' && (bodyShope === 'insurance' || bodyShope === 'both') && (
+    <div className="mb-4">
+        <label className="block text-gray-700 font-medium mb-1">
+            Insurance Amount By ShowRoom
+        </label>
+        <input 
+            type="text" 
+            value={insuranceAmountBody} 
+            onChange={(e) => setInsuranceAmountBody(e.target.value)} 
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Insurance amount"
+        />
+    </div>
+)}
+
 
                                 {/* Payable Amount (with insurance) */}
                                 <div className="flex items-center w-1/3">

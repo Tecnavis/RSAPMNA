@@ -34,39 +34,43 @@ const Vehicle: React.FC = () => {
 
   useEffect(() => {
     const fetchVehicles = async () => {
+      if (!uid) return;
+  
       const vehicleRef = collection(db, `user/${uid}/vehicle`);
       const snapshot = await getDocs(vehicleRef);
-
+  
       const vehicleData = await Promise.all(
-        snapshot.docs.map(async (doc) => {
-          const vehicle = { id: doc.id, ...(doc.data() as VehicleData) };
-
+        snapshot.docs.map(async (docSnapshot) => {
+          const vehicle = { id: docSnapshot.id, ...(docSnapshot.data() as VehicleData) };
+  
           const bookingsRef = collection(db, `user/${uid}/bookings`);
-          const bookingsQuery = query(
-            bookingsRef,
-            where("serviceVehicle", "==", vehicle.serviceVehicle)
-          );
-
+          const bookingsQuery = query(bookingsRef, where("serviceVehicle", "==", vehicle.serviceVehicle));
           const bookingsSnapshot = await getDocs(bookingsQuery);
+  
+          // Calculate totalOdometer from booking data
           const totalOdometer = bookingsSnapshot.docs.reduce((sum, bookingDoc) => {
             const bookingData = bookingDoc.data();
             return sum + Number(bookingData.totalDriverDistance || 0);
           }, 0);
-console.log("bookingData",totalOdometer)
-          // Check if serviceKM is a multiple of totalOdometer
-        if (totalOdometer > 0 && parseInt(vehicle.serviceKM) % totalOdometer === 0) {
-          alert(`Vehicle ${vehicle.vehicleName} (${vehicle.serviceVehicle}) has reached a service milestone.`);
-        }
-
+  
+          console.log("Total Odometer for", vehicle.serviceVehicle, ":", totalOdometer);
+  
+          // Update Firestore if totalOdometer changes
+          if (totalOdometer !== vehicle.totalOdometer) {
+            const vehicleDocRef = doc(db, `user/${uid}/vehicle`, vehicle.id);
+            await updateDoc(vehicleDocRef, { totalOdometer });
+          }
+  
           return { ...vehicle, totalOdometer };
         })
       );
-
+  
       setVehicles(vehicleData);
     };
-
+  
     fetchVehicles();
   }, [db, uid]);
+  
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -101,7 +105,8 @@ console.log("bookingData",totalOdometer)
     <div className="vehicle-container">
 <div className="vehicle-container">
   <h2 className="vehicle-heading">🚗 Manage Vehicles</h2>
-</div>      <form onSubmit={handleSubmit} className="vehicle-form">
+</div>    
+  <form onSubmit={handleSubmit} className="vehicle-form">
         <label>
           Vehicle Name:
           <input

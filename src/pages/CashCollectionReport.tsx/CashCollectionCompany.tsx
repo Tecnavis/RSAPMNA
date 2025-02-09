@@ -1,6 +1,6 @@
 // new code
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, writeBatch, arrayUnion, Timestamp, increment, addDoc, setDoc, runTransaction } from 'firebase/firestore';
 import Modal from 'react-modal';
@@ -8,6 +8,7 @@ import { parse, format } from 'date-fns';
 import styles from './cashCollectionReport.module.css';
 import IconEdit from '../../components/Icon/IconEdit';
 import { Link } from '@mui/material';
+import IconPrinter from '../../components/Icon/IconPrinter';
 
 interface Driver {
     id?: string;
@@ -59,7 +60,8 @@ const CashCollectionCompany: React.FC = () => {
     const [bookingToApprove, setBookingToApprove] = useState<Booking | null>(null);
     const [selectedMonth, setSelectedMonth] = useState<string>('');
         const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
-    
+        const printRef = useRef<HTMLDivElement>(null);
+
     const [monthlyTotals, setMonthlyTotals] = useState<{
         totalAmount: string;
         totalReceived: string;
@@ -954,9 +956,453 @@ console.log("parsedReceivedAmount",parsedReceivedAmount)
         }, {} as { [key: string]: string }); // Explicitly type acc here
         setInvoiceNumbers(initialInvoiceNumbers);
     }, [bookings]); // Re-run this effect when bookings change
+    // const handlePrint = () => {
+    //     // Filter bookings based on selected month and year
+    //     const filteredBookings = sortedBookings.filter((booking) => {
+    //         const bookingDate = parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date());
+    //         const bookingMonth = bookingDate.getMonth() + 1; // JavaScript months are 0-based
+    //         const bookingYear = bookingDate.getFullYear();
+    
+    //         return (
+    //             (!selectedMonth || bookingMonth === parseInt(selectedMonth)) &&
+    //             (!selectedYear || bookingYear === parseInt(selectedYear))
+    //         );
+    //     });
+    
+    //     const content = `
+    //         <html>
+    //         <head>
+    //             <title>Print</title>
+    //             <style>
+    //                 body {
+    //                     font-family: Arial, sans-serif;
+    //                     padding: 20px;
+    //                 }
+    //                 .table-container {
+    //                     width: 100%;
+    //                 }
+    //                 table {
+    //                     width: 100%;
+    //                     border-collapse: collapse;
+    //                 }
+    //                 th, td {
+    //                     padding: 12px;
+    //                     border: 1px solid #ddd;
+    //                     text-align: left;
+    //                     word-wrap: break-word;
+    //                     max-width: 200px; 
+    //                 }
+    //                 thead {
+    //                     background-color: #f1f1f1;
+    //                     font-weight: bold;
+    //                 }
+    //                 @media print {
+    //                     body {
+    //                         overflow: hidden !important;
+    //                     }
+    //                     .table-container {
+    //                         overflow: visible !important;
+    //                     }
+    //                     table, tr, td, th {
+    //                         page-break-inside: avoid !important;
+    //                     }
+    //                 }
+    //             </style>
+    //         </head>
+    //         <body>
+    //             <div style="text-align: center; margin-bottom: 20px;">
+    //                 <i class="fas fa-print" style="font-size: 48px;"></i>
+    //             </div>
+    
+    //             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+    //                 <div class="bg-gradient-to-r from-green-100 to-green-200 p-6 shadow-lg rounded-lg">
+    //                     <div class="flex items-center space-x-4">
+    //                         <div class="text-4xl text-green-600">
+    //                             <i class="fas fa-receipt"></i>
+    //                         </div>
+    //                         <div>
+    //                             <h3 class="text-xl font-bold text-gray-800">Total Collected Amount:</h3>
+    //                             <p class="text-gray-700 text-lg">${monthlyTotals.totalReceived}</p>
+    //                         </div>
+    //                     </div>
+    //                 </div>
+    //                 <div class="bg-gradient-to-r from-red-100 to-red-200 p-6 shadow-lg rounded-lg">
+    //                     <div class="flex items-center space-x-4">
+    //                         <div class="text-4xl text-red-600">
+    //                             <i class="fas fa-hand-holding-usd"></i>
+    //                         </div>
+    //                         <div>
+    //                             <h3 class="text-xl font-bold text-gray-800">Balance Amount To Collect:</h3>
+    //                             <p class="text-gray-700 text-lg">${monthlyTotals.totalBalances}</p>
+    //                         </div>
+    //                     </div>
+    //                 </div>
+    //             </div>
+    
+    //             <div class="table-container">
+    //                 <table>
+    //                     <thead>
+    //                         <tr>
+    //                             <th>#</th>
+    //                             <th>Date</th>
+    //                             <th>File Number</th>
+    //                             <th>Customer Vehicle Number</th>
+    //                             <th>Payable Amount By Company</th>
+    //                             <th>Received Amount From Company</th>
+    //                             <th>Balance</th>
+    //                             <th>Invoice Number</th>
+    //                         </tr>
+    //                     </thead>
+    //                     <tbody>
+    //                         ${filteredBookings.map((booking, index) => `
+    //                             <tr>
+    //                                 <td>${index + 1}</td>
+    //                                 <td>${format(parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date()), 'dd/MM/yyyy, h:mm:ss a')}</td>
+    //                                 <td>${booking.fileNumber}</td>
+    //                                 <td>${booking.vehicleNumber}</td>
+    //                                 <td>${booking.updatedTotalSalary}</td>
+    //                                 <td>${booking.receivedAmountCompany}</td>
+    //                                 <td>${calculateBalance(
+    //                                     parseFloat(booking.updatedTotalSalary?.toString() || '0'),
+    //                                     booking.receivedAmountCompany || 0,
+    //                                     booking.receivedUser
+    //                                 )}</td>
+    //                                 <td>${booking.invoiceNumber || ''}</td>
+    //                             </tr>
+    //                         `).join('')}
+    //                     </tbody>
+    //                 </table>
+    //             </div>
+    //         </body>
+    //         </html>
+    //     `;
+    
+    //     const printWindow = window.open('', '', 'height=600,width=800');
+    
+    //     if (printWindow) {
+    //         printWindow.document.write(content);
+    //         printWindow.document.close();
+    //         printWindow.print();
+    //     } else {
+    //         console.error("Failed to open print window. Please check popup blockers.");
+    //     }
+    // };
+    
+    const handlePrint = () => {  
+        const printContent = printRef.current; // Get the content to print
+        const printWindow = window.open('', '', 'height=1000,width=1600'); // Create a print window
+    
+        if (printWindow && printContent) {
+            printWindow.document.write('<html><head><title>Print</title>');
+    
+            // Add custom styles for print
+            printWindow.document.write(`
+                <style>
+                    body {
+                        font-family: 'Arial', sans-serif;
+                        line-height: 1.5;
+                        margin: 0;
+                        padding: 20px;
+                    }
+                    h2, h3 {
+                        color: #2c3e50;
+                    }
+                    .bg-gradient-to-r {
+                        background: linear-gradient(to right, #a8e063, #56ab2f);
+                        padding: 15px;
+                        border-radius: 8px;
+                        color: #fff;
+                    }
+                    .table-container {
+                        width: 100%;
+                        margin-top: 20px;
+                        border-collapse: collapse;
+                    }
+                    .table-container th, .table-container td {
+                        padding: 12px 15px; /* Added padding for better readability */
+                        border: 2px solid #000; /* Solid black borders */
+                        text-align: left;
+                        font-size: 14px; /* Set font size for clarity */
+                    }
+                    .table-container th {
+                        background-color: #f2f2f2;
+                        font-weight: bold;
+                    }
+                    .table-container tr:nth-child(even) {
+                        background-color: #f9f9f9;
+                    }
+                    .table-container td {
+                        background-color: #fff;
+                    }
+                    .no-print {
+                        display: none !important; /* Hide elements with the 'no-print' class */
+                    }
+                    .text-green {
+                        color: #2ecc71;
+                    }
+                    .text-red {
+                        color: #e74c3c;
+                    }
+                    .action-buttons {
+                        display: none; /* Hide action buttons for printing */
+                    }
+                         .print-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .company-details {
+                    text-align: right;
+                    max-width: 300px;
+                    font-size: 14px;
+                }
+                .company-logo {
+                    width: 50px;
+                    height: auto;
+                }
+                    @media print {
+                        body {
+                            padding: 0;
+                            margin: 0;
+                        }
+                        .grid {
+                            display: grid;
+                            grid-template-columns: repeat(1, 1fr); /* Stack items in a single column */
+                            gap: 4px;
+                        }
+                        .bg-gradient-to-r {
+                            padding: 5px; /* Reduce padding */
+                            font-size: 30px; /* Smaller font size */
+                        }
+                        .text-6xl {
+                            font-size: 4xl; /* Smaller icon size */
+                        }
+                        h3 {
+                            font-size: 14px; /* Smaller heading size */
+                        }
+                        p {
+                            font-size: 12px; /* Smaller paragraph size */
+                        }
+                        .flex {
+                            display: block; /* Stack flex items vertically */
+                        }
+                      .company-details {
+        position: absolute;
+        right: 20px;
+        top: 20px;
+    }
 
+   .company-logo {
+        display: block !important; /* Ensure the image is not hidden during printing */
+        width: 150px; /* Set a fixed width for the logo */
+        height: auto;
+    }
+                    .print-header {
+                        flex-direction: row;
+                        align-items: flex-start;
+                    }
+                    }
+                </style>
+            `);
+    
+            printWindow.document.write('</head><body>');
+            
+            // Get selected month and year
+            const monthText = selectedMonth ? selectedMonth : "All"; // Default to "All" if no month is selected
+            const yearText = selectedYear ? selectedYear : "All"; // Default to "All" if no year is selected
+            // Get the current date
+            const currentDate = new Date();
+            const formattedDate = currentDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            // Inject the selected month and year values in the print content
+            printWindow.document.write(`
+                <p><strong>Month:</strong> ${monthText}</p>
+                <p><strong>Year:</strong> ${yearText}</p>
+            `);
+            
+            // Inject the "Printed By" message based on the role
+            const printedBy = role === 'staff' ? `Printed By: ${userName}` : 'Printed By: Admin';
+            printWindow.document.write(`
+                <p><strong>${printedBy}</strong></p>
+            `);
+            printWindow.document.write(`
+                <p><strong>Printed Date:</strong> ${formattedDate}</p>
+            `);
+            printWindow.document.write(`
+                <div class="print-header">
+                  
+        <div class="company-details">
+    <h3><strong>Company:</strong> RSA</h3>
+    <p><strong>Location:</strong> Tirurkad</p>
+<img class="company-logo" src="http://localhost/assets/images/auth/rsa-png.png" alt="Company Logo" />
+</div>
+
+
+                </div>
+            `);
+            printWindow.document.write(`
+                <style>
+                    .card-container {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                        gap: 20px;
+                        padding: 20px;
+                        margin-top: 20px;
+                    }
+                    .card {
+                        background: linear-gradient(to right, #6a11cb, #2575fc);
+                        color: white;
+                        border-radius: 10px;
+                        padding: 20px;
+                        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                        transition: transform 0.3s ease-in-out;
+                    }
+                    .card:hover {
+                        transform: translateY(-5px);
+                    }
+                    .title {
+                        font-size: 1.2rem;
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                        text-transform: uppercase;
+                    }
+                    .value {
+                        font-size: 1.5rem;
+                        font-weight: 500;
+                        margin-top: 10px;
+                    }
+                    /* Ensure proper styling for printing */
+                    @media print {
+                        .card-container {
+                            display: block;
+                            margin: 0;
+                            padding: 0;
+                        }
+                        .card {
+                            background: #ffffff;
+                            color: #333;
+                            border: 1px solid #ddd;
+                            box-shadow: none;
+                            padding: 15px;
+                            margin: 10px 0;
+                        }
+                        .card:hover {
+                            transform: none;
+                        }
+                        .title {
+                            color: #333;
+                        }
+                        .value {
+                            font-size: 1.3rem;
+                        }
+                    }
+                </style>
+                 <div class="print-header">
+        <h1 class="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">
+            Cash Collection Report Of <span class="text-red-500">${driver?.driverName}</span>
+        </h1>
+    </div>
+                <div class="card-container">
+                 
+                 
+                    <div class="card">
+                        <div class="title">Total Collected Amount:</div>
+                        <div class="value">${monthlyTotals.totalReceived}</div>
+                    </div>
+                    <div class="card">
+                        <div class="title">Balance Amount To Collect: </div>
+                        <div class="value">${monthlyTotals.totalBalances}</div>
+                    </div>
+                   
+                </div>
+            `);
+                       // Write the rest of the content into the print window
+            printWindow.document.write(`
+                <table class="table-container">
+                     <thead>
+                             <tr>
+                                 <th>#</th>
+                                 <th>Date</th>
+                                 <th>File Number</th>
+                                <th>Customer Vehicle Number</th>
+                                <th>Payable Amount By Company</th>
+                                 <th>Received Amount From Company</th>
+                                <th>Balance</th>
+                                 <th>Invoice Number</th>
+                             </tr>
+                         </thead>
+                    <tbody>
+                        ${filteredBookings.map((booking, index) => `
+                          <tr>
+                                     <td>${index + 1}</td>
+                                     <td>${format(parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date()), 'dd/MM/yyyy, h:mm:ss a')}</td>
+                                     <td>${booking.fileNumber}</td>
+                                     <td>${booking.vehicleNumber}</td>
+                                     <td>${booking.updatedTotalSalary}</td>
+                                     <td>${booking.receivedAmountCompany}</td>
+                                     <td>${calculateBalance(
+                                         parseFloat(booking.updatedTotalSalary?.toString() || '0'),
+                                         booking.receivedAmountCompany || 0,
+                                         booking.receivedUser
+                                     )}</td>
+                                     <td>${booking.invoiceNumber || ''}</td>
+                                 </tr>
+                             `).join('')}
+                    </tbody>
+                </table>
+            `);
+    
+           
+            // Add CSS for print
+            printWindow.document.write(`
+                <style>
+                    .print-container {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: auto;
+                        padding: 10px;
+                        box-sizing: border-box;
+                    }
+                    .table-wrapper {
+                        width: 100%;
+                        max-width: 1000px;
+                        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                        border-radius: 8px;
+                        overflow: hidden;
+                        background-color: #fff;
+                        padding: 10px;
+                    }
+                    @media print {
+                        .print-container {
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            min-height: auto;
+                            margin: 0;
+                        }
+                        .table-wrapper {
+                            width: 100%;
+                            max-width: auto;
+                        }
+                    }
+                </style>
+            `);
+    
+            printWindow.document.write('</body></html>');
+            printWindow.document.close(); // Close the document to trigger printing
+            printWindow.print(); // Trigger the print dialog
+        } else {
+            console.error('Print window or content is null');
+        }
+    };
+    
+    
     return (
-        <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg">
+        <div className="container mx-auto my-10 p-5 bg-gray-50 shadow-lg rounded-lg"  ref={printRef}>
             <h1 className="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">Cash Collection Report</h1>
 
             {driver ? (
@@ -1117,8 +1563,14 @@ console.log("parsedReceivedAmount",parsedReceivedAmount)
                             </div>
                         </div>
                     )}
-
-                    <button
+ <button
+          type="button"
+          className="p-2 rounded-full bg-gray-500 text-white hover:bg-blue-600 mt-2 mb-2"
+          onClick={handlePrint}
+          aria-label="Print"
+        >
+          <IconPrinter />
+        </button>                    <button
                         onClick={generateInvoice}
                         disabled={selectedBookings.length === 0}
                         className={`px-6 py-2 font-semibold rounded-md text-white transition duration-300 ease-in-out 

@@ -64,6 +64,7 @@ import Advance from '../pages/Report/Advance/Advance';
 import CashCollectionCompany from '../pages/CashCollectionReport.tsx/CashCollectionCompany';
 import SelectiveReportInvoiceDriver from '../pages/DriverReport/SelectiveReportInvoiceDriver';
 import PmnaReport from '../pages/PMNAReport/PmnaReport';
+import TaxAndInsurance from '../pages/Vehicles/TaxAndInsurance';
 
 
 
@@ -209,6 +210,8 @@ const routes = [
     {path: "/rewarddetails",element:<RewardDetails/>},
     {path :"/leave",element:<Leave/>},
     {path :"/vehicle",element:<Vehicle/>},
+    {path :"/taxandinsurance",element:<TaxAndInsurance/>},
+
     {path :"/bookings/newbooking/viewmore/feedback",element:<Feedback/>},
     {path :"/feedbacktable",element:<FeedbackTable/>},
 

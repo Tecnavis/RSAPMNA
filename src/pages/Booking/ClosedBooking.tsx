@@ -22,6 +22,7 @@ interface Booking {
     bookingChecked?: boolean;
     feedback?: boolean;
     accountingStaffVerified?: boolean;
+    closedStatus?:string;
 }
 
 interface Driver {
@@ -213,6 +214,8 @@ const ClosedBooking: React.FC = () => {
                                             <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Phone Number</th>
                                             <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Service Type</th>
                                             <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Vehicle Number</th>
+                                            <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Closed By</th>
+
                                             <th className="bg-gray-100 p-2 text-left font-medium text-sm block md:table-cell">Action</th>
                                         </tr>
                                     </thead>
@@ -236,6 +239,9 @@ const rowStyle = booking.feedback
                                                     <td className="p-2 text-sm block md:table-cell">{booking.phoneNumber}</td>
                                                     <td className="p-2 text-sm block md:table-cell">{booking.serviceType}</td>
                                                     <td className="p-2 text-sm block md:table-cell">{booking.vehicleNumber}</td>
+                                                    <td className="p-2 text-sm block md:table-cell">{booking.closedStatus}</td>
+
+
                                                     <td>
                                                         <Button
                                                             variant="contained"

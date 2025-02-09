@@ -255,7 +255,7 @@ console.log("role",role)
                                     <div className="flex items-center">
                                     {/* <i className="fas fa-truck-pickup"></i> */}
                                         <IconMenuDocumentation className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark"> &nbsp;  Vehicle List &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark"> &nbsp;  Vehicle Details &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
                                     </div>
 
                                     <div className={currentMenu !== 'vehicle' ? 'rtl:rotate-90 -rotate-90' : ''}>
@@ -266,7 +266,10 @@ console.log("role",role)
                                 <AnimateHeight duration={300} height={currentMenu === 'vehicle' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <NavLink to="/vehicle">RSA Vehicle</NavLink>
+                                            <NavLink to="/vehicle">RSA Vehicle List</NavLink>
+                                        </li>
+                                        <li>
+                                            <NavLink to="/taxandinsurance">Tax And Insurance</NavLink>
                                         </li>
                                        
                                     </ul>

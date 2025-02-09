@@ -37,7 +37,8 @@ const Track: React.FC = () => {
     const [imageURLs, setImageURLs] = useState<string[]>(Array(6).fill(''));
     const [imgURLs, setImgURLs] = useState<string[]>(Array(6).fill(''));
     const [pickedTime, setPickedTime] = useState('');
-
+    const role = sessionStorage.getItem('role');
+    const userName = sessionStorage.getItem('username');
     const [imgFiles, setImgFiles] = useState<(File | null)[]>(Array(6).fill(null));
     const [vehicleImgURLs, setVehicleImgURLs] = useState<string[]>([]);
     const [paymentStatus, setPaymentStatus] = useState<string>('');
@@ -249,7 +250,7 @@ const submitBookingComplete = async () => {
         return;
     }
 
-    if (!paymentStatus) {
+    if (!paymentStatus && !companyBooking) {
         alert('Please select a Payment Type.');
         return;
     }
@@ -284,6 +285,8 @@ const submitBookingComplete = async () => {
                 amount: finalAmount,
                 vehicleImgURLs: uploadedImgURLs,
                 status: 'Order Completed',
+                closedStatus: `${role} ${userName ?? ''} closed booking`,
+
                 totalDriverSalary: totalDriverSalaryString,
                 updatedTotalSalary: updatedTotalSalaryString,
             });

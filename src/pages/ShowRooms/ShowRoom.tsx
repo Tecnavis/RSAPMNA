@@ -3,7 +3,6 @@ import { addDoc, collection, getFirestore, getDocs, doc, updateDoc, serverTimest
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import './ShowRoom.css';
 import { ChangeEvent, FormEvent } from 'react';
-
 import IconPrinter from '../../components/Icon/IconPrinter';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer, toast } from 'react-toastify';
@@ -14,6 +13,10 @@ import IconTrashLines from '../../components/Icon/IconTrashLines';
 import ConfirmationModal from '../../pages/Users/ConfirmationModal/ConfirmationModal';
 import QRCode from 'qrcode.react';
 import IconMapPin from '../../components/Icon/IconMapPin';
+import IconMenuScrumboard from '../../components/Icon/Menu/IconMenuScrumboard';
+import { FaPrint, FaQrcode } from 'react-icons/fa';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface ShowRoomType {
     [key: string]: any;
@@ -122,6 +125,8 @@ const ShowRoom: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [filteredRecords, setFilteredRecords] = useState<ShowRoomRecord[]>([]);
     const listRef = useRef<HTMLDivElement | null>(null);
+    const qrCodeRef = useRef<HTMLDivElement | null>(null);
+
     const formRef = useRef<HTMLFormElement | null>(null);
     const [baseLocation, setBaseLocation] = useState<AutocompleteResult | null>(null);
     const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
@@ -132,6 +137,9 @@ const ShowRoom: React.FC = () => {
     const [manualLng, setManualLng] = useState<string>('');
     const [generatedLink, setGeneratedLink] = useState<string>('');
     const qrRef = useRef<HTMLDivElement>(null); // Change the type to HTMLDivElement
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const modalContentRef = useRef<HTMLDivElement>(null);
+
     const [manualLatLng, setManualLatLng] = useState<string>(''); // Initialize with an empty string
 
     console.log(baseLocation, 'the baseLocation');
@@ -153,6 +161,9 @@ console.log("userRole",userRole)
             </div>
         );
     }
+
+   
+    
     useEffect(() => {
         const term = searchTerm.toLowerCase();
         const filtered = existingShowRooms.filter((record) => {
@@ -238,6 +249,22 @@ console.log("userRole",userRole)
         e.preventDefault();
         const db = getFirestore();
         const timestamp = serverTimestamp();
+        const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`;
+        const uid = sessionStorage.getItem('uid') || '';
+
+        const queryParams = new URLSearchParams({
+            id: showRoom.showroomId,
+            name: showRoom.ShowRoom,
+            location: showRoom.manualLocationName,
+            img: showRoom.img,
+            tollfree: showRoom.tollfree,
+            phoneNumber: showRoom.phoneNumber,
+            state: showRoom.state,
+            district: showRoom.district,
+            uid: uid,
+        }).toString();
+        const generatedLink = `${baseUrl}?${queryParams}`;
+    setGeneratedLink(generatedLink); // Store generated link
 
         let qrCodeBase64 = '';
         if (qrRef.current) {
@@ -403,7 +430,124 @@ console.log("userRole",userRole)
     useEffect(() => {
         fetchShowRooms();
     }, []);
-
+    // const handlePrinter = (room: { showroomLink: string; ShowRoom: string }) => {
+    //     if (!room) {
+    //         console.error("Room data is missing");
+    //         return;
+    //     }
+    
+    //     if (modalContentRef.current) {
+    //         const printWindow = window.open('', '_blank');
+    
+    //         if (printWindow) {
+    //             printWindow.document.open();
+    //             printWindow.document.write(`
+    //                 <html>
+    //                   <head>
+    //                     <title>Print Modal</title>
+    //                     <style>
+    //                       @page {
+    //                         size: A4 portrait; /* Ensures the print is in A4 size */
+    //                         margin: 10mm; /* Adds a small margin */
+    //                       }
+    //                       body {
+    //                         margin: 0;
+    //                         padding: 0;
+    //                         font-family: Arial, sans-serif;
+    //                         background: #fff;
+    //                         width: 210mm;
+    //                         height: 297mm;
+    //                         display: flex;
+    //                         justify-content: center;
+    //                         align-items: center;
+    //                         flex-direction: column;
+    //                         text-align: center;
+    //                       }
+    //                       .modal-content {
+    //                         width: 180mm; /* Slightly smaller than A4 to fit within margins */
+    //                         height: 260mm;
+    //                         padding: 20px;
+    //                         display: flex;
+    //                         flex-direction: column;
+    //                         align-items: center;
+    //                         justify-content: center;
+    //                         border: 1px solid #000; /* Optional border for print clarity */
+    //                       }
+    //                       .qr-container {
+    //                         width: 100%;
+    //                         display: flex;
+    //                         flex-direction: column;
+    //                         align-items: center;
+    //                         justify-content: space-between;
+    //                       }
+    //                       .qr-code {
+    //                         margin: 20px 0;
+    //                       }
+    //                       h2 {
+    //                         font-size: 20px;
+    //                         margin-bottom: 10px;
+    //                       }
+    //                     </style>
+    //                   </head>
+    //                   <body>
+    //                     <div class="modal-content">
+    //                       <h2>${room.ShowRoom.toUpperCase()}</h2>
+    //                       <div class="qr-container">
+    //                         <div class="qr-code" id="qrCode1"></div>
+    //                         <div class="qr-code" id="qrCode2"></div>
+    //                       </div>
+    //                     </div>
+    //                   </body>
+    //                 </html>
+    //             `);
+    
+    //             printWindow.document.close();
+    //             printWindow.focus();
+    
+    //             printWindow.onload = () => {
+    //                 const qrCodeContainer1 = printWindow.document.getElementById('qrCode1');
+    //                 const qrCodeContainer2 = printWindow.document.getElementById('qrCode2');
+    
+    //                 if (qrCodeContainer1 && qrCodeContainer2) {
+    //                     new (QRCode as any)(qrCodeContainer1, {
+    //                         text: room.showroomLink ?? '',
+    //                         width: 120,
+    //                         height: 120,
+    //                     });
+                    
+    //                     new (QRCode as any)(qrCodeContainer2, {
+    //                         text: room.showroomLink ?? '',
+    //                         width: 120,
+    //                         height: 120,
+    //                     });
+    //                 }
+                    
+                    
+    
+    //                 printWindow.print();
+    //                 printWindow.close();
+    //             };
+    //         }
+    //     }
+    // };
+    
+    const handlePrintPDF = () => {
+        const modalContent = document.getElementById("modal-content");
+      
+        if (!modalContent) return;
+      
+        // Use a higher scale for better quality
+        html2canvas(modalContent, { scale: 4 }).then((canvas) => { // Increase scale for higher resolution
+          const imgData = canvas.toDataURL("image/png");
+          const pdf = new jsPDF("p", "mm", "a4");
+          const imgWidth = 190; // Adjust width to fit A4
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+          pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
+          pdf.save("showroom-details.pdf");
+        });
+      };
+      
     const handlePrint = () => {
         const originalContents = document.body.innerHTML;
         const printContents = listRef.current?.innerHTML || '';
@@ -449,26 +593,7 @@ console.log("userRole",userRole)
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
 
-    const generateShowRoomLink = () => {
-        const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`; // Your actual base URL
-        // const baseUrl = `http://localhost:5174/showrooms/showroom/showroomDetails`; // Your actual base URL
-        const uid = sessionStorage.getItem('uid') || '';
-
-        const queryParams = new URLSearchParams({
-            id: showRoom.showroomId,
-            name: showRoom.ShowRoom,
-            location: showRoom.manualLocationName,
-            img: showRoom.img,
-            tollfree: showRoom.tollfree,
-            phoneNumber: showRoom.phoneNumber,
-            state: showRoom.state,
-            district: showRoom.district,
-            uid: uid,
-        }).toString();
-
-        const link = `${baseUrl}?${queryParams}`;
-        setGeneratedLink(link);
-    };
+    
 
     return (
         <div className="mb-5">
@@ -606,12 +731,182 @@ console.log("userRole",userRole)
                                 <td className="tableCell" data-label="District">
                                     {room.district}
                                 </td>
-                                {/* <td className="tableCell" data-label="generatedLink">
-                                    {room.showroomLink}
-                                </td> */}
+                              
+
                                 <td className="tableCell" data-label="QR">
-                                    {room.showroomLink ? <QRCode value={room.showroomLink} size={64} /> : <p>No QR Available</p>}
-                                </td>
+                {room.showroomLink ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            {/* View QR Button (Opens Modal) */}
+                            <button
+                                onClick={() => setIsModalOpen(true)}
+                                style={{
+                                    backgroundColor: '#007bff',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    padding: '10px 14px',
+                                    fontSize: '1rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    transition: 'all 0.3s ease-in-out',
+                                    boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)'
+                                }}
+                                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#0056b3')}
+                                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#007bff')}
+                            >
+                                <FaQrcode size={18} /> View QR
+                            </button>
+
+                            {/* Print QR Button */}
+                            {/* <button
+onClick={handlePrinter}
+style={{
+                                    backgroundColor: '#28a745',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    padding: '10px 14px',
+                                    fontSize: '1rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    transition: 'all 0.3s ease-in-out',
+                                    boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)'
+                                }}
+                                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#218838')}
+                                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#28a745')}
+                            >
+                                <FaPrint size={18} /> Print
+                            </button> */}
+                        </div>
+                    </div>
+                ) : (
+                    <p>No QR Available</p>
+                )}
+            </td>
+
+            {isModalOpen && (
+  <div
+    style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      backgroundColor: "rgba(40, 29, 29, 0.5)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "10px",
+    }}
+    onClick={() => setIsModalOpen(false)}
+  >
+    <div
+      id="modal-content"
+      ref={modalContentRef}
+      className="modal-content"
+      style={{
+        backgroundImage: "url('/rsaqr.jpg')",
+        backgroundSize: "contain",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        width: "70%",
+        height: "100%",
+        marginTop:'45px',
+        overflowY: "auto",
+        padding: "20px", // Increased padding
+        borderRadius: "10px",
+        position: "relative",
+        textAlign: "center",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100%",
+          width: "100%",
+        }}
+      >
+        <div
+          style={{
+            marginBottom: "19%", // Adjust gap between the two QR codes
+          }}
+        >
+          <QRCode renderAs="svg" value={room.showroomLink ?? ""} size={160} />
+          <div>{room.ShowRoom.toUpperCase()}</div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <QRCode renderAs="svg" value={room.showroomLink ?? ""} size={160} />
+          <div>{room.ShowRoom.toUpperCase()}</div>
+        </div>
+      </div>
+
+      {/* Close Button */}
+      <button
+        onClick={() => setIsModalOpen(false)}
+        style={{
+          backgroundColor: "#dc3545",
+          color: "#fff",
+          padding: "6px 12px",
+          borderRadius: "6px",
+          border: "none",
+          cursor: "pointer",
+          fontSize: "12px",
+          position: "absolute",
+          bottom: "10px",
+          left: "10px",
+        }}
+      >
+        x
+      </button>
+
+      {/* Print Button */}
+      <button
+        onClick={handlePrintPDF}
+        style={{
+          backgroundColor: "#007bff",
+          color: "#fff",
+          padding: "6px 12px",
+          borderRadius: "6px",
+          border: "none",
+          cursor: "pointer",
+          fontSize: "12px",
+          position: "absolute",
+          bottom: "10px",
+          right: "10px",
+        }}
+      >
+        Print PDF
+      </button>
+    </div>
+  </div>
+)}
+
+
+
+
+
 
                                 <td className="tableCell" data-label="Available Services">
                                     {room.availableServices}
@@ -976,7 +1271,7 @@ console.log("userRole",userRole)
                                 <p>{generatedLink}</p>
                             </div>
                         )}
-                        <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
+                        {/* <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
                             <Button
                                 onClick={generateShowRoomLink}
                                 variant="contained"
@@ -991,7 +1286,7 @@ console.log("userRole",userRole)
                             >
                                 Generate Showroom Link
                             </Button>
-                        </div>
+                        </div> */}
                         <div className="mb-4" style={{ marginBottom: '16px', textAlign: 'center' }}>
                             <button
                                 type="submit"
