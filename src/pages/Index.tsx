@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { IRootState } from '../store';
 import ReactApexChart from 'react-apexcharts';
-import { getFirestore, collection, onSnapshot, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, Timestamp, updateDoc, doc } from 'firebase/firestore';
 import './Index.css';
 import { format } from 'date-fns'; // You can use date-fns to format the current date.
 
@@ -14,10 +14,15 @@ const Index = () => {
     const uid = sessionStorage.getItem('uid');
     const role = sessionStorage.getItem('role');
     const userName = sessionStorage.getItem('username');
-    const [notifications, setNotifications] = useState<string[]>([]);
-    const [newNotifications, setNewNotifications] = useState<string[]>([]);
+    const [notifications, setNotifications] = useState<
+    { id: string; message: string; field: "taxDue" | "insuranceDue" }[]
+  >([]);
+  const [newNotifications, setNewNotifications] = useState<
+  { message: string; id: string; field:  "vehicleServiceDue" }[]
+>([]);
 
-    console.log("roleeer", uid);
+      const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+      const [dismissedStatus, setDismissedStatus] = useState<Record<string, boolean>>({}); 
 
     const [loading, setLoading] = useState(true);
     const [blink, setBlink] = useState(false); // New state for blinking
@@ -141,19 +146,38 @@ const Index = () => {
     useEffect(() => {
         const fetchVehicleData = () => {
             const unsubscribe = onSnapshot(collection(db, `user/${uid}/vehicle`), (querySnapshot) => {
-                let newNotifications: string[] = [];
+                let notifications: { message: string; id: string; field: "vehicleServiceDue" }[] = [];
+                let dismissedMap: Record<string, boolean> = {}; // Track dismissed statuses
     
-                querySnapshot.forEach((doc) => {
-                    const vehicle = doc.data();
-                    const { totalOdometer, serviceKM, serviceVehicle } = vehicle;
-    console.log("vehiclessss",vehicle)
+                querySnapshot.forEach((docSnap) => {
+                    const vehicle = docSnap.data();
+                    const { totalOdometer, serviceKM, serviceVehicle, vehicleServiceDue, vehicleServiceDismissed } = vehicle;
+                    const vehicleId = docSnap.id;
+    
+                    // Check if service is due
                     if (serviceKM > 0 && totalOdometer % serviceKM === 0 && totalOdometer !== 0) {
-                        newNotifications.push(`Vehicle ${serviceVehicle} is due for service. Odometer: ${totalOdometer} km.`);
+                        if (!vehicleServiceDue) {
+                            updateDoc(doc(db, `user/${uid}/vehicle`, vehicleId), {
+                                vehicleServiceDue: true,
+                            }).catch(error => console.error("Error updating vehicle service status:", error));
+                        }
+    
+                        // Add notification if not dismissed
+                        if (vehicleServiceDue && !vehicleServiceDismissed) {
+                            notifications.push({
+                                message: `🚗 Vehicle ${serviceVehicle} is due for service. Odometer: ${totalOdometer} km.`,
+                                id: vehicleId,
+                                field: "vehicleServiceDue",
+                            });
+                        }
                     }
+    
+                    // Store dismissed status in state
+                    dismissedMap[vehicleId] = vehicleServiceDismissed || false;
                 });
     
-                setNewNotifications(newNotifications);
-
+                setNewNotifications(notifications);
+                setDismissedStatus(dismissedMap); // Store dismissed status
             });
     
             return () => unsubscribe();
@@ -162,58 +186,136 @@ const Index = () => {
         fetchVehicleData();
     }, [db, uid]);
     
+    const handleClose = async (id: string, field:  "vehicleServiceDue") => {
+        try {
+            let updateData: any = {};
+            if (field === "vehicleServiceDue") {
+                updateData.vehicleServiceDismissed = true; // Dismiss vehicle service notification
+            }
+    
+            await updateDoc(doc(db, `user/${uid}/vehicle`, id), updateData);
+    
+            // Remove notification from state
+            setNewNotifications((prev) => prev.filter((note) => note.id !== id));
+            setNotifications((prev) => prev.filter((note) => note.id !== id));
+            setDismissedStatus((prev) => ({ ...prev, [id]: true }));
+        } catch (error) {
+            console.error("Error updating notification status:", error);
+        }
+    };
+    
+    
+    
     useEffect(() => {
         const fetchTaxInsuranceData = () => {
-          const unsubscribe = onSnapshot(collection(db, `user/${uid}/taxInsurance`), (querySnapshot) => {
-            let notificationsList: string[] = [];
-            querySnapshot.forEach((doc) => {
-              const data = doc.data();
-              console.log("data", data);
+            const unsubscribe = onSnapshot(collection(db, `user/${uid}/taxInsurance`), (querySnapshot) => {
+                let notificationsList: { id: string; message: string; field: "taxDue" | "insuranceDue" }[] = [];
+                let dismissedMap: Record<string, boolean> = {}; // Track dismissed statuses
     
-              let insuranceExpiryDate;
-              if (data.insuranceExpiryDate instanceof Timestamp) {
-                insuranceExpiryDate = data.insuranceExpiryDate.toDate();
-              } else {
-                insuranceExpiryDate = new Date(data.insuranceExpiryDate); // Handle non-Timestamp formats
-              }
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const docRef = doc(db, `user/${uid}/taxInsurance`, docSnap.id); // Reference to document
     
-              let taxExpiryDate;
-              if (data.taxExpiryDate instanceof Timestamp) {
-                taxExpiryDate = data.taxExpiryDate.toDate();
-              } else {
-                taxExpiryDate = new Date(data.taxExpiryDate); // Handle non-Timestamp formats
-              }
+                    let insuranceExpiryDate = data.insuranceExpiryDate instanceof Timestamp
+                        ? data.insuranceExpiryDate.toDate()
+                        : new Date(data.insuranceExpiryDate);
     
-              console.log("insuranceExpiryDate", insuranceExpiryDate);
-              console.log("taxExpiryDate", taxExpiryDate);
+                    let taxExpiryDate = data.taxExpiryDate instanceof Timestamp
+                        ? data.taxExpiryDate.toDate()
+                        : new Date(data.taxExpiryDate);
     
-              const currentDate = new Date();
-              const formattedCurrentDate = format(currentDate, 'yyyy-MM-dd');
-              console.log("formattedCurrentDate", formattedCurrentDate);
+                    const currentDate = new Date();
+                    currentDate.setHours(0, 0, 0, 0); // Normalize time for date comparison
+                    insuranceExpiryDate.setHours(0, 0, 0, 0);
+                    taxExpiryDate.setHours(0, 0, 0, 0);
     
-              // Check if insurance expiry date matches today
-              if (format(insuranceExpiryDate, 'yyyy-MM-dd') === formattedCurrentDate) {
-                notificationsList.push(
-                  `Today expires insurance of vehicle ${data.vehicleNumber}, expiry date: ${insuranceExpiryDate.toLocaleDateString()}`
-                );
-              }
-              // Check if tax expiry date matches today
-              if (format(taxExpiryDate, 'yyyy-MM-dd') === formattedCurrentDate) {
-                notificationsList.push(
-                  `Today expires tax ${data.vehicleNumber} expiry date: ${taxExpiryDate.toLocaleDateString()}`
-                );
-              }
+                    const fiveDaysBefore = new Date();
+                    fiveDaysBefore.setDate(currentDate.getDate() + 5);
+    
+                    let updateData: any = {};
+    
+                    // Insurance Expiry Notification
+                    if (insuranceExpiryDate <= fiveDaysBefore && !data.insuranceDue && !data.insuranceDueDismissed) {
+                        updateData.insuranceDue = true; // Mark insurance as due
+                    }
+                    if (data.insuranceDue && !dismissedIds.includes(docSnap.id)) {
+                        notificationsList.push({
+                            id: docSnap.id,
+                            message: `⚠️ Insurance for vehicle ${data.vehicleNumber} is expiring soon! Expiry Date: ${insuranceExpiryDate.toLocaleDateString()}`,
+                            field: "insuranceDue",
+                        });
+                    }
+    
+                    // Tax Expiry Notification
+                    if (taxExpiryDate <= fiveDaysBefore && !data.taxDue && !data.taxDueDismissed) {
+                        updateData.taxDue = true; // Mark tax as due
+                    }
+                    if (data.taxDue && !dismissedIds.includes(docSnap.id)) {
+                        notificationsList.push({
+                            id: docSnap.id,
+                            message: `⚠️ Tax for vehicle ${data.vehicleNumber} is expiring soon! Expiry Date: ${taxExpiryDate.toLocaleDateString()}`,
+                            field: "taxDue",
+                        });
+                    }
+    
+                    // **New Condition: Exact Expiry Date Check**
+                    if (insuranceExpiryDate.getTime() === currentDate.getTime()) {
+                        notificationsList.push({
+                            id: docSnap.id,
+                            message: `🚨 Insurance for vehicle ${data.vehicleNumber} is expiring Today!`,
+                            field: "insuranceDue",
+                        });
+                    }
+                    if (taxExpiryDate.getTime() === currentDate.getTime()) {
+                        notificationsList.push({
+                            id: docSnap.id,
+                            message: `🚨 Tax for vehicle ${data.vehicleNumber} is expiring Today!`,
+                            field: "taxDue",
+                        });
+                    }
+    
+                    // Store dismissed status in state
+                    dismissedMap[docSnap.id] = data.taxDueDismissed || data.insuranceDueDismissed;
+    
+                    // Update Firestore only if changes exist
+                    if (Object.keys(updateData).length > 0) {
+                        updateDoc(docRef, updateData)
+                            .then(() => console.log(`Updated tax/insurance due for ${data.vehicleNumber}`))
+                            .catch((error) => console.error("Error updating due status:", error));
+                    }
+                });
+    
+                setNotifications(notificationsList);
+                setDismissedStatus(dismissedMap); // Store dismissed status
             });
-            setNotifications(notificationsList);
-          });
     
-          return () => unsubscribe();
+            return () => unsubscribe();
         };
     
         fetchTaxInsuranceData();
-      }, [db, uid]);
+    }, [db, uid, dismissedIds]);
     
     
+    const handleCloseNotification = async (id: string, field: "taxDue" | "insuranceDue") => {
+        try {
+            const recordRef = doc(db, `user/${uid}/taxInsurance`, id);
+            const dismissedField = field === "taxDue" ? "taxDueDismissed" : "insuranceDueDismissed";
+    
+            await updateDoc(recordRef, { 
+                [field]: false, 
+                [dismissedField]: true // Mark as dismissed 
+            });
+    
+            setDismissedIds((prev) => [...prev, id]); // Track dismissed IDs
+            setNotifications((prev) => prev.filter((n) => n.id !== id)); // Remove from UI
+            setDismissedStatus((prev) => ({ ...prev, [id]: true })); // Update dismissed state
+        } catch (error) {
+            console.error("Error updating due status:", error);
+        }
+    };
+    
+
+    // -------------------------------------------------------------------------------------------
     return (
         <div className="container mx-auto p-6 bg-cover bg-center bg-no-repeat">
 
@@ -250,16 +352,38 @@ const Index = () => {
                             <p className="text-2xl">{salesByCategory.series[3]}</p>
                         </div>
                     </div>
-                    {notifications.map((note, index) => (
-        <div key={index} className="notification blink bg-red-500 text-white p-3 rounded-lg mb-4">
-          {note}
+                    <>
+    {notifications.map((note, index) => (
+        !dismissedStatus[note.id] && (
+            <div key={index} className="notification blink bg-yellow-500 text-white p-3 rounded-lg mb-4">
+                {note.message}
+                <button 
+                    className="ml-4 bg-red-500 px-3 py-1 rounded"
+                    onClick={() => handleCloseNotification(note.id, note.field)}
+                >
+                    Close
+                </button>
+            </div>
+        )
+    ))}
+</>
+
+
+<div>
+      {newNotifications.map((note) => (
+        <div
+          key={note.id}
+          className="notification blink bg-red-500 text-white p-3 rounded-lg mb-4"
+        >
+          {note.message}
+          <button onClick={() => handleClose(note.id, note.field)}
+            className="ml-4 bg-white text-red-500 px-2 py-1 rounded"
+          >
+            Close
+          </button>
         </div>
       ))}
-            {newNotifications.map((note, index) => (
-        <div key={index} className="notification blink bg-yellow-500 text-white p-3 rounded-lg mb-4">
-          {note}
-        </div>
-      ))}
+    </div>
                     <div className="panel h-full bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg shadow-lg p-6">
                         <div className="flex items-center justify-between mb-5">
                             <h5 className="font-semibold text-lg">Bookings By Category</h5>

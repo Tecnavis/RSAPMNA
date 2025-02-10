@@ -256,13 +256,13 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         setManualInput(pickupLocation.name || '');
     }, [pickupLocation]);
     useEffect(() => {
-        if (trappedLocation === 'outsideOfRoad') {
+        if (trappedLocation === 'outsideOfRoad' ||showroomLocation === 'lifting') {
             setDisableFields(true);
         } else {
             setDisableFields(false);
         }
-    }, [trappedLocation]);
-
+    }, [trappedLocation,showroomLocation]);
+    
     const validateForm = () => {
         let tempErrors: { [key: string]: string } = {}; // Allows string keys
         let isValid = true;
@@ -438,7 +438,10 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         switch (field) {
             case 'showroomLocation':
                 setShowroomLocation(value);
-
+                if (value === "lifting") {
+                    // When "Lifting" is selected, set Dropoff Location same as Pickup Location
+                    setDropoffLocation(pickupLocation);
+                } else {
                 const selectedShowroom: any = showrooms.find((show: any) => show.value === value);
 
                 if (selectedShowroom) {
@@ -466,6 +469,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                             lng: '',
                         });
                     }
+                
                 } else {
                     // setInsuranceAmountBody(0);
                     setDropoffLocation({
@@ -474,6 +478,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         lng: '',
                     });
                 }
+            }
                 break;
             case 'totalSalary':
                 setTotalSalary(value || 0);
@@ -769,34 +774,41 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const closeModal = () => {
         setIsModalOpen(false);
     };
-    // -------------------------------------------------------------------
-    
+    //---------------------------------------------------------- 
     useEffect(() => {
         const db = getFirestore();
         const serviceCollection = collection(db, `user/${uid}/showroom`);
-
-        // Set up the real-time listener
+    
         const unsubscribe = onSnapshot(
             serviceCollection,
             (snapshot) => {
                 const servicesList = snapshot.docs.map((doc) => ({
-                    id: doc.id, // Include the Firestore document ID
-
-                    value: doc.data().Location, // Keep this if Location is used as the value for selecting an option
-                    label: doc.data().ShowRoom, // ShowRoom will be displayed as the label in the dropdown
-                    insuranceAmountBody: doc.data().insuranceAmountBody, // Include this field if needed
-                    locationLatLng: doc.data().locationLatLng, // Include this field if needed
+                    id: doc.id,
+                    value: doc.data().Location,
+                    label: doc.data().ShowRoom,
+                    insuranceAmountBody: doc.data().insuranceAmountBody,
+                    locationLatLng: doc.data().locationLatLng,
                 }));
+    
+                // Add the "Lifting" option manually
+                servicesList.push({
+                    id: "lifting",
+                    value: "lifting",
+                    label: "Lifting",
+                    insuranceAmountBody: null,
+                    locationLatLng: null,
+                });
+    
                 setShowrooms(servicesList as any);
             },
             (error) => {
-                console.error('Error fetching services:', error);
+                console.error("Error fetching services:", error);
             }
         );
-
-        // Clean up the listener on component unmount
+    
         return () => unsubscribe();
     }, [uid]);
+    
 
     //-------------------------------------------------------------------------------------
     useEffect(() => {
@@ -1243,14 +1255,16 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     };
 
     const addOrUpdateItem = async (): Promise<void> => {
-        if (!validateForm()) {
+        const skipValidation = trappedLocation === 'outsideOfRoad' || showroomLocation === 'lifting';
+
+        if (!skipValidation && !validateForm()) {
             return; // Stop execution if validation fails
         }
-        if (!isButtonClicked) {
-            setErrorMessage("Click 'OK' button"); // Show error message if "OK" is not clicked
-            return;
-        }
-        if (validateForm() && !loading) {
+         if (!skipValidation && !isButtonClicked) {
+        setErrorMessage("Click 'OK' button"); // Show error message if "OK" is not clicked
+        return;
+    }
+        if ((skipValidation || validateForm()) && !loading) {
             // Check if loading is false before proceeding
             setLoading(true);
             try {
@@ -1700,6 +1714,7 @@ const bookingData = {
                         />
                     </div>
                 </div>
+                {!disableFields && (
                 <div>
                     <div className={styles.formGroup}>
                         <label htmlFor="distance" className={styles.label}>
@@ -1730,6 +1745,7 @@ const bookingData = {
                         {errors.distance && <p className="text-red-500 text-sm mt-1">{errors.distance}</p>}
                     </div>
                 </div>
+                )}
 
                 <div className={styles.trappedLocationContainer}>
                     <label htmlFor="trappedLocation" className={styles.trappedLocationLabel}>
@@ -1782,14 +1798,14 @@ const bookingData = {
                     {errors.trappedLocation && <span className="text-red-500 text-sm mt-1">{errors.trappedLocation}</span>}
                 </div>
 
-                {trappedLocation === 'outsideOfRoad' && (
+                {trappedLocation === 'outsideOfRoad' || showroomLocation ==='lifting' && (
                     <div className={styles.formGroup}>
                         <label htmlFor="updatedTotalSalary" className={styles.label}>
-                            Updated Total Amount
+                            Payable Amount (Special Case)
                         </label>
                         <input
                             id="updatedTotalSalary"
-                            type="number"
+                            type="text"
                             name="updatedTotalSalary"
                             placeholder="Enter Total Salary"
                             onChange={(e) => setUpdatedTotalSalary(Number(e.target.value))}
@@ -2178,7 +2194,7 @@ const bookingData = {
                         </div>
                     </React.Fragment>
                 )}
-
+  {!disableFields && (
                 <div className={styles.formGroup}>
                     <label htmlFor="totalDriverDistance" className={styles.label}>
                         Total Driver Distance
@@ -2194,6 +2210,7 @@ const bookingData = {
                     />
                     {errors.totalDriverDistance && <p className="text-red-500 text-sm mt-1">{errors.totalDriverDistance}</p>}
                 </div>
+            )}
                 {totalDriverDistance && (
                     <div className={styles.formGroup}>
                         <label htmlFor="totalDriverSalary" className={styles.label}>
