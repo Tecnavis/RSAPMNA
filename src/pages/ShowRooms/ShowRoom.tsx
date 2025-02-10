@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Fragment } from 'react';
 import { addDoc, collection, getFirestore, getDocs, doc, updateDoc, serverTimestamp, query, orderBy, deleteDoc, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { IoIosCloseCircle } from "react-icons/io";
+
 import './ShowRoom.css';
 import { ChangeEvent, FormEvent } from 'react';
 import IconPrinter from '../../components/Icon/IconPrinter';
@@ -17,6 +19,7 @@ import IconMenuScrumboard from '../../components/Icon/Menu/IconMenuScrumboard';
 import { FaPrint, FaQrcode } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { Dialog, Transition } from '@headlessui/react';
 
 interface ShowRoomType {
     [key: string]: any;
@@ -141,6 +144,8 @@ const ShowRoom: React.FC = () => {
     const modalContentRef = useRef<HTMLDivElement>(null);
 
     const [manualLatLng, setManualLatLng] = useState<string>(''); // Initialize with an empty string
+
+
 
     console.log(baseLocation, 'the baseLocation');
     const uid = sessionStorage.getItem('uid');
@@ -807,58 +812,59 @@ style={{
     }}
     onClick={() => setIsModalOpen(false)}
   >
-    <div
-      id="modal-content"
-      ref={modalContentRef}
-      className="modal-content"
-      style={{
-        backgroundImage: "url('/rsaqr.jpg')",
-        backgroundSize: "contain",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        width: "70%",
-        height: "100%",
-        marginTop:'45px',
-        overflowY: "auto",
-        padding: "20px", // Increased padding
-        borderRadius: "10px",
-        position: "relative",
-        textAlign: "center",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-      onClick={(e) => e.stopPropagation()}
-    >
+    <div>
       <div
+        id="modal-content"
+        ref={modalContentRef}
+        className="modal-content"
         style={{
+          backgroundImage: "url('/rsaqr.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          width: "1588px", // A4 width (2x scale)
+          height: "2246px", // A4 height (2x scale)
+          overflowY: "auto",
+          padding: "80px",
+          borderRadius: "10px",
+          position: "relative",
+          textAlign: "center",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
           alignItems: "center",
-          height: "100%",
-          width: "100%",
+          justifyContent: "space-around",
+          backgroundColor: "#fff",
+          transform: "scale(0.5)", // Scale down for screen preview
+          transformOrigin: "top center",
         }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div
-          style={{
-            marginBottom: "19%", // Adjust gap between the two QR codes
-          }}
-        >
-          <QRCode renderAs="svg" value={room.showroomLink ?? ""} size={160} />
-          <div>{room.ShowRoom.toUpperCase()}</div>
-        </div>
-
         <div
           style={{
             display: "flex",
             flexDirection: "column",
+            justifyContent: "center",
             alignItems: "center",
+            height: "100%",
+            width: "100%",
+            gap: "34%",
           }}
         >
-          <QRCode renderAs="svg" value={room.showroomLink ?? ""} size={160} />
-          <div>{room.ShowRoom.toUpperCase()}</div>
+          {/* QR Code 1 */}
+          <div>
+            <QRCode renderAs="svg" value={room.showroomLink ?? ""} size={400} />
+            <div style={{ fontSize: "30px", fontWeight: "bold", marginTop: "10px" }}>
+              {room.ShowRoom.toUpperCase()}
+            </div>
+          </div>
+
+          {/* QR Code 2 */}
+          <div>
+            <QRCode renderAs="svg" value={room.showroomLink ?? ""} size={400} />
+            <div style={{ fontSize: "30px", fontWeight: "bold", marginTop: "10px" }}>
+              {room.ShowRoom.toUpperCase()}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -868,14 +874,14 @@ style={{
         style={{
           backgroundColor: "#dc3545",
           color: "#fff",
-          padding: "6px 12px",
+          padding: "12px 20px",
           borderRadius: "6px",
           border: "none",
           cursor: "pointer",
-          fontSize: "12px",
+          fontSize: "16px",
           position: "absolute",
-          bottom: "10px",
-          left: "10px",
+          bottom: "20px",
+          left: "20px",
         }}
       >
         x
@@ -887,14 +893,14 @@ style={{
         style={{
           backgroundColor: "#007bff",
           color: "#fff",
-          padding: "6px 12px",
+          padding: "12px 20px",
           borderRadius: "6px",
           border: "none",
           cursor: "pointer",
-          fontSize: "12px",
+          fontSize: "16px",
           position: "absolute",
-          bottom: "10px",
-          right: "10px",
+          bottom: "20px",
+          right: "20px",
         }}
       >
         Print PDF
@@ -902,6 +908,7 @@ style={{
     </div>
   </div>
 )}
+
 
 
 
