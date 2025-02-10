@@ -106,6 +106,8 @@ const TaxAndInsurance: React.FC = () => {
       insuranceExpiryDate: formData.insuranceExpiryDate,
       insurancePaperUrl: insurancePaperUrl || formData.insurancePaperUrl || "",
       taxPaperUrl: taxPaperUrl || formData.taxPaperUrl || "",
+      insuranceDue: false, // ✅ Set insuranceDue to false when submitting
+        taxDue: false,    
     };
 
     try {
