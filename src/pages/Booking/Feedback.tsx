@@ -171,14 +171,29 @@ const Feedback: React.FC = () => {
                 { merge: true }
             );    
             // Calculate total points from feedbacks subcollection
-            const feedbacksRef = collection(driverDocRef, 'feedbacks');
-            const feedbacksSnapshot = await getDocs(feedbacksRef);
-    
-            let totalRewardPoints = 0;
-            feedbacksSnapshot.forEach((doc) => {
-                const data = doc.data();
-                totalRewardPoints += data.totalPoints || 0; // Sum up totalPoints
-            });
+        const feedbacksRef = collection(driverDocRef, 'feedbacks');
+        const feedbacksSnapshot = await getDocs(feedbacksRef);
+
+        let totalRewardPoints = 0;
+        feedbacksSnapshot.forEach((doc) => {
+            const data = doc.data();
+            totalRewardPoints += data.totalPoints || 0;
+        });
+
+        // Fetch reward items from the subcollection
+        const rewardItemsRef = collection(driverDocRef, 'rewarditems');
+        const rewardItemsSnapshot = await getDocs(rewardItemsRef);
+
+        let totalDeductions = 0;
+        rewardItemsSnapshot.forEach((doc) => {
+            const { TotalRedeem, points } = doc.data();
+            totalDeductions += (TotalRedeem || 0) * (points || 0); // Ensure values are valid numbers
+        });
+
+        // Update total reward points after deductions
+        totalRewardPoints -= totalDeductions;
+        if (totalRewardPoints < 0) totalRewardPoints = 0; // Prevent negative values
+
     
             // Update rewardPoints in the driver document
             await setDoc(driverDocRef, { rewardPoints: totalRewardPoints }, { merge: true });

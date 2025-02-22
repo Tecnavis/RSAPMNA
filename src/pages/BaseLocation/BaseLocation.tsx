@@ -37,6 +37,7 @@ const BaseLocation: React.FC = () => {
     const uid = sessionStorage.getItem('uid') || '';
     const navigate = useNavigate();
     const [latLng, setLatLng] = useState('');
+    const [searchQuery, setSearchQuery] = useState<string>('');
 
     // const handleMapClick = (location) => {
     //     setLat(location.lat);
@@ -211,89 +212,111 @@ const BaseLocation: React.FC = () => {
             setLng(parsedLng.toString());
         } 
     };
-    
+    const filteredItems = items.filter(item =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+    ); 
   return (
         <div className="base-location-form-container">
-            <form onSubmit={handleFormSubmit} className="base-location-form">
-                <div className="form-group">
-                    <label htmlFor="baseLocationName">Base Location Name:</label>
-                    <Autocomplete
-                        value={baseLocation}
-                        onInputChange={(event, newInputValue) => {
-                            setBaseLocationName(newInputValue);
-                            if (newInputValue) {
-                                getAutocompleteResults(newInputValue, setBaseOptions);
-                            } else {
-                                setBaseOptions([]);
-                            }
-                        }}
-                        onChange={handleBaseChange}
-                        sx={{ width: 300 }}
-                        options={baseOptions}
-                        getOptionLabel={(option) => option.label}
-                        isOptionEqualToValue={(option, value) => option.label === value.label}
-                        renderInput={(params) => <TextField {...params} label="Search Base Location" variant="outlined" />}
-                    />
-                </div>
+            <form onSubmit={handleFormSubmit} className="bg-white shadow-lg rounded-lg p-6 w-full max-w-lg mx-auto">
+    <h2 className="text-2xl font-semibold text-gray-800 text-center mb-6">
+        {editing ? 'Edit Base Location' : 'Add Base Location'}
+    </h2>
 
-                <div className="form-group">
-                    <label htmlFor="manualLocationName">Manual Base Location Name:</label>
-                    <TextField
-                        id="manualLocationName"
-                        variant="outlined"
-                        fullWidth
-                        value={baseLocationName}
-                        onChange={(e) => setBaseLocationName(e.target.value)}
-                    />
-            <a
+    {/* Base Location Name */}
+    <div className="mb-4">
+        <label className="block text-gray-700 font-medium mb-1" htmlFor="baseLocationName">
+            Base Location Name:
+        </label>
+        <Autocomplete
+            value={baseLocation}
+            onInputChange={(event, newInputValue) => {
+                setBaseLocationName(newInputValue);
+                if (newInputValue) {
+                    getAutocompleteResults(newInputValue, setBaseOptions);
+                } else {
+                    setBaseOptions([]);
+                }
+            }}
+            onChange={handleBaseChange}
+            options={baseOptions}
+            getOptionLabel={(option) => option.label}
+            isOptionEqualToValue={(option, value) => option.label === value.label}
+            renderInput={(params) => (
+                <TextField
+                    {...params}
+                    label="Search Base Location"
+                    variant="outlined"
+                    fullWidth
+                    className="bg-white"
+                />
+            )}
+        />
+    </div>
+
+    {/* Manual Base Location Name */}
+    <div className="mb-4 flex items-center gap-2">
+        <div className="w-full">
+            <label className="block text-gray-700 font-medium mb-1" htmlFor="manualLocationName">
+                Manual Base Location Name:
+            </label>
+            <TextField
+                id="manualLocationName"
+                variant="outlined"
+                fullWidth
+                value={baseLocationName}
+                onChange={(e) => setBaseLocationName(e.target.value)}
+                className="bg-white"
+            />
+        </div>
+        <a
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(baseLocationName)}`}
             target="_blank"
             rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-700 transition duration-300"
         >
-            <IconMapPin />
+            <IconMapPin className="w-6 h-6" />
         </a>
+    </div>
 
-                </div>
+    {/* Latitude and Longitude */}
+    <div className="mb-4">
+        <label className="block text-gray-700 font-medium mb-1" htmlFor="lat">
+            Latitude and Longitude:
+        </label>
+        <TextField
+            label="Latitude, Longitude"
+            value={latLng}
+            onChange={handleLatLngChange}
+            placeholder="e.g., 40.7128, -74.0060"
+            fullWidth
+            variant="outlined"
+            className="bg-white"
+        />
+    </div>
 
-                <div className="form-group">
-                    <label htmlFor="lat">Latitude:</label>
-                    <TextField
-                        label="Latitude, Longitude"
-                        value={latLng}
-                        onChange={handleLatLngChange}
-                        placeholder="e.g., 40.7128, -74.0060"
-                        fullWidth
-                        variant="outlined"
-                    />
-                </div>
+    {/* Submit Button */}
+    <button
+        type="submit"
+        className="w-full bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 transition duration-300"
+    >
+        {editing ? 'Update Base Location' : 'Save Base Location'}
+    </button>
+</form>
 
-                {/* <div className="form-group">
-                    <label htmlFor="lng">Longitude:</label>
-                    <TextField
-                        id="lng"
-                        variant="outlined"
-                        fullWidth
-                        value={lng}
-                        onChange={(e) => setLng(e.target.value)}
-                    />
-                </div> */}
-
-                <button type="submit" className="btn btn-primary">
-                    {editing ? 'Update Base Location' : 'Save Base Location'}
-                </button>
-            </form>
-
-            {savedBaseLocation && (
-                <div className="base-location-details">
-                    <h3>Base Location Details</h3>
-                    <p>
-                        <strong>Location:</strong> {savedBaseLocation.name}
-                    </p>
-                    <p>
-                        <strong>Coordinates:</strong> ({savedBaseLocation.lat}, {savedBaseLocation.lng})
-                    </p>
-                </div>
-            )}
+            <h1 className="text-3xl font-bold text-center text-gray-800 mb-6 border-b-4 border-blue-500 pb-2">
+    Base Locations List
+</h1>
+            <div className='mt-2'>
+            <TextField
+            label="Search Base Location"
+            variant="outlined"
+            fullWidth
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            sx={{ marginBottom: 2 }}
+        />
+        </div>
+          
 
             <div className="table-responsive mb-5">
                 <table>
@@ -307,7 +330,7 @@ const BaseLocation: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {items.map((item, index) => (
+                        {filteredItems.map((item, index) => (
                             <tr key={item.id}>
                                 <td>{index + 1}</td>
                                 <td>

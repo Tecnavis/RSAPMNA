@@ -61,6 +61,7 @@ const CashCollectionCompany: React.FC = () => {
     const [selectedMonth, setSelectedMonth] = useState<string>('');
         const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
         const printRef = useRef<HTMLDivElement>(null);
+        const staffRole = sessionStorage.getItem('staffRole');
 
     const [monthlyTotals, setMonthlyTotals] = useState<{
         totalAmount: string;
@@ -91,6 +92,7 @@ const CashCollectionCompany: React.FC = () => {
     // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     console.log('role', userName);
     console.log(filteredBookings, 'this is the filtered bookings');
+    const isAllowed = role === 'admin' || staffRole === 'secondary admin' || staffRole === 'verifier';
 
     const sortedBookings = [...filteredBookings].sort((a, b) => {
         return b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime();
@@ -786,7 +788,7 @@ console.log("parsedReceivedAmount",parsedReceivedAmount)
                  if (!booking.selectedDriver) throw new Error("Selected driver is not defined.");
              
                        // Update the staffReceived collection
-                       await updateStaffReceived(staffId, uid, receivedAmountToUse, [bookingId]);
+                    //    await updateStaffReceived(staffId, uid, receivedAmountToUse, [bookingId]);
                    
                      
                        const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
@@ -1636,6 +1638,7 @@ console.log("parsedReceivedAmount",parsedReceivedAmount)
                                                     {(booking.companyBooking && driver?.companyName !== 'Company') || booking.receivedUser === 'Staff' ? (
                                                         <span style={{ color: 'red', fontWeight: 'bold' }}>Not Need</span>
                                                     ) : (
+                                                        
                                                         <>
                                                             <input
                                                                 type="text"
@@ -1647,12 +1650,12 @@ console.log("parsedReceivedAmount",parsedReceivedAmount)
                                                                     padding: '0.25rem 0.5rem',
                                                                     marginRight: '0.5rem',
                                                                 }}
-                                                                disabled={booking.approve}
+                                                                disabled={booking.approve|| !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'verifier')}
                                                                 min="0"
                                                             />
                                                             <button
                                                                 onClick={() => handleOkClick(booking.id)}
-                                                                disabled={booking.approve || loadingStates[booking.id]} // Disable if loading
+                                                                disabled={booking.approve || loadingStates[booking.id] || !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'verifier')} // Disable if loading
                                                                 style={{
                                                                     backgroundColor:
                                                                         Number(
@@ -1668,8 +1671,8 @@ console.log("parsedReceivedAmount",parsedReceivedAmount)
                                                                     border: 'none',
                                                                     borderRadius: '0.25rem',
                                                                     padding: '0.5rem',
-                                                                    cursor: 'pointer',
-                                                                }}
+                                                                    cursor: booking.approve || !invoiceNumbers[booking.id] || !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'verifier') ? 'not-allowed' : 'pointer',
+                                                                    opacity: booking.approve || !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'verifier') ? 0.6 : 1,                                                                }}
                                                             >
     {loadingStates[booking.id] ? 'Loading...' : 'OK'}
     </button>
@@ -1704,7 +1707,7 @@ console.log("parsedReceivedAmount",parsedReceivedAmount)
                                                     type="text"
                                                     value={invoiceNumbers[booking.id] || ''}
                                                     onChange={(e) => handleInvoiceChange(booking.id, e.target.value)}
-                                                    disabled={booking.approve}
+                                                    disabled={booking.approve || !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'accountant')}
                                                     placeholder="Enter Invoice Number"
                                                     style={{
                                                         padding: '5px',
@@ -1714,17 +1717,20 @@ console.log("parsedReceivedAmount",parsedReceivedAmount)
                                                 />
                                                 <button
                                                     onClick={() => handleInvoiceSubmit(booking)}
-                                                    disabled={booking.approve || !invoiceNumbers[booking.id]} // Disable if approve is true or no invoice number
-                                                    style={{
+                                                    disabled={
+                                                        booking.approve || 
+                                                        !invoiceNumbers[booking.id] || 
+                                                        !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'accountant')
+                                                    }                                                    style={{
                                                         padding: '15px 10px',
                                                         marginLeft: '2px',
                                                         borderRadius: '4px',
                                                         border: '1px solid #ccc',
                                                         backgroundColor: '#007BFF',
                                                         color: 'white',
-                                                        cursor: booking.approve || !invoiceNumbers[booking.id] ? 'not-allowed' : 'pointer',
-                                                        opacity: booking.approve ? 0.6 : 1,
-                                                    }}
+                                                        cursor: booking.approve || !invoiceNumbers[booking.id] || !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'accountant') ? 'not-allowed' : 'pointer',
+            opacity: booking.approve || !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'accountant') ? 0.6 : 1,
+        }}
                                                 >
                                                     Add
                                                 </button>

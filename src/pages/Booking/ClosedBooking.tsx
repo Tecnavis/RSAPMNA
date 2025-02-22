@@ -43,6 +43,7 @@ const ClosedBooking: React.FC = () => {
     const uid = sessionStorage.getItem('uid');
     const navigate = useNavigate();
     const [tab, setTab] = useState<'verified' | 'unverified'>('unverified');
+    const staffRole = sessionStorage.getItem('staffRole');
 
     
 
@@ -251,7 +252,7 @@ const rowStyle = booking.feedback
                                                             View More
                                                         </Button>
                                                           {/* Show "Accounting staff verified" button if feedback and bookingChecked are true */}
-                                                          {booking.feedback && booking.bookingChecked && !booking.accountingStaffVerified && (
+                                                          {booking.feedback && booking.bookingChecked && !booking.accountingStaffVerified &&!(staffRole === 'verifier') &&  (
                                                             <Button
                                                                 variant="contained"
                                                                 color="secondary"
@@ -261,15 +262,23 @@ const rowStyle = booking.feedback
                                                                 Accounting staff verify
                                                             </Button>
                                                         )}
-                                                        {booking.accountingStaffVerified && (
-                                                            <Button
-                                                                variant="contained"
-                                                                color="secondary"
-                                                                style={{ marginLeft: '10px' }}
-                                                            >
-                                                                Accounting staff verified
-                                                            </Button>
-                                                        )}
+                                                      {booking.accountingStaffVerified && (
+  <div
+    style={{
+      display: "inline-block",
+      backgroundColor: "#f0f4ff", // Light blue background
+      color: "#3b5998", // Darker blue text
+      padding: "8px 12px",
+      borderRadius: "6px",
+      fontWeight: "bold",
+      border: "1px solid #3b5998",
+      marginLeft: "10px"
+    }}
+  >
+    ✅ Accounting staff verified
+  </div>
+)}
+
                                                     </td>
                                                     <td className="p-2 text-sm block md:table-cell">
                                                     </td>

@@ -58,6 +58,7 @@ interface BookingDetails {
     driverSalary?: string;
     companyAmount?: string;
     amount?: string;
+    NotesAdded?:string
 }
 interface FormData {
     pickedTime: Timestamp | null | undefined;
@@ -106,6 +107,7 @@ const ViewMore: React.FC = () => {
     const [feedback, setFeedback] = useState(false);
 const [notes, setNotes] = useState<string>('');
 const [showroomName, setShowroomName] = useState("");
+const staffRole = sessionStorage.getItem('staffRole');
 
     const [formData, setFormData] = useState<FormData>({
         pickedTime: null,
@@ -151,6 +153,8 @@ const [showroomName, setShowroomName] = useState("");
         droppedTime: bookingDetails?.droppedTime,
         remark: bookingDetails?.remark,
         feedback: bookingDetails?.feedback,
+        NotesAdded: bookingDetails?.NotesAdded,
+
     });
     useEffect(() => {
         if (bookingDetails && bookingDetails.comments) {
@@ -247,6 +251,8 @@ const [showroomName, setShowroomName] = useState("");
                 droppedTime: bookingDetails?.droppedTime,
                 remark: bookingDetails?.remark,
                 feedback: bookingDetails?.feedback,
+                NotesAdded: bookingDetails?.NotesAdded,
+
             });
         }
     }, [bookingDetails]);
@@ -257,21 +263,25 @@ const [showroomName, setShowroomName] = useState("");
     const closeModal = () => {
         setSelectedImage(null); // Clear selected image
     };
-    const handleSaveNotes = async () => {
-        if (!uid || !id) {
-            console.error("UID or Booking ID is missing.");
-            return;
-        }
-    
-        try {
-            const bookingRef = doc(db, `user/${uid}/bookings`, id);
-            await updateDoc(bookingRef, { comments: notes });
-            alert("Notes updated successfully!");
-        } catch (error) {
-            console.error("Error updating notes:", error);
-            alert("Failed to update notes.");
-        }
-    };
+   const handleSaveNotes = async () => {
+    if (!uid || !id) {
+        console.error("UID or Booking ID is missing.");
+        return;
+    }
+
+    try {
+        const bookingRef = doc(db, `user/${uid}/bookings`, id);
+        await updateDoc(bookingRef, { 
+            comments: notes, 
+            NotesAdded: userName // Corrected object structure
+        });
+        alert("Notes updated successfully!");
+    } catch (error) {
+        console.error("Error updating notes:", error);
+        alert("Failed to update notes.");
+    }
+};
+
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>, field: keyof typeof formData) => {
         const files = event.target.files;
         if (files) {
@@ -372,6 +382,8 @@ const [showroomName, setShowroomName] = useState("");
                     feedback: data.feedback || false,
                     remarkWritten: data.remarkWritten || '',
                     feedbackWritten: data.feedbackWritten || '',
+                    NotesAdded: data.NotesAdded || '',
+
                 });
             }
         } catch (error) {
@@ -624,6 +636,10 @@ const [showroomName, setShowroomName] = useState("");
                                     onClick={() => handleImageClick(url)} // Open the image in the modal
                                 />
                                 <input type="file" accept="image/*" onChange={(event) => handleReplaceImage(event, index, 'vehicleImageURLs')} />
+                                <div className="mt-2">
+            <strong>Pickup Time:</strong> {bookingDetails?.pickedTime ? formatTimestamp(bookingDetails.pickedTime) : 'N/A'}
+          </div>
+
                             </div>
                         ))}
                     </div>
@@ -643,6 +659,9 @@ const [showroomName, setShowroomName] = useState("");
                                     onClick={() => handleImageClick(url)} // Open the image in the modal
                                 />
                                 <input type="file" accept="image/*" onChange={(event) => handleReplaceImage(event, index, 'vehicleImgURLs')} />
+                                <div className="mt-2">
+            <strong>Dropped Time:</strong> {bookingDetails?.droppedTime ? formatTimestamp(bookingDetails.droppedTime) : 'N/A'}
+          </div>
                             </div>
                         ))}
                     </div>
@@ -1078,30 +1097,7 @@ const [showroomName, setShowroomName] = useState("");
                                 <td className="bg-gray-100 p-2 font-semibold">Remark :</td>
                                 <td className="p-2 text-danger">{bookingDetails.remark}</td>
                             </tr>
-                            <tr>
-                            <td colSpan={2}>
-                            <div className="p-4 border border-gray-300 rounded-lg shadow-md bg-white">
-            <label className="block text-lg font-semibold text-gray-700 mb-2">Notes:</label>
-
-            <textarea
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none transition-all"
-                rows={3}
-                placeholder="Add your notes here..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-            />
-                        <label className="  text-red-700 mb-2">Written By: {role}{userName}</label>
-
-            <button
-                className="mt-3 flex items-center justify-center gap-2 px-5 py-2 bg-green-500 text-white font-medium rounded-md shadow-md hover:bg-blue-600 transition-all"
-                onClick={handleSaveNotes}
-            >
-                <IconSave className="w-5 h-5" />
-                Save Notes
-            </button>
-        </div>
-    </td>
-</tr>
+                          
 
                             {bookingDetails.bookingChecked === true && (
                                 <>
@@ -1121,12 +1117,40 @@ const [showroomName, setShowroomName] = useState("");
                             )}
                         </>
                     )}
+                      <tr>
+                            <td colSpan={2}>
+                            <div className="p-4 border border-gray-300 rounded-lg shadow-md bg-white">
+            <label className="block text-lg font-semibold text-gray-700 mb-2">Notes:</label>
+
+            <textarea
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none transition-all"
+                rows={3}
+                placeholder="Add your notes here..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+            />
+                        <label className="  text-red-700 mb-2">Written By: {bookingDetails?.NotesAdded}</label>
+
+            <button
+                className="mt-3 flex items-center justify-center gap-2 px-5 py-2 bg-green-500 text-white font-medium rounded-md shadow-md hover:bg-blue-600 transition-all"
+                onClick={handleSaveNotes}
+            >
+                <IconSave className="w-5 h-5" />
+                Save Notes
+            </button>
+        </div>
+    </td>
+</tr>
                 </tbody>
             </table>
             <br />
             <div className="w-full">
+
                 {bookingDetails?.bookingChecked === false && bookingDetails?.status === 'Order Completed' && (
-                    <button
+                   <>
+                                               {(role === 'admin' || staffRole === 'secondary admin'|| staffRole === 'verifier') && (
+
+                   <button
                         disabled={bookingDetails?.paymentStatus === 'Not Paid'}
                         onClick={handleVerifyClick}
                         className={`w-full text-white font-semibold py-2 px-4 rounded-lg shadow-lg focus:outline-none focus:ring-2 transition duration-300 ease-in-out ${
@@ -1137,15 +1161,22 @@ const [showroomName, setShowroomName] = useState("");
                     >
                         Verify
                     </button>
+                                               )}
+                    </>
                 )}
 
                 {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && (
                     <p className="text-green-600 font-medium text-center mt-2">Booking verified successfully!</p>
                 )}
                 {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && bookingDetails?.feedback !== true && (
+                    <>
+                                                                   {(role === 'admin' || staffRole === 'secondary admin'|| staffRole === 'verifier') && (
+
                     <button className="bg-green-500 text-white px-4 py-2 rounded mt-4" onClick={handleFeedbackClick}>
                         Feedback Form
                     </button>
+                                                                   )}
+                    </>
                 )}
 
                 {bookingDetails?.bookingChecked === true && bookingDetails.status === 'Order Completed' && bookingDetails?.feedback === true && (
@@ -1333,6 +1364,8 @@ const [showroomName, setShowroomName] = useState("");
                     </button>
                 </form>
             )}
+            {!(staffRole === 'call executive') && (
+
             <div className="flex justify-end">
                 {bookingDetails.status !== 'Order Completed' && (
                     <div className="flex justify-end">
@@ -1342,6 +1375,7 @@ const [showroomName, setShowroomName] = useState("");
                     </div>
                 )}
             </div>
+            )}
         </div>
     );
 };

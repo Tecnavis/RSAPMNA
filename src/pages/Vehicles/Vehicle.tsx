@@ -11,6 +11,7 @@ import {
   DocumentData,
 } from "firebase/firestore";
 import "./Vehicle.css";
+import { TextField } from "@mui/material";
 
 interface VehicleData {
   id?: string;
@@ -31,6 +32,7 @@ const Vehicle: React.FC = () => {
     totalOdometer: 0,
   });
   const [editId, setEditId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>(""); // Search state
 
   useEffect(() => {
     const fetchVehicles = async () => {
@@ -76,7 +78,9 @@ const Vehicle: React.FC = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
-
+  const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const formattedData = { ...formData } as Record<string, any>;
@@ -100,12 +104,17 @@ const Vehicle: React.FC = () => {
     setEditId(vehicle.id || null);
     setFormData(vehicle);
   };
-
+  const filteredVehicles = vehicles.filter(
+    (vehicle) =>
+      vehicle.vehicleName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      vehicle.serviceVehicle.toLowerCase().includes(searchQuery.toLowerCase())
+  );
   return (
     <div className="vehicle-container">
 <div className="vehicle-container">
   <h2 className="vehicle-heading">🚗 Manage Vehicles</h2>
-</div>    
+</div> 
+  
   <form onSubmit={handleSubmit} className="vehicle-form">
         <label>
           Vehicle Name:
@@ -137,22 +146,25 @@ const Vehicle: React.FC = () => {
             required
           />
         </label>
-        {/* <label>
-          Total Runned KM:
-          <input
-            type="number"
-            name="totalOdometer"
-            value={formData.totalOdometer}
-            onChange={handleInputChange}
-            required
-          />
-        </label> */}
+      
         <button type="submit">{editId ? "Update Vehicle" : "Add Vehicle"}</button>
       </form>
 
       <div className="vehicle-container">
   <h3 className="vehicle-list-heading">📋 Vehicle List</h3>
-</div>      <table className="vehicle-table">
+</div>    
+
+       <div className='mt-2'>
+                  <TextField
+                  label="Search Vehicles..."
+                  variant="outlined"
+                  fullWidth
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  sx={{ marginBottom: 2 }}
+              />
+              </div>
+  <table className="vehicle-table">
 <thead>
   <tr>
     <th>#</th> {/* Added index column */}
@@ -164,7 +176,7 @@ const Vehicle: React.FC = () => {
   </tr>
 </thead>
 <tbody>
-  {vehicles.map((vehicle, index) => (
+  {filteredVehicles.map((vehicle, index) => (
     <tr key={vehicle.id}>
       <td>{index + 1}</td> {/* Display the index */}
       <td>{vehicle.vehicleName}</td>

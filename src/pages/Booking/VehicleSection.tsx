@@ -49,6 +49,8 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
     const [showNotification, setShowNotification] = useState<boolean>(false);
     const [isButtonGreen, setIsButtonGreen] = useState(false); // State to change button color
     const role = sessionStorage.getItem('role');
+    const staffRole = sessionStorage.getItem('staffRole');
+
     const adjustmentApplied = useRef<boolean>(false);
     const uid = sessionStorage.getItem('uid') || '';
     const db = getFirestore();
@@ -199,17 +201,23 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
             const confirmAction = window.confirm('Adjusting salary below the current total. Are you sure?');
 
             if (confirmAction) {
-                // Only show the password prompt depending on the user's role
-                const password = role === 'staff' ? prompt('Enter password to apply the adjustment') : prompt('Enter password to apply the adjustment: Password=RSA@123');
+                let passwordPromptMessage = 'Enter password to apply the adjustment';
+            let expectedPassword = 'Adjust';
 
-                const expectedPassword = role === 'staff' ? 'Adjust' : 'RSA@123';
+            // If the role is admin or secondary_admin, set the expected password to 'RSA@123'
+            if (role === 'admin' || staffRole === 'secondary admin'|| staffRole === 'verifier') {
+                passwordPromptMessage = 'Enter password to apply the adjustment: Password=RSA@Adjust';
+                expectedPassword = 'RSA@Adjust';
+            }
 
-                if (password === expectedPassword) {
-                    // Call the function to update the total salary
-                    onUpdateTotalSalary(adjustedSalary);
-                    adjustmentApplied.current = true;
-                    setIsButtonGreen(true); // Change button color to green
-                    setShowNotification(false);
+            const password = prompt(passwordPromptMessage);
+
+            if (password === expectedPassword) {
+                // Call the function to update the total salary
+                onUpdateTotalSalary(adjustedSalary);
+                adjustmentApplied.current = true;
+                setIsButtonGreen(true); // Change button color to green
+                setShowNotification(false);
                 } else {
                     alert('Incorrect password. Adjustment not applied.');
                 }

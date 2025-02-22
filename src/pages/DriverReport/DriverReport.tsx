@@ -48,6 +48,7 @@ const DriverReport: React.FC = () => {
 
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
+    const staffRole = sessionStorage.getItem('staffRole');
 
     useEffect(() => {
         if (!uid) {
@@ -202,7 +203,12 @@ const DriverReport: React.FC = () => {
 
     const renderTable = (driversList: Driver[], title: string) => {
         const header = title === 'Company Details' || title === 'Providers Details' ? 'Company Name' : 'Driver Name';
-
+        const totalAmountInHandSum = driversList.reduce((sum, driver) => 
+            sum + (Number(driver.netTotalAmountInHand) || 0), 0
+        );
+        const totalBalanceSalaryAmountSum = driversList.reduce((sum, driver) => 
+            sum + (Number(driver.totalSalaryAmount) || 0), 0
+        );
         return (
             <div className="mb-8">
                 <h3 className="text-xl font-semibold mb-4">{title}</h3>
@@ -283,6 +289,15 @@ const DriverReport: React.FC = () => {
                                 </td>
                             </tr>
                         ))}
+                          <tr className="bg-gray-200 font-bold">
+                        <td colSpan={3} className="border px-4 py-2 text-right">Total:</td>
+                        <td className="border px-4 py-2">₹{totalAmountInHandSum.toFixed(2)}</td>
+                        {(title === 'PMNA Drivers' || title === 'Providers Details') && (
+
+                        <td className="py-2 px-4">{totalBalanceSalaryAmountSum.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</td>
+                        )}
+                        <td className="border px-4 py-2"></td>
+                    </tr>
                     </tbody>
                 </table>
             </div>
@@ -295,8 +310,12 @@ const DriverReport: React.FC = () => {
             <div className="mb-4 w-full">
                 <input type="text" placeholder="Search..." value={searchQuery} onChange={handleSearchChange} className="p-2 border border-gray-300 rounded w-full outline-none" />
             </div>
+            {!(staffRole === "verifier") && (
+<>
             {renderTable(rsaDrivers, 'PMNA Drivers')}
             {renderTable(otherDrivers, 'Providers Details')}
+            </>
+            )}
             {renderTable(companyDrivers, 'Company Details')}
         </div>
     );

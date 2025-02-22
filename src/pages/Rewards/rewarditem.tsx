@@ -21,13 +21,14 @@ const CardLayout = () => {
     const storage = getStorage();
     const uid = sessionStorage.getItem('uid');
     const [rewards, setRewards] = useState<RewardItem[]>([]);
-    console.log(rewards, 'the rewards');
+    const [selectedCategory, setSelectedCategory] = useState<string>('');  // State for category filter
     const [isPopupVisible, setIsPopupVisible] = useState(false);
     const [isPopupEdit, setIsPopupEdit] = useState(false);
     const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
-    const handleOn = ()=> setIsPopupVisible(true)
-    const handleOff = ()=> {
-        setIsPopupVisible(false)
+
+    const handleOn = () => setIsPopupVisible(true);
+    const handleOff = () => {
+        setIsPopupVisible(false);
         setFormData({
             name: '',
             description: '',
@@ -37,23 +38,23 @@ const CardLayout = () => {
             percentage: '',
             stock: '',
             image: '',
-        })
-    }
+        });
+    };
 
-  
     const [formData, setFormData] = useState({
         name: '',
         description: '',
         price: '',
         image: '',
-        category:'',
-        percentage:'',
-        stock:'',
-        points:"",
+        category: '',
+        percentage: '',
+        stock: '',
+        points: '',
     });
+
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    
-    const handleEditOff = ()=>{
+
+    const handleEditOff = () => {
         setFormData({
             name: '',
             description: '',
@@ -63,9 +64,10 @@ const CardLayout = () => {
             stock: '',
             points: '',
             image: '',
-        })
-        setIsPopupEdit(false)
-    }
+        });
+        setIsPopupEdit(false);
+    };
+
     // Handle the Edit button click
     const handleEdit = (rewardId: any) => {
         const reward = rewards.find((r) => r._id === rewardId);
@@ -113,7 +115,6 @@ const CardLayout = () => {
 
     // Create new reward item
     const handleNewReward = async () => {
-         
         try {
             let imageUrl = '';
             if (selectedFile) {
@@ -213,7 +214,6 @@ const CardLayout = () => {
             [name]: value,
         }));
     };
-    
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
@@ -238,12 +238,22 @@ const CardLayout = () => {
         fetchData();
     }, []);
 
+    // Filter rewards by category
+    const filteredRewards = selectedCategory
+        ? rewards.filter((reward) => reward.category === selectedCategory)
+        : rewards;
     return (
         <div className="card-layout">
             <button className="new-reward-btn" onClick={handleOn}>
                 New Reward
             </button>
-
+            <select className="category-filter" onChange={(e) => setSelectedCategory(e.target.value)}>
+                <option value="">All Categories</option>
+                <option value="Showroom">Showroom</option>
+                <option value="Driver">Driver</option>
+                <option value="Staff">Staff</option>
+                <option value="ShowroomStaff">Showroom Staff</option>
+            </select>
             {isPopupVisible && (
                 <div className="popup-form">
                     <h2>Create New Reward</h2>
@@ -300,7 +310,6 @@ const CardLayout = () => {
                             <option value="Driver">Driver</option>
                             <option value="Staff">Staff</option>
                             <option value="ShowroomStaff">Showroom Staff</option>
-                            <option value="Provider">Provider</option>
                         </select>
                         <input type="file" name="image" onChange={handleFileChange} />
                         <button type="submit">Update Reward</button>
@@ -311,8 +320,8 @@ const CardLayout = () => {
                 </div>
             )}
 
-            <div className="card-container">
-                {rewards.map((reward) => (
+<div className="card-container">
+                {filteredRewards.map((reward) => (
                     <div key={reward._id} className="card">
                         {reward.image && <img src={reward.image} alt={reward.name} className="card-image" />}
                         <div className="card-content">
@@ -320,7 +329,7 @@ const CardLayout = () => {
                             <p className="card-description">{reward.description}</p>
                             <p className="card-description">{reward.points}</p>
                             <div className="card-footer">
-                                <span className="card-price">{reward.price} </span>
+                                <span className="card-price">{reward.price}</span>
                                 <div className="card-actions">
                                     <button className="edit-btn" onClick={() => handleEdit(reward._id)}>
                                         Edit

@@ -138,11 +138,14 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [isEditing, setIsEditing] = useState(false); // To track if we're in edit mode
     const [driverLeaves, setDriverLeaves] = useState<DriverLeave[]>([]);
     const [confirmUpdatedTotalSalary, setConfirmUpdatedTotalSalary] = useState('');
+    const [liftingTotalSalary, setLiftingTotalSalary] = useState('');
+
     const [showModal, setShowModal] = useState(false);
     const [isButtonClicked, setIsButtonClicked] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [bookingEdit, setBookingEdit] = useState<boolean>(); // Set the default value
     const [selectedShowroomId, setSelectedShowroomId] = useState<string | null>(null);
+    const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
 
     const uid = sessionStorage.getItem('uid');
     const userName = sessionStorage.getItem('username');
@@ -155,6 +158,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             setBookingId(editData.bookingId || '');
             setTrappedLocation(editData.trappedLocation || '');
             setConfirmUpdatedTotalSalary(editData.confirmUpdatedTotalSalary || '');
+            setLiftingTotalSalary(editData.liftingTotalSalary || '');
+
             setBodyShope(editData.bodyShope || '');
             setComments(editData.comments || '');
             setFileNumber(editData.fileNumber || '');
@@ -256,13 +261,12 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         setManualInput(pickupLocation.name || '');
     }, [pickupLocation]);
     useEffect(() => {
-        if (trappedLocation === 'outsideOfRoad' ||showroomLocation === 'lifting') {
+        if (trappedLocation === 'outsideOfRoad' || showroomLocation === 'lifting') {
             setDisableFields(true);
         } else {
             setDisableFields(false);
         }
-    }, [trappedLocation,showroomLocation]);
-    
+    }, [trappedLocation, showroomLocation]);
     const validateForm = () => {
         let tempErrors: { [key: string]: string } = {}; // Allows string keys
         let isValid = true;
@@ -371,12 +375,18 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
         setIsAdjustmentApplied(true);
         // Call any other logic you need for applying the adjustment
     };
-    const handleInsuranceAmountBodyChange = (amount: string) => {
+    // const handleInsuranceAmountBodyChange = (amount: string) => {
+    //     console.log('Insurance Amount Body Changed:', amount);
+    //     setInsuranceAmountBody(amount);
+    //     setEditData((prev:any) => ({ ...prev, insuranceAmountBody: amount })); // Ensure state update
+    // };
+    const handleInsuranceAmountBodyChange = (amount: any) => {
         console.log('Insurance Amount Body Changed:', amount);
         setInsuranceAmountBody(amount);
-        setEditData((prev:any) => ({ ...prev, insuranceAmountBody: amount })); // Ensure state update
+        if (isEditing) {
+            setEditData((prev: any) => ({ ...prev, insuranceAmountBody: amount }));
+        }
     };
-    
     const handleConfirm = () => {
         setIsButtonClicked(true); // Mark the button as clicked
         setErrorMessage('');
@@ -401,7 +411,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     };
     const handleBodyInsuranceChange = (insurance: any) => {
         setBodyShope(insurance);
-        
+
         if (insurance === 'insurance' && state?.editData?.insuranceAmountBody) {
             // Restore showroom's insuranceAmountBody when switching to "insurance"
             setInsuranceAmountBody(state.editData.insuranceAmountBody);
@@ -410,8 +420,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             setInsuranceAmountBody('');
         }
     };
-    
-    
+
     // -----------------00000000000000000000000000
     const handleChangedInsuranceChange = (insurance: any) => {
         setBodyShope(insurance);
@@ -434,56 +443,61 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     }, [selectedCompany, companies]); // Use 'companies' instead of 'drivers'
     // -------------------------------------------------------------------------------------------------------------------
     const handleInputChange = (field: any, value: any) => {
-        console.log("eeeeeee")
+        console.log('eeeeeee');
         switch (field) {
             case 'showroomLocation':
                 setShowroomLocation(value);
-                if (value === "lifting") {
+                if (value === 'lifting') {
                     // When "Lifting" is selected, set Dropoff Location same as Pickup Location
                     setDropoffLocation(pickupLocation);
                 } else {
-                const selectedShowroom: any = showrooms.find((show: any) => show.value === value);
+                    const selectedShowroom: any = showrooms.find((show: any) => show.value === value);
 
-                if (selectedShowroom) {
-                    setSelectedShowroomId(selectedShowroom.id); // Store the ID in state
+                    if (selectedShowroom) {
+                        setSelectedShowroomId(selectedShowroom.id); // Store the ID in state
 
-                    // setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
-                    // console.log('nsuranceAmountBodymm', selectedShowroom.insuranceAmountBody);
-                    // // Check if selectedShowroom has locationLatLng before accessing lat and lng
-                    if (selectedShowroom.locationLatLng && selectedShowroom.locationLatLng.lat && selectedShowroom.locationLatLng.lng) {
-                        const latString = selectedShowroom.locationLatLng.lat.toString();
-                        const lngString = selectedShowroom.locationLatLng.lng.toString();
+                        // setInsuranceAmountBody(selectedShowroom.insuranceAmountBody);
+                        // console.log('nsuranceAmountBodymm', selectedShowroom.insuranceAmountBody);
+                        // // Check if selectedShowroom has locationLatLng before accessing lat and lng
+                        if (selectedShowroom.locationLatLng && selectedShowroom.locationLatLng.lat && selectedShowroom.locationLatLng.lng) {
+                            const latString = selectedShowroom.locationLatLng.lat.toString();
+                            const lngString = selectedShowroom.locationLatLng.lng.toString();
 
-                        setDropoffLocation({
-                            name: selectedShowroom.value,
-                            lat: latString,
-                            lng: lngString,
-                        });
+                            setDropoffLocation({
+                                name: selectedShowroom.value,
+                                lat: latString,
+                                lng: lngString,
+                            });
+                        } else {
+                            console.error('Location data is missing for the selected showroom.');
+                            setSelectedShowroomId(null); // Reset ID if no showroom is selected
+                            setDropoffLocation({
+                                name: selectedShowroom.value || '',
+
+                                lat: '',
+                                lng: '',
+                            });
+                        }
                     } else {
-                        console.error('Location data is missing for the selected showroom.');
-                        setSelectedShowroomId(null); // Reset ID if no showroom is selected
+                        // setInsuranceAmountBody(0);
                         setDropoffLocation({
-                            name: selectedShowroom.value || '',
-
+                            name: '',
                             lat: '',
                             lng: '',
                         });
                     }
-                
-                } else {
-                    // setInsuranceAmountBody(0);
-                    setDropoffLocation({
-                        name: '',
-                        lat: '',
-                        lng: '',
-                    });
                 }
-            }
                 break;
             case 'totalSalary':
                 setTotalSalary(value || 0);
                 break;
-
+                case 'liftingTotalSalary':
+                    setLiftingTotalSalary(value);
+        
+                    if (showroomLocation === 'lifting') {
+                        setUpdatedTotalSalary(value);
+                    }
+                    break;
             case 'serviceCategory':
                 setServiceCategory(value || 0);
 
@@ -528,11 +542,12 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
 
                         setSelectedCompany('');
 
-  if (bookingEdit === true) {
-                        setIsModalOpen(false);
-                    } else {
-                        setIsModalOpen(true);
-                    }                    }
+                        if (bookingEdit === true) {
+                            setIsModalOpen(false);
+                        } else {
+                            setIsModalOpen(true);
+                        }
+                    }
                 }
                 break;
 
@@ -694,8 +709,6 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     }
                 }
                 break;
-            
-            
 
             case 'dropoffLocation':
                 if (typeof value === 'number' || typeof value === 'string') {
@@ -766,7 +779,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     };
 
     const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-// ------------------------------------------------
+    // ------------------------------------------------
 
     const openModal = (distance: any) => {
         setIsModalOpen(true);
@@ -774,11 +787,17 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const closeModal = () => {
         setIsModalOpen(false);
     };
-    // -------------------------------------------------------------------------
+    useEffect(() => {
+        if (showroomLocation === 'lifting') {
+            setUpdatedTotalSalary(Number(liftingTotalSalary) || 0);
+        }
+    }, [showroomLocation, liftingTotalSalary]);
+    
+    // -------------------------------------------------------------------------------
     useEffect(() => {
         const db = getFirestore();
         const serviceCollection = collection(db, `user/${uid}/showroom`);
-    
+
         const unsubscribe = onSnapshot(
             serviceCollection,
             (snapshot) => {
@@ -789,26 +808,25 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     insuranceAmountBody: doc.data().insuranceAmountBody,
                     locationLatLng: doc.data().locationLatLng,
                 }));
-    
+
                 // Add the "Lifting" option manually
                 servicesList.push({
-                    id: "lifting",
-                    value: "lifting",
-                    label: "Lifting",
+                    id: 'lifting',
+                    value: 'lifting',
+                    label: 'Lifting',
                     insuranceAmountBody: null,
                     locationLatLng: null,
                 });
-    
+
                 setShowrooms(servicesList as any);
             },
             (error) => {
-                console.error("Error fetching services:", error);
+                console.error('Error fetching services:', error);
             }
         );
-    
+
         return () => unsubscribe();
     }, [uid]);
-    
 
     //-------------------------------------------------------------------------------------
     useEffect(() => {
@@ -870,7 +888,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
 
         return () => unsubscribe();
     }, []);
-
+    // ---------------------------------------------------------------------------
     useEffect(() => {
         const fetchDrivers = async () => {
             if (!serviceType || !serviceDetails || !pickupLocation) {
@@ -1164,7 +1182,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             }
             newTotalSalary -= parseFloat(typeof insuranceAmountBody === 'string' ? insuranceAmountBody : insuranceAmountBody.toString()) || 0;
         }
-    
+
         console.log('newTotalSalary', newTotalSalary);
         if (editData?.adjustValue) {
             // If editData has adjustValue, prioritize it
@@ -1175,7 +1193,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             // Otherwise, use the calculated newTotalSalary
             setUpdatedTotalSalary(newTotalSalary >= 0 ? newTotalSalary : 0);
         }
-    }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope, adjustValue, editData?.adjustValue,isEditing]);
+    }, [totalSalary, insuranceAmountBody, serviceCategory, bodyShope, adjustValue, editData?.adjustValue, isEditing]);
 
     const formatDate = (date: any) => {
         const day = date.getDate().toString().padStart(2, '0');
@@ -1255,15 +1273,15 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     };
 
     const addOrUpdateItem = async (): Promise<void> => {
-        const skipValidation = trappedLocation === 'outsideOfRoad' || showroomLocation === 'lifting';
+        const skipValidation = trappedLocation === 'outsideOfRoad' || showroomLocation === 'lifting' || selectedDriver === 'dummy' || selectedDriver === 'dummyProvider';
 
         if (!skipValidation && !validateForm()) {
             return; // Stop execution if validation fails
         }
-         if (!skipValidation && !isButtonClicked) {
-        setErrorMessage("Click 'OK' button"); // Show error message if "OK" is not clicked
-        return;
-    }
+        if (!skipValidation && !isButtonClicked) {
+            setErrorMessage("Click 'OK' button"); // Show error message if "OK" is not clicked
+            return;
+        }
         if ((skipValidation || validateForm()) && !loading) {
             // Check if loading is false before proceeding
             setLoading(true);
@@ -1331,12 +1349,13 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     lng: pickupLocation?.lng?.toString() || '',
                 };
                 const totalDriverDistanceNumber = parseFloat(totalDriverDistance) || 0;
-// -----------------------------------------------------------------
-const selectedShowroomData = showrooms.find((show: any) => show.value === showroomLocation);
-const showroomId = selectedShowroomData ? selectedShowroomData.id : '';
-console.log("selectedShowroomData", selectedShowroomData);
-         
-const bookingData = {
+                // -----------------------------------------------------------------
+                const selectedShowroomData = showrooms.find((show: any) => show.value === showroomLocation);
+                const showroomId = selectedShowroomData ? selectedShowroomData.id : '';
+                console.log('selectedShowroomData', selectedShowroomData);
+                const showroom = selectedShowroomData ? selectedShowroomData.label : '';
+
+                const bookingData = {
                     driver: driverName,
                     totalSalary: totalSalary,
                     pickupLocation: formattedPickupLocation,
@@ -1351,7 +1370,7 @@ const bookingData = {
                     baseLocation: baseLocation || '',
                     showroomLocation: showroomLocation,
                     company: company || '',
-                    showroomId:showroomId,
+                    showroomId: showroomId,
                     adjustValue: adjustValue || '',
                     customerName: customerName || '',
                     totalDriverDistance: totalDriverDistanceNumber || 0,
@@ -1378,6 +1397,7 @@ const bookingData = {
                     pickupDistance: pickupDistance,
                     companyBooking: companyBooking,
                     companyName: companyName,
+                    showroom:showroom,
                     newStatus: '',
                     editedTime: '',
                 };
@@ -1715,36 +1735,36 @@ const bookingData = {
                     </div>
                 </div>
                 {!disableFields && (
-                <div>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="distance" className={styles.label}>
-                            Total Distance (KM)
-                        </label>
-                        <div className={styles.inputWithIcon}>
-                            <input
-                                style={{ color: 'red' }}
-                                id="distance"
-                                type="text"
-                                name="distance"
-                                placeholder="Total Distance"
-                                value={distance}
-                                className={styles.formControl}
-                                onChange={(e) => handleInputChange('distance', e.target.value)}
-                            />
+                    <div>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="distance" className={styles.label}>
+                                Total Distance (KM)
+                            </label>
+                            <div className={styles.inputWithIcon}>
+                                <input
+                                    style={{ color: 'red' }}
+                                    id="distance"
+                                    type="text"
+                                    name="distance"
+                                    placeholder="Total Distance"
+                                    value={distance}
+                                    className={styles.formControl}
+                                    onChange={(e) => handleInputChange('distance', e.target.value)}
+                                />
 
-                            <a
-                                href={`https://www.google.com/maps/dir/?api=1&origin=${baseLocation?.lat},${baseLocation?.lng}&destination=${baseLocation?.lat},${baseLocation?.lng}&waypoints=${pickupLocation?.lat},${pickupLocation?.lng}|${dropoffLocation?.lat},${dropoffLocation?.lng}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={styles.iconWrapper}
-                            >
-                                <IconMapPin />
-                            </a>
+                                <a
+                                    href={`https://www.google.com/maps/dir/?api=1&origin=${baseLocation?.lat},${baseLocation?.lng}&destination=${baseLocation?.lat},${baseLocation?.lng}&waypoints=${pickupLocation?.lat},${pickupLocation?.lng}|${dropoffLocation?.lat},${dropoffLocation?.lng}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={styles.iconWrapper}
+                                >
+                                    <IconMapPin />
+                                </a>
+                                {errors.distance && <p className="text-red-500 text-sm mt-1">{errors.distance}</p>}
+                            </div>
                             {errors.distance && <p className="text-red-500 text-sm mt-1">{errors.distance}</p>}
                         </div>
-                        {errors.distance && <p className="text-red-500 text-sm mt-1">{errors.distance}</p>}
                     </div>
-                </div>
                 )}
 
                 <div className={styles.trappedLocationContainer}>
@@ -1798,7 +1818,7 @@ const bookingData = {
                     {errors.trappedLocation && <span className="text-red-500 text-sm mt-1">{errors.trappedLocation}</span>}
                 </div>
 
-                {trappedLocation === 'outsideOfRoad' || showroomLocation ==='lifting' && (
+                {trappedLocation === 'outsideOfRoad' && (
                     <div className={styles.formGroup}>
                         <label htmlFor="updatedTotalSalary" className={styles.label}>
                             Payable Amount (Special Case)
@@ -1815,55 +1835,52 @@ const bookingData = {
                         />
                     </div>
                 )}
-                {!disableFields && (
-                    <div className={styles.formGroup}>
-                        <label htmlFor="serviceType" className={styles.label}>
-                            Service Type
-                        </label>
-                        <select
-                            id="serviceType"
-                            name="serviceType"
-                            className="form-select flex-1"
-                            value={serviceType}
-                            style={{
-                                width: '100%',
-                                padding: '0.5rem',
-                                border: '1px solid #ccc',
-                                borderRadius: '5px',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                            }}
-                            onChange={(e) => handleInputChange('serviceType', e.target.value)}
-                        >
-                            <option value="">Select Service Type</option>
-                            {serviceTypes.map((service) => (
-                                <option key={service.id} value={service.name}>
-                                    {service.name}
-                                </option>
-                            ))}
-                        </select>
-                        {errors.serviceType && <p className="text-red-500 text-sm mt-1">{errors.serviceType}</p>}
-                    </div>
-                )}
+                <div className={styles.formGroup}>
+                    <label htmlFor="serviceType" className={styles.label}>
+                        Service Type
+                    </label>
+                    <select
+                        id="serviceType"
+                        name="serviceType"
+                        className="form-select flex-1"
+                        value={serviceType}
+                        style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid #ccc',
+                            borderRadius: '5px',
+                            fontSize: '1rem',
+                            outline: 'none',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                        }}
+                        onChange={(e) => handleInputChange('serviceType', e.target.value)}
+                    >
+                        <option value="">Select Service Type</option>
+                        {serviceTypes.map((service) => (
+                            <option key={service.id} value={service.name}>
+                                {service.name}
+                            </option>
+                        ))}
+                    </select>
+                    {errors.serviceType && <p className="text-red-500 text-sm mt-1">{errors.serviceType}</p>}
+                </div>
 
-                {!disableFields && (
-                    <div className={styles.formGroup}>
-                        <label htmlFor="driver" className={styles.label}>
-                            Driver
-                        </label>
-                        <input
-                            id="driver"
-                            type="text"
-                            name="driver"
-                            placeholder="Select your driver"
-                            onClick={() => openModal(distance)}
-                            value={selectedDriver ? selectedDriverData?.driverName || 'DummyDriver' : ''}
-                            readOnly
-                            className={styles.formControl}
-                        />
-                    </div>
-                )}
+                <div className={styles.formGroup}>
+                    <label htmlFor="driver" className={styles.label}>
+                        Driver
+                    </label>
+                    <input
+                        id="driver"
+                        type="text"
+                        name="driver"
+                        placeholder="Select your driver"
+                        onClick={() => openModal(distance)}
+                        value={selectedDriver ? selectedDriverData?.driverName || 'DummyDriver' : ''}
+                        readOnly
+                        className={styles.formControl}
+                    />
+                </div>
+
                 <ReactModal isOpen={isModalOpen} onRequestClose={closeModal} style={customStyles}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
                         <div style={{ position: 'sticky', top: 0, backgroundColor: '#f9f9f9', zIndex: 999, padding: '10px', borderBottom: '1px solid #ddd' }}>
@@ -1882,12 +1899,10 @@ const bookingData = {
                                             <tr>
                                                 <th className="py-2 px-4 text-left">Driver Name</th>
                                                 <th className="py-2 px-4 text-left">Pickup Distance</th>
-
                                                 <th className="py-2 px-4 text-left">Payable Amount</th>
                                                 <th className="py-2 px-4 text-left font-bold text-violet-600">Profit after Deducting Expenses</th>
                                                 <th className="py-2 px-4 text-left  text-red-600">Leave Status</th>
                                                 <th className="py-2 px-4 text-left font-bold">Current Status</th> {/* New Column Header */}
-
                                                 <th className="py-2 px-4 text-left">Select</th>
                                             </tr>
                                         </thead>
@@ -1980,11 +1995,14 @@ const bookingData = {
                                             isRSA && selectedCompanyData ? selectedCompanyData.salaryPerKm[selectedService] : !isRSA ? driver.salaryPerKm[selectedService] : serviceDetails.salaryPerKM;
 
                                         const parsedDistance = parseFloat(distance) || 0; // Ensure distance is a number
-                                        const calculatedSalary = calculateTotalSalary(salary, parsedDistance, basicSalaryKM, salaryPerKM, isRSA);
+                                        const calculatedSalary =
+                                            showroomLocation === 'lifting'
+                                                ? 0 // Don't calculate salary for lifting
+                                                : calculateTotalSalary(salary, parsedDistance, basicSalaryKM, salaryPerKM, isRSA);
 
                                         // Calculate profit based on expenses per KM
                                         const expensePerKM = serviceDetails.expensePerKM || 0;
-                                        const profit = calculatedSalary - parsedDistance * expensePerKM;
+                                        const profit = showroomLocation === 'lifting' ? 0 : calculatedSalary - parsedDistance * expensePerKM;
                                         const isOnLeave = driverLeaves.some((leave: DriverLeave) => leave.driverId === driver.id);
 
                                         return (
@@ -1994,12 +2012,10 @@ const bookingData = {
                                                         <tr>
                                                             <th className="py-2 px-4 text-left">Driver Name</th>
                                                             <th className="py-2 px-4 text-left">Pickup Distance</th>
-
-                                                            <th className="py-2 px-4 text-left">Payable Amount</th>
-                                                            <th className="py-2 px-4 text-left font-bold text-violet-600">Profit after Deducting Expenses</th>
+                                                            {showroomLocation !== 'lifting' && <th className="py-2 px-4 text-left">Payable Amount</th>}
+                                                            {showroomLocation !== 'lifting' && <th className="py-2 px-4 text-left font-bold text-violet-600">Profit after Deducting Expenses</th>}
                                                             <th className="py-2 px-4 text-left font-bold text-red-600">Leave Status</th>
                                                             <th className="py-2 px-4 text-left font-bold">Current Status</th> {/* New Column Header */}
-
                                                             <th className="py-2 px-4 text-left">Select</th>
                                                         </tr>
                                                     </thead>
@@ -2015,10 +2031,12 @@ const bookingData = {
                                                                 {driver.driverName || 'Unknown Driver'}
                                                             </td>
                                                             <td className="py-2 px-4">{driver.pickupDistance}</td> {/* Display the pickup distance here */}
-                                                            <td className="py-2 px-4">{calculatedSalary.toFixed(2)}</td>
-                                                            <td className="py-2 px-4 text-red-600 font-semibold" style={{ backgroundColor: '#ffe6e6' }}>
-                                                                {profit.toFixed(2)}
-                                                            </td>
+                                                            {showroomLocation !== 'lifting' && <td className="py-2 px-4 font-semibold text-blue-800">{calculatedSalary.toFixed(2)}</td>}
+                                                            {showroomLocation !== 'lifting' && (
+                                                                <td className="py-2 px-4 text-red-600 font-semibold" style={{ backgroundColor: '#ffe6e6' }}>
+                                                                    {profit.toFixed(2)}
+                                                                </td>
+                                                            )}
                                                             <td
                                                                 style={{
                                                                     color: isOnLeave ? 'red' : 'green',
@@ -2029,7 +2047,6 @@ const bookingData = {
                                                                 {isOnLeave ? 'Leave Today' : 'Available'}
                                                             </td>
                                                             <td className="py-2 px-4 text-blue-800 font-semibold">{driver.newStatus || 'Unknown'}</td> {/* New Column Data */}
-
                                                             <td className="py-2 px-4">
                                                                 <input
                                                                     type="radio"
@@ -2049,8 +2066,26 @@ const bookingData = {
                         </div>
                     </div>
                 </ReactModal>
+                {showroomLocation === 'lifting' && (
+    <div className={styles.formGroup}>
+        <label htmlFor="liftingTotalSalary" className={styles.label}>
+            Payable Amount (Special Case)
+        </label>
+        <input
+            id="liftingTotalSalary"
+            type="text"
+            name="liftingTotalSalary"
+            placeholder="Enter Total Salary"
+            onChange={(e) => handleInputChange('liftingTotalSalary', e.target.value)}
+            required
+            value={liftingTotalSalary}
+            className={styles.formControl}
+        />
+    </div>
+)}
 
-                {selectedDriver && selectedDriverData && (
+
+                {!disableFields && selectedDriver && selectedDriverData && (
                     <React.Fragment>
                         <div>
                             <VehicleSection
@@ -2111,20 +2146,17 @@ const bookingData = {
                                 </div>
 
                                 {serviceCategory === 'Body Shop' && (bodyShope === 'insurance' || bodyShope === 'both') && (
-    <div className="mb-4">
-        <label className="block text-gray-700 font-medium mb-1">
-            Insurance Amount By ShowRoom
-        </label>
-        <input 
-            type="text" 
-            value={insuranceAmountBody} 
-            onChange={(e) => setInsuranceAmountBody(e.target.value)} 
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Insurance amount"
-        />
-    </div>
-)}
-
+                                    <div className="mb-4">
+                                        <label className="block text-gray-700 font-medium mb-1">Insurance Amount By ShowRoom</label>
+                                        <input
+                                            type="text"
+                                            value={insuranceAmountBody}
+                                            onChange={(e) => setInsuranceAmountBody(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="Insurance amount"
+                                        />
+                                    </div>
+                                )}
 
                                 {/* Payable Amount (with insurance) */}
                                 <div className="flex items-center w-1/3">
@@ -2194,23 +2226,24 @@ const bookingData = {
                         </div>
                     </React.Fragment>
                 )}
-  {!disableFields && (
-                <div className={styles.formGroup}>
-                    <label htmlFor="totalDriverDistance" className={styles.label}>
-                        Total Driver Distance
-                    </label>
-                    <input
-                        id="totalDriverDistance"
-                        type="text"
-                        name="totalDriverDistance"
-                        placeholder="Enter Driver Distance"
-                        onChange={(e) => handleInputChange('totalDriverDistance', e.target.value)}
-                        value={totalDriverDistance}
-                        className={styles.formControl}
-                    />
-                    {errors.totalDriverDistance && <p className="text-red-500 text-sm mt-1">{errors.totalDriverDistance}</p>}
-                </div>
-            )}
+            
+                {!disableFields  && (
+                    <div className={styles.formGroup}>
+                        <label htmlFor="totalDriverDistance" className={styles.label}>
+                            Total Driver Distance
+                        </label>
+                        <input
+                            id="totalDriverDistance"
+                            type="text"
+                            name="totalDriverDistance"
+                            placeholder="Enter Driver Distance"
+                            onChange={(e) => handleInputChange('totalDriverDistance', e.target.value)}
+                            value={totalDriverDistance}
+                            className={styles.formControl}
+                        />
+                        {errors.totalDriverDistance && <p className="text-red-500 text-sm mt-1">{errors.totalDriverDistance}</p>}
+                    </div>
+                )}
                 {totalDriverDistance && (
                     <div className={styles.formGroup}>
                         <label htmlFor="totalDriverSalary" className={styles.label}>
@@ -2227,6 +2260,22 @@ const bookingData = {
                         />
                     </div>
                 )}
+                                {showroomLocation === 'lifting' && (
+   <div className={styles.formGroup}>
+   <label htmlFor="totalDriverSalary" className={styles.label}>
+       Driver Salary
+   </label>
+   <input
+       id="totalDriverSalary"
+       type="text"
+       name="totalDriverSalary"
+       placeholder="Enter Driver Salary"
+       onChange={(e) => handleInputChange('totalDriverSalary', e.target.value)}
+       value={totalDriverSalary}
+       className={styles.formControl}
+   />
+</div>
+                                )}
                 <div className={styles.formGroup}>
                     <label htmlFor="customerName" className={styles.label}>
                         Customer Name

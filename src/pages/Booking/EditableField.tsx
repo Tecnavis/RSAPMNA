@@ -30,6 +30,9 @@ const EditableField: React.FC<EditableFieldProps> = ({
   valueStyle, // Optional style prop
   bookingCheck,
 }) => {
+  const staffRole = sessionStorage.getItem('staffRole');
+  const role = sessionStorage.getItem('role');
+
   return isEditing ? (
     <div style={{ display: 'flex', alignItems: 'center' }}>
       
@@ -65,12 +68,17 @@ const EditableField: React.FC<EditableFieldProps> = ({
         {value}
       </span>
       {isEditable && !(bookingCheck === true || bookingCheck === null) && (
-        <CiEdit
+       <>
+                                                      {(role === 'admin' || staffRole === 'secondary admin'|| staffRole === 'verifier') && (
+
+       <CiEdit
           size={28}
           className="cursor-pointer"
           color="blue"
           onClick={onEditClick}
         />
+                                                      )}
+        </>
       )}
     </>
   );

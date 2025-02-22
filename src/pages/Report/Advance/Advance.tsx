@@ -22,6 +22,7 @@ import './Advance.css';
 import ConfirmationModal from './ConfirmationModal';
 import ConfirmationModal1 from './ConfirmationModal1';
 import CashCollectionTable from './CasCollectionTable';
+import ReceiveDetailsTable from './ReceiveDetailsTable ';
 interface Booking {
     id: string;
     driverId: string;
@@ -73,7 +74,7 @@ const Advance: React.FC = () => {
     const [advanceDetails, setAdvanceDetails] = useState<AdvanceData[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]); // State for bookings
     const [editAdvanceId, setEditAdvanceId] = useState<string | null>(null);
-    const [editAdvanceDataId, setEditAdvanceDataId] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState('receiveDetails');
     const [editAmount, setEditAmount] = useState<number | ''>('');
     const [isEditing, setIsEditing] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -156,23 +157,23 @@ const Advance: React.FC = () => {
             fetchAdvanceAndCalculate();
         }
     }, [selectedType, selectedDriver, bookings, db, uid]);
-
-    const distributeReceivedAmount = (receivedAmount: number, bookings: Booking[]) => {
-        let remainingAmount = receivedAmount;
+// -----------------------
+const distributeReceivedAmount = (receivedAmount: number | string, bookings: Booking[]) => {
+    let remainingAmount = Number(receivedAmount); // Ensure it's a number
         const selectedBookingIds: string[] = [];
 
         const sortedBookings = bookings
             .filter(
-                (booking) => booking.status === 'Order Completed' && booking.companyBooking === false && booking.selectedDriver === selectedDriver && booking.amount > (booking.receivedAmount || 0)
+                (booking) => booking.status === 'Order Completed' && booking.companyBooking === false && booking.selectedDriver === selectedDriver &&  booking.amount > Number(booking.receivedAmount || 0)
             )
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         const updatedBookings = sortedBookings.map((booking) => {
-            const bookingBalance = booking.amount - (booking.receivedAmount || 0);
+            const bookingBalance = booking.amount -  Number(booking.receivedAmount || 0);
 
             if (remainingAmount > 0 && bookingBalance > 0) {
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);
-                booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
+                booking.receivedAmount = Number(booking.receivedAmount || 0) + appliedAmount;
                 remainingAmount -= appliedAmount;
                 selectedBookingIds.push(booking.id);
             }
@@ -187,8 +188,8 @@ const Advance: React.FC = () => {
                 driver: booking.selectedDriver || 'Unknown Driver',
                 fileNumber: booking.id ? [booking.id] : ['Unknown'],
                 amount: booking.amount,
-                receivedAmount: booking.receivedAmount || 0,
-                balance: booking.amount - (booking.receivedAmount || 0),
+                receivedAmount: Number(booking.receivedAmount || 0),
+                balance: booking.amount - Number(booking.receivedAmount || 0),
             }))
         );
 
@@ -198,11 +199,12 @@ const Advance: React.FC = () => {
         setReceivedAmountToSettle(amount);
         setIsModalOpen1(true);
     };
-    const handleReceiveSettle = async (receivedAmount: number) => {
+    const handleReceiveSettle = async (receivedAmount: number | string) => {
         console.log('receivedAmount', receivedAmount);
+        const collectedDetailsRef = collection(db, `user/${uid}/collectedDetails`); // New Collection
 
         try {
-            const { updatedBookings, selectedBookingIds } = distributeReceivedAmount(receivedAmount, bookings);
+            const { updatedBookings, selectedBookingIds } = distributeReceivedAmount(Number(receivedAmount), bookings);
             console.log('updatedBookings', updatedBookings);
             setBookings(updatedBookings);
 
@@ -212,7 +214,7 @@ const Advance: React.FC = () => {
                 const bookingRef = doc(db, `user/${uid}/bookings`, booking.id);
                 const receivedDetailsRef = collection(db, `user/${uid}/receivedDetails`); // New collection
 
-                const currentReceivedAmount = booking.receivedAmount ?? 0;
+                const currentReceivedAmount = Number(booking.receivedAmount ?? 0);
                 const balance = (booking.amount - currentReceivedAmount).toString();
 
                 if (selectedBookingIds.includes(booking.id)) {
@@ -221,7 +223,7 @@ const Advance: React.FC = () => {
                         driver: booking.driver || 'Unknown Driver',
                         fileNumber: booking.fileNumber, // Assuming booking.id is the file number
                         amount: booking.amount,
-                        receivedAmount: booking.receivedAmount || 0,
+                        receivedAmount: Number(booking.receivedAmount || 0),
                         balance: balance,
                         
                         timestamp: new Date(), // Use a consistent format
@@ -233,18 +235,37 @@ const Advance: React.FC = () => {
 
                 // Update the main booking document with the new receivedAmount and balance
                 batch.update(bookingRef, {
-                    receivedAmount: booking.receivedAmount,
+                    receivedAmount: Number(booking.receivedAmount),
                     balance: balance,
                     role: role || 'unknown',
                 });
             });
+            let driverName = 'Unknown Driver';
+            if (selectedDriver) {
+                const driverDocRef = doc(db, `user/${uid}/driver`, selectedDriver);
+                const driverSnap = await getDoc(driverDocRef);
+                if (driverSnap.exists()) {
+                    driverName = driverSnap.data().driverName || 'Unknown Driver';
+                }
+            }
+            const newCollectionEntry = {
+                driver: selectedDriver || 'Unknown Driver',
+                driverName: driverName, // Include driver name
 
+                receivedAmount: Number(receivedAmount),
+                date: new Date().toLocaleDateString(), // Formatted Date
+                time: new Date().toLocaleTimeString(), // Formatted Time
+                timestamp: new Date(), // Full Timestamp
+            };
+
+            await addDoc(collectedDetailsRef, newCollectionEntry);
+    
             // Update staff received details
             const usersQuery = query(collection(db, `user/${uid}/users`), where('userName', '==', userName));
             const querySnapshot = await getDocs(usersQuery);
 
             querySnapshot.forEach((userDoc) => {
-                updateStaffReceived(userDoc.id, uid, receivedAmount, selectedBookingIds);
+                updateStaffReceived(userDoc.id, uid, Number(receivedAmount), selectedBookingIds);
             });
 
             await batch.commit();
@@ -938,6 +959,7 @@ const Advance: React.FC = () => {
                                 <ConfirmationModal isOpen={isModalOpen} onConfirm={confirmAdd} onCancel={cancelAdd} message="Are you sure you want to add this data?" />
                             </div>
                         )}
+                        
                         {selectedType === 'cashCollection' && (
                             <div>
                                 <div style={{ marginBottom: '16px' }}>
@@ -1023,8 +1045,50 @@ const Advance: React.FC = () => {
                             message={`Are you sure you want to settle the received amount of ${receivedAmountToSettle}?`}
                         />
                     </div>
-                    {selectedType === 'cashCollection' && <CashCollectionTable uid={uid} />}
+                    {selectedType === 'cashCollection' && (
+    <div>
+      <div style={{ display: 'flex', marginBottom: '16px', width: '100%' }}>
+      <button
+    onClick={() => setActiveTab('receiveDetails')}
+    style={{
+        flex: 1,
+        padding: '20px',
+        cursor: 'pointer',
+        borderBottom: activeTab === 'receiveDetails' ? '3px solid #4CAF50' : '3px solid transparent',
+        backgroundColor: activeTab === 'receiveDetails' ? '#dff0d8' : 'transparent', // Light green background
+        fontWeight: activeTab === 'receiveDetails' ? 'bold' : 'normal',
+        fontSize: activeTab === 'receiveDetails' ? '1.2rem' : '1rem', // Larger text when active
+        textAlign: 'center',
+        transition: 'all 0.3s ease',
+    }}
+>
+    Receive Details
+</button>
+<button
+    onClick={() => setActiveTab('cashCollection')}
+    style={{
+        flex: 1,
+        padding: '20px',
+        cursor: 'pointer',
+        borderBottom: activeTab === 'cashCollection' ? '3px solid #4CAF50' : '3px solid transparent',
+        backgroundColor: activeTab === 'cashCollection' ? '#dff0d8' : 'transparent', // Light green background
+        fontWeight: activeTab === 'cashCollection' ? 'bold' : 'normal',
+        fontSize: activeTab === 'cashCollection' ? '1.2rem' : '1rem', // Larger text when active
+        textAlign: 'center',
+        transition: 'all 0.3s ease',
+    }}
+>
+    Cash Collection
+</button>
 
+</div>
+
+
+        {/* Tab Content */}
+        {activeTab === 'receiveDetails' && <ReceiveDetailsTable uid={uid} />}
+        {activeTab === 'cashCollection' && <CashCollectionTable uid={uid} />}
+    </div>
+)}
                     {selectedType === 'advance' && (
                         <div>
                             <div className="advance-details">

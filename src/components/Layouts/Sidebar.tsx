@@ -31,8 +31,9 @@ const Sidebar = () => {
     const location = useLocation();
     const dispatch = useDispatch();
     const { t } = useTranslation();
-    const role =sessionStorage.getItem('role');
-console.log("role",role)
+    const role = sessionStorage.getItem('role');
+    const userName = sessionStorage.getItem('username');
+    const staffRole = sessionStorage.getItem('staffRole');
     const toggleMenu = (value: string) => {
         setCurrentMenu((oldValue) => {
             return oldValue === value ? '' : value;
@@ -98,6 +99,7 @@ console.log("role",role)
                                     Users
                                 </span>
                             </h2> */}
+{(role === 'admin' || staffRole === 'secondary admin') && (
 
                             <li className="menu nav-item">
                                 <button type="button" className={`${currentMenu === 'users' ? 'active' : ''} nav-link group w-full  py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('users')}>
@@ -133,7 +135,7 @@ console.log("role",role)
                 </ul>
                                 </AnimateHeight>
                             </li>
-
+)}
                             {/* <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
                                 <IconMinus className="w-4 h-5 flex-none hidden" />
                                 <span>
@@ -155,18 +157,29 @@ console.log("role",role)
 
                                 <AnimateHeight duration={300} height={currentMenu === 'bookings' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
+
                                         <li>
                                             <NavLink to="/bookings/newbooking">Bookings </NavLink>
                                         </li>
+                                   
                                         <li>
                                             <NavLink to="/bookings/booking">Add Booking </NavLink>
                                         </li>
+                                        {!(staffRole === "call executive" || staffRole === "verifier"|| staffRole === "cashier"|| staffRole === "accountant") && (
+                                        <>
                                         <li>
                                             <NavLink to="/bookings/pendingbookings">Pending Bookings</NavLink>
                                         </li>
+                                        </>
+                                        )}
+                                                                                {!(staffRole === "call executive"|| staffRole === "cashier") && (
+
                                         <li>
                                             <NavLink to="/bookings/closedbooking">Driver Completed Bookings</NavLink>
                                         </li>
+                                                                                )}
+                                        {!(staffRole === "call executive" || staffRole === "verifier"|| staffRole === "cashier"|| staffRole === "accountant") && (
+                                            <>
                                         <li>
                                             <NavLink to="/bookings/approvedbooking">Service Details</NavLink>
                                         </li>
@@ -174,9 +187,12 @@ console.log("role",role)
                                         <li>
                                             <NavLink to="/bookings/cancelbooking">Canceled Bookings</NavLink>
                                         </li>
+                                        
                                         <li>
                                             <NavLink to="/bookings/invoicedbooking">Invoiced Bookings</NavLink>
                                         </li>
+                                        </>
+                                        )}
                                     </ul>
                                 </AnimateHeight>
                             </li>
@@ -193,6 +209,7 @@ console.log("role",role)
                                     ShowRooms
                                 </span>
                             </h2> */}
+{(role === 'admin' || staffRole === 'secondary admin'|| staffRole === 'verifier' || !(staffRole === 'call executive'|| staffRole === 'cashier'|| staffRole === "accountant")) && (
 
                             <li className="menu nav-item">
                                 <button type="button" className={`${currentMenu === 'showrooms' ? 'active' : ''} nav-link group w-full  py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('showrooms')}>
@@ -216,13 +233,14 @@ console.log("role",role)
                                     </ul>
                                 </AnimateHeight>
                             </li>
-
+)}
                             {/* <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
                                 <IconMinus className="w-4 h-5 flex-none hidden" />
                                 <span>
                                     Service
                                 </span>
                             </h2> */}
+{(role === 'admin' || staffRole === 'secondary admin') && (
 
                             <li className="menu nav-item">
                                 <button type="button" className={`${currentMenu === 'service' ? 'active' : ''} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('service')}>
@@ -249,8 +267,9 @@ console.log("role",role)
                                     </ul>
                                 </AnimateHeight>
                             </li>
-{/* =------------------------------------------------------*/}
-<li className="menu nav-item ">
+)}
+                            {(role === 'admin' || staffRole === 'secondary admin'|| staffRole === 'verifier') && (
+                                <li className="menu nav-item ">
                                 <button type="button" className={`${currentMenu } nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('vehicle')}>
                                     <div className="flex items-center">
                                     {/* <i className="fas fa-truck-pickup"></i> */}
@@ -275,6 +294,9 @@ console.log("role",role)
                                     </ul>
                                 </AnimateHeight>
                             </li>
+                            )}
+                            {(role === 'admin' || staffRole === 'secondary admin') && (
+
                              <li className="menu nav-item">
                                 <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
                                     <IconMinus className="w-4 h-5 flex-none hidden" />
@@ -284,7 +306,10 @@ console.log("role",role)
                                     </span>
                                 </h2>
                             </li>
+                            )}
 {/* -------------------------------------------------------- */}
+{!(staffRole === 'call executive') && (
+
                             <li className="menu nav-item ">
                                 <button type="button" className={`${currentMenu === 'driverreport' ? 'active' : ''} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('driverreport')}>
                                     <div className="flex items-center">
@@ -302,15 +327,22 @@ console.log("role",role)
                                         <li>
                                             <NavLink to="/driverreport">Driver/Company/Provider Reports</NavLink>
                                         </li>
+                                        {!(staffRole === 'call executive')&&!(staffRole === 'verifier'|| staffRole === "cashier") && (
+                                            <>
                                         <li>
                                             <NavLink to="/showroomreport">ShowRoom Reports</NavLink>
                                         </li>
+                                        </>
+                                        )}
                                         <li>
                                             <NavLink to="/rsastaffreport">RSA Staff Reports</NavLink>
                                         </li>
+
                                     </ul>
                                 </AnimateHeight>
                             </li>
+)}
+                            {(role === 'admin' || staffRole === 'secondary admin'|| staffRole === 'verifier') && (
 
                             <li className="menu nav-item ">
                                 <button type="button" className={`${currentMenu } nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('reward')}>
@@ -326,16 +358,19 @@ console.log("role",role)
 
                                 <AnimateHeight duration={300} height={currentMenu === 'reward' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
+                                    {!(staffRole === 'verifier') && (
+
                                         <li>
                                             <NavLink to="/rewarditem">Reward Items</NavLink>
                                         </li>
+                                    )}
                                         <li>
                                             <NavLink to="/rewards">Rewards</NavLink>
                                         </li>
                                     </ul>
                                 </AnimateHeight>
                             </li>
-
+                            )}
  {/* <li className="menu nav-item ">
                                 <button type="button" className={`${currentMenu === 'location' ? 'active' : ''} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('location')}>
                                     <div className="flex items-center">
@@ -356,6 +391,8 @@ console.log("role",role)
                                     </ul>
                                 </AnimateHeight>
                             </li> */}
+                                    {!(staffRole === 'call executive')&&!(staffRole === 'verifier'|| staffRole === "cashier") && (
+
                              <li className="menu nav-item ">
                                 <button type="button" className={`${currentMenu } nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('leave')}>
                                     <div className="flex items-center">
@@ -377,6 +414,9 @@ console.log("role",role)
                                     </ul>
                                 </AnimateHeight>
                             </li>
+                            )}
+                            {(role === 'admin' || staffRole === 'secondary admin') && (
+
                             <li className="menu nav-item ">
                                 <button type="button" className={`${currentMenu } nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('feedbacktable')}>
                                     <div className="flex items-center">
@@ -398,6 +438,9 @@ console.log("role",role)
                                     </ul>
                                 </AnimateHeight>
                             </li>
+                            )}
+                                    {!(staffRole === "call executive" || staffRole === "verifier") &&  (
+
                              <li className="menu nav-item">
                                 <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
                                     <IconMinus className="w-4 h-5 flex-none hidden" />
@@ -407,6 +450,9 @@ console.log("role",role)
                                     </span>
                                 </h2>
                             </li>
+                            )}
+                                    {!(staffRole === 'call executive')&&!(staffRole === 'verifier'|| staffRole === "cashier") && (
+
                             <li className="menu nav-item">
                                 <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
                                     <IconMinus className="w-4 h-5 flex-none hidden" />
@@ -416,26 +462,8 @@ console.log("role",role)
                                     </span>
                                 </h2>
                             </li>
-                            {/* <li className="menu nav-item ">
-                                <button type="button" className={`${currentMenu === 'status' ? 'active' : ''} nav-link group w-full py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1`} onClick={() => toggleMenu('status')}>
-                                    <div className="flex items-center">
-                                        <IconArchive className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark"> &nbsp;  Status &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
-                                    </div>
-
-                                    <div className={currentMenu !== 'status' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                        <IconCaretDown />
-                                    </div>
-                                </button>
-
-                                <AnimateHeight duration={300} height={currentMenu === 'status' ? 'auto' : 0}>
-                                    <ul className="sub-menu text-gray-500">
-                                        <li>
-                                            <NavLink to="/checkstatus/status">Status</NavLink>
-                                        </li>
-                                    </ul>
-                                </AnimateHeight>
-                            </li> */}
+                            )}
+                          
                               <li className="menu nav-item">
                                 <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
                                     <IconMinus className="w-4 h-5 flex-none hidden" />
@@ -453,7 +481,8 @@ console.log("role",role)
                                     {t('user_and_pages')}
                                 </span>
                             </h2> */}
-
+                                    {!(staffRole === "call executive" || staffRole === "verifier"|| staffRole === "cashier"|| staffRole === "accountant") && (
+                                        <>
                             <li className="menu nav-item">
                                 <button type="button" className={`${currentMenu === 'general' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('general')}>
                                     <div className="flex items-center">
@@ -566,12 +595,8 @@ console.log("role",role)
                                             </ul>
                                         </AnimateHeight>
                                     </li>
-                            {/* <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
-                                <IconMinus className="w-4 h-5 flex-none hidden" />
-                                <span>
-                                    About
-                                </span>
-                            </h2> */}
+                                    </>
+)}
                         </ul>
                     </PerfectScrollbar>
                 </div>

@@ -20,7 +20,8 @@ const Index = () => {
   const [newNotifications, setNewNotifications] = useState<
   { message: string; id: string; field:  "vehicleServiceDue" }[]
 >([]);
-
+const staffRole = sessionStorage.getItem('staffRole');
+console.log("staffRole",staffRole)
       const [dismissedIds, setDismissedIds] = useState<string[]>([]);
       const [dismissedStatus, setDismissedStatus] = useState<Record<string, boolean>>({}); 
 
@@ -314,8 +315,7 @@ const Index = () => {
         }
     };
     
-
-    // -------------------------------------------------------------------------------------------
+// ---------------------------------------------------
     return (
         <div className="container mx-auto p-6 bg-cover bg-center bg-no-repeat">
 
@@ -357,12 +357,15 @@ const Index = () => {
         !dismissedStatus[note.id] && (
             <div key={index} className="notification blink bg-yellow-500 text-white p-3 rounded-lg mb-4">
                 {note.message}
+                {(role === 'admin' || staffRole === 'secondary admin'|| staffRole === 'verifier') && (
+
                 <button 
                     className="ml-4 bg-red-500 px-3 py-1 rounded"
                     onClick={() => handleCloseNotification(note.id, note.field)}
                 >
                     Close
                 </button>
+                )}
             </div>
         )
     ))}

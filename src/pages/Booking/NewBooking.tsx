@@ -127,6 +127,7 @@ const NewBooking = () => {
     // -----------------------------------------------------
     const [totalDriverSalary, setTotalDriverSalary] = useState<number>(0);
     const [updatedTotalSalary, setUpdatedTotalSalary] = useState<number>(0);
+    const staffRole = sessionStorage.getItem('staffRole');
 
     const PAGE_SIZES = [10, 25, 'All'];
     const db = getFirestore();
@@ -166,18 +167,32 @@ const NewBooking = () => {
     };
     const closeCancelModal = () => setIsCancelModalOpen(false);
     // -----------------------------------------------------------------
-    const calculateUpdatedTotalSalary = (distance: number, basicSalaryKmm: string, salaryPerKMM: string, salaryy: string) => {
-        const salaryNumber = parseFloat(salaryy);
-        console.log("salaryNumber",salaryNumber)
-        if (distance > parseFloat(basicSalaryKmm)) {
-            const updatedTotalSalary = salaryNumber + (distance - parseFloat(basicSalaryKmm)) * parseFloat(salaryPerKMM);
-            setUpdatedTotalSalary(updatedTotalSalary);
-console.log("updatedTotalSalary",updatedTotalSalary)
-        } else {
-            // If not, just return the basic salary
-            setUpdatedTotalSalary(salaryNumber); // Update the state with the base salary if condition is not met
+    const calculateUpdatedTotalSalary = (
+        distance: number,
+        basicSalaryKmm: string | number,
+        salaryPerKMM: string | number,
+        salaryy: string | number
+    ) => {
+        const salaryNumber = typeof salaryy === "number" ? salaryy : parseFloat(salaryy);
+        const basicSalaryNumber = typeof basicSalaryKmm === "number" ? basicSalaryKmm : parseFloat(basicSalaryKmm);
+        const salaryPerKmNumber = typeof salaryPerKMM === "number" ? salaryPerKMM : parseFloat(salaryPerKMM);
+    
+        if (isNaN(salaryNumber) || isNaN(basicSalaryNumber) || isNaN(salaryPerKmNumber)) {
+            console.error("Invalid salary values", { salaryNumber, basicSalaryNumber, salaryPerKmNumber });
+            return 0; // Default to 0 if any value is invalid
         }
+    
+        let updatedTotalSalary = salaryNumber;
+    
+        if (distance > basicSalaryNumber) {
+            updatedTotalSalary += (distance - basicSalaryNumber) * salaryPerKmNumber;
+        }
+    
+        console.log("Updated Total Salary:", updatedTotalSalary);
+        setUpdatedTotalSalary(updatedTotalSalary); // Update state
+        return updatedTotalSalary;
     };
+    
     
     const calculateTotalDriverSalary = (
         totalDriverDistance: number,
@@ -375,7 +390,7 @@ console.log("updatedTotalSalary",updatedTotalSalary)
                 totalDriverSalary: totalDriverSalary,
                 distance: cancelFormData.distance,
                 updatedTotalSalary: updatedTotalSalary,
-                amount: selectedRecord?.companyBooking ? '0' : cancelFormData.updatedTotalSalary,
+                amount: selectedRecord?.companyBooking ? '0' : updatedTotalSalary, // Handle company booking logic
                 cancelReason: cancelFormData.cancelReason,
                 status: 'Order Completed', // Update the status to 'Cancelled'
             };
@@ -939,6 +954,7 @@ console.log("updatedTotalSalary",updatedTotalSalary)
                                             Edit
                                         </button>
                                     </td>
+
                                     <td data-label="Tracking">
                                         {rowData.status === 'Cancelled' ? (
                                             <button
@@ -968,7 +984,9 @@ console.log("updatedTotalSalary",updatedTotalSalary)
                                             </button>
                                         )}
                                     </td>
-                                    {/* ----------------------------------------------------------------- */}
+                                 
+                                    {!(staffRole === 'call executive')&&!(staffRole === 'verifier'|| staffRole === "cashier") && (
+<>
                                     {rowData.requestBool == true && (
                                         <td data-label="Change Pickup Location">
                                             <button
@@ -1007,6 +1025,8 @@ console.log("updatedTotalSalary",updatedTotalSalary)
                                             </button>
                                         </td>
                                     )}
+                                    </>
+                                )}
                                 </tr>
                             );
                         })}
@@ -1021,13 +1041,18 @@ console.log("updatedTotalSalary",updatedTotalSalary)
                             <TextInput
                                 label="Total Distance Traveled By the Driver"
                                 name="totalDriverDistance"
-                                value={cancelFormData.totalDriverDistance}
+                                value={cancelFormData.totalDriverDistance || ''} // Prevent undefined values
                                 onChange={handleInputChange}
                                 placeholder="Enter driver kilometers"
                             />
                             <TextInput label="Driver Amount" name="totalDriverSalary" value={totalDriverSalary} onChange={handleInputChange} placeholder="Enter driver amount" />
-                            <TextInput label="Total Km (Base to Pickup - pickup to dropoff - dropoff to base)" name="distance" value={cancelFormData.distance} onChange={handleInputChanged} placeholder="Enter company kilometers" />
-
+                            <TextInput
+    label="Total Km (Base to Pickup - pickup to dropoff - dropoff to base)"
+    name="distance" // Ensure this matches state key
+    value={cancelFormData.distance || ''}
+    onChange={handleInputChanged}
+    placeholder="Enter company kilometers"
+/>
                             {!selectedRecord?.companyBooking && (
                                 <TextInput label="Payable Amount Customer" name="amount" value={updatedTotalSalary} onChange={handleInputChange} placeholder="Enter Amount" />
                             )}

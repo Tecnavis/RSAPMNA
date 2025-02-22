@@ -18,6 +18,7 @@ interface User {
     userName: string;
     password: string;
     profileImage?: string;
+    staffRole?:string;
 }
 
 const Staff: React.FC = () => {
@@ -28,6 +29,7 @@ const Staff: React.FC = () => {
     const db = getFirestore();
     const navigate = useNavigate();
     const uid = sessionStorage.getItem('uid');
+    const staffRole = sessionStorage.getItem('staffRole');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -81,6 +83,8 @@ const Staff: React.FC = () => {
                                 <th>#</th>
                                 <th>Photo</th>
                                 <th>Name</th>
+                                <th>Role</th>
+
                                 <th>Email</th>
                                 <th>Address</th>
                                 <th>Phone Number</th>
@@ -101,6 +105,8 @@ const Staff: React.FC = () => {
                                     <td>
                                         <div className="whitespace-nowrap">{item.name}</div>
                                     </td>
+                                    <td>{item.staffRole}</td>
+
                                     <td>{item.email}</td>
                                     <td>{item.address}</td>
                                     <td>{item.phone_number}</td>

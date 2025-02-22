@@ -10,12 +10,15 @@ import {
 } from "firebase/firestore";
 import "./TaxAndInsurance.css";
 import IconEye from "../../components/Icon/IconEye";
+import { TextField } from "@mui/material";
 
 interface TaxInsuranceData {
   id?: string;
   vehicleNumber: string;
   taxExpiryDate: string;
   insuranceExpiryDate: string;
+  pollutionExpiryDate: string;  // ✅ New field
+  emiExpiryDate: string;  
   insurancePaperUrl?: string;
   taxPaperUrl?: string;
   [key: string]: any; // This allows any other properties
@@ -25,6 +28,7 @@ const TaxAndInsurance: React.FC = () => {
   const db = getFirestore();
   const uid = sessionStorage.getItem("uid");
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [records, setRecords] = useState<TaxInsuranceData[]>([]);
   const [formData, setFormData] = useState<TaxInsuranceData & { insurancePaper?: File | null; taxPaper?: File | null }>({
@@ -32,6 +36,8 @@ const TaxAndInsurance: React.FC = () => {
     taxExpiryDate: "",
     insuranceExpiryDate: "",
     insurancePaper: null,
+    pollutionExpiryDate: "",  // ✅ New field
+    emiExpiryDate: "", 
     taxPaper: null,
   });
   const [editId, setEditId] = useState<string | null>(null);
@@ -73,11 +79,11 @@ const TaxAndInsurance: React.FC = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!uid || loading) return;
-
+  
     setLoading(true);
-
+  
     const uploadPromises: Promise<string | null>[] = [];
-
+  
     if (formData.insurancePaper) {
       const insuranceUpload = uploadFile(
         formData.insurancePaper,
@@ -87,7 +93,7 @@ const TaxAndInsurance: React.FC = () => {
     } else {
       uploadPromises.push(Promise.resolve(null));
     }
-
+  
     if (formData.taxPaper) {
       const taxUpload = uploadFile(
         formData.taxPaper,
@@ -97,19 +103,26 @@ const TaxAndInsurance: React.FC = () => {
     } else {
       uploadPromises.push(Promise.resolve(null));
     }
-
+  
     const [insurancePaperUrl, taxPaperUrl] = await Promise.all(uploadPromises);
-
+  
+    // Get the current date
+  
+    
     const recordData: TaxInsuranceData = {
       vehicleNumber: formData.vehicleNumber,
       taxExpiryDate: formData.taxExpiryDate,
       insuranceExpiryDate: formData.insuranceExpiryDate,
+      pollutionExpiryDate: formData.pollutionExpiryDate,
+      emiExpiryDate: formData.emiExpiryDate,
       insurancePaperUrl: insurancePaperUrl || formData.insurancePaperUrl || "",
       taxPaperUrl: taxPaperUrl || formData.taxPaperUrl || "",
-      insuranceDue: false, // ✅ Set insuranceDue to false when submitting
-        taxDue: false,    
+      insuranceDueDismissed: false,
+      taxDueDismissed: false,
+      emiDueDismissed: false,
+      pollutionDueDismissed: false,
     };
-
+  
     try {
       if (editId) {
         const recordRef = doc(db, `user/${uid}/taxInsurance`, editId);
@@ -124,16 +137,19 @@ const TaxAndInsurance: React.FC = () => {
     } finally {
       setLoading(false);
     }
-
+  
     setFormData({
       vehicleNumber: "",
       taxExpiryDate: "",
       insuranceExpiryDate: "",
+      emiExpiryDate: "",
+      pollutionExpiryDate: "",
       insurancePaper: null,
       taxPaper: null,
     });
   };
-
+  
+  
   const handleEdit = (record: TaxInsuranceData) => {
     setEditId(record.id || null);
     setFormData((prev) => ({
@@ -148,10 +164,17 @@ const TaxAndInsurance: React.FC = () => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-GB"); // 'en-GB' format is day/month/year
   };
-
+  const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+  
+  // Filtered records based on search term
+  const filteredRecords = records.filter((record) =>
+    record.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase())
+  );
   return (
     <div className="vehicle-container">
-      <h2 className="vehicle-heading">🚗 Manage Tax & Insurance</h2>
+      <h2 className="vehicle-heading">🚗 Manage Tax, Pollution, EMI & Insurance</h2>
       <form onSubmit={handleSubmit} className="vehicle-form">
         <label>
           Vehicle Number:
@@ -175,10 +198,30 @@ const TaxAndInsurance: React.FC = () => {
           <input type="file" name="taxPaper" onChange={handleFileChange} />
           {formData.taxPaperUrl && <a  href={formData.taxPaperUrl} target="_blank" rel="noopener noreferrer">View</a>}
         </label>
+        <label>
+  Pollution Expiry Date:
+  <input type="date" name="pollutionExpiryDate" value={formData.pollutionExpiryDate} onChange={handleInputChange} required />
+</label>
+
+<label>
+  EMI Expiry Date:
+  <input type="date" name="emiExpiryDate" value={formData.emiExpiryDate} onChange={handleInputChange} required />
+</label>
+
         <button type="submit" disabled={loading}>{editId ? "Update Record" : "Add Record"}</button>
       </form>
-
-      <h3 className="vehicle-list-heading">📋 Tax & Insurance Records</h3>
+  
+<div className='mt-2'>
+            <TextField
+            label="Search by Vehicle Number"
+            variant="outlined"
+            fullWidth
+            value={searchTerm}
+            onChange={handleSearchChange}
+            sx={{ marginBottom: 2 }}
+        />
+        </div>
+      <h3 className="vehicle-list-heading">📋 Tax, Pollution, EMI & Insurance Records</h3>
       <table className="vehicle-table">
         <thead>
           <tr>
@@ -186,18 +229,32 @@ const TaxAndInsurance: React.FC = () => {
             <th>Vehicle Number</th>
             <th>Tax Expiry Date</th>
             <th>Insurance Expiry Date</th>
+           
+            <th>Pollution Expiry Date</th>
+            <th>EMI Expiry Date</th>
             <th>Insurance Paper</th>
             <th>Tax Paper</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {records.map((record, index) => (
+          {filteredRecords.map((record, index) => (
             <tr key={record.id}>
               <td>{index + 1}</td>
               <td>{record.vehicleNumber}</td>
-              <td>{formatDate(record.taxExpiryDate)}</td> {/* Display formatted tax expiry date */}
-              <td>{formatDate(record.insuranceExpiryDate)}</td> {/* Display formatted insurance expiry date */}
+              <td
+        className={record.taxDueDismissed ? "highlight-red" : ""}
+      >
+        {formatDate(record.taxExpiryDate)}
+      </td>          
+      <td
+        className={record.insuranceDueDismissed ? "highlight-red" : ""}
+      >
+        {formatDate(record.insuranceExpiryDate)}
+      </td>
+                    <td>{formatDate(record.pollutionExpiryDate)}</td>
+<td>{formatDate(record.emiExpiryDate)}</td>
+
               <td>
                 {record.insurancePaperUrl ? (
                   <a style={{color:'blue'}} href={record.insurancePaperUrl} target="_blank" rel="noopener noreferrer">View Insurance Paper</a>

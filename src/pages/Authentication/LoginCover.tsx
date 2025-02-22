@@ -15,12 +15,18 @@ const LoginCover = () => {
     const [errorMessage, setErrorMessage] = useState(""); // State to store error messages
     const navigate = useNavigate();
     const uid = import.meta.env.VITE_REACT_APP_UID
+    const [staffRole, setStaffRole] = useState(""); // State for staffRole
+    
+    
     useEffect(() => {
         // If the user is already signed in, redirect to the home page
         if (sessionStorage.getItem('uid')) {
             navigate('/index');
         }
     }, [navigate]);
+    const handleStaffRoleChange = (e:any) => {
+        setStaffRole(e.target.value);
+    };
 
     const signIn = () => {
         // Store role in local storage
@@ -29,6 +35,11 @@ const LoginCover = () => {
         const db = getFirestore();
         const auth = getAuth();
 
+        if (role === "admin") {
+            // Set staffRole to "admin" if role is admin
+            setStaffRole("admin");
+            sessionStorage.setItem('staffRole', "admin"); // Store in session storage
+        }
         if (role === "staff") {
             checkStaffCredentials();
         } else {
@@ -39,8 +50,10 @@ const LoginCover = () => {
                     sessionStorage.setItem('uid', uid);
                     sessionStorage.setItem('role', role);
 
-                    console.log("User signed in:", uid);
-                    navigate('/index'); // Redirect to home page or any other route
+                    if (role === "admin") {
+                        sessionStorage.setItem('staffRole', "admin"); // Ensure it's stored
+                    }
+                                        navigate('/index'); // Redirect to home page or any other route
                 })
                 .catch((error) => {
                     const errorCode = error.code;
@@ -56,13 +69,15 @@ const LoginCover = () => {
     
         try {
             console.log("Attempting to fetch staff credentials...");
-            console.log(`Username: ${username}, Password: ${password}, Role:${role}`);
+            console.log(`Username: ${username}, Password: ${password}, Role:${role}, stagffRole:${staffRole}`);
     
             const q = query(
                 collection(db, `user/${uid}/users`),
                 where('userName', '==', username),
                 where('password', '==', password),
-                where('role', '==', 'staff')
+                where('role', '==', 'staff'),
+                where('staffRole', '==', staffRole)
+
             );
             
             console.log("Query created, executing the query...");
@@ -83,7 +98,8 @@ const LoginCover = () => {
                 sessionStorage.setItem('username', username); // Store username
                 sessionStorage.setItem('uid', uid);
                 sessionStorage.setItem('password', password);
-
+                sessionStorage.setItem('staffRole', staffRole); // Store staff role in sessionStorage
+console.log("staffRole",staffRole)
                 console.log("Staff user signed in successfully with UID:", userId);
                 navigate('/index');
             } else {
@@ -153,6 +169,19 @@ const LoginCover = () => {
                                         <option value="staff">Staff</option>
                                     </select>
                                 </div>
+                                {role === "staff" && (
+    <div>
+        <label htmlFor="staffRole">Staff Role</label>
+        <select id="staffRole" value={staffRole} onChange={handleStaffRoleChange} className="form-input">
+            <option value="">Select Staff Role</option>
+            <option value="secondary admin">Secondary Admin</option>
+            <option value="call executive">Call Executive</option>
+            <option value="verifier">Verifier</option>
+            <option value="accountant">Accountant</option>
+            <option value="cashier">Cashier</option>
+        </select>
+    </div>
+)}
                                 <div>
                                     <label htmlFor="Email">Email/Username</label>
                                     <div className="relative text-white-dark">

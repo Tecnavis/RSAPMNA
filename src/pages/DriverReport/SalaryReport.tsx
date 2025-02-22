@@ -744,6 +744,9 @@ console.log("relevantBookings",relevantBookings)
             setFilteredBookings(bookings.slice(startIndex, endIndex));
         }
     }, [bookings, currentPage, showAll]);
+    const givenAmount = totalCalculatedUpdatedTotalSalary != null && typeof totalSalaryAmount === 'number'
+    ? (totalCalculatedUpdatedTotalSalary - totalSalaryAmount).toFixed(2)
+    : 'N/A';
     const handlePrint = () => {  
         const printContent = printRef.current; // Get the content to print
         const printWindow = window.open('', '', 'height=1000,width=1600'); // Create a print window
@@ -802,20 +805,26 @@ console.log("relevantBookings",relevantBookings)
                     .action-buttons {
                         display: none; /* Hide action buttons for printing */
                     }
-                         .print-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-                .company-details {
-                    text-align: right;
-                    max-width: 300px;
-                    font-size: 14px;
-                }
-                .company-logo {
-                    width: 50px;
-                    height: auto;
-                }
+                      .print-header {
+    width: 100%;
+}
+
+             .company-details {
+    position: absolute;
+    right: 20px; /* Adjust margin from the right edge */
+    top: 20px; /* Adjust margin from the top */
+    text-align: right;
+    max-width: 300px;
+    font-size: 14px;
+}
+
+.company-logo {
+    display: block !important;
+    visibility: visible !important;
+    width: 150px; /* Adjust logo size */
+    height: auto;
+}
+
                     @media print {
                         body {
                             padding: 0;
@@ -842,21 +851,8 @@ console.log("relevantBookings",relevantBookings)
                         .flex {
                             display: block; /* Stack flex items vertically */
                         }
-                      .company-details {
-        position: absolute;
-        right: 20px;
-        top: 20px;
-    }
-
-   .company-logo {
-        display: block !important; /* Ensure the image is not hidden during printing */
-        width: 150px; /* Set a fixed width for the logo */
-        height: auto;
-    }
-                    .print-header {
-                        flex-direction: row;
-                        align-items: flex-start;
-                    }
+                     
+                    
                     }
                 </style>
             `);
@@ -888,17 +884,17 @@ console.log("relevantBookings",relevantBookings)
                 <p><strong>Printed Date:</strong> ${formattedDate}</p>
             `);
             printWindow.document.write(`
-                <div class="print-header">
-                  
-        <div class="company-details">
+                <div class=" text-right ml-auto">
+                   <div class="company-details">
+                       <img class="company-logo" src="/assets/images/auth/rsa-png.png" alt="Company Logo" />
+
     <h3><strong>Company:</strong> RSA</h3>
     <p><strong>Location:</strong> Tirurkad</p>
-<img class="company-logo" src="http://localhost/assets/images/auth/rsa-png.png" alt="Company Logo" />
 </div>
-
 
                 </div>
             `);
+            
             printWindow.document.write(`
                 <style>
                     .card-container {
@@ -956,12 +952,18 @@ console.log("relevantBookings",relevantBookings)
                         }
                     }
                 </style>
-                 <div class="print-header">
-        <h1 class="text-4xl font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300">
-            Salary Report for <span class="text-red-500">${driver?.driverName}</span>
-        </h1>
-    </div>
+        <div class="print-header">
+<h1 class="text-4xl w-full font-extrabold mb-6 text-center text-gray-900 shadow-md p-3 rounded-lg bg-gradient-to-r from-indigo-300 to-red-300 flex flex-col items-center block">
+        Salary Report for 
+        <span class="text-red-500 w-full text-center">${driver?.driverName}</span>
+    </h1>
+</div>
+
                 <div class="card-container">
+                 <div class="card">
+                        <div class="title">Salary in ${selectedMonth ? selectedMonth : 'All Months'}</div>
+                        <div class="value">${totalCalculatedUpdatedTotalSalary}</div>
+                    </div>
                  <div class="card">
                         <div class="title">Total Cash In Hand</div>
                         <div class="value">${netTotalAmountInHand}</div>
@@ -971,13 +973,17 @@ console.log("relevantBookings",relevantBookings)
                         <div class="value">${driver?.advance ? driver.advance : 'No advance payment made'}</div>
                     </div>
                     <div class="card">
-                        <div class="title">Salary in ${selectedMonth ? selectedMonth : 'All Months'}</div>
-                        <div class="value">${totalCalculatedUpdatedTotalSalary}</div>
-                    </div>
-                    <div class="card">
-                        <div class="title">Balance </div>
-                        <div class="value">${balanceAmount}</div>
-                    </div>
+        <div class="title">Given Amount In ${selectedMonth ? selectedMonth : 'All Months'}</div>
+        <div class="value">${givenAmount}</div>
+    </div>
+                  
+           <div class="card" style="background: ${balanceAmount < 0 ? 'linear-gradient(to right, #2ecc71, #27ae60)' : 'linear-gradient(to right, #e74c3c, #c0392b)'};">
+    <div class="title">${balanceAmount < 0 ? 'Balance Salary' : 'Cash in Hand Return'}</div>
+    <div>${totalCalculatedUpdatedTotalSalary} - (${netTotalAmountInHand} + ${givenAmount} + ${driver?.advance ? driver.advance : '0'})</div>
+    <div class="value">${balanceAmount}</div>
+</div>
+
+
                    
                 </div>
             `);
@@ -1398,7 +1404,7 @@ const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
             </div>
         </div>
     </div>
-
+ 
     {/* Balance Salary Amount Card */}
     <div className="bg-gradient-to-r from-blue-300 to-blue-500 p-8 shadow-2xl rounded-2xl hover:shadow-3xl hover:scale-[1.05] transition-all duration-300 ease-in-out print-card">
         <div className="flex items-center space-x-6">

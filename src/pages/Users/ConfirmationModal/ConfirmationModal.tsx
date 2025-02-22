@@ -11,6 +11,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isVisible, onConf
     const [showPassword, setShowPassword] = useState<boolean>(false);
     const role = sessionStorage.getItem('role');
     const confirmPassword = import.meta.env.VITE_REACT_APP_CONFIRM_PASSWORD;
+    const staffRole = sessionStorage.getItem('staffRole');
 
     const handleTogglePassword = () => {
         setShowPassword(!showPassword);
@@ -32,7 +33,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isVisible, onConf
         <div className="fixed inset-0 flex items-start justify-center bg-black bg-opacity-50">
             <div className="bg-white p-6 rounded shadow-lg mt-10">
                 <h3 className="text-lg font-semibold">
-                Enter Password {role !== 'staff' && confirmPassword} to Confirm 
+                Enter Password {role === 'admin' || staffRole === 'secondary admin' && confirmPassword} to Confirm 
                 </h3>
                 <div className="relative">
                     <input

@@ -25,6 +25,8 @@ const RsaStaffReport: React.FC = () => {
 
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid') || '';
+    const staffRole = sessionStorage.getItem('staffRole');
+    const role = sessionStorage.getItem('role');
 
     const calculateTotalAmountInHand = async (staffId: string) => {
         const staffReceivedRef = collection(db, `user/${uid}/users/${staffId}/staffReceived`);
@@ -148,6 +150,8 @@ const RsaStaffReport: React.FC = () => {
                                     )}
                                 </td>
                                 <td className="border px-4 py-2 flex gap-2 items-center">
+                                {(role === 'admin' || staffRole === 'secondary admin') && (
+<>
                                     {editUserId === user.id ? (
                                         <button onClick={handleSaveUserClick} className="text-green-500 hover:text-green-700">
                                             Save
@@ -157,6 +161,8 @@ const RsaStaffReport: React.FC = () => {
                                             <IconEdit className="inline-block w-5 h-5" />
                                         </button>
                                     )}
+                                    </>
+                                )}
                                     <Link
                                         to={{
                                             pathname: `/rsastaffReport/userdetails/${user.id}`

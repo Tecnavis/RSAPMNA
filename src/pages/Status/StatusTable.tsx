@@ -33,6 +33,12 @@ interface TabButtonProps {
     fileNumber:string;
     pickedTime: Timestamp | null | undefined;
     droppedTime: Timestamp | null | undefined;
+    receivedUser?: string;
+    receivedAmount?: string;
+    receivedAmountShowroom?: string;
+    receivedUserStaff?: string;
+    unPaidReceivedUser?: string;
+    amount?: string;  // Ensure this exists
 
 }
 
@@ -214,6 +220,7 @@ const StatusTable: React.FC = () => {
     console.log("role",userName)
     const pendingRef = useRef<HTMLDivElement>(null);
     const [bookingAmount, setBookingAmount] = useState<number>(0);
+    const [selectedPaymentType, setSelectedPaymentType] = useState<'staff' | 'driver' | 'showroom'>('staff');
 
     useEffect(() => {
         const fetchBookingAmount = async () => {
@@ -239,36 +246,43 @@ const StatusTable: React.FC = () => {
         setPaymentAmount(record.updatedTotalSalary.toString()); // Pre-fill the amount with updatedTotalSalary
         setShowPaymentModal(true);
     };
-    
-    const handleSavePayment = async () => {
+    const handleSavePayment = async (paymentType: 'staff' | 'driver' | 'showroom') => { 
         if (selectedBooking && paymentAmount) {
             try {
                 const updatedTotalSalary = selectedBooking.updatedTotalSalary;
                 const paymentAmountNumber = Number(paymentAmount);
-    
-                // Initialize paymentStatus to 'Not Paid'
-                let paymentStatus = 'Not Paid';
-    
-                // Calculate newAmount by adding the new payment to the existing amount
                 let newAmount = String(paymentAmountNumber);
     
-                // Query user collection
-                const userQuery = query(
-                    collection(db, `user/${uid}/users`),
-                    where('userName', '==', userName)
-                );
-                const userSnapshot = await getDocs(userQuery);
+                const bookingRef = doc(db, `user/${uid}/bookings`, selectedBooking.id);
+                const bookingSnapshot = await getDoc(bookingRef);
     
-                if (!userSnapshot.empty) {
-                    const userDoc = userSnapshot.docs[0];
-                    const staffReceivedRef = collection(
+                if (!bookingSnapshot.exists()) {
+                    console.error('Booking not found!');
+                    return;
+                }
+    
+                let paymentStatus: string = 'Unpaid'; // Declare paymentStatus
+                let updateData: Partial<BookingRecord> = {
+                    amount: newAmount,
+                    status: 'Order Completed',
+                    paymentStatus: 'Paid',
+                };
+                if (paymentType === 'showroom') {
+                    const bookingData = bookingSnapshot.data();
+                    const showroomId = bookingData?.showroomId;
+    
+                    if (!showroomId) {
+                        console.error('Showroom ID not found for this booking!');
+                        return;
+                    }
+    
+                    const showroomReceivedRef = collection(
                         db,
-                        `user/${uid}/users/${userDoc.id}/staffReceived`
+                        `user/${uid}/showroom/${showroomId}/showroomReceived`
                     );
     
-                    // Check if entry exists for the selectedBookingId
                     const existingEntryQuery = query(
-                        staffReceivedRef,
+                        showroomReceivedRef,
                         where('selectedBookingId', 'array-contains', selectedBooking.id)
                     );
                     const existingEntrySnapshot = await getDocs(existingEntryQuery);
@@ -277,61 +291,122 @@ const StatusTable: React.FC = () => {
                         // If an entry exists, update amount and append booking ID
                         const existingEntryDoc = existingEntrySnapshot.docs[0];
                         const existingData = existingEntryDoc.data();
-                        const existingAmount = existingData.amount || '0'; // Default to string
+                        const existingAmount = existingData.amount || '0';
                         const existingBookingIds = existingData.selectedBookingId || [];
     
                         newAmount = String(Number(newAmount) + Number(existingAmount));
     
                         const entryRef = doc(
                             db,
-                            `user/${uid}/users/${userDoc.id}/staffReceived`,
+                            `user/${uid}/showroom/${showroomId}/showroomReceived`,
                             existingEntryDoc.id
                         );
     
                         await updateDoc(entryRef, {
                             amount: newAmount,
                             date: new Date().toISOString(),
-                            selectedBookingIds: [...new Set([...existingBookingIds, selectedBooking.id])], // Ensure uniqueness
+                            selectedBookingIds: [...new Set([...existingBookingIds, selectedBooking.id])],
                         });
                     } else {
                         // Create a new document if no entry exists
-                        await addDoc(staffReceivedRef, {
+                        await addDoc(showroomReceivedRef, {
                             amount: newAmount,
                             date: new Date().toISOString(),
                             selectedBookingIds: [selectedBooking.id],
                         });
                     }
+    
+                    updateData.receivedAmountShowroom = newAmount;
+                    updateData.receivedUserStaff = 'Showroom';
+                    updateData.receivedUser = 'Staff';
                 }
     
-                // Determine payment status
-                if (Number(newAmount) >= updatedTotalSalary) {
-                    paymentStatus = 'Paid';
-                }
+                await updateDoc(bookingRef, updateData);
+                if (paymentType === 'staff') {
+                    const userQuery = query(
+                        collection(db, `user/${uid}/users`),
+                        where('userName', '==', userName)
+                    );
+                    const userSnapshot = await getDocs(userQuery);
     
-                // Fetch current booking and update with calculated values
-                const bookingRef = doc(db, `user/${uid}/bookings`, selectedBooking.id);
-                const bookingSnapshot = await getDoc(bookingRef);
+                    if (!userSnapshot.empty) {
+                        const userDoc = userSnapshot.docs[0];
+                        const staffReceivedRef = collection(
+                            db,
+                            `user/${uid}/users/${userDoc.id}/staffReceived`
+                        );
     
-                let unPaidReceivedUser = userName;
-                let receivedUser = 'Staff';
-                if (bookingSnapshot.exists()) {
-                    const bookingData = bookingSnapshot.data();
-                    if (bookingData.unPaidReceivedUser && bookingData.unPaidReceivedUser !== userName) {
-                        unPaidReceivedUser = 'Other';
-                    } else {
-                        receivedUser = 'Staff';
+                        // Check if entry exists for the selectedBookingId
+                        const existingEntryQuery = query(
+                            staffReceivedRef,
+                            where('selectedBookingId', 'array-contains', selectedBooking.id)
+                        );
+                        const existingEntrySnapshot = await getDocs(existingEntryQuery);
+    
+                        if (!existingEntrySnapshot.empty) {
+                            // If an entry exists, update amount and append booking ID
+                            const existingEntryDoc = existingEntrySnapshot.docs[0];
+                            const existingData = existingEntryDoc.data();
+                            const existingAmount = existingData.amount || '0';
+                            const existingBookingIds = existingData.selectedBookingId || [];
+    
+                            newAmount = String(Number(newAmount) + Number(existingAmount));
+    
+                            const entryRef = doc(
+                                db,
+                                `user/${uid}/users/${userDoc.id}/staffReceived`,
+                                existingEntryDoc.id
+                            );
+    
+                            await updateDoc(entryRef, {
+                                amount: newAmount,
+                                date: new Date().toISOString(),
+                                selectedBookingIds: [...new Set([...existingBookingIds, selectedBooking.id])], 
+                            });
+                        } else {
+                            // Create a new document if no entry exists
+                            await addDoc(staffReceivedRef, {
+                                amount: newAmount,
+                                date: new Date().toISOString(),
+                                selectedBookingIds: [selectedBooking.id],
+                            });
+                        }
                     }
+    
+                    // Determine payment status
+                    if (Number(newAmount) >= updatedTotalSalary) {
+                        paymentStatus = 'Paid';
+                    }
+    
+                    let unPaidReceivedUser = userName;
+                    let receivedUser = 'Staff';
+                    if (bookingSnapshot.exists()) {
+                        const bookingData = bookingSnapshot.data();
+                        if (bookingData.unPaidReceivedUser && bookingData.unPaidReceivedUser !== userName) {
+                            unPaidReceivedUser = 'Other';
+                        } else {
+                            receivedUser = 'Staff';
+                        }
+                    }
+    
+                    await updateDoc(bookingRef, {
+                        amount: newAmount,
+                        status: 'Order Completed',
+                        paymentStatus: paymentStatus,
+                        unPaidReceivedUser: unPaidReceivedUser,
+                        selectedBookingId: [selectedBooking.id],
+                        receivedAmountStaff: newAmount,
+                        receivedUser: receivedUser,
+                    });
+    
+                } else if (paymentType === 'driver') {
+                } else if (paymentType === 'showroom') {
+                    updateData.receivedAmountShowroom = newAmount;
+                    updateData.receivedUserStaff = 'Showroom';
+                    updateData.receivedUser = 'Staff';
                 }
     
-                await updateDoc(bookingRef, {
-                    amount: newAmount,
-                    status: 'Order Completed',
-                    paymentStatus: paymentStatus,
-                    unPaidReceivedUser: unPaidReceivedUser,
-                    selectedBookingId: [selectedBooking.id],
-                    receivedAmountStaff: newAmount,
-                    receivedUser: receivedUser,
-                });
+                await updateDoc(bookingRef, updateData);
     
                 // Reset modal and states
                 setShowPaymentModal(false);
@@ -344,8 +419,6 @@ const StatusTable: React.FC = () => {
     };
     
     
-    
-
     useEffect(() => {
         dispatch(setPageTitle('Status'));
 
@@ -664,18 +737,19 @@ const StatusTable: React.FC = () => {
                     </button>
                 </Card>
             ))}
-   {showPaymentModal && (
+
+{showPaymentModal && (
     <ReactModal
         isOpen={showPaymentModal}
         onRequestClose={() => {
             setShowPaymentModal(false);
-            setPaymentAmount(''); // Reset payment amount on close
+            setPaymentAmount('');
         }}
         contentLabel="Payment Settlement"
         style={{
             content: {
                 width: '400px',
-                height: '350px',
+                height: '400px',
                 margin: 'auto',
                 padding: '20px',
                 borderRadius: '8px',
@@ -690,12 +764,14 @@ const StatusTable: React.FC = () => {
         <h2 className="text-xl font-semibold">
             Payment Settlement of {selectedBooking?.customerName}
         </h2>
+
         <div className="mt-4">
             <label className="block">Payable Amount (By Customer):</label>
             <p className="font-semibold text-lg">
-                💵 {selectedBooking?.updatedTotalSalary ?? 0} {/* Fallback to 0 if undefined */}
+                💵 {selectedBooking?.updatedTotalSalary ?? 0}
             </p>
         </div>
+
         <div className="mt-4">
             <label className="block">Amount</label>
             <input
@@ -705,20 +781,61 @@ const StatusTable: React.FC = () => {
                 className="border p-2 w-full"
             />
         </div>
+
         {Number(paymentAmount) < (selectedBooking?.updatedTotalSalary ?? 0) && (
             <div className="mt-2 text-red-500">
-                Balance Remaining: {(selectedBooking?.updatedTotalSalary ?? 0) - bookingAmount - Number(paymentAmount)}
+                Balance Remaining: {(selectedBooking?.updatedTotalSalary ?? 0) - Number(paymentAmount)}
             </div>
         )}
-        <button
-            onClick={handleSavePayment}
-            className="bg-green-500 text-white py-2 px-4 rounded mt-4"
-        >
-            Save Payment
-        </button>
+
+        {/* Radio Button for Selecting Payment Type */}
+        <div className="mt-4">
+            <label className="block font-semibold">Select Payment Type:</label>
+            <div className="flex gap-4 mt-2">
+                <label className="flex items-center gap-2">
+                    <input
+                        type="radio"
+                        name="paymentType"
+                        value="staff"
+                        checked={selectedPaymentType === 'staff'}
+                        onChange={() => setSelectedPaymentType('staff')}
+                    />
+                    Staff
+                </label>
+                <label className="flex items-center gap-2">
+                    <input
+                        type="radio"
+                        name="paymentType"
+                        value="driver"
+                        checked={selectedPaymentType === 'driver'}
+                        onChange={() => setSelectedPaymentType('driver')}
+                    />
+                    Driver
+                </label>
+                <label className="flex items-center gap-2">
+                    <input
+                        type="radio"
+                        name="paymentType"
+                        value="showroom"
+                        checked={selectedPaymentType === 'showroom'}
+                        onChange={() => setSelectedPaymentType('showroom')}
+                    />
+                    Showroom
+                </label>
+            </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="mt-4 flex justify-center">
+            <button
+                onClick={() => handleSavePayment(selectedPaymentType)}
+                className="bg-blue-500 text-white py-2 px-4 rounded"
+            >
+                Submit Payment
+            </button>
+        </div>
     </ReactModal>
 )}
-
 
         </div>
     )}

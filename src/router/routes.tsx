@@ -65,6 +65,9 @@ import CashCollectionCompany from '../pages/CashCollectionReport.tsx/CashCollect
 import SelectiveReportInvoiceDriver from '../pages/DriverReport/SelectiveReportInvoiceDriver';
 import PmnaReport from '../pages/PMNAReport/PmnaReport';
 import TaxAndInsurance from '../pages/Vehicles/TaxAndInsurance';
+import Attendance from '../pages/Attendance/Attendance';
+import AttendanceDetails from '../pages/Attendance/AttendanceDetails';
+import Company from '../pages/Users/Company';
 
 
 
@@ -132,7 +135,6 @@ const ColumnChooser = lazy(() => import('../pages/DataTables/ColumnChooser'));
 const Profile = lazy(() => import('../pages/Users/Profile'));
 const Staff = lazy(() => import('../pages/Users/Staff'));
 
-const Company = lazy(() => import('../pages/Users/Company'));
 
 const Driver = lazy(() => import('../pages/Users/Driver'));
 const Customer = lazy(() => import('../pages/Users/Customer'));
@@ -205,6 +207,9 @@ const routes = [
         path: '/index',
         element: <Index />,
     },
+    {path :"/attendance",element:<Attendance/>},
+    {path :"/attendanceDetails",element:<AttendanceDetails/>},
+
     {path :"/rewarditem",element:<RewarItem/>},
     {path :"/rewards",element:<Reward/>},
     {path: "/rewarddetails",element:<RewardDetails/>},

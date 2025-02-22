@@ -31,6 +31,10 @@
     flex-direction: column;
     gap: 15px;
   }
+  .highlight-red {
+    background-color: rgba(194, 249, 127, 0.737);
+    color: rgb(6, 94, 11); /* Ensures text is visible */
+  }
   
   .vehicle-form label {
     font-weight: bold;

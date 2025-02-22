@@ -51,7 +51,7 @@ const PmnaReport = () => {
   return (
     <div className="max-w-4xl mx-auto mt-6 p-6 bg-white shadow-lg rounded-lg">
       <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">
-        Monthly Salary Report
+        PMNA Crane Monthly Salary Report
       </h2>
       <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
         {Object.keys(monthlyData).length > 0 ? (
