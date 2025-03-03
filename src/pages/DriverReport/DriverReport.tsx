@@ -124,30 +124,23 @@ const DriverReport: React.FC = () => {
                                     const received = Number(b.receivedAmount) || 0;
                                     const bookingAmount = Number(b.amount) || 0;
                                     const currentBalance = bookingAmount - received;
-
-                                    console.log('Booking:', b);
-                                    console.log('Received Amount:', received);
-                                    console.log('Booking Amount:', bookingAmount);
-                                    console.log('Current Balance for this booking:', currentBalance);
-                                    console.log('Accumulated Sum Before:', sum);
-
-                                    const newSum = sum + currentBalance;
-                                    console.log('Accumulated Sum After:', newSum);
-                                    return newSum;
+                                    return sum + currentBalance;
                                 }, 0);
 
-                            console.log('Total Balance:', totalBalance);
+                                console.log(`Company: ${driver.companyName}, Driver ID: ${driver.id}, Calculated Total Balance: ${totalBalance}`);
 
                             const totalCompanyBalance = driverBookingsForBalances
                                 .filter((b) => b.companyBooking)
                                 .reduce((sum, b) => {
-                                    const receivedCompany = Number(b.receivedAmountCompany) || 0;
-                                    const updatedSalary = Number(b.updatedTotalSalary) || 0;
+                                    const receivedCompany = parseFloat(b.receivedAmountCompany as string) || 0;
+                                    const updatedSalary = parseFloat(b.updatedTotalSalary as string) || 0;
                                     // Check for OkClick to override balanceCompany to 0
-                                    const balanceCompany = b.OkClick ? 0 : b.approve ? 0 : updatedSalary - receivedCompany;
-
+                                    const balanceCompany = b.OkClick || b.approve ? 0 : updatedSalary - receivedCompany;
+                                 
                                     return sum + balanceCompany;
                                 }, 0);
+                                console.log(`Company: ${driver.companyName}, Driver ID: ${driver.id}, Calculated Company Balance: ${totalCompanyBalance}`);
+                                const totalAmount = driverBookingsForBalances.some((b) => b.companyBooking) ? totalCompanyBalance : totalBalance;
 
                             const totalDriverSalary = driverBookingsForSalaries.reduce((sum, b) => {
                                 return sum + parseFloat(b.totalDriverSalary || 0);
@@ -163,7 +156,7 @@ const DriverReport: React.FC = () => {
 
                             return {
                                 ...driver,
-                                netTotalAmountInHand: driverBookingsForBalances.some((b) => b.companyBooking) ? totalCompanyBalance + advance : totalBalance + advance,
+                                netTotalAmountInHand: totalAmount,
                                 totalSalaryAmount: totalSalaryAmount,
                                 bookingCount: bookingCount, 
                             };

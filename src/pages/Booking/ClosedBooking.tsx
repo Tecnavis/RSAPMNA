@@ -32,14 +32,15 @@ interface Driver {
     companyName: string;
     // Add other relevant driver fields here
 }
+const PAGE_SIZES: Array<number | 'All'> = [10, 25, 'All'];
 
 const ClosedBooking: React.FC = () => {
     const [completedBookings, setCompletedBookings] = useState<Booking[]>([]);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [allDrivers, setALLDrivers] = useState<Driver[]>([]);
     const [docId, setDocId] = useState<string>('');
-    const [loadingBookings, setLoadingBookings] = useState<Set<string>>(new Set());
-    const db = getFirestore();
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState<number | 'All'>(10);    const db = getFirestore();
     const uid = sessionStorage.getItem('uid');
     const navigate = useNavigate();
     const [tab, setTab] = useState<'verified' | 'unverified'>('unverified');
@@ -131,7 +132,14 @@ const ClosedBooking: React.FC = () => {
     const filteredTabBookings = tab === 'verified' 
         ? sortedBookings.filter((booking) => booking.accountingStaffVerified)
         : sortedBookings.filter((booking) => !booking.accountingStaffVerified);
-    
+        const totalPages =
+        pageSize === 'All' ? 1 : Math.ceil(filteredTabBookings.length / pageSize);
+
+    const displayedBookings =
+        pageSize === 'All'
+            ? filteredTabBookings
+            : filteredTabBookings.slice((page - 1) * pageSize, page * pageSize);
+
     return (
         <div className="panel mt-6">
             <h5 className="font-semibold text-lg dark:text-white-light mb-5">Completed Bookings</h5>
@@ -292,7 +300,33 @@ const rowStyle = booking.feedback
                     </div>
                 </div>
             </div>
-          
+            {/* Pagination Controls */}
+            <div className="flex justify-between items-center mt-4">
+                {/* Page Size Selection */}
+                <div>
+                    <label htmlFor="pageSize" className="mr-2">Rows per page:</label>
+                    <select
+                        id="pageSize"
+                        value={pageSize}
+                        onChange={(e) => {
+                            setPageSize(e.target.value === 'All' ? 'All' : Number(e.target.value));
+                            setPage(1); // Reset to page 1
+                        }}
+                        className="border border-gray-300 rounded p-1"
+                    >
+                        {PAGE_SIZES.map((size) => (
+                            <option key={size} value={size}>{size}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Page Navigation */}
+                <div className="flex items-center">
+                    <Button disabled={page === 1} onClick={() => setPage(page - 1)}>Prev</Button>
+                    <span className="mx-2">Page {page} of {totalPages}</span>
+                    <Button disabled={page === totalPages} onClick={() => setPage(page + 1)}>Next</Button>
+                </div>
+            </div>
         </div>
     );
 };

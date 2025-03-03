@@ -1,17 +1,16 @@
 import React, { useEffect, useState, ChangeEvent } from 'react';
 import { addDoc, collection, doc, getDoc, getFirestore, updateDoc } from 'firebase/firestore';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { v4 as uuid } from 'uuid';
 import { Timestamp } from 'firebase/firestore'; // Import Timestamp from Firebase
 import { query, where, getDocs } from 'firebase/firestore';
-import { Button } from '@mui/material';
-import ProgressBar from '@ramonak/react-progress-bar';
+
 
 interface FormData {
     fileNumber: string;
     customerName: string;
     phoneNumber: string;
-    vehicleSection: string;
+    serviceCategory: string;
     vehicleNumber: string;
     comments: string;
 }
@@ -38,25 +37,27 @@ const AddBook: React.FC = () => {
         fileNumber: '',
         customerName: '',
         phoneNumber: '',
-        vehicleSection: '',
+        serviceCategory: '',
         vehicleNumber: '',
         comments: '',
     });
 
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [rewards, setRewards] = useState<RewardItem[]>([]);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const db = getFirestore();
     const navigate = useNavigate();
     const location = useLocation();
-    const showroomId = location.state?.showroomId ?? '';
-    const uid = location.state?.uid ?? '';
-    console.log("showroomId", showroomId);
+    const showroomId = sessionStorage.getItem('showroomId');
+    console.log("rrrr", showroomId);
     const name = location.state?.name ?? ''; // Extracted name
     const phone = location.state?.phoneNumber ?? ''; // Extracted phoneNumber
-    console.log("name", name);
-    console.log("phone", phone);
+    const uid = sessionStorage.getItem('uid');
+    const staffId = sessionStorage.getItem('staffId');
+    const showroomIdNumber = sessionStorage.getItem('showroomIdNumber');
+
+    console.log("showroomIdNumber", showroomIdNumber);
+        console.log("uidg", uid);
 
     const [bookingId, setBookingId] = useState<string>('');
     const [showroomData, setShowroomData] = useState<ShowroomData | null>(null);
@@ -108,138 +109,24 @@ const AddBook: React.FC = () => {
 
 
 
-
-    const handleOpenModal = () => {
-        setIsModalOpen(true);
-    };
-
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-    };
-
     useEffect(() => {
-        const newBookingId = uuid().substring(0, 5);
+        const newBookingId = uuid().substring(0, 6);
         setBookingId(newBookingId);
     }, []);
 
-    const handleClaimReward = async (item: RewardItem) => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            // Check if we have all necessary data
-            if (!uid || !showroomid || !phone) {
-                throw new Error('Missing required data for claiming reward');
-            }
-
-            // Reference to the showroom document
-            const showroomDocRef = doc(db, `user/${uid}/showroom/${showroomid}`);
-            
-            // Get current showroom data
-            const showroomDoc = await getDoc(showroomDocRef);
-            if (!showroomDoc.exists()) {
-                throw new Error('Showroom document not found');
-            }
-
-            const showroomData = showroomDoc.data();
-            const staffArray = showroomData.staff || [];
-            
-            // Find and update the specific staff member's reward points
-            const updatedStaff = staffArray.map((staffMember: any) => {
-                if (staffMember.phoneNumber === phone) {
-                    return {
-                        ...staffMember,
-                        rewardPoints: staffMember.rewardPoints - item.points,
-                        claimedHistory: [
-                            ...(staffMember.claimedHistory || []),
-                            {
-                                itemName: item.name,
-                                points: item.points,
-                                claimedDate: Timestamp.now(),
-                                description: item.description,
-                                category: item.category,
-                                price: item.price,
-                                itemImage: item.image,
-                                id: item._id,
-
-
-                            }
-                        ]
-                    };
-                }
-                return staffMember;
-            });
-
-            // Update the showroom document with the modified staff array
-            await updateDoc(showroomDocRef, {
-                staff: updatedStaff
-            });
-
-            // Update the reward item's stock
-            const rewardItemRef = doc(db, `user/${uid}/rewarditems/${item._id}`);
-            await updateDoc(rewardItemRef, {
-                stock: item.stock - 1
-            });
-
-            // Update local state
-            setRewardPoints((prevPoints) => (prevPoints || 0) - item.points);
-            
-            // Update the rewards list to reflect the new stock
-            const updatedRewards = rewards.map(reward => 
-                reward._id === item._id 
-                    ? { ...reward, stock: reward.stock - 1 }
-                    : reward
-            );
-            console.log(updatedRewards)
-
-            setRewards(updatedRewards);
-
-            setSuccessMessage(`Successfully claimed ${item.name}!`);
-            
-            // Don't close the modal immediately so user can see the success message
-            setTimeout(handleCloseModal, 2000);
-
-        } catch (error) {
-            console.error('Error claiming reward:', error);
-            setError('Failed to claim reward. Please try again.');
-        } finally {
-            setLoading(false);
+    useEffect(() => {
+        if (showroomIdNumber && bookingId) {
+            const updatedFileNumber = `${showroomIdNumber}${bookingId}`;
+            setFormData(prevFormData => ({
+                ...prevFormData,
+                fileNumber: updatedFileNumber,
+            }));
         }
-    };
+    }, [showroomIdNumber, bookingId]);
+    
 
 console.log(rewardPoints,'this is the reward points')
   
-    useEffect(() => {
-        const fetchStaffRewardPoints = async()=>{
-            try {
-                const showroomDocRef = doc(db, `user/${uid}/showroom/${showroomid}`);
-                const showroomDoc = await getDoc(showroomDocRef);
-                if (showroomDoc.exists()) {
-                    const showroomData = showroomDoc.data();
- 
-                    // Find the staff member with the matching phone number
-                    const staffMember = showroomData.staff?.find(
-                        (staff:any) => staff.phoneNumber === phone
-                    );
-
-                    if (staffMember) {
-                        setRewardPoints(staffMember.rewardPoints || 0);
-                    } else {
-                        console.log('Staff member not found!');
-                        setRewardPoints(null); // Set to null if no match found
-                    }
-                } else {
-                    console.log('No such document!');
-                }
-            } catch (error) {
-                console.error('Error fetching staff reward points:', error);
-            }
-        }
-
-        
-            fetchStaffRewardPoints();
-       
-    }, [db, uid, showroomId, phone]);
 
     // Inside your component
     useEffect(() => {
@@ -256,8 +143,8 @@ console.log(rewardPoints,'this is the reward points')
     };
 
     const validateForm = (): boolean => {
-        const { customerName, phoneNumber, vehicleSection, vehicleNumber } = formData;
-        return !!(customerName && phoneNumber && vehicleSection && vehicleNumber);
+        const { customerName, phoneNumber, serviceCategory, vehicleNumber } = formData;
+        return !!(customerName && phoneNumber && serviceCategory && vehicleNumber);
     };
 
     const formatDate = (date: Date): string => {
@@ -278,13 +165,22 @@ console.log(rewardPoints,'this is the reward points')
 
         try {
             const currentDate = new Date();
-            const dateTime = currentDate.toLocaleString();
-            const formattedDate = formatDate(currentDate);
+            const dateTime = currentDate.toLocaleString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+                        const formattedDate = formatDate(currentDate);
+            const uid = sessionStorage.getItem("uid"); // Retrieve uid
 
             // Add the document with a Timestamp for createdAt
             const docRef = await addDoc(collection(db, `user/${uid}/bookings`), {
                 ...formData,
-                showroomId: showroomDocId, // Include showroomId in the document
+                showroomId: showroomId, // Include showroomId in the document
                 dateTime: dateTime,
                 createdAt: Timestamp.now(), // Store the current timestamp
                 bookingStatus: 'ShowRoom Booking',
@@ -298,6 +194,7 @@ console.log(rewardPoints,'this is the reward points')
                 phoneNumber: formData.phoneNumber,   // Adding customer phone
                 name: name,  // Adding name from location state
                 phone: phone,
+                staffId:staffId,
             });
             console.log('Document added successfully with ID:', docRef.id);
 
@@ -307,13 +204,13 @@ console.log(rewardPoints,'this is the reward points')
                 customerName: '',
                 phoneNumber: '',
                 vehicleNumber: '',
-                vehicleSection: '',
+                serviceCategory: '',
                 comments: '',
             });
 
             // Navigate back after a short delay to show the success message
             setTimeout(() => {
-                navigate(-1);
+                navigate('/showroomstaffdashboard');
             }, 500); // Adjust delay as needed
 
         } catch (error) {
@@ -324,39 +221,73 @@ console.log(rewardPoints,'this is the reward points')
         }
     };
 
-    const fetchData = async () => {
-        try {
-            const rewardQuery = query(collection(db, `user/${uid}/rewarditems`), where('category', '==', 'ShowroomStaff'));
-            const querySnapshot = await getDocs(rewardQuery);
-            const rewardsData: RewardItem[] = querySnapshot.docs.map((doc) => ({
-                _id: doc.id,
-                ...doc.data(),
-            })) as RewardItem[];
-
-            setRewards(rewardsData);
-        } catch (error) {
-            console.error('Error fetching reward items:', error);
-        }
-    };
-
-    useEffect(() => {
-    fetchData();
-    }, [])
+   
     
     return (
-        <div>
+        <div style={{padding:'2px'}}>
+              <nav className="fixed top-0 left-0 w-full bg-gradient-to-r from-gray-900 to-black text-white shadow-lg py-5 z-50">
+    <div className="max-w-6xl mx-auto flex justify-between items-center px-6">
+        <div className="text-2xl font-bold tracking-wide uppercase">
+            Add Bookings
+        </div>
+        <ul className="flex space-x-8 text-lg font-medium">
+            <li>
+                <NavLink 
+                    to="https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails"
+                    className={({ isActive }) => `relative pb-2 transition-all duration-300 ${isActive ? 'text-yellow-400' : 'hover:text-yellow-400'}`}
+                >
+                    Home
+                </NavLink>
+            </li>
+            <li>
+                <NavLink 
+                    to="/showroomstaffdashboard"
+                    state={{ showroomId, staffId }}
+                    className={({ isActive }) => `relative pb-2 transition-all duration-300 ${isActive ? 'text-yellow-400' : 'hover:text-yellow-400'}`}
+                >
+                    Dashboard
+                </NavLink>
+            </li>
+            <li>
+                <NavLink 
+                    to="/showroomstaffprofile"
+                    className={({ isActive }) => `relative pb-2 transition-all duration-300 ${isActive ? 'text-yellow-400' : 'hover:text-yellow-400'}`}
+                >
+                    Profile
+                </NavLink>
+            </li>
+            <li>
+                <NavLink 
+                    to="/addbook"
+                    className={({ isActive }) => `relative pb-2 transition-all duration-300 ${isActive ? 'text-yellow-400' : 'hover:text-yellow-400'}`}
+                >
+                    Add Book
+                </NavLink>
+            </li>
+            <li>
+                <NavLink 
+                    to="/showroomstaffreward"
+                    className={({ isActive }) => `relative pb-2 transition-all duration-300 ${isActive ? 'text-yellow-400' : 'hover:text-yellow-400'}`}
+                >
+                    Reward
+                </NavLink>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+                  
             <div style={styles.container}>
-            <button onClick={handleOpenModal} className="btn btn-primary">
-        Rewards
-      </button>
-                <h1 style={styles.header}>Add Bookings</h1>
+                
+          
+                <h1 className='text-2xl font-bold text-center text-gray-800 mt- mb-4'>Add Bookings</h1>
                 <div style={styles.formContainer}>
                     {error && <div style={styles.errorMessage}>{error}</div>}
                     {successMessage && <div style={styles.successMessage}>{successMessage}</div>}
-                    <div style={styles.fieldContainer}>
+                    {/* <div style={styles.fieldContainer}>
                         <strong style={styles.fieldLabel}>Booking ID: </strong>
                         <span style={styles.fieldValue}>{bookingId}</span>
-                    </div>
+                    </div> */}
                     <div style={styles.inputGroup}>
                         <label htmlFor="fileNumber" style={styles.label}>File Number</label>
                         <input
@@ -371,17 +302,17 @@ console.log(rewardPoints,'this is the reward points')
                         />
                     </div>
                     <div style={styles.inputGroup}>
-                        <label htmlFor="vehicleSection" style={styles.label}>Vehicle Section</label>
+                        <label htmlFor="serviceCategory" style={styles.label}>Vehicle Section</label>
                         <select
-                            id="vehicleSection"
-                            name="vehicleSection"
-                            value={formData.vehicleSection}
+                            id="serviceCategory"
+                            name="serviceCategory"
+                            value={formData.serviceCategory}
                             style={styles.select}
-                            onChange={(e: ChangeEvent<HTMLSelectElement>) => handleInputChange('vehicleSection', e.target.value)}
+                            onChange={(e: ChangeEvent<HTMLSelectElement>) => handleInputChange('serviceCategory', e.target.value)}
                         >
                             <option value="">Select Service Section</option>
                             <option value="Service Center">Service Center</option>
-                            <option value="Body Shopes">Body Shopes</option>
+                            <option value="Body Shop">Body Shopes</option>
                             <option value="ShowRooms">ShowRooms</option>
                         </select>
                     </div>
@@ -444,68 +375,7 @@ console.log(rewardPoints,'this is the reward points')
                     </div>
                 </div>
             </div>
-            {isModalOpen && (
-                <div className="modal-overlay" onClick={handleCloseModal}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                        <p style={{ backgroundColor: 'green', padding: '5px', borderRadius: '10px', fontWeight: 'bold', color: 'white' }}>Current Points: {rewardPoints}</p>
-                        <div className="rewardProgressCard" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-                            {/* Loop through rewards */}
-                            {rewards.map((items, index) => {
-                                // Calculate completion percentage based on reward points and target
-                                const completionPercentage = Math.min(((rewardPoints ?? 0) / items.points) * 100, 100);
-
-                                // Function to handle reward claim
-
-                                return (
-                                    <div key={index} className="container my-2" style={{ backgroundColor: '#b2b2b2', padding: '10px', borderRadius: '10px' }}>
-                                        <div className="flex items-center space-x-4">
-                                            <div className="w-1/4">
-                                                <img style={{ height: '95px', width: '95px', objectFit: 'cover' }} src={items.image} alt="Live from space" className="w-full h-auto rounded" />
-                                            </div>
-                                            <div className="w-3/4">
-                                                <h1 className="text-2xl font-bold">{items.name}</h1>
-                                                <p className="text-lg text-gray-700">Price: ₹{items.price}</p>
-                                                <p className="text-md text-gray-500">Target: {items.points}</p>
-                                                <p className="text-md text-gray-500">Stock available: {items.stock}</p>
-                                            </div>
-                                        </div>
-                                        <ProgressBar completed={completionPercentage} className="mt-4" />
-
-                                        {/* Show Claim or Encouragement Message */}
-                                        {completionPercentage === 100 && Number(items.stock) > 0 ? (
-                                            <button
-                                                onClick={() => handleClaimReward(items)}
-                                                style={{
-                                                    marginTop: '10px',
-                                                    padding: '8px 16px',
-                                                    backgroundColor: 'blue',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '5px',
-                                                    cursor: 'pointer',
-                                                    fontWeight: 'bold',
-                                                    width: '100%',
-                                                }}
-                                            >
-                                                Claim Reward
-                                            </button>
-                                        ) : Number(items.stock) === 0 ? (
-                                            <p style={{ marginTop: '10px', fontWeight: 'bold', color: 'red' }}>Out of Stock</p>
-                                        ) : (
-                                            <p style={{ marginTop: '10px', fontWeight: 'bold' }}>Almost there! Keep going to claim your reward!</p>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        {/* Close Button */}
-                        <Button variant="outlined" onClick={handleCloseModal} color="error">
-                            Close
-                        </Button>
-                    </div>
-                </div>
-            )}
+           
         </div>
     );
 };
@@ -516,6 +386,7 @@ const styles = {
         margin: '0 auto',
         padding: '20px',
         borderRadius: '8px',
+        marginTop:'100px',
         boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)',
         backgroundColor: '#fff',
     },

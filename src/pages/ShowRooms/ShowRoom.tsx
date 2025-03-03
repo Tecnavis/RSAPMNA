@@ -254,11 +254,14 @@ console.log("userRole",userRole)
         e.preventDefault();
         const db = getFirestore();
         const timestamp = serverTimestamp();
-        const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`;
-        const uid = sessionStorage.getItem('uid') || '';
+        // const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`;
+                const baseUrl = `http://localhost:5173/showrooms/showroom/showroomDetails`;
 
+        const uid = sessionStorage.getItem('uid') || '';
         const queryParams = new URLSearchParams({
-            id: showRoom.showroomId,
+            showroomIdNumber: showRoom.showroomId,
+            id: showRoom.id,
+
             name: showRoom.ShowRoom,
             location: showRoom.manualLocationName,
             img: showRoom.img,
@@ -268,6 +271,8 @@ console.log("userRole",userRole)
             district: showRoom.district,
             uid: uid,
         }).toString();
+        console.log("queryParams",queryParams)
+
         const generatedLink = `${baseUrl}?${queryParams}`;
     setGeneratedLink(generatedLink); // Store generated link
 

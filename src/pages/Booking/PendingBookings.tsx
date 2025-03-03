@@ -13,7 +13,7 @@ type RecordData = {
     vehicleModel: string;
     comments: string;
     id: string; 
-    status: string; 
+    status: string;
     bookingStatus: string;
     dateTime: string;
 };

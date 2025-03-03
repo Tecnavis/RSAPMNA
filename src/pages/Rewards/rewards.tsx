@@ -11,7 +11,7 @@ interface ClientRewardDetails {
     rewardPoints: number;
     companyName?: string;
 
-    bookingPoint?:number;
+    bookingPoint?: number;
     category?: string;
     staff: Staff[];
 }
@@ -26,8 +26,6 @@ const ClientRewards: React.FC = () => {
     const [driverRewards, setDriverRewards] = useState<ClientRewardDetails[]>([]);
     const [customerRewards, setCustomerRewards] = useState<ClientRewardDetails[]>([]);
     const [showroomRewards, setShowroomRewards] = useState<ClientRewardDetails[]>([]);
-    const [selectedShowroomStaff, setSelectedShowroomStaff] = useState<{ [showroomName: string]: string }>({});
-    const [showroomVisible, setShowroomVisible] = useState<string | null>(null); // Track the clicked showroom
     const [showroomStaffRewards, setShowroomStaffRewards] = useState<ClientRewardDetails[]>([]);
     const [bookingPoints, setBookingPoints] = useState<{ [id: string]: number }>({});
 
@@ -71,32 +69,52 @@ const ClientRewards: React.FC = () => {
     };
     const fetchShowrooms = async () => {
         try {
-            const showroomCollection = collection(db, `user/${uid}/showroom`);
-            const showroomSnapshot = await getDocs(showroomCollection);
+          const showroomCollection = collection(db, `user/${uid}/showroom`);
+          const showroomSnapshot = await getDocs(showroomCollection);
+      
+          // For each showroom document, fetch staff matching the showroomId
+          const showroomList: ClientRewardDetails[] = await Promise.all(
+            showroomSnapshot.docs.map(async (docSnapshot) => {
+              const showroomData = docSnapshot.data();
+              // Assuming either the document has a showroomId field or you use the doc.id
+              const showroomIdFromDoc = showroomData.id || docSnapshot.id;
+      
 
-            const showroomList: ClientRewardDetails[] = showroomSnapshot.docs.map((doc) => ({
-                id: doc.id, // Get the showroom ID
-                name: doc.data().ShowRoom,
-                rewardPoints: doc.data().rewardPoints || 0,
-                bookingPoint: doc.data().bookingPoint || 0,
-
-                staff:
-                    doc.data().staff?.map((staff: any) => ({
-                        id: staff.id, // Make sure to fetch the ID for each staff member
-                        name: staff.name,
-                        phoneNumber: staff.phoneNumber,
-                        rewardPoints: staff.rewardPoints || 0,
-                        bookingPoint: doc.data().bookingPoint || 0,
-
-                    })) || [], // Default to an empty array if no staff is found
-            }));
-
-            setShowroomRewards(showroomList);
-            setShowroomStaffRewards(showroomList); // Set showroom staff rewards
+              // Query showroomStaff collection where showroomId matches
+              const staffQuery = query(
+                collection(db, `user/${uid}/showroomStaff`),
+                where("showroomId", "==", showroomIdFromDoc)
+              );
+              const staffSnapshot = await getDocs(staffQuery);
+              const staffList: Staff[] = staffSnapshot.docs.map((staffDoc) => {
+                const staffData = staffDoc.data();
+                return {
+                  id: staffDoc.id,
+                  name: staffData.name,
+                  phoneNumber: staffData.phoneNumber,
+                  rewardPoints: staffData.rewardPoints || 0,
+                };
+              });
+      
+              return {
+                id: docSnapshot.id,
+                name: showroomData.ShowRoom, // Adjust if your field name is different
+                rewardPoints: showroomData.rewardPoints || 0,
+                bookingPoint: showroomData.bookingPoint || 0,
+                staff: staffList, // Attach the fetched staff list
+              };
+            })
+          );
+      
+          setShowroomRewards(showroomList);
+          // If you want to keep showroomStaffRewards separately,
+          // you might filter or merge showroomList.staff from each showroom.
+          setShowroomStaffRewards(showroomList);
         } catch (error) {
-            console.error('Error fetching showrooms:', error);
+          console.error("Error fetching showrooms and staff:", error);
         }
-    };
+      };
+      
 
     useEffect(() => {
         fetchDrivers();
@@ -113,7 +131,7 @@ const ClientRewards: React.FC = () => {
                 { category: 'Driver', rewards: driverRewards },
                 { category: 'Showroom', rewards: showroomRewards },
                 { category: 'Marketing Executive', rewards: customerRewards },
-                { category: 'ShowroomStaff', rewards: customerRewards },
+                { category: 'ShowroomStaff', rewards: showroomStaffRewards },
             ];
         } else {
             return [{ category: visibleCategory, rewards: getCategoryRewards(visibleCategory) }];
@@ -140,52 +158,36 @@ const ClientRewards: React.FC = () => {
         console.log('Category:', category);
         window.location.href = `/rewarddetails?id=${id}&name=${encodeURIComponent(name)}&rewardPoints=${rewardPoints}&category=${encodeURIComponent(category)}`;
     };
-    const handleShowroomStaffSelect = (id: string | number, showroomName: string, staffMember: string, rewardPoints: number, category: ClientCategory) => {
-        const selectedStaff = showroomRewards.find((showroom) => showroom.name === showroomName)?.staff?.find((staff) => staff.name === staffMember);
 
-        if (selectedStaff) {
-            setSelectedShowroomStaff((prev) => ({
-                ...prev,
-                [showroomName]: staffMember,
-            }));
-            window.location.href = `/rewarddetails?id=${id}&name=${encodeURIComponent(selectedStaff.name)}&rewardPoints=${
-                selectedStaff.rewardPoints || 0
-            }&category=ShowroomStaff&phoneNumber=${encodeURIComponent(selectedStaff.phoneNumber || '')}`;
-        }
-    };
-
-    const handleShowroomClick = (clientName: string) => {
-        setShowroomVisible((prev) => (prev === clientName ? null : clientName)); // Toggle dropdown visibility
-    };
     const handleBookingPointChange = (id: string, value: string) => {
         setBookingPoints((prevPoints) => ({ ...prevPoints, [id]: parseInt(value) || 0 }));
     };
 
-    const updateBookingPointsInAllShowrooms = async (category:any, bookingPoint:any) => {
+    const updateBookingPointsInAllShowrooms = async (category: any, bookingPoint: any) => {
         try {
             const showroomCollection = collection(db, `user/${uid}/showroom`);
             const showroomSnapshot = await getDocs(showroomCollection);
-    
+
             // Iterate through each showroom document
             showroomSnapshot.forEach(async (docSnapshot) => {
                 const showroomDocRef = doc(db, `user/${uid}/showroom`, docSnapshot.id);
-    
+
                 if (category === 'Showroom') {
                     // If category is 'Showroom', update the bookingPoint in the showroom document
                     await setDoc(showroomDocRef, { bookingPoint }, { merge: true });
                 } else if (category === 'ShowroomStaff') {
                     console.log('Category is ShowroomStaff');
-    
+
                     // For 'ShowroomStaff', update two fields (PointsForShowroomStaff and PointsForShowroom)
                     const { bookingPoint1, bookingPoint2 } = bookingPoint;
                     const staffDocRef = doc(db, `user/${uid}/showroom`, docSnapshot.id);
-                    
+
                     try {
                         await setDoc(
                             staffDocRef,
-                            { 
+                            {
                                 bookingPointStaff: bookingPoint1, // Store Points For ShowRoomStaff
-                                bookingPointForShowroom: bookingPoint2 // Store Points For ShowRoom
+                                bookingPointForShowroom: bookingPoint2, // Store Points For ShowRoom
                             },
                             { merge: true }
                         );
@@ -194,173 +196,199 @@ const ClientRewards: React.FC = () => {
                     }
                 }
             });
-    
+
             console.log('Booking points updated successfully');
         } catch (error) {
             console.error('Error updating booking points:', error);
         }
     };
-    
-    
-    
+
     // -----------------------------------------------------------------------------------11-11-2024--------------------------------------------------------
     return (
         <div className="client-rewards-container">
             <h1>CLIENT REWARDS</h1>
             <br />
-            <div className="cards-container"> 
-    {[
-        { category: 'Driver', rewardPoints: driverRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) },
-        { category: 'Showroom', rewardPoints: showroomRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) },
-        { category: 'Marketing Executive', rewardPoints: customerRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) },
-        { category: 'ShowroomStaff', rewardPoints: showroomStaffRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) }, // Display ShowroomStaff reward points
-    ].map((client, index) => (
-        <div key={index} className={`client-card ${client.category.toLowerCase()}`}>
-            <h2>{client.category}</h2>
+            <div className="cards-container">
+                {[
+                    { category: 'Driver', rewardPoints: driverRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) },
+                    { category: 'Showroom', rewardPoints: showroomRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) },
+                    { category: 'Marketing Executive', rewardPoints: customerRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) },
+                    { category: 'ShowroomStaff', rewardPoints: showroomStaffRewards.reduce((acc, cur) => acc + cur.rewardPoints, 0) }, // Display ShowroomStaff reward points
+                ].map((client, index) => (
+                    <div key={index} className={`client-card ${client.category.toLowerCase()}`}>
+                        <h2>{client.category}</h2>
 
-            {/* Show input fields for categories other than 'Driver' */}
-            {client.category !== 'Driver' && client.category !== 'ShowroomStaff' && (
-                <>
-                    <TextField
-                        label="Points"
-                        type="number"
-                        value={bookingPoints[client.category] || ''} // Make sure it's initialized properly
-                        onChange={(e) => handleBookingPointChange(client.category, e.target.value)} // Update function
-                        variant="outlined"
-                        fullWidth
-                    />
+                        {/* Show input fields for categories other than 'Driver' */}
+                        {client.category !== 'Driver' && client.category !== 'ShowroomStaff' && (
+                            <>
+                                <TextField
+                                    label="Points"
+                                    type="number"
+                                    value={bookingPoints[client.category] || ''} // Make sure it's initialized properly
+                                    onChange={(e) => handleBookingPointChange(client.category, e.target.value)} // Update function
+                                    variant="outlined"
+                                    fullWidth
+                                />
 
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => updateBookingPointsInAllShowrooms(client.category, bookingPoints[client.category])} // Update points for the category
-                    >
-                        OK
-                    </Button>
-                </>
-            )}
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    onClick={() => updateBookingPointsInAllShowrooms(client.category, bookingPoints[client.category])} // Update points for the category
+                                >
+                                    OK
+                                </Button>
+                            </>
+                        )}
 
-            {/* Show two input fields for 'ShowroomStaff' */}
-            {client.category === 'ShowroomStaff' && (
-                <>
-                    <TextField
-                        label="Points For ShowRoomStaff"
-                        type="number"
-                        value={bookingPoints[`${client.category}_1`] || ''} // For ShowroomStaff, use a different key
-                        onChange={(e) => handleBookingPointChange(`${client.category}_1`, e.target.value)} // Update function
-                        variant="outlined"
-                        fullWidth
-                    />
+                        {/* Show two input fields for 'ShowroomStaff' */}
+                        {client.category === 'ShowroomStaff' && (
+                            <>
+                                <TextField
+                                    label="Points For ShowRoomStaff"
+                                    type="number"
+                                    value={bookingPoints[`${client.category}_1`] || ''} // For ShowroomStaff, use a different key
+                                    onChange={(e) => handleBookingPointChange(`${client.category}_1`, e.target.value)} // Update function
+                                    variant="outlined"
+                                    fullWidth
+                                />
 
-                    <TextField
-                        label="Points For ShowRoom"
-                        type="number"
-                        value={bookingPoints[`${client.category}_2`] || ''} // For ShowroomStaff, use another key
-                        onChange={(e) => handleBookingPointChange(`${client.category}_2`, e.target.value)} // Update function
-                        variant="outlined"
-                        fullWidth
-                    />
+                                <TextField
+                                    label="Points For ShowRoom"
+                                    type="number"
+                                    value={bookingPoints[`${client.category}_2`] || ''} // For ShowroomStaff, use another key
+                                    onChange={(e) => handleBookingPointChange(`${client.category}_2`, e.target.value)} // Update function
+                                    variant="outlined"
+                                    fullWidth
+                                />
 
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => {
-                            const bookingPoint = {
-                                bookingPoint1: bookingPoints[`${client.category}_1`],
-                                bookingPoint2: bookingPoints[`${client.category}_2`],
-                            };
-                            updateBookingPointsInAllShowrooms(client.category, bookingPoint); // Update points for ShowroomStaff
-                        }}
-                    >
-                        OK
-                    </Button>
-                </>
-            )}
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    onClick={() => {
+                                        const bookingPoint = {
+                                            bookingPoint1: bookingPoints[`${client.category}_1`],
+                                            bookingPoint2: bookingPoints[`${client.category}_2`],
+                                        };
+                                        updateBookingPointsInAllShowrooms(client.category, bookingPoint); // Update points for ShowroomStaff
+                                    }}
+                                >
+                                    OK
+                                </Button>
+                            </>
+                        )}
 
-            {/* Button to toggle rewards visibility */}
-            <button onClick={() => handleViewRewards(client.category as ClientCategory)} className="reward-btn ml-2 mt-2">
-                {visibleCategory === client.category ? 'Hide Rewards' : 'View Rewards'}
-            </button>
+                        {/* Button to toggle rewards visibility */}
+                        <button onClick={() => handleViewRewards(client.category as ClientCategory)} className="reward-btn ml-2 mt-2">
+                            {visibleCategory === client.category ? 'Hide Rewards' : 'View Rewards'}
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            <div className="rewards-list">
+  {getRewardsList().map(({ category, rewards }) => (
+    <div key={category}>
+      <h3>{category} Rewards</h3>
+      <ul>
+        {rewards.map((client, index) => (
+          <li key={index} className="reward-item">
+            <span className="reward-name">{client.name}</span>
+            <span className="text-lg font-bold text-green-600">
+
+              {client.rewardPoints} pts
+              <Button
+                onClick={() =>
+                  handleView(
+                    client.id,
+                    client.name,
+                    client.rewardPoints,
+                    category as ClientCategory
+                  )
+                }
+              >
+                <IconEye />
+              </Button>
+            </span>
+            
+          </li>
+        ))}
+      </ul>
+    </div>
+  ))}
+
+
+
+<div className="max-w-4xl mx-auto px-4 py-6">
+  {showroomRewards.map((showroom) => (
+    <div
+      key={showroom.id}
+      className="bg-white rounded-xl shadow-lg p-6 mb-8 hover:shadow-2xl transition-shadow duration-300"
+    >
+      <h2 className="text-3xl font-extrabold text-gray-800 mb-3">
+        {showroom.name}
+      </h2>
+      <p className="text-gray-600 mb-4">
+        Reward Points:{" "}
+        <span className="font-semibold text-blue-600">
+          {showroom.rewardPoints}
+        </span>{" "}
+        | Booking Point:{" "}
+        <span className="font-semibold text-blue-600">
+          {showroom.bookingPoint}
+        </span>
+      </p>
+
+      {showroom.staff && showroom.staff.length > 0 ? (
+        <div className="mt-6">
+          <h3 className="text-2xl font-bold text-gray-700 mb-3 border-b pb-2">
+            Staff
+          </h3>
+          <ul className="space-y-3">
+            {showroom.staff.map((staffMember) => (
+              <li
+                key={staffMember.id}
+                className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div>
+                  <p className="text-lg font-semibold text-gray-800">
+                    {staffMember.name}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {staffMember.phoneNumber}
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="text-lg font-bold text-green-600">
+                    {staffMember.rewardPoints} pts
+                  </div>
+                  <Button
+                    onClick={() =>
+                      handleView(
+                        staffMember.id,
+                        staffMember.name,
+                        staffMember.rewardPoints ?? 0,
+                        "ShowroomStaff" as ClientCategory
+                      )
+                    }
+                  >
+                    <IconEye />
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
-    ))}
+      ) : (
+        <p className="text-gray-500 mt-4">
+          No staff found for this showroom.
+        </p>
+      )}
+    </div>
+  ))}
 </div>
 
 
-            <div className="rewards-list">
-                {getRewardsList().map(({ category, rewards }) => (
-                    <div key={category}>
-                        <h3>{category} Rewards</h3>
-                        <ul>
-                            {rewards.map((client, index) => (
-                                <li key={index} className="reward-item">
-                                    <span className="reward-name">{client.name}</span>
-                                    {client.staff && client.staff.length > 0 && (
-                                        <>
-                                            {/* Only show the "Select Staff" dropdown when the showroom is clicked */}
-                                            <Button onClick={() => handleShowroomClick(client.name)}>Show Staff</Button>
-                                            {showroomVisible === client.name && (
-                                                <div className="mt-6 space-y-2">
-                                                    <label className="block text-sm font-semibold text-gray-800 tracking-wide" htmlFor={`${client.name}-staff-select`}>
-                                                        Select Staff
-                                                    </label>
-                                                    <div className="relative">
-                                                        <select
-                                                            id={`${client.name}-staff-select`}
-                                                            value={selectedShowroomStaff[client.name] || ''}
-                                                            onChange={(e) => handleShowroomStaffSelect(client.id, client.name, e.target.value, client.rewardPoints, category as ClientCategory)}
-                                                            className="block w-full bg-white border border-gray-300 text-gray-700 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 pl-3 pr-10 text-base sm:text-sm"
-                                                        >
-                                                            <option value="" disabled>
-                                                                Select Staff
-                                                            </option>
-                                                            <optgroup label="Staff Members" className="text-lg font-semibold text-gray-800">
-                                                                {client.staff.map((staffMember, staffIndex) => (
-                                                                    <option
-                                                                        key={staffIndex}
-                                                                        value={staffMember.name}
-                                                                        className="text-gray-600 bg-gray-50 hover:bg-blue-50 hover:text-blue-700 transition-all flex justify-between items-center"
-                                                                    >
-                                                                        <span>{staffMember.name}</span>
-                                                                        <span> - </span>
-                                                                        <span> {staffMember.phoneNumber}</span>
-                                                                        <span className="ml-2 px-2 py-1 text-sm text-gray-900 bg-yellow-200 rounded-full font-semibold hover:bg-yellow-300">
-                                                                            ({staffMember.rewardPoints || 0} points)
-                                                                        </span>
-                                                                    </option>
-                                                                ))}
-                                                            </optgroup>
-                                                        </select>
 
-                                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                            <svg className="w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                                                <path
-                                                                    fillRule="evenodd"
-                                                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                                    clipRule="evenodd"
-                                                                />
-                                                            </svg>
-                                                        </div>
-                                                    </div>
-                                                    <p className="text-xs text-gray-500 italic">Staff list based on current showroom selection</p>
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-                                    <span className="reward-points">
-                                        {client.rewardPoints} points
-                                        <Button
-                                            onClick={() => {
-                                                handleView(client.id, client.name, client.rewardPoints, category as ClientCategory); // Call the handleView function with the id, name, and rewardPoints
-                                            }}
-                                        >
-                                            <IconEye />
-                                        </Button>
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                ))}
             </div>
         </div>
     );

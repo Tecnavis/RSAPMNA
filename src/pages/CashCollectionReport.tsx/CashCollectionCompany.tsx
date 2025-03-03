@@ -1707,7 +1707,7 @@ console.log("parsedReceivedAmount",parsedReceivedAmount)
                                                     type="text"
                                                     value={invoiceNumbers[booking.id] || ''}
                                                     onChange={(e) => handleInvoiceChange(booking.id, e.target.value)}
-                                                    disabled={booking.approve || !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'accountant')}
+                                                    disabled={booking.approve || !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'accountant'|| staffRole === 'verifier')}
                                                     placeholder="Enter Invoice Number"
                                                     style={{
                                                         padding: '5px',
@@ -1720,7 +1720,7 @@ console.log("parsedReceivedAmount",parsedReceivedAmount)
                                                     disabled={
                                                         booking.approve || 
                                                         !invoiceNumbers[booking.id] || 
-                                                        !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'accountant')
+                                                        !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'accountant'|| staffRole === 'verifier')
                                                     }                                                    style={{
                                                         padding: '15px 10px',
                                                         marginLeft: '2px',
@@ -1728,8 +1728,8 @@ console.log("parsedReceivedAmount",parsedReceivedAmount)
                                                         border: '1px solid #ccc',
                                                         backgroundColor: '#007BFF',
                                                         color: 'white',
-                                                        cursor: booking.approve || !invoiceNumbers[booking.id] || !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'accountant') ? 'not-allowed' : 'pointer',
-            opacity: booking.approve || !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'accountant') ? 0.6 : 1,
+                                                        cursor: booking.approve || !invoiceNumbers[booking.id] || !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'accountant'|| staffRole === 'verifier') ? 'not-allowed' : 'pointer',
+            opacity: booking.approve || !(role === 'admin' || staffRole === 'secondary admin' || staffRole === 'accountant'|| staffRole === 'verifier') ? 0.6 : 1,
         }}
                                                 >
                                                     Add

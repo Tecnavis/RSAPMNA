@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getFirestore, doc, getDoc, updateDoc, deleteDoc, getDocs, collection, Timestamp, query, where } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
+import { CiEdit } from 'react-icons/ci';
 
 import { storage } from '../../config/config';
 import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField, ThemeProvider } from '@mui/material';
@@ -45,6 +46,7 @@ interface BookingDetails {
     status: string;
     pickedTime: Timestamp | null | undefined;
     remark: string;
+    showroom:string;
     formAdded: boolean;
     bookingChecked: boolean;
     paymentStatus: string;
@@ -104,10 +106,11 @@ const ViewMore: React.FC = () => {
     const queryParams = new URLSearchParams(search);
     const userName = sessionStorage.getItem('username');
     const [showForm, setShowForm] = useState(false);
-    const [feedback, setFeedback] = useState(false);
-const [notes, setNotes] = useState<string>('');
+    const [filteredDrivers, setFilteredDrivers] = useState<{ id: string; driverName: string }[]>([]);
+    const [notes, setNotes] = useState<string>('');
 const [showroomName, setShowroomName] = useState("");
 const staffRole = sessionStorage.getItem('staffRole');
+const [showrooms, setShowrooms] = useState<{ id: string; name: string }[]>([]);
 
     const [formData, setFormData] = useState<FormData>({
         pickedTime: null,
@@ -134,6 +137,7 @@ const staffRole = sessionStorage.getItem('staffRole');
         companyName: bookingDetails?.companyName,
         trappedLocation: bookingDetails?.trappedLocation,
         showroomLocation: bookingDetails?.showroomLocation,
+        showroom:bookingDetails?.showroom,
         customerName: bookingDetails?.customerName,
         driver: bookingDetails?.driver,
         selectedCompany: bookingDetails?.selectedCompany,
@@ -170,6 +174,7 @@ const staffRole = sessionStorage.getItem('staffRole');
         company: false,
         trappedLocation: false,
         showroomLocation: false,
+        showroom:false,
         customerName: false,
         driver: false,
         selectedCompany: false,
@@ -200,6 +205,7 @@ const staffRole = sessionStorage.getItem('staffRole');
         company: false,
         trappedLocation: false,
         showroomLocation: false,
+        showroom:false,
         customerName: false,
         driver: false,
         selectedCompany: false,
@@ -252,7 +258,7 @@ const staffRole = sessionStorage.getItem('staffRole');
                 remark: bookingDetails?.remark,
                 feedback: bookingDetails?.feedback,
                 NotesAdded: bookingDetails?.NotesAdded,
-
+                showroom:bookingDetails?.showroom,
             });
         }
     }, [bookingDetails]);
@@ -383,6 +389,7 @@ const staffRole = sessionStorage.getItem('staffRole');
                     remarkWritten: data.remarkWritten || '',
                     feedbackWritten: data.feedbackWritten || '',
                     NotesAdded: data.NotesAdded || '',
+                    showroom: data.showroom || '',
 
                 });
             }
@@ -462,24 +469,24 @@ const staffRole = sessionStorage.getItem('staffRole');
             });
         }
     }, [bookingDetails]);
+
     useEffect(() => {
-        const fetchShowroom = async () => {
-          if (!bookingDetails?.showroomLocation || !uid) return;
-      
-          const showroomRef = collection(db, `user/${uid}/showroom`);
-          const q = query(showroomRef, where("Location", "==", bookingDetails.showroomLocation));
-          
-          const querySnapshot = await getDocs(q);
-          if (!querySnapshot.empty) {
-            const showroomData = querySnapshot.docs[0].data();
-            setShowroomName(showroomData.ShowRoom || "N/A");
-          } else {
-            setShowroomName("N/A");
-          }
+        const fetchShowrooms = async () => {
+            if (!uid) return;
+    
+            const showroomRef = collection(db, `user/${uid}/showroom`);
+            const querySnapshot = await getDocs(showroomRef);
+    
+            const showroomList = querySnapshot.docs.map((doc) => ({
+                id: doc.id,
+                name: doc.data().ShowRoom, // Ensure your Firestore document has the field "ShowRoom"
+            }));
+    
+            setShowrooms(showroomList);
         };
-      
-        fetchShowroom();
-      }, [bookingDetails?.showroomLocation, uid]);
+    
+        fetchShowrooms();
+    }, [uid]);
     const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!uid || !id) {
@@ -810,22 +817,43 @@ const staffRole = sessionStorage.getItem('staffRole');
                     </tr>
                     <tr>
                     <td className="bg-gray-100 p-2 font-semibold">Service Center :</td>
-    <td className="p-2">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <EditableField
-          label="Showroom Location"
-          value={showroomName}  // Display showroom name
-          isEditing={editStates.showroomLocation}
-          editedValue={editedFields.showroomLocation}
-          loading={loadingStates.showroomLocation}
-          onEditClick={() => handleEditClick('showroomLocation')}
-          onSaveClick={() => handleSaveClick('showroomLocation')}
-          onChange={(e) => setEditedFields((prev) => ({ ...prev, showroomLocation: e.target.value }))}
-          isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-          bookingCheck={bookingCheck}
-        />
-      </div>
-    </td>
+<td className="p-2">
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    {editStates.showroom ? (
+      <select
+        value={editedFields.showroom}
+        onChange={(e) => setEditedFields((prev) => ({ ...prev, showroom: e.target.value }))}
+        className="border p-2 rounded"
+      >
+        <option value="">Select Showroom</option>
+        {showrooms.map((showroom) => (
+          <option key={showroom.id} value={showroom.name}>
+            {showroom.name}
+          </option>
+        ))}
+      </select>
+    ) : (
+      <span>{editedFields.showroom || "N/A"}</span>
+    )}
+{ !(bookingCheck === true || bookingCheck === null) && (
+    <>
+    {!editStates.showroom ? (
+      <button onClick={() => handleEditClick("showroom")} className="text-blue-500 ml-2">
+        <CiEdit   size={28}
+          className="cursor-pointer"
+          color="blue"/>
+      </button>
+    ) : (
+      <button onClick={() => handleSaveClick("showroom")} className="text-green-500 ml-2">
+        Save
+      </button>
+    )}
+    </>
+)}
+  </div>
+</td>
+
+
                     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">File Number :</td>
@@ -987,22 +1015,41 @@ const staffRole = sessionStorage.getItem('staffRole');
                     </tr>
                     <tr>
                     <td className="bg-gray-100 p-2 font-semibold">Dropoff Location :</td>
-    <td className="p-2">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <EditableField
-          label="Showroom Location"
-          value={showroomName}  // Display showroom name
-          isEditing={editStates.showroomLocation}
-          editedValue={editedFields.showroomLocation}
-          loading={loadingStates.showroomLocation}
-          onEditClick={() => handleEditClick('showroomLocation')}
-          onSaveClick={() => handleSaveClick('showroomLocation')}
-          onChange={(e) => setEditedFields((prev) => ({ ...prev, showroomLocation: e.target.value }))}
-          isEditable={bookingDetails?.status === 'Order Completed' && !(bookingCheck === true || bookingCheck === null)}
-          bookingCheck={bookingCheck}
-        />
-      </div>
-    </td>
+                    <td className="p-2">
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    {editStates.showroom ? (
+      <select
+        value={editedFields.showroom}
+        onChange={(e) => setEditedFields((prev) => ({ ...prev, showroom: e.target.value }))}
+        className="border p-2 rounded"
+      >
+        <option value="">Select Showroom</option>
+        {showrooms.map((showroom) => (
+          <option key={showroom.id} value={showroom.name}>
+            {showroom.name}
+          </option>
+        ))}
+      </select>
+    ) : (
+      <span>{editedFields.showroom || "N/A"}</span>
+    )}
+{ !(bookingCheck === true || bookingCheck === null) && (
+    <>
+    {!editStates.showroom ? (
+      <button onClick={() => handleEditClick("showroom")} className="text-blue-500 ml-2">
+        <CiEdit   size={28}
+          className="cursor-pointer"
+          color="blue"/>
+      </button>
+    ) : (
+      <button onClick={() => handleSaveClick("showroom")} className="text-green-500 ml-2">
+        Save
+      </button>
+    )}
+    </>
+)}
+  </div>
+</td>
     </tr>
                     <tr>
                         <td className="bg-gray-100 p-2 font-semibold">Distance :</td>

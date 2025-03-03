@@ -221,7 +221,9 @@ const StatusTable: React.FC = () => {
     const pendingRef = useRef<HTMLDivElement>(null);
     const [bookingAmount, setBookingAmount] = useState<number>(0);
     const [selectedPaymentType, setSelectedPaymentType] = useState<'staff' | 'driver' | 'showroom'>('staff');
-
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10; // Limit to 10 per page
+    
     useEffect(() => {
         const fetchBookingAmount = async () => {
             if (selectedBooking?.id) {
@@ -491,7 +493,24 @@ const StatusTable: React.FC = () => {
     const completedBookings = sortedRecordsData.filter((record) => record.status === 'Order Completed');
     const ongoingBookings = sortedRecordsData.filter((record) => record.status !== 'Order Completed');
     const pendingBookings = sortedRecordsData.filter((record) => record.paymentStatus === "Not Paid");
+// Pagination logic
+const indexOfLastItem = currentPage * itemsPerPage;
+const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+const paginatedCompletedBookings = completedBookings.slice(indexOfFirstItem, indexOfLastItem);
 
+const totalPages = Math.ceil(completedBookings.length / itemsPerPage);
+
+const handleNextPage = () => {
+    if (currentPage < totalPages) {
+        setCurrentPage(currentPage + 1);
+    }
+};
+
+const handlePrevPage = () => {
+    if (currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+    }
+};
     const fetchDrivers = async () => {
         try {
             const driversCollection = collection(db, `user/${uid}/driver`);
@@ -844,8 +863,36 @@ const StatusTable: React.FC = () => {
             <Header>
                 <Title>Order Completed</Title>
             </Header>
-            {completedBookings.map((record) => (
-                <Card key={record.id} style={{ background: 'linear-gradient(179.1deg, rgb(43, 170, 96) 2.3%, rgb(129, 204, 104) 98.3%)',}}>
+            <div className="flex items-center justify-center mt-5 space-x-4 mb-2">
+    <button
+        onClick={handlePrevPage}
+        disabled={currentPage === 1}
+        className={`px-4 py-2 text-white rounded-lg transition duration-300 ${
+            currentPage === 1
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-600'
+        }`}
+    >
+        Previous
+    </button>
+    <span className="text-lg font-semibold">
+        Page {currentPage} of {totalPages}
+    </span>
+    <button
+        onClick={handleNextPage}
+        disabled={currentPage === totalPages}
+        className={`px-4 py-2 text-white rounded-lg transition duration-300 ${
+            currentPage === totalPages
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-600'
+        }`}
+    >
+        Next
+    </button>
+</div>
+
+            {paginatedCompletedBookings.map((record) => (
+                <Card key={record.id} style={{ background: 'linear-gradient(179.1deg, rgb(43, 170, 96) 2.3%, rgb(129, 204, 104) 98.3%)'}}>
                     <DataItem
                         style={{
                             margin: '5px 0',

@@ -68,6 +68,9 @@ import TaxAndInsurance from '../pages/Vehicles/TaxAndInsurance';
 import Attendance from '../pages/Attendance/Attendance';
 import AttendanceDetails from '../pages/Attendance/AttendanceDetails';
 import Company from '../pages/Users/Company';
+import ShowroomStaffReward from '../pages/ShowRooms/ShowroomStaffReward';
+import ShowroomStaffProfile from '../pages/ShowRooms/ShowroomStaffProfile';
+import ShowroomStaffDashboard from '../pages/ShowRooms/ShowroomStaffDashboard';
 
 
 
@@ -752,6 +755,24 @@ const routes = [
 {
     path: '/addbook',
     element: <AddBook/>,
+    layout: 'blank',
+
+},
+{
+    path: '/showroomstaffreward',
+    element: <ShowroomStaffReward/>,
+    layout: 'blank',
+
+},
+{
+    path: '/showroomstaffprofile',
+    element: <ShowroomStaffProfile/>,
+    layout: 'blank',
+
+},
+{
+    path: '/showroomstaffdashboard',
+    element: <ShowroomStaffDashboard/>,
     layout: 'blank',
 
 },

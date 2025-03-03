@@ -87,6 +87,7 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
     const [receivedAmount, setReceivedAmount] = useState<number>(0);
     const [receivedAmountCompany, setReceivedAmountCompany] = useState<number>(0);
     const [loading, setLoading] = useState(false);
+    const [serviceVehicle, setServiceVehicle] = useState<string>('');
 
     const { state } = useLocation();
     const [isModalOpen1, setIsModalOpen1] = useState<boolean>(false);
@@ -176,6 +177,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             setVehicleModel(editData.vehicleModel || '');
             setVehicleSection(editData.vehicleSection || '');
             setShowroomLocation(editData.showroomLocation || '');
+            setServiceVehicle(editData.serviceVehicle || '');
+
             setDistance(editData.distance || '');
             setSelectedDriver(editData.selectedDriver || '');
             setBaseLocation(editData.baseLocation || null);
@@ -762,7 +765,9 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
 
                 setTrappedLocation(value || '');
                 break;
-
+                case 'serviceVehicle':
+                    setServiceVehicle(value);
+                    break;
             case 'showrooms':
                 setShowrooms(value || '');
                 break;
@@ -777,9 +782,22 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             setSelectedDriver(value || '');
         }
     };
-
     const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
-    // ------------------------------------------------
+
+    useEffect(() => {
+        if (selectedDriver) {
+            const selectedDriverData = drivers.find((driver) => driver.id === selectedDriver);
+            console.log('selectedDriverData', selectedDriverData);
+
+            if (selectedDriverData) {
+                if (selectedDriverData.serviceVehicle) {
+                    setServiceVehicle(renderServiceVehicle(selectedDriverData.serviceVehicle, serviceType));
+                }
+            } else {
+                console.error('Driver not found:', selectedDriver);
+            }
+        }
+    }, [selectedDriver, serviceType, drivers]);    // ------------------------------------------------
 
     const openModal = (distance: any) => {
         setIsModalOpen(true);
@@ -1234,6 +1252,13 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
             console.error('Error sending notification:', error);
         }
     };
+    const renderServiceVehicle = (serviceVehicle:any, serviceType:any) => {
+        if (serviceVehicle && serviceVehicle[serviceType]) {
+            return serviceVehicle[serviceType];
+        } else {
+            return 'Unknown Vehicle';
+        }
+    };
     const sendAlert = async (token: any, title: any, body: any) => {
         try {
             const response = await fetch('https://rsanotification.onrender.com/send-notification', {
@@ -1380,6 +1405,8 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                     phoneNumber: phoneNumber || '',
                     vehicleType: vehicleType || '',
                     bodyShope: bodyShope || '',
+                    serviceVehicle: serviceVehicle || '',
+
                     statusEdit: activeForm === 'withoutMap' ? 'mapbooking' : 'withoutmapbooking',
                     selectedCompany: selectedCompany || '',
                     serviceType: serviceType || '',
@@ -1707,8 +1734,13 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                             <IconPlus />
                         </button>
                     </div>
-                    {showShowroomModal && <ShowroomModalWithout onClose={() => setShowShowroomModal(false)} updateShowroomLocation={updateShowroomLocation} />}
                 </div>
+                {showShowroomModal && (
+    <ShowroomModalWithout
+        onClose={() => setShowShowroomModal(false)}
+        updateShowroomLocation={updateShowroomLocation}
+    />
+)}
 
                 <div className={styles.formGroup}>
                     <label htmlFor="showrooms" className={styles.label}>
@@ -2226,7 +2258,31 @@ const WithoutMapBooking: React.FC<WithoutMapBookingProps> = ({ activeForm }) => 
                         </div>
                     </React.Fragment>
                 )}
-            
+             {/* <div className="flex items-center mt-4" style={{ width: '100%' }}>
+                    <label htmlFor="serviceVehicle" className="ltr:mr-2 rtl:ml-2 w-1/3 mb-0">
+                        Service Vehicle Number
+                    </label>
+
+                    <input
+                        id="serviceVehicle"
+                        type="text"
+                        name="serviceVehicle"
+                        className="form-input flex-1"
+                        placeholder="Enter Service Vehicle Number"
+                        value={serviceVehicle}
+                        onChange={(e) => handleInputChange('serviceVehicle', e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid #ccc',
+                            borderRadius: '5px',
+                            fontSize: '1rem',
+                            outline: 'none',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                        }}
+                        required
+                    />
+                </div> */}
                 {!disableFields  && (
                     <div className={styles.formGroup}>
                         <label htmlFor="totalDriverDistance" className={styles.label}>

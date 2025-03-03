@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { doc, getFirestore, updateDoc, arrayUnion, query, where, getDocs, collection, getDoc } from 'firebase/firestore';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { doc, getFirestore, updateDoc, arrayUnion, query, where, getDocs, collection, getDoc, addDoc } from 'firebase/firestore';
 import './ShowRoom.css';
 import Swal from 'sweetalert2';
 import { toast } from 'react-toastify';
 
 interface ShowRoomDetailsType {
+    showroomIdNumber:string;
     id: string;
     name: string;
     location: string;
@@ -29,6 +30,7 @@ const ShowRoomDetails: React.FC = () => {
         name: '',
         location: '',
         img: '',
+        showroomIdNumber:'',
         tollfree: '',
         phoneNumber: '',
         state: '',
@@ -36,25 +38,11 @@ const ShowRoomDetails: React.FC = () => {
         uid: '',
     });
 
-    const [formData, setFormData] = useState({ name: '', phoneNumber: '' });
+    const [formData, setFormData] = useState({ name: '', phoneNumber: '',whatsappNumber:'',designation:'' });
     const [signInData, setSignInData] = useState({ phoneNumber: '' }); // New state for sign-in form
     const userRole = sessionStorage.getItem('role'); // Assume 'role' is stored in sessionStorage
-    console.log("userRole",userRole)
-        // // Role-based access control
-        // useEffect(() => {
-        //     if (userRole !== 'admin' && userRole !== 'staff') {
-        //         toast.error('You are an unauthorized user', { autoClose: 3000 });
-        //     }
-        // }, [userRole]);
-    
-        // // Only allow access if role is 'admin' or 'staff'
-        // if (userRole !== 'admin' && userRole !== 'staff') {
-        //     return (
-        //         <div style={{ textAlign: 'center', marginTop: '50px' }}>
-        //             <h1>You are an unauthorized user</h1>
-        //         </div>
-        //     );
-        // }
+    console.log("showroomIdNumber",showRoomDetails)
+       
     useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
         setShowRoomDetails({
@@ -66,6 +54,7 @@ const ShowRoomDetails: React.FC = () => {
             phoneNumber: queryParams.get('phoneNumber') || '',
             state: queryParams.get('state') || '',
             district: queryParams.get('district') || '',
+            showroomIdNumber:queryParams.get('showroomIdNumber') || '',
             uid: queryParams.get('uid') || '',
         });
     }, [location.search]);
@@ -86,123 +75,116 @@ const ShowRoomDetails: React.FC = () => {
         });
     };
 
-    const handleNavigation = () => {
-        console.log("Name:", formData.name);
-        console.log("Phone Number:", formData.phoneNumber);
+
     
-        navigate('/addbook', { 
-            state: { 
-                uid: showRoomDetails?.uid, 
-                showroomId: showRoomDetails?.id,
-                name: formData.name, 
-                phoneNumber: formData.phoneNumber 
-            } 
+// -----------------------------------------------------------------------------------------
+const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    const indianPhoneNumberRegex = /^[6-9]\d{9}$/;
+
+    if (!indianPhoneNumberRegex.test(formData.phoneNumber)) {
+        setErrorMessage('Please enter a valid 10-digit Indian mobile number.');
+        return;
+    }
+
+    if (!showRoomDetails.id || !showRoomDetails.uid) return;
+
+    try {
+        const staffCollectionRef = collection(db, `user/${showRoomDetails.uid}/showroomStaff`);
+
+        // Check if the phone number already exists
+        const q = query(staffCollectionRef, where('phoneNumber', '==', formData.phoneNumber));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            setErrorMessage('The mobile number is already registered.');
+            return;
+        }
+
+        // Add the new staff member
+        await addDoc(staffCollectionRef, {
+            name: formData.name,
+            phoneNumber: formData.phoneNumber,
+            whatsappNumber: formData.whatsappNumber,
+            designation: formData.designation,
+            showroomId: showRoomDetails.id, // Store showroom ID for reference
+
+            uid: showRoomDetails.uid, // Store user ID for reference
         });
-    };
-    
 
-    const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setErrorMessage(null);
-        const indianPhoneNumberRegex = /^[6-9]\d{9}$/;
+        Swal.fire({
+            icon: 'success',
+            title: 'Registered successfully!',
+            showConfirmButton: false,
+            timer: 3000,
+        });
 
-        if (!indianPhoneNumberRegex.test(formData.phoneNumber)) {
-            setErrorMessage('Please enter a valid 10-digit Indian mobile number.');
-            return;
+        setFormData({ name: '', phoneNumber: '', designation: '', whatsappNumber: '' });
+        setIsSignIn(true);
+
+        sessionStorage.setItem('staffId', querySnapshot.docs[0].id);
+        navigate('/addbook', {
+            state: {
+                uid: showRoomDetails?.uid,
+                showroomId: showRoomDetails?.id,
+                name: formData.name,
+                phoneNumber: formData.phoneNumber,
+                showroomIdNumber: showRoomDetails?.showroomIdNumber, // Store showroom ID for reference
+
+            },
+        });
+    } catch (error) {
+        setErrorMessage('An error occurred while adding the staff.');
+    }
+};
+
+
+const handleSignInSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    const indianPhoneNumberRegex = /^[6-9]\d{9}$/;
+
+    if (!indianPhoneNumberRegex.test(signInData.phoneNumber)) {
+        setErrorMessage('Please enter a valid 10-digit Indian mobile number.');
+        return;
+    }
+
+    try {
+        const staffCollectionRef = collection(db, `user/${showRoomDetails.uid}/showroomStaff`);
+        const q = query(staffCollectionRef, where('phoneNumber', '==', signInData.phoneNumber));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            const staffData = querySnapshot.docs[0].data();
+console.log("staffData",staffData)
+            // Store staff info in sessionStorage
+            sessionStorage.setItem('staffId', querySnapshot.docs[0].id);
+            // sessionStorage.setItem('staffName', staffData.name);
+            sessionStorage.setItem('showroomIdNumber', showRoomDetails.showroomIdNumber);
+            sessionStorage.setItem('showroomId', showRoomDetails.id);
+            sessionStorage.setItem('uid', showRoomDetails.uid);
+            
+            navigate('/addbook', {
+                state: {
+                    // uid: showRoomDetails?.uid,
+                    // showroomId: showRoomDetails?.id,
+                    phoneNumber: signInData.phoneNumber,
+                },
+            });
+        } else {
+            setErrorMessage('Phone number is not registered.');
         }
+    } catch (error) {
+        setErrorMessage('An error occurred during sign-in.');
+    }
+};
 
-        if (!showRoomDetails.id || !showRoomDetails.uid) return;
-        try {
-            const showroomCollectionRef = collection(db, `user/${showRoomDetails.uid}/showroom`);
-            const q = query(showroomCollectionRef, where('showroomId', '==', showRoomDetails.id));
-
-            const querySnapshot = await getDocs(q);
-
-            if (querySnapshot.empty) return;
-
-            const documentRef = doc(db, `user/${showRoomDetails.uid}/showroom/${querySnapshot.docs[0].id}`);
-
-            const docSnap = await getDoc(documentRef);
-
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                const isPhoneAlreadyUsed = data.staff?.some((staffMember: { phoneNumber: string }) => staffMember.phoneNumber === formData.phoneNumber);
-
-                if (isPhoneAlreadyUsed) {
-                    setErrorMessage('The mobile number is already registered.');
-                    return;
-                }
-
-                await updateDoc(documentRef, {
-                    staff: arrayUnion(formData),
-                });
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Registered successfully!',
-                    showConfirmButton: false,
-                    timer: 3000,
-                });
-                setFormData({ name: '', phoneNumber: '' })
-                setIsSignIn(true);
-                navigate('/addbook', { 
-                    state: { 
-                        uid: showRoomDetails?.uid, 
-                        showroomId: showRoomDetails?.id,
-                        name: formData.name, 
-                        phoneNumber: formData.phoneNumber 
-                    } 
-                });
-            } else {
-                setErrorMessage('No such document!');
-            }
-        } catch (error) {
-            setErrorMessage('An error occurred while adding the document.');
-        }
-    };
-
-    const handleSignInSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setErrorMessage(null);
-        const indianPhoneNumberRegex = /^[6-9]\d{9}$/;
-
-        if (!indianPhoneNumberRegex.test(signInData.phoneNumber)) {
-            setErrorMessage('Please enter a valid 10-digit Indian mobile number.');
-            return;
-        }
-
-        try {
-            // Add your sign-in logic here (you might want to query the database to check if the phone number exists).
-            // For example:
-            const showroomCollectionRef = collection(db, `user/${showRoomDetails.uid}/showroom`);
-            const q = query(showroomCollectionRef, where('showroomId', '==', showRoomDetails.id));
-
-            const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty) {
-                // Verify phone number in your sign-in logic
-                const docRef = querySnapshot.docs[0];
-                const data = docRef.data();
-                const isPhoneExists = data.staff?.some((staffMember: { phoneNumber: string }) => staffMember.phoneNumber === signInData.phoneNumber);
-
-                if (isPhoneExists) {
-                    // Redirect to dashboard or desired page
-                    navigate('/addbook', { 
-                        state: { 
-                            uid: showRoomDetails?.uid, 
-                            showroomId: showRoomDetails?.id,
-                            phoneNumber: signInData.phoneNumber // Pass the phone number
-                        } 
-                    });
-                                } else {
-                    setErrorMessage('Phone number is not registered.');
-                }
-            }
-        } catch (error) {
-            setErrorMessage('An error occurred during sign-in.');
-        }
-    };
 
     return (
+        
         <div className="showroom-details-container">
+           
             <div className="showroom-header">
                 <h1>{showRoomDetails.name}</h1>
             </div>
@@ -255,7 +237,11 @@ const ShowRoomDetails: React.FC = () => {
                                 <label htmlFor="name">Name:</label>
                                 <input type="text" id="name" name="name" value={formData.name} onChange={handleFormChange} required />
                                 <label htmlFor="phoneNumber">Phone Number:</label>
-                                <input type="number" id="phoneNumber" name="phoneNumber" value={formData.phoneNumber} onChange={handleFormChange} required />
+                                <input type="text" id="phoneNumber" name="phoneNumber" value={formData.phoneNumber} onChange={handleFormChange} required />
+                                <label htmlFor="designation">Designation:</label>
+                                <input type="text" id="designation" name="designation" value={formData.designation} onChange={handleFormChange} required />
+                                <label htmlFor="whatsappNumber">Whatsapp Number:</label>
+                                <input type="text" id="whatsappNumber" name="whatsappNumber" value={formData.whatsappNumber} onChange={handleFormChange} required />
                                 {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
                                 <button type="submit">Submit</button>
                             </form>

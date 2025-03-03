@@ -41,13 +41,16 @@ const ReceiveDetailsTable: React.FC<{ uid: string }> = ({ uid }) => {
 
   const formatTimestamp = (timestamp: Timestamp | { seconds: number; nanoseconds: number }): string => {
     if (timestamp instanceof Timestamp) {
-      return timestamp.toDate().toLocaleString();
+      const date = timestamp.toDate();
+      return `${date.toLocaleDateString('en-GB')} ${date.toLocaleTimeString('en-US')}`;
     }
     if (timestamp && timestamp.seconds) {
-      return new Date(timestamp.seconds * 1000).toLocaleString();
+      const date = new Date(timestamp.seconds * 1000);
+      return `${date.toLocaleDateString('en-GB')} ${date.toLocaleTimeString('en-US')}`;
     }
     return 'Invalid Date';
   };
+  
 
   const filteredData = receiveDetailsData.filter((item) => {
     const timestampString = formatTimestamp(item.timestamp).toLowerCase();

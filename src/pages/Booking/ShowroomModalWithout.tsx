@@ -31,7 +31,9 @@ interface Showroom {
     const [img, setImg] = useState<string>('');
     const [locationName, setLocationName] = useState<string>('');
     const [locationCoords, setLocationCoords] = useState<{ lat: string; lng: string }>({ lat: '', lng: '' });
-  
+      const [latLng, setLatLng] = useState('');
+  const [lat, setLat] = useState<string>('');
+      const [lng, setLng] = useState<string>('');
     const db = getFirestore();
     const uid = sessionStorage.getItem('uid') || '';
   
@@ -115,10 +117,33 @@ interface Showroom {
         const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName)}`;
         window.open(googleMapsUrl, '_blank');
     };
-
+    const handleLatLngChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const { value } = event.target;
+        setLatLng(value);  // Update latLng state
+    
+        // Split input into latitude and longitude
+        const [inputLat, inputLng] = value.split(',').map(coord => coord.trim());
+    
+        // Validate and parse latitude and longitude
+        const parsedLat = parseFloat(inputLat);
+        const parsedLng = parseFloat(inputLng);
+    
+        if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+            setLat(parsedLat.toString());
+            setLng(parsedLng.toString());
+            setLocationCoords({ lat: parsedLat.toString(), lng: parsedLng.toString() }); // Update locationCoords
+        }
+    };
+    
     return (
-        <div className="showroom-modal">
-            <div  className="showroom-form">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white w-full max-w-lg rounded-lg shadow-lg p-6 relative">
+            <button
+                onClick={onClose}
+                className="absolute top-2 right-2 text-gray-600 hover:text-gray-900"
+            >
+                ✕
+            </button>
                 <div className="form-group">
                     <label htmlFor="showRoom">Showroom Name:</label>
                     <TextField
@@ -145,25 +170,20 @@ interface Showroom {
                     </div>
                 </div>
                 <div className="form-group">
-                    <label htmlFor="lat">Latitude:</label>
-                    <TextField
-                        value={locationCoords.lat}
-                        onChange={(e) => setLocationCoords({ ...locationCoords, lat: e.target.value })}
-                        variant="outlined"
-                        label="Latitude"
-                        fullWidth
-                    />
-                </div>
-                <div className="form-group">
-                    <label htmlFor="lng">Longitude:</label>
-                    <TextField
-                        value={locationCoords.lng}
-                        onChange={(e) => setLocationCoords({ ...locationCoords, lng: e.target.value })}
-                        variant="outlined"
-                        label="Longitude"
-                        fullWidth
-                    />
-                </div>
+        <label htmlFor="latLng">Latitude and Longitude:</label>
+        <TextField
+    label="Latitude, Longitude"
+    value={latLng}  // Ensure the input reflects the updated value
+    onChange={handleLatLngChange}
+    placeholder="e.g., 40.7128, -74.0060"
+    fullWidth
+    variant="outlined"
+    className="bg-white"
+/>
+
+
+
+    </div>
                 <div className="form-group">
                     <label htmlFor="description">Description:</label>
                     <textarea

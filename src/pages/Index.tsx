@@ -1,25 +1,33 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { IRootState } from '../store';
 import ReactApexChart from 'react-apexcharts';
 import { getFirestore, collection, onSnapshot, Timestamp, updateDoc, doc } from 'firebase/firestore';
 import './Index.css';
 import { format } from 'date-fns'; // You can use date-fns to format the current date.
+import IndexModal from "./IndexModal"; // Import your modal
 
 const Index = () => {
     const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
     const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass === 'rtl');
     const db = getFirestore();
+    const navigate = useNavigate(); // Initialize useNavigate
+
     const uid = sessionStorage.getItem('uid');
     const role = sessionStorage.getItem('role');
     const userName = sessionStorage.getItem('username');
+    // -------------------------------------------------------------------
     const [notifications, setNotifications] = useState<
-    { id: string; message: string; field: "taxDue" | "insuranceDue" }[]
+    { id: string; message: string; field: "taxDue" | "insuranceDue" | "pollutionDue" | "emiDue" }[]
   >([]);
+  
   const [newNotifications, setNewNotifications] = useState<
   { message: string; id: string; field:  "vehicleServiceDue" }[]
 >([]);
+const [showConfirmModal, setShowConfirmModal] = useState(false);
+const [selectedNotification, setSelectedNotification] = useState<{ id: string; field: "taxDue" | "insuranceDue" | "pollutionDue" | "emiDue" } | null>(null);
+
 const staffRole = sessionStorage.getItem('staffRole');
 console.log("staffRole",staffRole)
       const [dismissedIds, setDismissedIds] = useState<string[]>([]);
@@ -210,84 +218,92 @@ console.log("staffRole",staffRole)
     useEffect(() => {
         const fetchTaxInsuranceData = () => {
             const unsubscribe = onSnapshot(collection(db, `user/${uid}/taxInsurance`), (querySnapshot) => {
-                let notificationsList: { id: string; message: string; field: "taxDue" | "insuranceDue" }[] = [];
+                let notificationsList: { id: string; message: string; field: "taxDue" | "insuranceDue" | "pollutionDue" | "emiDue" }[] = [];
                 let dismissedMap: Record<string, boolean> = {}; // Track dismissed statuses
     
                 querySnapshot.forEach((docSnap) => {
                     const data = docSnap.data();
-                    const docRef = doc(db, `user/${uid}/taxInsurance`, docSnap.id); // Reference to document
-    
-                    let insuranceExpiryDate = data.insuranceExpiryDate instanceof Timestamp
-                        ? data.insuranceExpiryDate.toDate()
-                        : new Date(data.insuranceExpiryDate);
-    
-                    let taxExpiryDate = data.taxExpiryDate instanceof Timestamp
-                        ? data.taxExpiryDate.toDate()
-                        : new Date(data.taxExpiryDate);
+                    const docRef = doc(db, `user/${uid}/taxInsurance`, docSnap.id);
     
                     const currentDate = new Date();
-                    currentDate.setHours(0, 0, 0, 0); // Normalize time for date comparison
-                    insuranceExpiryDate.setHours(0, 0, 0, 0);
-                    taxExpiryDate.setHours(0, 0, 0, 0);
+                    currentDate.setHours(0, 0, 0, 0);
     
                     const fiveDaysBefore = new Date();
-                    fiveDaysBefore.setDate(currentDate.getDate() + 5);
+                    fiveDaysBefore.setDate(currentDate.getDate() + 7);
     
                     let updateData: any = {};
     
-                    // Insurance Expiry Notification
-                    if (insuranceExpiryDate <= fiveDaysBefore && !data.insuranceDue && !data.insuranceDueDismissed) {
-                        updateData.insuranceDue = true; // Mark insurance as due
-                    }
-                    if (data.insuranceDue && !dismissedIds.includes(docSnap.id)) {
-                        notificationsList.push({
-                            id: docSnap.id,
-                            message: `⚠️ Insurance for vehicle ${data.vehicleNumber} is expiring soon! Expiry Date: ${insuranceExpiryDate.toLocaleDateString()}`,
-                            field: "insuranceDue",
-                        });
+                    // Function to generate messages based on expiry date
+                    const getExpiryMessage = (expiryDate: Date, type: string) => {
+                        if (expiryDate > currentDate && expiryDate <= fiveDaysBefore) {
+                            return `⚠️ ${type} for vehicle ${data.vehicleNumber} is expiring soon! Expiry Date: ${expiryDate.toLocaleDateString()}`;
+                        } else if (expiryDate.getTime() === currentDate.getTime()) {
+                            return `${type} for vehicle ${data.vehicleNumber} is expiring today! Expiry Date: ${expiryDate.toLocaleDateString()}`;
+                        } else if (expiryDate < currentDate) {
+                            return `${type} for vehicle ${data.vehicleNumber} is expired! Expiry Date: ${expiryDate.toLocaleDateString()}`;
+                        }
+                        return null;
+                    };
+    
+                    // 🏷 Tax Notification Logic
+                    let taxExpiryDate = data.taxExpiryDate instanceof Timestamp ? data.taxExpiryDate.toDate() : new Date(data.taxExpiryDate);
+                    taxExpiryDate.setHours(0, 0, 0, 0);
+    
+                    if (!data.taxDueDismissed) {
+                        let taxMessage = getExpiryMessage(taxExpiryDate, "Tax");
+                        if (taxMessage) {
+                            updateData.taxDue = true;
+                            notificationsList.push({ id: docSnap.id, message: taxMessage, field: "taxDue" });
+                        }
                     }
     
-                    // Tax Expiry Notification
-                    if (taxExpiryDate <= fiveDaysBefore && !data.taxDue && !data.taxDueDismissed) {
-                        updateData.taxDue = true; // Mark tax as due
-                    }
-                    if (data.taxDue && !dismissedIds.includes(docSnap.id)) {
-                        notificationsList.push({
-                            id: docSnap.id,
-                            message: `⚠️ Tax for vehicle ${data.vehicleNumber} is expiring soon! Expiry Date: ${taxExpiryDate.toLocaleDateString()}`,
-                            field: "taxDue",
-                        });
+                    // 🏷 Insurance Notification Logic
+                    let insuranceExpiryDate = data.insuranceExpiryDate instanceof Timestamp ? data.insuranceExpiryDate.toDate() : new Date(data.insuranceExpiryDate);
+                    insuranceExpiryDate.setHours(0, 0, 0, 0);
+    
+                    if (!data.insuranceDueDismissed) {
+                        let insuranceMessage = getExpiryMessage(insuranceExpiryDate, "Insurance");
+                        if (insuranceMessage) {
+                            updateData.insuranceDue = true;
+                            notificationsList.push({ id: docSnap.id, message: insuranceMessage, field: "insuranceDue" });
+                        }
                     }
     
-                    // **New Condition: Exact Expiry Date Check**
-                    if (insuranceExpiryDate.getTime() === currentDate.getTime()) {
-                        notificationsList.push({
-                            id: docSnap.id,
-                            message: `🚨 Insurance for vehicle ${data.vehicleNumber} is expiring Today!`,
-                            field: "insuranceDue",
-                        });
-                    }
-                    if (taxExpiryDate.getTime() === currentDate.getTime()) {
-                        notificationsList.push({
-                            id: docSnap.id,
-                            message: `🚨 Tax for vehicle ${data.vehicleNumber} is expiring Today!`,
-                            field: "taxDue",
-                        });
+                    // 🏷 Pollution Notification Logic
+                    let pollutionExpiryDate = data.pollutionExpiryDate instanceof Timestamp ? data.pollutionExpiryDate.toDate() : new Date(data.pollutionExpiryDate);
+                    pollutionExpiryDate.setHours(0, 0, 0, 0);
+    
+                    if (!data.pollutionDueDismissed) {
+                        let pollutionMessage = getExpiryMessage(pollutionExpiryDate, "Pollution check");
+                        if (pollutionMessage) {
+                            updateData.pollutionDue = true;
+                            notificationsList.push({ id: docSnap.id, message: pollutionMessage, field: "pollutionDue" });
+                        }
                     }
     
-                    // Store dismissed status in state
-                    dismissedMap[docSnap.id] = data.taxDueDismissed || data.insuranceDueDismissed;
+                    // 🏷 EMI Notification Logic
+                    let emiExpiryDate = data.emiExpiryDate instanceof Timestamp ? data.emiExpiryDate.toDate() : new Date(data.emiExpiryDate);
+                    emiExpiryDate.setHours(0, 0, 0, 0);
     
-                    // Update Firestore only if changes exist
+                    if (!data.emiDueDismissed) {
+                        let emiMessage = getExpiryMessage(emiExpiryDate, "EMI");
+                        if (emiMessage) {
+                            updateData.emiDue = true;
+                            notificationsList.push({ id: docSnap.id, message: emiMessage, field: "emiDue" });
+                        }
+                    }
+    
+                    dismissedMap[docSnap.id] = data.taxDueDismissed || data.insuranceDueDismissed || data.pollutionDueDismissed || data.emiDueDismissed;
+    
                     if (Object.keys(updateData).length > 0) {
                         updateDoc(docRef, updateData)
-                            .then(() => console.log(`Updated tax/insurance due for ${data.vehicleNumber}`))
+                            .then(() => console.log(`Updated due status for ${data.vehicleNumber}`))
                             .catch((error) => console.error("Error updating due status:", error));
                     }
                 });
     
                 setNotifications(notificationsList);
-                setDismissedStatus(dismissedMap); // Store dismissed status
+                setDismissedStatus(dismissedMap);
             });
     
             return () => unsubscribe();
@@ -297,22 +313,26 @@ console.log("staffRole",staffRole)
     }, [db, uid, dismissedIds]);
     
     
-    const handleCloseNotification = async (id: string, field: "taxDue" | "insuranceDue") => {
+    const handleCloseNotification = async (id: string, field: "taxDue" | "insuranceDue" | "emiDue" | "pollutionDue") => {
         try {
+            const dismissedBy = role === "admin" ? role : `${role} ${userName}`; // Exclude userName if role is "admin"
+
             const recordRef = doc(db, `user/${uid}/taxInsurance`, id);
-            const dismissedField = field === "taxDue" ? "taxDueDismissed" : "insuranceDueDismissed";
+            await updateDoc(recordRef, { [`${field}Dismissed`]: true, [field]: false, 
+                [`${field}DismissedBy`]: dismissedBy   });
     
-            await updateDoc(recordRef, { 
-                [field]: false, 
-                [dismissedField]: true // Mark as dismissed 
-            });
-    
-            setDismissedIds((prev) => [...prev, id]); // Track dismissed IDs
-            setNotifications((prev) => prev.filter((n) => n.id !== id)); // Remove from UI
-            setDismissedStatus((prev) => ({ ...prev, [id]: true })); // Update dismissed state
+            setDismissedIds((prev) => [...prev, id]);
+            setNotifications((prev) => prev.filter((notification) => notification.id !== id));
+            navigate("/taxandinsurance"); 
         } catch (error) {
-            console.error("Error updating due status:", error);
+            console.error("Error dismissing notification:", error);
         }
+    };
+    
+   
+    const confirmCloseNotification = (id: string, field: "taxDue" | "insuranceDue" | "emiDue" | "pollutionDue") => {
+        setSelectedNotification({ id, field });
+        setShowConfirmModal(true);
     };
     
 // ---------------------------------------------------
@@ -352,24 +372,49 @@ console.log("staffRole",staffRole)
                             <p className="text-2xl">{salesByCategory.series[3]}</p>
                         </div>
                     </div>
+                    
                     <>
-    {notifications.map((note, index) => (
-        !dismissedStatus[note.id] && (
-            <div key={index} className="notification blink bg-yellow-500 text-white p-3 rounded-lg mb-4">
-                {note.message}
-                {(role === 'admin' || staffRole === 'secondary admin'|| staffRole === 'verifier') && (
+                    {notifications.map((notification) => (
+    <div
+        key={notification.id}
+        className={`notification ${
+            notification.field === "taxDue" ? "taxDue" :
+            notification.field === "insuranceDue" ? "insuranceDue" :
+            notification.field === "emiDue" ? "emiDue" :
+            "pollutionDue"
+        }`}
+    >
+        <p>🔔 {notification.message}</p>
+        {(role === 'admin' || staffRole === 'secondary admin'|| staffRole === 'verifier') && (
 
-                <button 
-                    className="ml-4 bg-red-500 px-3 py-1 rounded"
-                    onClick={() => handleCloseNotification(note.id, note.field)}
-                >
-                    Close
-                </button>
-                )}
-            </div>
-        )
-    ))}
+        <button
+            onClick={() =>
+                confirmCloseNotification(notification.id, notification.field)
+            }
+        >
+            Dismiss
+        </button>
+        )}
+    </div>
+))}
+
+
+
+    {showConfirmModal && selectedNotification && (
+        <IndexModal
+            title="Confirm Dismissal"
+            message={`Are you sure you want to dismiss this ${
+                selectedNotification.field === "taxDue" ? "Tax" : "Insurance"
+            } notification?`}
+            onConfirm={() => {
+                handleCloseNotification(selectedNotification.id, selectedNotification.field);
+                setShowConfirmModal(false);
+            }}
+            onCancel={() => setShowConfirmModal(false)}
+        />
+    )}
 </>
+
 
 
 <div>

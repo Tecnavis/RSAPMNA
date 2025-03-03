@@ -9,6 +9,7 @@ import ConfirmationModal from './ConfirmationModal';
 import ConfirmationModal1 from './ConfirmationModal1';
 import IconPrinter from '../../components/Icon/IconPrinter';
 import './Print.css'
+import SalaryModal from './SalaryModal';
 interface Booking {
     id: string;
     fileNumber: string;
@@ -72,9 +73,12 @@ const SalaryReport: React.FC = () => {
     const [showAdvanceTable, setShowAdvanceTable] = useState<boolean>(false);
     const role = sessionStorage.getItem('role');
     const userName = sessionStorage.getItem('username');
-//    ----------------------------------------------------------------------
 const [netTotalAmountInHand, setNetTotalAmountInHand] = useState<number>(0);
-// -----------
+// -------------------------------------------------------------------
+const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
+const [enteredSalary, setEnteredSalary] = useState<number>(0);
+const [enteredTransactionId, setEnteredTransactionId] = useState<string>('');
+
 const [currentPage, setCurrentPage] = useState(1);
 const [showAll, setShowAll] = useState(true); // Start by showing all bookings
 const itemsPerPage = 10;
@@ -344,62 +348,81 @@ const itemsPerPage = 10;
         }
         return false;
     };
-
-    const handleConfirm = async () => {
-        if (promptForTotalSalaryConfirmation()) {
-            try {
-                const updatePromises = selectedBookings.map(async (bookingId) => {
-                    const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
-                    const bookingSnapshot = await getDoc(bookingRef);
-
-                    if (bookingSnapshot.exists()) {
-                        const bookingData = bookingSnapshot.data();
-
-                        const totalDriverSalary = bookingData?.totalDriverSalary || 0;
-                        const transferedSalary = totalDriverSalary;
-                        const balanceSalary = 0;
-                        const salaryApproved = true; // Set salaryApproved status to true
-
-                        await updateDoc(bookingRef, {
-                            transferedSalary,
-                            balanceSalary,
-                            salaryApproved, // Add this line to update the status
-                        });
-
-                        return { id: bookingSnapshot.id,totalDriverSalary, transferedSalary, balanceSalary, salaryApproved };
-                    } else {
-                        console.log(`No booking found with ID: ${bookingId}`);
-                        return null;
-                    }
-                });
-
-                const updatedBookings = await Promise.all(updatePromises);
-                const filteredBookings = updatedBookings.filter((booking) => booking !== null);
-
-                // Update local state after successful updates
-                setBookings((prevBookings) =>
-                    prevBookings.map((booking) => {
-                        const updatedBooking = filteredBookings.find((updatedBooking) => updatedBooking?.id === booking.id);
-                        return updatedBooking
-                            ? { ...booking, transferedSalary: updatedBooking.totalDriverSalary, balanceSalary: 0, salaryApproved: true }
-                            : booking;
-                    })
-                );
-                
-
-                setSelectedBookings([]); // Clear selected bookings after confirmation
-
-                alert('Salaries confirmed successfully.');
-                setIsConfirmed(true);
-
-                // Call handleGenerateInvoice to open the invoice modal with selected bookings
-                handleGenerateInvoice();
-            } catch (error) {
-                console.error('Error confirming salaries:', error);
-                alert('Error confirming salaries. Please try again.');
-            }
+    const handleConfirmClick  = () => {
+        setIsSalaryModalOpen(true);
+    };
+    
+    const handleSalaryConfirm = async (salaryAmount: number, transactionId: string) => {
+        setIsSalaryModalOpen(false);
+    
+        const calculatedTotalSalary = calculateSelectedTotalSalary();
+    
+        if (salaryAmount !== calculatedTotalSalary) {
+            alert('Entered salary does not match the calculated total salary. Please try again.');
+            return;
+        }
+    
+        try {
+            const updatePromises = selectedBookings.map(async (bookingId) => {
+                const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
+                const bookingSnapshot = await getDoc(bookingRef);
+    
+                if (bookingSnapshot.exists()) {
+                    const bookingData = bookingSnapshot.data();
+    
+                    const totalDriverSalary = bookingData?.totalDriverSalary || 0;
+                    const transferedSalary = totalDriverSalary;
+                    const balanceSalary = 0;
+                    const salaryApproved = true; // Set salaryApproved status to true
+    
+                    await updateDoc(bookingRef, {
+                        transferedSalary,
+                        balanceSalary,
+                        salaryApproved, // Add this line to update the status
+                    });
+    
+                    return { id: bookingSnapshot.id, totalDriverSalary, transferedSalary, balanceSalary, salaryApproved };
+                } else {
+                    console.log(`No booking found with ID: ${bookingId}`);
+                    return null;
+                }
+            });
+    
+            // Add salary details to Firestore
+            const salaryDetailsRef = collection(db, `user/${uid}/salaryDetails`);
+            await addDoc(salaryDetailsRef, {
+                driverId: id,  // Driver's ID
+                salaryAmount,
+                transactionId,
+                timestamp: serverTimestamp(),
+            });
+    
+            const updatedBookings = await Promise.all(updatePromises);
+            const filteredBookings = updatedBookings.filter((booking) => booking !== null);
+    
+            // Update local state after successful updates
+            setBookings((prevBookings) =>
+                prevBookings.map((booking) => {
+                    const updatedBooking = filteredBookings.find((updatedBooking) => updatedBooking?.id === booking.id);
+                    return updatedBooking
+                        ? { ...booking, transferedSalary: updatedBooking.totalDriverSalary, balanceSalary: 0, salaryApproved: true }
+                        : booking;
+                })
+            );
+    
+            setSelectedBookings([]); // Clear selected bookings after confirmation
+    
+            alert('Salaries confirmed successfully.');
+            setIsConfirmed(true);
+    
+            // Call handleGenerateInvoice to open the invoice modal with selected bookings
+            handleGenerateInvoice();
+        } catch (error) {
+            console.error('Error confirming salaries:', error);
+            alert('Error confirming salaries. Please try again.');
         }
     };
+    
 
     const handleGenerateInvoice = () => {
         setShowInvoiceModal(true);
@@ -1302,6 +1325,11 @@ const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
           <IconPrinter />
         </button>
       </div>
+      <SalaryModal
+    open={isSalaryModalOpen}
+    onClose={() => setIsSalaryModalOpen(false)}
+    onConfirm={handleSalaryConfirm}
+/>
 
             {selectedBookings.length > 0 && (
                 <div className="mt-5">
@@ -1340,7 +1368,7 @@ const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
                         <div>
                             <button
                                 className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg mr-3 ${isConfirmed ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                onClick={handleConfirm}
+                                onClick={handleConfirmClick}
                                 disabled={isConfirmed}
                             >
                                 Confirm
