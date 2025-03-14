@@ -38,6 +38,7 @@ const ShowroomStaffReward: React.FC = () => {
   const phone = sessionStorage.getItem('phoneNumber'); // Assuming staff's phone number is stored here
 console.log("staffId",staffId)
   const db = getFirestore();
+  const [claimedRewards, setClaimedRewards] = useState<any[]>([]);
 
   // Fetch rewards for showroom staff from Firestore
   const fetchRewards = async () => {
@@ -82,51 +83,102 @@ console.log("staffId",staffId)
     }
   };
   
+  const fetchClaimedRewards = async () => {
+    if (!uid || !staffId) {
+      console.error('uid or staffId is null');
+      return;
+    }
+  
+    try {
+      const claimedRewardsRef = collection(db, `user/${uid}/showroomStaff/${staffId}/claimedRewards`);
+      const querySnapshot = await getDocs(claimedRewardsRef);
+  
+      const claimedRewardsData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+  
+      setClaimedRewards(claimedRewardsData);
+    } catch (error) {
+      console.error('Error fetching claimed rewards:', error);
+    }
+  };
+  
   useEffect(() => {
     fetchRewards();
     fetchStaffRewardPoints();
+    fetchClaimedRewards();
     setLoading(false);
   }, [db, uid, showroomId, staffId]);
   
+  
 
-  // Handler to claim reward (update reward points and stock)
   const handleClaimReward = async (item: RewardItem) => {
     try {
-      // For this example, we simulate a successful claim:
-      console.log('Claiming reward for item:', item.name);
-      setSuccessMessage(`Successfully claimed ${item.name}!`);
+        console.log('Claiming reward for item:', item.name);
+        setSuccessMessage(`Successfully claimed ${item.name}!`);
 
-      // Update local rewards list to reduce stock
-      setRewards((prevRewards) =>
-        prevRewards.map((reward) =>
-          reward._id === item._id ? { ...reward, stock: reward.stock - 1 } : reward
-        )
-      );
-      setRewardPoints((prevPoints) => prevPoints - item.points);
- // Add the claim record to the "claimedStaffReward" collection
- const claimData = {
-    itemName: item.name,
-    itemPoints: item.points,
-    claimedDate: Timestamp.now(),
-    description: item.description,
-    category: item.category,
-    price: item.price,
-    itemImage: item.image || '',
-    staffId: staffId,  // track which staff claimed it
-    // Add other fields as needed
-  };
+        // Reduce stock and update UI
+        setRewards((prevRewards) =>
+            prevRewards.map((reward) =>
+                reward._id === item._id ? { ...reward, stock: reward.stock - 1 } : reward
+            )
+        );
+        setRewardPoints((prevPoints) => prevPoints - item.points);
 
-  await addDoc(collection(db, `user/${uid}/claimedStaffReward`), claimData);
+        // Claim data to be stored
+        const claimData = {
+            itemName: item.name,
+            itemPoints: item.points,
+            claimedDate: Timestamp.now(),
+            description: item.description,
+            category: item.category,
+            price: item.price,
+            itemImage: item.image || '',
+            staffId: staffId, // Track which staff claimed it
+        };
 
-      // Clear the success message after 2 seconds
-      setTimeout(() => {
-        setSuccessMessage(null);
-      }, 2000);
+        if (staffId) {
+            const claimedRewardsRef = collection(db, `user/${uid}/showroomStaff/${staffId}/claimedRewards`);
+            await addDoc(claimedRewardsRef, claimData);
+
+            // Step 1: Retrieve totalRedeemedPoints from all claimedRewards
+            const claimedRewardsSnapshot = await getDocs(claimedRewardsRef);
+            let totalRedeemedPoints = 0;
+            claimedRewardsSnapshot.forEach((doc) => {
+                totalRedeemedPoints += parseFloat(doc.data().itemPoints || 0);
+            });
+
+            // Step 2: Retrieve totalPoint from showroomStaff document
+            const staffDocRef = doc(db, `user/${uid}/showroomStaff`, staffId);
+            const staffSnapshot = await getDoc(staffDocRef);
+            const totalPoint = staffSnapshot.exists() ? staffSnapshot.data().totalPoint || 0 : 0;
+
+            // Step 3: Calculate rewardPoints
+            const rewardPoints = totalPoint - totalRedeemedPoints;
+
+            // Step 4: Update totalRedeemedPoints and rewardPoints in showroomStaff document
+            await updateDoc(staffDocRef, {
+                totalRedeemedPoints,
+                rewardPoints,
+            });
+
+            console.log(`Updated rewardPoints for staffId ${staffId}:`, rewardPoints);
+        } else {
+            console.error('staffId is null');
+        }
+
+        // Clear the success message after 2 seconds
+        setTimeout(() => {
+            setSuccessMessage(null);
+        }, 2000);
     } catch (error) {
-      console.error('Error claiming reward:', error);
-      setError('Failed to claim reward. Please try again.');
+        console.error('Error claiming reward:', error);
+        setError('Failed to claim reward. Please try again.');
     }
-  };
+};
+
+
 
   if (loading) {
     return (
@@ -257,6 +309,36 @@ console.log("staffId",staffId)
           })}
         </div>
       </div>
+      <div className="mt-8">
+  <h2 className="text-2xl font-bold text-center mb-4">Claimed Rewards History</h2>
+  {claimedRewards.length === 0 ? (
+    <p className="text-center text-gray-500">No rewards claimed yet.</p>
+  ) : (
+    <div className="max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {claimedRewards.map((reward, index) => (
+          <div key={index} className="bg-white rounded-lg shadow-md p-4">
+            <div className="flex items-center space-x-4">
+              {reward.itemImage && (
+                <div className="w-24 h-24">
+                  <img src={reward.itemImage} alt={reward.itemName} className="w-full h-full object-cover rounded-lg" />
+                </div>
+              )}
+              <div>
+                <h2 className="text-xl font-bold">{reward.itemName}</h2>
+                <p className="text-gray-700">Points Used: {reward.itemPoints}</p>
+                <p className="text-gray-500">Category: {reward.category}</p>
+                <p className="text-gray-500">Price: ₹{reward.price}</p>
+                <p className="text-gray-400 text-sm">Claimed on: {reward.claimedDate.toDate().toLocaleDateString()}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+</div>
+
     </div>
   );
 };

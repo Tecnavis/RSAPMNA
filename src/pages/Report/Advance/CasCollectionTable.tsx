@@ -10,6 +10,7 @@ interface DataType {
   amount: number;
   receivedAmount: number;
   balance: number;
+  currentNetAmount?: number;
   timestamp: Timestamp | { seconds: number; nanoseconds: number };
 }
 
@@ -115,7 +116,10 @@ const CashCollectionTable: React.FC<{ uid: string }> = ({ uid }) => {
                 <th>Date and Time</th>
                 <th>Driver Name</th>
                 <th>File Number</th>
-                <th>Amount</th>
+                <th>Initial Total Amount in Hand </th>
+
+                <th>Booking Amount</th>
+
                 <th>Collected Amount</th>
                 <th>Balance</th>
               </tr>
@@ -127,7 +131,10 @@ const CashCollectionTable: React.FC<{ uid: string }> = ({ uid }) => {
                   <td>{formatTimestamp(item.timestamp)}</td>
                   <td>{item.driver}</td>
                   <td>{Array.isArray(item.fileNumber) ? item.fileNumber.join(', ') : String(item.fileNumber)}</td>
+                  <td>₹{item.currentNetAmount}</td>
+
                   <td>₹{item.amount.toLocaleString()}</td>
+
                   <td>₹{item.receivedAmount.toLocaleString()}</td>
                   <td>₹{item.balance.toLocaleString()}</td>
                 </tr>

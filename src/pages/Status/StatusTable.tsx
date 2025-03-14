@@ -39,7 +39,9 @@ interface TabButtonProps {
     receivedUserStaff?: string;
     unPaidReceivedUser?: string;
     amount?: string;  // Ensure this exists
-
+    balance?: string | number;
+    givenAmount: string;
+    paymentType?:string;
 }
 
 interface Driver {
@@ -223,7 +225,7 @@ const StatusTable: React.FC = () => {
     const [selectedPaymentType, setSelectedPaymentType] = useState<'staff' | 'driver' | 'showroom'>('staff');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10; // Limit to 10 per page
-    
+    // ---------------------------------------------------
     useEffect(() => {
         const fetchBookingAmount = async () => {
             if (selectedBooking?.id) {
@@ -250,176 +252,190 @@ const StatusTable: React.FC = () => {
     };
     const handleSavePayment = async (paymentType: 'staff' | 'driver' | 'showroom') => { 
         if (selectedBooking && paymentAmount) {
-            try {
-                const updatedTotalSalary = selectedBooking.updatedTotalSalary;
-                const paymentAmountNumber = Number(paymentAmount);
-                let newAmount = String(paymentAmountNumber);
-    
-                const bookingRef = doc(db, `user/${uid}/bookings`, selectedBooking.id);
-                const bookingSnapshot = await getDoc(bookingRef);
-    
-                if (!bookingSnapshot.exists()) {
-                    console.error('Booking not found!');
-                    return;
-                }
-    
-                let paymentStatus: string = 'Unpaid'; // Declare paymentStatus
-                let updateData: Partial<BookingRecord> = {
-                    amount: newAmount,
-                    status: 'Order Completed',
-                    paymentStatus: 'Paid',
-                };
-                if (paymentType === 'showroom') {
-                    const bookingData = bookingSnapshot.data();
-                    const showroomId = bookingData?.showroomId;
-    
-                    if (!showroomId) {
-                        console.error('Showroom ID not found for this booking!');
-                        return;
-                    }
-    
-                    const showroomReceivedRef = collection(
-                        db,
-                        `user/${uid}/showroom/${showroomId}/showroomReceived`
-                    );
-    
-                    const existingEntryQuery = query(
-                        showroomReceivedRef,
-                        where('selectedBookingId', 'array-contains', selectedBooking.id)
-                    );
-                    const existingEntrySnapshot = await getDocs(existingEntryQuery);
-    
-                    if (!existingEntrySnapshot.empty) {
-                        // If an entry exists, update amount and append booking ID
-                        const existingEntryDoc = existingEntrySnapshot.docs[0];
-                        const existingData = existingEntryDoc.data();
-                        const existingAmount = existingData.amount || '0';
-                        const existingBookingIds = existingData.selectedBookingId || [];
-    
-                        newAmount = String(Number(newAmount) + Number(existingAmount));
-    
-                        const entryRef = doc(
-                            db,
-                            `user/${uid}/showroom/${showroomId}/showroomReceived`,
-                            existingEntryDoc.id
-                        );
-    
-                        await updateDoc(entryRef, {
-                            amount: newAmount,
-                            date: new Date().toISOString(),
-                            selectedBookingIds: [...new Set([...existingBookingIds, selectedBooking.id])],
-                        });
-                    } else {
-                        // Create a new document if no entry exists
-                        await addDoc(showroomReceivedRef, {
-                            amount: newAmount,
-                            date: new Date().toISOString(),
-                            selectedBookingIds: [selectedBooking.id],
-                        });
-                    }
-    
-                    updateData.receivedAmountShowroom = newAmount;
-                    updateData.receivedUserStaff = 'Showroom';
-                    updateData.receivedUser = 'Staff';
-                }
-    
-                await updateDoc(bookingRef, updateData);
-                if (paymentType === 'staff') {
-                    const userQuery = query(
-                        collection(db, `user/${uid}/users`),
-                        where('userName', '==', userName)
-                    );
-                    const userSnapshot = await getDocs(userQuery);
-    
-                    if (!userSnapshot.empty) {
-                        const userDoc = userSnapshot.docs[0];
-                        const staffReceivedRef = collection(
-                            db,
-                            `user/${uid}/users/${userDoc.id}/staffReceived`
-                        );
-    
-                        // Check if entry exists for the selectedBookingId
-                        const existingEntryQuery = query(
-                            staffReceivedRef,
-                            where('selectedBookingId', 'array-contains', selectedBooking.id)
-                        );
-                        const existingEntrySnapshot = await getDocs(existingEntryQuery);
-    
-                        if (!existingEntrySnapshot.empty) {
-                            // If an entry exists, update amount and append booking ID
-                            const existingEntryDoc = existingEntrySnapshot.docs[0];
-                            const existingData = existingEntryDoc.data();
-                            const existingAmount = existingData.amount || '0';
-                            const existingBookingIds = existingData.selectedBookingId || [];
-    
-                            newAmount = String(Number(newAmount) + Number(existingAmount));
-    
-                            const entryRef = doc(
-                                db,
-                                `user/${uid}/users/${userDoc.id}/staffReceived`,
-                                existingEntryDoc.id
-                            );
-    
-                            await updateDoc(entryRef, {
-                                amount: newAmount,
-                                date: new Date().toISOString(),
-                                selectedBookingIds: [...new Set([...existingBookingIds, selectedBooking.id])], 
-                            });
-                        } else {
-                            // Create a new document if no entry exists
-                            await addDoc(staffReceivedRef, {
-                                amount: newAmount,
-                                date: new Date().toISOString(),
-                                selectedBookingIds: [selectedBooking.id],
-                            });
-                        }
-                    }
-    
-                    // Determine payment status
-                    if (Number(newAmount) >= updatedTotalSalary) {
-                        paymentStatus = 'Paid';
-                    }
-    
-                    let unPaidReceivedUser = userName;
-                    let receivedUser = 'Staff';
-                    if (bookingSnapshot.exists()) {
-                        const bookingData = bookingSnapshot.data();
-                        if (bookingData.unPaidReceivedUser && bookingData.unPaidReceivedUser !== userName) {
-                            unPaidReceivedUser = 'Other';
-                        } else {
-                            receivedUser = 'Staff';
-                        }
-                    }
-    
-                    await updateDoc(bookingRef, {
-                        amount: newAmount,
-                        status: 'Order Completed',
-                        paymentStatus: paymentStatus,
-                        unPaidReceivedUser: unPaidReceivedUser,
-                        selectedBookingId: [selectedBooking.id],
-                        receivedAmountStaff: newAmount,
-                        receivedUser: receivedUser,
-                    });
-    
-                } else if (paymentType === 'driver') {
-                } else if (paymentType === 'showroom') {
-                    updateData.receivedAmountShowroom = newAmount;
-                    updateData.receivedUserStaff = 'Showroom';
-                    updateData.receivedUser = 'Staff';
-                }
-    
-                await updateDoc(bookingRef, updateData);
-    
-                // Reset modal and states
-                setShowPaymentModal(false);
-                setSelectedBooking(null);
-                setPaymentAmount('');
-            } catch (error) {
-                console.error('Error saving payment:', error);
+          try {
+            // Get the updated total salary and convert payment amount to number
+            const updatedTotalSalary = Number(selectedBooking.updatedTotalSalary);
+            const paymentAmountNumber = Number(paymentAmount);
+            // newAmount is a string representation of the payment received
+            let newAmount = String(paymentAmountNumber);
+            // Calculate balance (if needed)
+            const balance = updatedTotalSalary - paymentAmountNumber;
+      
+            const bookingRef = doc(db, `user/${uid}/bookings`, selectedBooking.id);
+            const bookingSnapshot = await getDoc(bookingRef);
+            
+            if (!bookingSnapshot.exists()) {
+              console.error('Booking not found!');
+              return;
             }
+            
+            // Declare updateData; its contents will depend on payment type
+            let updateData: Partial<BookingRecord> = {};
+      
+            if (paymentType === 'driver') {
+              if (paymentAmountNumber === updatedTotalSalary) {
+                updateData = {
+                    amount: String(updatedTotalSalary),
+                    status: 'Order Completed',
+                  paymentStatus: 'Paid',
+                  receivedAmount: newAmount,
+                  balance: balance, // Should be zero in this case
+                };
+              } else if (paymentAmountNumber < updatedTotalSalary) {
+                updateData = {
+                    givenAmount:newAmount,
+                  amount: String(updatedTotalSalary),
+                  status: 'Order Completed',
+                  paymentStatus: 'Not Paid',
+                  receivedAmount: newAmount,
+                  balance: balance,
+                  paymentType:'Partial Payment'
+                };
+              }
+            } else if (paymentType === 'showroom') {
+              // Process showroom-specific logic (fetch or update showroomReceived entries)
+              const bookingData = bookingSnapshot.data();
+              const showroomId = bookingData?.showroomId;
+              if (!showroomId) {
+                console.error('Showroom ID not found for this booking!');
+                return;
+              }
+              const showroomReceivedRef = collection(
+                db,
+                `user/${uid}/showroom/${showroomId}/showroomReceived`
+              );
+              const existingEntryQuery = query(
+                showroomReceivedRef,
+                where('selectedBookingId', 'array-contains', selectedBooking.id)
+              );
+              const existingEntrySnapshot = await getDocs(existingEntryQuery);
+          
+              if (!existingEntrySnapshot.empty) {
+                const existingEntryDoc = existingEntrySnapshot.docs[0];
+                const existingData = existingEntryDoc.data();
+                const existingAmount = Number(existingData.amount || '0');
+                const existingBookingIds = existingData.selectedBookingId || [];
+          
+                // Sum the amounts
+                newAmount = String(paymentAmountNumber + existingAmount);
+          
+                const entryRef = doc(
+                  db,
+                  `user/${uid}/showroom/${showroomId}/showroomReceived`,
+                  existingEntryDoc.id
+                );
+                await updateDoc(entryRef, {
+                  amount: newAmount,
+                  date: new Date().toISOString(),
+                  selectedBookingIds: [...new Set([...existingBookingIds, selectedBooking.id])],
+                });
+              } else {
+                await addDoc(showroomReceivedRef, {
+                  amount: newAmount,
+                  date: new Date().toISOString(),
+                  selectedBookingIds: [selectedBooking.id],
+                });
+              }
+          
+              // Set updateData for showroom payments
+              if (paymentAmountNumber === updatedTotalSalary) {
+                updateData = {
+                    amount: String(updatedTotalSalary),
+                    status: 'Order Completed',
+                  paymentStatus: 'Paid',
+                  receivedAmountShowroom: newAmount,
+                  receivedUserStaff: 'Showroom',
+                  receivedUser: 'Staff',
+                };
+              } else if (paymentAmountNumber < updatedTotalSalary) {
+                updateData = {
+                  amount: String(updatedTotalSalary),
+                  status: 'Order Completed',
+                  paymentStatus: 'Not Paid',
+                  receivedAmountShowroom: newAmount,
+                  receivedUserStaff: 'Showroom',
+                  receivedUser: 'Staff',
+                };
+              }
+            } else if (paymentType === 'staff') {
+              // Process staff-specific logic: fetch the user and update staffReceived collection
+              const userQuery = query(
+                collection(db, `user/${uid}/users`),
+                where('userName', '==', userName)
+              );
+              const userSnapshot = await getDocs(userQuery);
+          
+              if (!userSnapshot.empty) {
+                const userDoc = userSnapshot.docs[0];
+                const staffReceivedRef = collection(
+                  db,
+                  `user/${uid}/users/${userDoc.id}/staffReceived`
+                );
+                const existingEntryQuery = query(
+                  staffReceivedRef,
+                  where('selectedBookingId', 'array-contains', selectedBooking.id)
+                );
+                const existingEntrySnapshot = await getDocs(existingEntryQuery);
+          
+                if (!existingEntrySnapshot.empty) {
+                  const existingEntryDoc = existingEntrySnapshot.docs[0];
+                  const existingData = existingEntryDoc.data();
+                  const existingAmount = Number(existingData.amount || '0');
+                  const existingBookingIds = existingData.selectedBookingId || [];
+          
+                  newAmount = String(paymentAmountNumber + existingAmount);
+          
+                  const entryRef = doc(
+                    db,
+                    `user/${uid}/users/${userDoc.id}/staffReceived`,
+                    existingEntryDoc.id
+                  );
+                  await updateDoc(entryRef, {
+                    amount: newAmount,
+                    date: new Date().toISOString(),
+                    selectedBookingIds: [...new Set([...existingBookingIds, selectedBooking.id])],
+                  });
+                } else {
+                  await addDoc(staffReceivedRef, {
+                    amount: newAmount,
+                    date: new Date().toISOString(),
+                    selectedBookingIds: [selectedBooking.id],
+                  });
+                }
+              }
+          
+              // Set updateData for staff payments
+              if (paymentAmountNumber === updatedTotalSalary) {
+                updateData = {
+                    amount: String(updatedTotalSalary),
+                    status: 'Order Completed',
+                  paymentStatus: 'Paid',
+                  receivedAmount: newAmount,
+                  receivedUser: 'Staff',
+                };
+              } else if (paymentAmountNumber < updatedTotalSalary) {
+                updateData = {
+                  amount: String(updatedTotalSalary),
+                  status: 'Order Completed',
+                  paymentStatus: 'Not Paid',
+                  receivedAmount: newAmount,
+                };
+              }
+            }
+          
+            // Finally, update the booking document with updateData
+            await updateDoc(bookingRef, updateData);
+          
+            // Reset modal and states
+            setShowPaymentModal(false);
+            setSelectedBooking(null);
+            setPaymentAmount('');
+          } catch (error) {
+            console.error('Error saving payment:', error);
+          }
         }
-    };
-    
+      };
+      
     
     useEffect(() => {
         dispatch(setPageTitle('Status'));
@@ -561,7 +577,14 @@ const handlePrevPage = () => {
         // Use Intl.DateTimeFormat for proper formatting
         return new Intl.DateTimeFormat('en-IN', options).format(date);
     };
-    
+    useEffect(() => {
+        if (selectedBooking) {
+          // Calculate balance; adjust the formula as needed
+          const calculatedBalance = Number(selectedBooking.updatedTotalSalary) - Number(selectedBooking.balance || 0);
+          setPaymentAmount(String(calculatedBalance));
+        }
+      }, [selectedBooking]);
+      
     return (
         <Container>
             <Header>
@@ -787,19 +810,26 @@ const handlePrevPage = () => {
         <div className="mt-4">
             <label className="block">Payable Amount (By Customer):</label>
             <p className="font-semibold text-lg">
-                💵 {selectedBooking?.updatedTotalSalary ?? 0}
+                💵 { selectedBooking?.updatedTotalSalary}
             </p>
         </div>
-
-        <div className="mt-4">
+        {selectedBooking?.givenAmount && (
+                <div className="mt-2 p-2 text-blue-600 font-semibold text-lg bg-gray-100 rounded-md">
+                Given Amount: {selectedBooking?.givenAmount}
+            </div>
+        )}
+{selectedBooking?.paymentType !== "Partial Payment" && (
+            <div className="mt-4">
             <label className="block">Amount</label>
             <input
                 type="text"
-                value={paymentAmount}
+                value={paymentAmount || String(selectedBooking?.balance ?? 0)}
+
                 onChange={(e) => setPaymentAmount(e.target.value)}
                 className="border p-2 w-full"
             />
         </div>
+        )}
 
         {Number(paymentAmount) < (selectedBooking?.updatedTotalSalary ?? 0) && (
             <div className="mt-2 text-red-500">

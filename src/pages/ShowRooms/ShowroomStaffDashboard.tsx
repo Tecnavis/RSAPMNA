@@ -25,7 +25,7 @@ const ShowroomStaffDashboard: React.FC = () => {
     const showroomId = sessionStorage.getItem('showroomId');
     const uid = sessionStorage.getItem('uid');
     const db = getFirestore();
-
+console.log("staffId",uid)
     useEffect(() => {
         if (!uid || !showroomId || !staffId) {
             console.warn('Missing session storage values');
@@ -36,7 +36,7 @@ const ShowroomStaffDashboard: React.FC = () => {
         const fetchBookings = async () => {
             try {
                 const bookingsRef = collection(db, `user/${uid}/bookings`);
-                const q = query(bookingsRef, where('showroomId', '==', showroomId), where('createdBy', '==', 'showroomStaff'),orderBy('created' ,'desc'));
+                const q = query(bookingsRef, where('showroomId', '==', showroomId), where('createdBy', '==', 'showroomStaff'));
 
                 const querySnapshot = await getDocs(q);
                 const bookingList: Booking[] = querySnapshot.docs.map((doc) => {
@@ -61,6 +61,7 @@ const ShowroomStaffDashboard: React.FC = () => {
                 });
 
                 setBookings(bookingList);
+                console.log("bookingList",bookings)
             } catch (error) {
                 console.error('Error fetching bookings:', error);
             } finally {

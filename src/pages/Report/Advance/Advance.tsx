@@ -39,6 +39,7 @@ interface Booking {
     driver?: string; // Add this if `driver` exists in Firestore
     fileNumber?: string;
     receivedUser?: string;
+    reportRemark?: string; 
 }
 interface DataType {
     driver: string;
@@ -46,6 +47,7 @@ interface DataType {
     amount: number;
     receivedAmount: number;
     balance: number;
+    reportRemark?: string; 
 }
 
 interface Driver {
@@ -164,7 +166,7 @@ const distributeReceivedAmount = (receivedAmount: number | string, bookings: Boo
 
         const sortedBookings = bookings
             .filter(
-                (booking) => booking.status === 'Order Completed' && booking.companyBooking === false && booking.selectedDriver === selectedDriver &&  booking.amount > Number(booking.receivedAmount || 0)
+                (booking) => booking.status === 'Order Completed' && booking.companyBooking === false&& booking.receivedUser  !== "Staff" && booking.selectedDriver === selectedDriver &&  booking.amount > Number(booking.receivedAmount || 0)
             )
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -190,6 +192,8 @@ const distributeReceivedAmount = (receivedAmount: number | string, bookings: Boo
                 amount: booking.amount,
                 receivedAmount: Number(booking.receivedAmount || 0),
                 balance: booking.amount - Number(booking.receivedAmount || 0),
+                reportRemark: booking.reportRemark || '', // Add remark column
+
             }))
         );
 
@@ -199,6 +203,21 @@ const distributeReceivedAmount = (receivedAmount: number | string, bookings: Boo
         setReceivedAmountToSettle(amount);
         setIsModalOpen1(true);
     };
+    const handleRemarkChange = async (index: number, newRemark: string) => {
+        const updatedData = [...tableData];
+        updatedData[index].reportRemark = newRemark;
+        setTableData(updatedData);
+    
+        try {
+            const bookingId = updatedData[index].fileNumber[0]; // Assuming fileNumber is the booking ID
+            const bookingRef = doc(db, `user/${uid}/bookings`, bookingId);
+            await updateDoc(bookingRef, { reportRemark: newRemark });
+            console.log('Report remark updated successfully');
+        } catch (error) {
+            console.error('Error updating report remark:', error);
+        }
+    };
+    
     const handleReceiveSettle = async (receivedAmount: number | string) => {
         console.log('receivedAmount', receivedAmount);
         const collectedDetailsRef = collection(db, `user/${uid}/collectedDetails`); // New Collection
@@ -225,7 +244,8 @@ const distributeReceivedAmount = (receivedAmount: number | string, bookings: Boo
                         amount: booking.amount,
                         receivedAmount: Number(booking.receivedAmount || 0),
                         balance: balance,
-                        
+                        currentNetAmount: netTotalAmountInHand,
+
                         timestamp: new Date(), // Use a consistent format
                     };
 

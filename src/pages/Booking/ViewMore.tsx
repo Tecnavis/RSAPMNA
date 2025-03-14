@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { getFirestore, doc, getDoc, updateDoc, deleteDoc, getDocs, collection, Timestamp, query, where } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, deleteDoc, getDocs, collection, Timestamp, query, where, increment, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 import { CiEdit } from 'react-icons/ci';
 
@@ -397,25 +397,124 @@ const [showrooms, setShowrooms] = useState<{ id: string; name: string }[]>([]);
             console.error('Error fetching data:', error);
         }
     };
-    const handleVerifyClick = async () => {
+
+
+    const handleVerifyClick = async () => {  
         if (!id) {
             console.error('Error: bookingId is undefined.');
             return;
         }
+    
         try {
-            // Update bookingChecked in Firestore
             const bookingDocRef = doc(db, `user/${uid}/bookings`, id);
+            const bookingSnapshot = await getDoc(bookingDocRef);
+    
+            if (!bookingSnapshot.exists()) {
+                console.error('Error: Booking not found.');
+                return;
+            }
+    
+            const bookingData = bookingSnapshot.data();
+            const { createdBy, showroomId, staffId } = bookingData;
+    
+            if (createdBy !== "showroomStaff" && createdBy !== "showroom") {
+                await updateDoc(bookingDocRef, { bookingChecked: true });
+                setBookingChecked(true);
+                console.log('Booking verified without reward processing.');
+                window.location.reload();
+                return;
+            }
+    
+            const showroomDocRef = doc(db, `user/${uid}/showroom`, showroomId);
+            const showroomSnapshot = await getDoc(showroomDocRef);
+    
+            if (!showroomSnapshot.exists()) {
+                console.error('Error: Showroom not found.');
+                return;
+            }
+    
+            const showroomData = showroomSnapshot.data();
+            const bookingPointStaff = showroomData?.bookingPointStaff || 0;
+            const bookingPointForShowroom = showroomData?.bookingPointForShowroom || 0;
+            const bookingPoint = showroomData?.bookingPoint || 0;
+    
+            if (createdBy === "showroomStaff") {
+                const staffRewardsCollectionRef = collection(db, `user/${uid}/showroomStaff/${staffId}/rewards`);
+                await addDoc(staffRewardsCollectionRef, {
+                    rewardPoints: bookingPointStaff,
+                    bookingId: id, 
+                    timestamp: serverTimestamp() 
+                });
+    
+                const staffDocRef = doc(db, `user/${uid}/showroomStaff`, staffId);
+                const staffSnapshot = await getDoc(staffDocRef);
+                const totalPointStaff = (staffSnapshot.data()?.totalPoint || 0) + bookingPointStaff;
+                const totalRedeemedPointsStaff = staffSnapshot.data()?.totalRedeemedPoints || 0;
+                const rewardPointsStaff = totalPointStaff - totalRedeemedPointsStaff;
+    
+                await updateDoc(staffDocRef, {
+                    totalPoint: totalPointStaff,
+                    rewardPoints: rewardPointsStaff
+                });
+    
+                const showroomRewardsCollectionRef = collection(db, `user/${uid}/showroom/${showroomId}/rewards`);
+                await addDoc(showroomRewardsCollectionRef, {
+                    rewardPoints: bookingPointForShowroom,
+                    bookingId: id, 
+                    timestamp: serverTimestamp() 
+                });
+    
+                const totalPointByStaff = (showroomData?.totalPointByStaff || 0) + bookingPointForShowroom;
+                const rewardPointByStaff = (showroomData?.rewardPointByStaff || 0) + bookingPointForShowroom;
+    
+                await updateDoc(showroomDocRef, {
+                    totalPointByStaff,
+                    rewardPointByStaff
+                });
+    
+            } else if (createdBy === "showroom") {
+                const showroomRewardsCollectionRef = collection(db, `user/${uid}/showroom/${showroomId}/rewards`);
+                await addDoc(showroomRewardsCollectionRef, {
+                    rewardPoints: bookingPoint,
+                    bookingId: id, 
+                    timestamp: serverTimestamp() 
+                });
+    
+                const totalPointByShowroom = (showroomData?.totalPointByShowroom || 0) + bookingPoint;
+                const rewardPointsByShowroom = (showroomData?.rewardPointsByShowroom || 0) + bookingPoint;
+    
+                await updateDoc(showroomDocRef, {
+                    totalPointByShowroom,
+                    rewardPointsByShowroom
+                });
+            }
+    
+            // Fetch updated showroom data
+            const updatedShowroomSnapshot = await getDoc(showroomDocRef);
+            const updatedShowroomData = updatedShowroomSnapshot.data();
+    
+            const totalPoint = (updatedShowroomData?.totalPointByShowroom || 0) + (updatedShowroomData?.totalPointByStaff || 0);
+            const rewardPointShowroom = (updatedShowroomData?.rewardPointByStaff || 0) + (updatedShowroomData?.rewardPointsByShowroom || 0);
+            const totalRedeemedPoints = updatedShowroomData?.totalRedeemedPoints || 0;
+            const rewardPoints = rewardPointShowroom - totalRedeemedPoints;
+    
+            await updateDoc(showroomDocRef, {
+                totalPoint,
+                rewardPointShowroom,
+                rewardPoints
+            });
+    
             await updateDoc(bookingDocRef, { bookingChecked: true });
-
-            // Update local state after successful DB update
+    
             setBookingChecked(true);
-            console.log('Booking verified successfully!');
+            console.log('Booking verified, reward points updated successfully!');
             window.location.reload();
         } catch (error) {
             console.error('Error verifying booking: ', error);
         }
     };
-
+    
+    
     const togglePickupDetails = () => {
         setShowPickupDetails(!showPickupDetails);
         setShowDropoffDetails(false);

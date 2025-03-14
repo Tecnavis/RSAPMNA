@@ -56,12 +56,16 @@ const SalaryReport: React.FC = () => {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
     const [driver, setDriver] = useState<Driver | null>(null);
-    const [selectedMonth, setSelectedMonth] = useState<string>('');
+    const currentDate = new Date();
+const defaultMonth = currentDate.toLocaleString('default', { month: 'long' });
+const defaultYear = currentDate.getFullYear().toString();
+
+    const [selectedMonth, setSelectedMonth] = useState<string>(defaultMonth);
     const [totalSalaryAmount, setTotalSalaryAmount] = useState<number>(0);
     const [selectedBookings, setSelectedBookings] = useState<string[]>([]);
     const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
     const [showInvoiceModal, setShowInvoiceModal] = useState<boolean>(false);
-    const [selectedYear, setSelectedYear] = useState<string>('');
+    const [selectedYear, setSelectedYear] = useState<string>(defaultYear);
     const [showAdvanceDetails, setShowAdvanceDetails] = useState<boolean>(false);
     const [adjustedBookingIds, setAdjustedBookingIds] = useState<string[]>([]);
     const [adjustedFileNumbers, setAdjustedFileNumbers] = useState<string[]>([]);
@@ -77,7 +81,8 @@ const [netTotalAmountInHand, setNetTotalAmountInHand] = useState<number>(0);
 // -------------------------------------------------------------------
 const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
 const [enteredSalary, setEnteredSalary] = useState<number>(0);
-const [enteredTransactionId, setEnteredTransactionId] = useState<string>('');
+const selectedBookingsRef = useRef<HTMLDivElement | null>(null);
+const selectAllRef = useRef<HTMLTableCellElement | null>(null);
 
 const [currentPage, setCurrentPage] = useState(1);
 const [showAll, setShowAll] = useState(true); // Start by showing all bookings
@@ -231,11 +236,13 @@ const itemsPerPage = 10;
         fetchBookings();
     }, [db, id, uid, driver?.advance]); // Adding driver.advance to the dependency array to recalculate when it changes
     useEffect(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        
-        setFilteredBookings(bookings.slice(startIndex, endIndex));
-    }, [bookings, currentPage]);
+        if (!showAll) {
+          const startIndex = (currentPage - 1) * itemsPerPage;
+          const endIndex = startIndex + itemsPerPage;
+          setFilteredBookings((prev) => prev.slice(startIndex, endIndex));
+        }
+      }, [currentPage, itemsPerPage, showAll, filteredBookings]);
+      
     
     useEffect(() => { 
         if (netTotalAmountInHand !== undefined && totalSalaryAmount !== undefined) {
@@ -244,39 +251,53 @@ const itemsPerPage = 10;
     }, [netTotalAmountInHand, totalSalaryAmount]);
     
     
-    useEffect(() => {
-        if (selectedMonth || selectedYear) {
-            const filtered = bookings.filter((booking) => {
-                const bookingDate = parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date());
-                const bookingMonth = format(bookingDate, 'MMMM');
-                const bookingYear = format(bookingDate, 'yyyy');
-
-                const monthMatch = selectedMonth ? bookingMonth === selectedMonth : true;
-                const yearMatch = selectedYear ? bookingYear === selectedYear : true;
-
-                return monthMatch && yearMatch;
-            });
-            setFilteredBookings(filtered);
-        } else {
-            setFilteredBookings(bookings);
-        }
-    }, [bookings, selectedMonth, selectedYear]);
-
-    useEffect(() => {
-        if (selectAll) {
-            setSelectedBookings(filteredBookings.map((booking) => booking.id));
-        } else {
-            setSelectedBookings([]);
-        }
-    }, [selectAll, filteredBookings]);
+   // Filter bookings based on selectedMonth and selectedYear
+useEffect(() => {
+    if (selectedMonth || selectedYear) {
+      const filtered = bookings.filter((booking) => {
+        const bookingDate = parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date());
+        const bookingMonth = format(bookingDate, 'MMMM');
+        const bookingYear = format(bookingDate, 'yyyy');
+  
+        const monthMatch = selectedMonth ? bookingMonth === selectedMonth : true;
+        const yearMatch = selectedYear ? bookingYear === selectedYear : true;
+  
+        return monthMatch && yearMatch;
+      });
+      setFilteredBookings(filtered);
+    } else {
+      setFilteredBookings(bookings);
+    }
+  }, [bookings, selectedMonth, selectedYear]);
+  
+  
+  // Update selectedBookings when selectAll is toggled
+  useEffect(() => {
+    if (selectAll) {
+      setSelectedBookings(filteredBookings.map((booking) => booking.id));
+    } else {
+      setSelectedBookings([]);
+    }
+  }, [selectAll, filteredBookings]);
+  
 
     const handleCheckboxChange = (bookingId: string) => {
         if (selectedBookings.includes(bookingId)) {
             setSelectedBookings(selectedBookings.filter((id) => id !== bookingId));
         } else {
-            setSelectedBookings([...selectedBookings, bookingId]);
+            const selectedBooking = filteredBookings.find((b) => b.id === bookingId);
+            if (selectedBooking) {
+                setSelectedBookings([...selectedBookings, bookingId]);
+            }
         }
+    
+        // Scroll to 'Select All' and 'Selected Bookings' smoothly
+        setTimeout(() => {
+            selectAllRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            selectedBookingsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
     };
+    
     const calculateSelectedTotalSalary = () => {
         return selectedBookings.reduce((acc, bookingId) => {
             const booking = bookings.find((b) => b.id === bookingId);
@@ -732,22 +753,8 @@ console.log("relevantBookings",relevantBookings)
             console.error("Error distributing salary:", error);
         }
     };
-    useEffect(() => {
-        let tempBookings = bookings;
+   
     
-        // Apply filtering by month/year if needed
-        if (selectedMonth || selectedYear) {
-            tempBookings = bookings.filter((booking) => {
-                const bookingDate = parse(booking.dateTime, 'dd/MM/yyyy, h:mm:ss a', new Date());
-                const bookingMonth = format(bookingDate, 'MMMM');
-                const bookingYear = format(bookingDate, 'yyyy');
-        
-                const monthMatch = selectedMonth ? bookingMonth === selectedMonth : true;
-                const yearMatch = selectedYear ? bookingYear === selectedYear : true;
-        
-                return monthMatch && yearMatch;
-            });
-        }
     // -------------------------------------
         // if (showAll) {
         //     setFilteredBookings(tempBookings);
@@ -756,17 +763,8 @@ console.log("relevantBookings",relevantBookings)
         //     const endIndex = startIndex + itemsPerPage;
         //     setFilteredBookings(tempBookings.slice(startIndex, endIndex));
         // }
-    }, [bookings, selectedMonth, selectedYear, currentPage, showAll]);
     
-    useEffect(() => {
-        if (showAll) {
-            setFilteredBookings(bookings); // Show all bookings initially
-        } else {
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            setFilteredBookings(bookings.slice(startIndex, endIndex));
-        }
-    }, [bookings, currentPage, showAll]);
+   
     const givenAmount = totalCalculatedUpdatedTotalSalary != null && typeof totalSalaryAmount === 'number'
     ? (totalCalculatedUpdatedTotalSalary - totalSalaryAmount).toFixed(2)
     : 'N/A';
@@ -1329,78 +1327,12 @@ const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
     open={isSalaryModalOpen}
     onClose={() => setIsSalaryModalOpen(false)}
     onConfirm={handleSalaryConfirm}
+        salaryAmount={calculateSelectedTotalSalary()}  // Pass the calculated salary amount
+
 />
+{/* ---------------------------------------------- */}
 
-            {selectedBookings.length > 0 && (
-                <div className="mt-5">
-                    <h2 className="text-xl font-bold mb-3 text-center text-gray-800">Selected Bookings Total Salary</h2>
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead>
-                            <tr className="bg-gray-100">
-                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">File Number</th>
-                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Total Salary Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {selectedBookings.map((bookingId) => {
-                                const booking = bookings.find((b) => b.id === bookingId);
-                                if (!booking) {
-                                    // Handle the case where booking is undefined, e.g., return null or a placeholder
-                                    return null; // or return <tr><td colSpan={2}>Booking not found</td></tr>;
-                                }
-                                return (
-                                    <tr key={booking.id}>
-                                        <td className="border px-4 py-2">{booking.fileNumber}</td>
-                                        <td className="border px-4 py-2">{booking.balanceSalary?.toFixed(2) || '0.00'}</td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Total Salary Amount</th>
-                                <td className="border px-4 py-2">{calculateSelectedTotalSalary()}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                    <div className="flex flex-col sm:flex-row justify-between mt-4">
-                        <div className="text-lg font-bold mb-4 sm:mb-0">Total Salary: {totalSalaryAmount}</div>
-                        <div>
-                            <button
-                                className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg mr-3 ${isConfirmed ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                onClick={handleConfirmClick}
-                                disabled={isConfirmed}
-                            >
-                                Confirm
-                            </button>
-                            <button
-                                className={`bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg ${isConfirmed ? '' : 'opacity-50 cursor-not-allowed'}`}
-                                onClick={handleGenerateInvoice}
-                                disabled={!isConfirmed} // Disable until confirmed
-                            >
-                                Generate Invoice
-                            </button>
-                        </div>
-                    </div>
-                    {showInvoiceModal && (
-                        <InvoiceModal
-                        
-                            selectedBookings={selectedBookings}
-                            bookings={bookings.map((booking) => ({
-                                ...booking,
-                                transferedSalary: booking.transferedSalary ?? 0, // Fallback to 0 if undefined
-                            }))}
-                            onClose={closeInvoiceModal}
-                            onGenerateInvoice={() => {
-                                console.log('Selected Bookings:', selectedBookings); // This will log the selectedBookings array
-                                closeInvoiceModal();
-                                navigate('/driverreport/salaryreport/driversalaryInvoice', { state: { selectedBookings } });
-                            }}
-                        />
-                    )}
-                </div>
-            )}
-
+{/* --------------------------------------------------- */}
 <div >
 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8 print-container">
     {/* Advance Amount Card */}
@@ -1449,7 +1381,91 @@ const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
     </div>
    
 </div>
+<div ref={selectedBookingsRef}>
+  {selectedBookings.length > 0 ? (
+    calculateSelectedTotalSalary() > 0 ? (
+      <div className="mt-5">
+        <h2 className="text-xl font-bold mb-3 text-center text-gray-800">
+          Selected Bookings Total Salary
+        </h2>
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">File Number</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Total Salary Amount</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {selectedBookings.map((bookingId) => {
+              const booking = bookings.find((b) => b.id === bookingId);
+              if (!booking) return null; // Skip if booking not found
+              return (
+                <tr key={booking.id}>
+                  <td className="border px-4 py-2">{booking.fileNumber}</td>
+                  <td className="border px-4 py-2">{booking.balanceSalary?.toFixed(2) || '0.00'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Total Salary Amount</th>
+              <td className="border px-4 py-2">{calculateSelectedTotalSalary()}</td>
+            </tr>
+          </tfoot>
+        </table>
+        <div className="flex flex-col sm:flex-row justify-between mt-4">
+          <div className="text-lg font-bold mb-4 sm:mb-0">
+            Total Salary: {calculateSelectedTotalSalary()}
+          </div>
+          <div>
+            <button
+              className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg mr-3 ${
+                isConfirmed ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              onClick={handleConfirmClick}
+              disabled={isConfirmed}
+            >
+              Confirm
+            </button>
+            <button
+              className={`bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg ${
+                isConfirmed ? '' : 'opacity-50 cursor-not-allowed'
+              }`}
+              onClick={handleGenerateInvoice}
+              disabled={!isConfirmed}
+            >
+              Generate Invoice
+            </button>
+          </div>
+        </div>
 
+        {showInvoiceModal && (
+          <InvoiceModal
+            selectedBookings={selectedBookings}
+            bookings={bookings.map((booking) => ({
+              ...booking,
+              transferedSalary: booking.transferedSalary ?? 0, // Fallback to 0 if undefined
+            }))}
+            onClose={closeInvoiceModal}
+            onGenerateInvoice={() => {
+              console.log('Selected Bookings:', selectedBookings);
+              closeInvoiceModal();
+              navigate('/driverreport/salaryreport/driversalaryInvoice', {
+                state: { selectedBookings },
+              });
+            }}
+          />
+        )}
+      </div>
+    ) : (
+      // Show message when total salary is 0
+      <div className="mt-5 text-center text-lg font-bold text-red-600">
+        Already Paid Salary
+      </div>
+    )
+  ) : null}
+</div>
 <div className="flex justify-center mt-4">
 <button
             onClick={() => {
@@ -1508,13 +1524,17 @@ const handleSettleSalary = async (bookingId: string, balanceSalary: number) => {
                                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Total Driver Salary</th>
                                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Transferred Salary</th>
                                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Balance Salary</th>
-                                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 no-print" >
-                                        Actions
-                                        <span className="flex items-center">
-                                            <input type="checkbox" checked={selectAll} onChange={(e) => setSelectAll(e.target.checked)} />
-                                            <span className="ml-2">Select All</span>
-                                        </span>
-                                    </th>
+                                    <th 
+    className="px-4 py-2 text-left text-sm font-semibold text-gray-600 no-print" 
+    ref={selectAllRef} // ✅ Now it works without error
+>
+    Actions
+    <span className="flex items-center">
+        <input type="checkbox" checked={selectAll} onChange={(e) => setSelectAll(e.target.checked)} />
+        <span className="ml-2">Select All</span>
+    </span>
+</th>
+
                                     <th className=' no-print'>ViewMore</th>
                                 </tr>
                             </thead>

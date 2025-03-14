@@ -220,71 +220,48 @@ const RewardPage: React.FC = () => {
 
         fetchClaimedHistory();
     }, [uid, id]);
-        useEffect(() => {
-        const fetchClaimedRewards = async () => {
+    useEffect(() => {
+        const fetchShowroomStaffClaimedHistory = async () => {
             if (!uid || !id) {
-                console.error('Missing UID or showroom ID.');
+                console.error('Missing UID or showroom staff ID.');
                 return;
             }
-
+    
             try {
-                const claimedRewardsRef = collection(db, `user/${uid}/showroom/${id}/claimedRewards`);
+                // Reference to showroom staff claimed rewards
+                const claimedRewardsRef = collection(db, `user/${uid}/showroomStaff/${id}/claimedRewards`);
                 const querySnapshot = await getDocs(claimedRewardsRef);
-
-                // Here we expect RewardItem[] or null values temporarily.
-                const claimedRewardsData: (RewardItem | null)[] = await Promise.all(
-                    querySnapshot.docs.map(async (document) => {
-                        const rewardData = document.data(); // Use 'document' instead of 'doc'
-                        const rewardId = rewardData.rewardId;
-                        console.log('rewardId', rewardId);
-
-                        if (rewardId) {
-                            const rewardItemRef = doc(db, `user/${uid}/rewarditems`, rewardId);
-                            const rewardDocSnapshot = await getDoc(rewardItemRef);
-                            console.log('rewardItemRef path:', rewardItemRef.path);
-
-                            if (rewardDocSnapshot.exists()) {
-                                const rewardDetails = rewardDocSnapshot.data();
-
-                                // Fallback values for missing RewardItem properties
-                                const rewardItem: RewardItem = {
-                                    docId: document.id,
-                                    _id: rewardDetails._id || '', // Provide default values if not present
-                                    name: rewardDetails.name || 'No Name',
-                                    description: rewardDetails.description || 'No Description',
-                                    points: rewardDetails.points || 0,
-                                    price: rewardDetails.price || 0, // Provide default value if not available
-                                    category: rewardDetails.category || 'Uncategorized', // Provide default value if not available
-                                    percentage: rewardDetails.percentage || 0, // Provide default value if not available
-                                    stock: rewardDetails.stock || 0, // Provide default value if not available
-                                    rewardDetails,
-                                };
-
-                                console.log('Reward Details Found:', rewardDetails);
-                                console.log('Document ID (docId):', document.id);
-
-                                return rewardItem;
-                            } else {
-                                console.warn('No reward details found for:', rewardId);
-                            }
-                        }
-                        return null; // If no rewardId is found, return null
-                    })
-                );
-
-                // Filter out null results and set the redemption history
-                const filteredClaimedRewards = claimedRewardsData.filter((item): item is RewardItem => item !== null);
-
-                setRedemptionHistory(filteredClaimedRewards);
-                console.log('Claimed Rewards with Details:', filteredClaimedRewards);
+    
+                if (querySnapshot.empty) {
+                    console.log('No claimed rewards found for showroom staff.');
+                    setClaimedHistory([]);
+                    return;
+                }
+    
+                const claimedHistoryDatas: ClaimedHistoryItem[] = querySnapshot.docs.map((doc) => {
+                    const data = doc.data();
+                    return {
+                        itemName: data.itemName || 'No Name',  // ✅ Corrected property name
+                        description: data.description || 'No Description',
+                        points: data.itemPoints || 0,
+                        price: data.price || 0, // Ensure it's a number
+                        claimedDate: data.claimedDate instanceof Timestamp ? data.claimedDate.toDate().toLocaleString() : '',
+                        itemImage: data.itemImage || '',
+                    };
+                });
+                
+                
+    
+                setClaimedHistory(claimedHistoryDatas);
+                console.log('Showroom Staff Claimed History:', claimedHistoryDatas);
             } catch (error) {
-                console.error('Error fetching claimed rewards:', error);
+                console.error('Error fetching claimed history for ShowroomStaff:', error);
             }
         };
-
-        fetchClaimedRewards();
-    }, [id, db, uid]);
-
+    
+        fetchShowroomStaffClaimedHistory();
+    }, [uid, id]);
+    
     useEffect(() => {
         const fetchClaimedRewards = async () => {
             if (!uid || !id) {

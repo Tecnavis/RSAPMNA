@@ -152,11 +152,11 @@ const DriverReport: React.FC = () => {
 
                             const totalSalaryAmount = totalDriverSalary - totalTransferedSalary;
 
-                            const advance = driver.advance || 0; // Default to 0 if advance is missing
+                            const advance = Number(driver.advance) || 0; // Convert to number, default to 0 if missing or NaN
 
                             return {
                                 ...driver,
-                                netTotalAmountInHand: totalAmount,
+                                netTotalAmountInHand: totalAmount + advance,
                                 totalSalaryAmount: totalSalaryAmount,
                                 bookingCount: bookingCount, 
                             };

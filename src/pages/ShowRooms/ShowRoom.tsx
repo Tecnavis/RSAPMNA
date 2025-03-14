@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, Fragment } from 'react';
-import { addDoc, collection, getFirestore, getDocs, doc, updateDoc, serverTimestamp, query, orderBy, deleteDoc, getDoc } from 'firebase/firestore';
+import { addDoc, collection, getFirestore, getDocs, doc, updateDoc, serverTimestamp, query, orderBy, deleteDoc, getDoc, where } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { IoIosCloseCircle } from "react-icons/io";
 
@@ -16,10 +16,11 @@ import ConfirmationModal from '../../pages/Users/ConfirmationModal/ConfirmationM
 import QRCode from 'qrcode.react';
 import IconMapPin from '../../components/Icon/IconMapPin';
 import IconMenuScrumboard from '../../components/Icon/Menu/IconMenuScrumboard';
-import { FaPrint, FaQrcode } from 'react-icons/fa';
+import { FaAward, FaPhoneAlt, FaPrint, FaQrcode, FaWhatsapp } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { Dialog, Transition } from '@headlessui/react';
+import IconUsersGroup from '../../components/Icon/IconUsersGroup';
 
 interface ShowRoomType {
     [key: string]: any;
@@ -151,8 +152,40 @@ const ShowRoom: React.FC = () => {
     const uid = sessionStorage.getItem('uid');
     const userRole = sessionStorage.getItem('role'); // Assume 'role' is stored in sessionStorage
 console.log("userRole",userRole)
-    // Role-based access control
-    useEffect(() => {
+ // Staff state and modal visibility
+ const [staffList, setStaffList] = useState<any[]>([]);
+ const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+ const [currentShowroomId, setCurrentShowroomId] = useState<string | null>(null);
+ const [currentShowroomName, setCurrentShowroomName] = useState<string | null>(null);
+
+ // Function to fetch showroom staff by showroom id
+ const fetchShowroomStaff = async (id: string) => {
+    console.log("showroomId",id)
+   try {
+     const db = getFirestore();
+     const staffQuery = query(
+       collection(db, `user/${uid}/showroomStaff`),
+       where("showroomId", "==", id)
+     );
+     const querySnapshot = await getDocs(staffQuery);
+     const staff = querySnapshot.docs.map((doc) => ({
+       id: doc.id,
+       ...doc.data(),
+     }));
+     setStaffList(staff);
+   } catch (error) {
+     console.error("Error fetching showroom staff:", error);
+   }
+ };
+
+ const handleViewStaff = (id: string, name: string) => {
+    setCurrentShowroomId(id);
+    setCurrentShowroomName(name);
+    fetchShowroomStaff(id); // Fetch staff using id
+    setIsStaffModalOpen(true);
+  };
+  
+     useEffect(() => {
         if (userRole !== 'admin' && userRole !== 'staff') {
             toast.error('You are an unauthorized user', { autoClose: 3000 });
         }
@@ -254,8 +287,8 @@ console.log("userRole",userRole)
         e.preventDefault();
         const db = getFirestore();
         const timestamp = serverTimestamp();
-        // const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`;
-                const baseUrl = `http://localhost:5173/showrooms/showroom/showroomDetails`;
+        const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`;
+                // const baseUrl = `http://localhost:5173/showrooms/showroom/showroomDetails`;
 
         const uid = sessionStorage.getItem('uid') || '';
         const queryParams = new URLSearchParams({
@@ -275,6 +308,7 @@ console.log("userRole",userRole)
 
         const generatedLink = `${baseUrl}?${queryParams}`;
     setGeneratedLink(generatedLink); // Store generated link
+    await new Promise((resolve) => setTimeout(resolve, 500)); // Small delay before capturing
 
         let qrCodeBase64 = '';
         if (qrRef.current) {
@@ -291,7 +325,7 @@ console.log("userRole",userRole)
             createdAt: timestamp,
             status: 'admin added showroom',
             showroomLink: generatedLink || '',
-            qrCode: qrCodeBase64,
+            qrCode: qrCodeBase64 || showRoom.qrCode || '',
             Location: `${baseLocation}, ${showRoom.locationLatLng.lat}, ${showRoom.locationLatLng.lng}`,
             manualLocationName: manualLocationName, // Add manual location name
             manualLat: parseFloat(manualLat), // Add manual latitude and ensure it's a number
@@ -440,106 +474,6 @@ console.log("userRole",userRole)
     useEffect(() => {
         fetchShowRooms();
     }, []);
-    // const handlePrinter = (room: { showroomLink: string; ShowRoom: string }) => {
-    //     if (!room) {
-    //         console.error("Room data is missing");
-    //         return;
-    //     }
-    
-    //     if (modalContentRef.current) {
-    //         const printWindow = window.open('', '_blank');
-    
-    //         if (printWindow) {
-    //             printWindow.document.open();
-    //             printWindow.document.write(`
-    //                 <html>
-    //                   <head>
-    //                     <title>Print Modal</title>
-    //                     <style>
-    //                       @page {
-    //                         size: A4 portrait; /* Ensures the print is in A4 size */
-    //                         margin: 10mm; /* Adds a small margin */
-    //                       }
-    //                       body {
-    //                         margin: 0;
-    //                         padding: 0;
-    //                         font-family: Arial, sans-serif;
-    //                         background: #fff;
-    //                         width: 210mm;
-    //                         height: 297mm;
-    //                         display: flex;
-    //                         justify-content: center;
-    //                         align-items: center;
-    //                         flex-direction: column;
-    //                         text-align: center;
-    //                       }
-    //                       .modal-content {
-    //                         width: 180mm; /* Slightly smaller than A4 to fit within margins */
-    //                         height: 260mm;
-    //                         padding: 20px;
-    //                         display: flex;
-    //                         flex-direction: column;
-    //                         align-items: center;
-    //                         justify-content: center;
-    //                         border: 1px solid #000; /* Optional border for print clarity */
-    //                       }
-    //                       .qr-container {
-    //                         width: 100%;
-    //                         display: flex;
-    //                         flex-direction: column;
-    //                         align-items: center;
-    //                         justify-content: space-between;
-    //                       }
-    //                       .qr-code {
-    //                         margin: 20px 0;
-    //                       }
-    //                       h2 {
-    //                         font-size: 20px;
-    //                         margin-bottom: 10px;
-    //                       }
-    //                     </style>
-    //                   </head>
-    //                   <body>
-    //                     <div class="modal-content">
-    //                       <h2>${room.ShowRoom.toUpperCase()}</h2>
-    //                       <div class="qr-container">
-    //                         <div class="qr-code" id="qrCode1"></div>
-    //                         <div class="qr-code" id="qrCode2"></div>
-    //                       </div>
-    //                     </div>
-    //                   </body>
-    //                 </html>
-    //             `);
-    
-    //             printWindow.document.close();
-    //             printWindow.focus();
-    
-    //             printWindow.onload = () => {
-    //                 const qrCodeContainer1 = printWindow.document.getElementById('qrCode1');
-    //                 const qrCodeContainer2 = printWindow.document.getElementById('qrCode2');
-    
-    //                 if (qrCodeContainer1 && qrCodeContainer2) {
-    //                     new (QRCode as any)(qrCodeContainer1, {
-    //                         text: room.showroomLink ?? '',
-    //                         width: 120,
-    //                         height: 120,
-    //                     });
-                    
-    //                     new (QRCode as any)(qrCodeContainer2, {
-    //                         text: room.showroomLink ?? '',
-    //                         width: 120,
-    //                         height: 120,
-    //                     });
-    //                 }
-                    
-                    
-    
-    //                 printWindow.print();
-    //                 printWindow.close();
-    //             };
-    //         }
-    //     }
-    // };
     
     const handlePrintPDF = () => {
         const modalContent = document.getElementById("modal-content");
@@ -668,6 +602,8 @@ console.log("userRole",userRole)
 
                             <th className="tableCell">Image</th>
                             <th className="tableCell">Showroom Name</th>
+                            <th className="tableCell">Showroom Staffs</th>
+
                             <th className="tableCell">Showroom Id</th>
                             <th className="tableCell">Location</th>
                             <th className="tableCell">User Name</th>
@@ -714,6 +650,17 @@ console.log("userRole",userRole)
                                 <td className="tableCell" data-label="Showroom Name">
                                     {room.ShowRoom.toUpperCase()}
                                 </td>
+                                <td className="tableCell" data-label="Showroom Name">
+  <div className="flex items-center space-x-2">
+    <button
+      onClick={() => handleViewStaff(room.id, room.ShowRoom)}
+      className="text-dark px-4 py-2 rounded-lg"
+    >
+      <IconUsersGroup />
+    </button>
+  </div>
+</td>
+
                                 <td className="tableCell" data-label="Showroom Id">
                                     {room.showroomId}
                                 </td>
@@ -953,6 +900,55 @@ style={{
                     </tbody>
                 </table>
             </div>
+
+{isStaffModalOpen && (
+  <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75 z-50">
+    <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-2xl transform transition-all duration-300">
+      <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+    Staffs Of {currentShowroomName}
+      </h2>
+      {staffList.length > 0 ? (
+        <ul className="space-y-4">
+          {staffList.map((staff) => (
+            <li
+              key={staff.id}
+              className="p-4 bg-gray-50 rounded-lg shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between"
+            >
+              <div>
+                <p className="text-lg font-medium text-gray-700">
+                  {staff.name}
+                </p>
+                <p className="text-sm text-gray-500">{staff.designation}</p>
+              </div>
+              <div className="mt-2 sm:mt-0 text-right space-y-1">
+                <p className="text-sm text-gray-600 flex items-center gap-1">
+                  <FaPhoneAlt className="text-blue-500" />
+                  <span className="font-medium">{staff.phoneNumber}</span>
+                </p>
+                <p className="text-sm text-gray-600 flex items-center gap-1">
+                  <FaWhatsapp className="text-green-500" />
+                  <span className="font-medium">{staff.whatsappNumber}</span>
+                </p>
+                <p className="text-sm text-gray-600 flex items-center gap-1">
+                  <FaAward className="text-yellow-500" />
+                  <span className="font-medium">{staff.rewardPoints}</span>
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-gray-600">No staff found for this showroom.</p>
+      )}
+      <button
+        onClick={() => setIsStaffModalOpen(false)}
+        className="mt-6 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-md transition duration-200"
+      >
+        Close
+      </button>
+    </div>
+  </div>
+)}
 
             <Modal open={open} onClose={handleClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
                 <Box sx={style}>
